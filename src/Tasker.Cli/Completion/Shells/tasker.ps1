@@ -1,5 +1,5 @@
 # Tab completion for tasker (PowerShell 5.1 and 7+): commands, options and values (projects, statuses, tasks...) of the current workspace.
-# Printed by 'tasker completion pwsh'; 'tasker completion install pwsh' dot-sources it from your $PROFILE.
+# Printed by 'tasker completion pwsh'; 'tasker completion pwsh --install' dot-sources it from your $PROFILE.
 # All the knowledge about commands lives in tasker: this script only asks it with the [suggest] directive and quotes the answer
 # for PowerShell. cmd.exe has no programmable completion, so it is not supported there.
 # The file is pure ASCII on purpose: Windows PowerShell 5.1 reads a script without a BOM in the ANSI code page.

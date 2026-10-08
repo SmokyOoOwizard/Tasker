@@ -14,7 +14,7 @@
 
 ## Платформы
 
-macOS и Linux проверены. Windows поддерживается, но на самой Windows пока не проверялся: см. [страницу Windows](https://github.com/SmokyOoOwizard/Tasker/wiki/Windows).
+macOS и Linux проверены. Windows поддерживается, но на самой Windows пока не проверялся: см. [страницу Windows](https://github.com/SmokyOoOwizard/Tasker/wiki/Платформы).
 
 ## Установка
 

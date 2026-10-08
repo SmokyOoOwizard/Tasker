@@ -22,7 +22,7 @@ internal sealed record Shell(string Name, string ResourceName, string[]? Aliases
 /// Поддерживаемые оболочки. Скрипты только вызывают директиву <c>[suggest]</c> (<see cref="CompleteDirective"/>) и вставляют
 /// ответ с экранированием по правилам своей оболочки, знаний о командах в них нет — поэтому новая оболочка (fish) —
 /// это новый скрипт и строка здесь (и ещё строка выбора файла настроек в scripts/install.sh). PowerShell (<c>pwsh</c>) — для Windows,
-/// Linux и macOS; его блок в <c>$PROFILE</c> ставит <c>tasker completion install pwsh</c> (<see cref="PowerShellProfile"/>).
+/// Linux и macOS; его блок в <c>$PROFILE</c> ставит <c>tasker completion pwsh --install</c> (<see cref="PowerShellProfile"/>).
 /// </summary>
 internal static class Shells
 {
