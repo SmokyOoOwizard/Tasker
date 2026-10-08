@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateEmbeddedFilesManifest Condition="'$(EmbedFrontend)' != 'false'">true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.12" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tasker.Core\Tasker.Core.csproj" />
+    <ProjectReference Include="..\Tasker.Daemon\Tasker.Daemon.csproj" />
+    <ProjectReference Include="..\Tasker.Storage.Db\Tasker.Storage.Db.csproj" />
+    <ProjectReference Include="..\Tasker.Storage.Files\Tasker.Storage.Files.csproj" />
+    <ProjectReference Include="..\Tasker.Configs\Tasker.Configs.csproj" />
+    <ProjectReference Include="..\Tasker.Mcp\Tasker.Mcp.csproj" />
+  </ItemGroup>
+
+  <!-- Собранный фронтенд (frontend/dist) встраивается в сборку как ресурс wwwroot/**.
+       Перед сборкой .NET выполнить: cd frontend && npm run build.
+       Консольной утилите (Tasker.Cli) фронтенд не нужен: при -p:EmbedFrontend=false он не встраивается. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\frontend\dist\**\*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(EmbedFrontend)' != 'false'" />
+  </ItemGroup>
+
+</Project>

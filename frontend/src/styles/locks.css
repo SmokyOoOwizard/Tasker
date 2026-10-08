@@ -1,0 +1,17 @@
+.lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-rose-tint);
+  color: var(--accent-rose);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lock-badge svg {
+  width: 13px;
+  height: 13px;
+}

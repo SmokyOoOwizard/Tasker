@@ -1,0 +1,25 @@
+formatVersion: 9
+id: 63f3a620-277c-45d3-9c3a-0c3ee2f181e4
+name: Основная
+statusSets:
+- 9bd67326-014e-43f2-9485-c2c85a221934
+columns:
+- id: d0e7cbf3-b8d7-4b3b-9044-7a5552581e5f
+  name: Backlog
+  statuses:
+  - 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+  - e419107c-3971-482e-b68f-46860d54f4d2
+  onDrop:
+    9bd67326-014e-43f2-9485-c2c85a221934: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+- id: b493de9c-8ee9-45c5-a5e3-6e28492cddb5
+  name: В работе
+  statuses:
+  - 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+  onDrop:
+    9bd67326-014e-43f2-9485-c2c85a221934: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+- id: 0730b8b7-ff95-43a9-9883-6980fb97f563
+  name: Готово
+  statuses:
+  - 30300951-beb2-495f-a290-2b36ae0f4920
+  onDrop:
+    9bd67326-014e-43f2-9485-c2c85a221934: 30300951-beb2-495f-a290-2b36ae0f4920

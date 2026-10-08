@@ -1,0 +1,14 @@
+formatVersion: 9
+id: ffb349fb-e32f-4a09-98ea-df35f050380d
+title: 'Установщик для Linux: вызывать tasker mcp upgrade'
+description: |-
+  Для Linux нет install-скрипта; когда появится, после копирования сборки он должен вызывать tasker mcp upgrade (как scripts/install-macos.sh), с флагом --restart. Связано с TSK-103.
+
+  ВЫПОЛНЕНО В TSK-120: общий scripts/install.sh для macOS и Linux после копирования сборки вызывает `tasker mcp upgrade` (при неудаче — без молчаливого перезапуска, с подсказкой `tasker mcp upgrade --restart`; флаг `--restart` перезапускает по просьбе).
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T17:42:44.0272380+00:00
+updatedAt: 2026-10-07T21:43:51.5860820+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 112

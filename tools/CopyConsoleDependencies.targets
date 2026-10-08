@@ -1,0 +1,19 @@
+<Project>
+
+  <!-- Тесты и стенд (Tasker.Stress) запускают `dotnet tasker.dll` из своего выходного каталога. Консоль (Tasker.Cli) работает на одном
+       Microsoft.NETCore.App, а у них из-за ссылки на демон/Tasker.Web подключён ещё и общий каркас Microsoft.AspNetCore.App. Если
+       версия сборки в каркасе не ниже версии пакета (в образе dotnet/sdk на Linux — так; на macOS со средой старее пакета — нет),
+       сборка пакета (Microsoft.Extensions.Logging.Abstractions и др.) в выходной каталог НЕ копируется, и tasker.dll падает с
+       FileNotFoundException (TSK-111). Докладываем из выхода Tasker.Cli всё, чего в каталоге нет; существующие файлы не трогаем. -->
+  <Target Name="CopyConsoleDependenciesNotInOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <ConsoleOutput>$(MSBuildThisFileDirectory)..\src\Tasker.Cli\bin\$(Configuration)\$(TargetFramework)\</ConsoleOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <ConsoleFiles Include="$(ConsoleOutput)**\*" />
+      <MissingConsoleFiles Include="@(ConsoleFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(MissingConsoleFiles)" DestinationFolder="$(OutDir)%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

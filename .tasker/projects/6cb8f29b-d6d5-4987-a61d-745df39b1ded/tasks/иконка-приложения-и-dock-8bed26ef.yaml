@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 8bed26ef-8b5e-49b5-90ce-c5a0a0f8485a
+title: Иконка приложения и Dock
+description: |-
+  Раздел бэклога: Десктоп.
+
+  Иконка приложения в Dock на macOS: `.app`-бандл с `Info.plist` и `.icns`.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:22.3177550+00:00
+updatedAt: 2026-10-08T15:59:02.8158420+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 35

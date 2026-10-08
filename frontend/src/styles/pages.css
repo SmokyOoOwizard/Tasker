@@ -1,0 +1,115 @@
+.app-content {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  padding: 2.5rem 3rem;
+}
+
+.page {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-wide {
+  max-width: 1100px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.card {
+  background: var(--surface-glass-strong);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.75rem 2rem;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.card p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.card.form .button {
+  align-self: flex-start;
+}
+
+.card.form .card-title {
+  margin-bottom: 0;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px -4px rgba(99, 102, 241, 0.45);
+  color: var(--text-on-accent);
+}
+
+.profile-avatar span {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.profile-avatar svg {
+  width: 32px;
+  height: 32px;
+}
+
+.profile-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.profile-meta {
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-tint-strong);
+  color: var(--accent-600);
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+}

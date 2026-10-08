@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Версия Tasker — одна на все проекты: файл VERSION в корне репозитория (например 0.1.0 или 0.2.0-rc.1).
+       команда `tasker` с ключом version и демон показывают её; сборка из исходников установщиком добавляет «+<коммит>» (build metadata).
+       Выпуск новой версии: правка VERSION, коммит, тег v<версия>, scripts/release.sh (он сверяет тег и файл). -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)VERSION')">
+    <TaskerVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</TaskerVersion>
+    <VersionPrefix>$(TaskerVersion.Split('-')[0])</VersionPrefix>
+    <VersionSuffix Condition="$(TaskerVersion.Contains('-'))">$(TaskerVersion.Substring($([MSBuild]::Add($(TaskerVersion.IndexOf('-')), 1))))</VersionSuffix>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+</Project>

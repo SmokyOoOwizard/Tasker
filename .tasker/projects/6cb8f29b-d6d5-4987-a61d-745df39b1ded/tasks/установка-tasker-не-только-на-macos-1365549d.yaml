@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 1365549d-859c-44bc-8e25-1116d752dd6a
+title: Установка `tasker` не только на macOS
+description: |-
+  Раздел бэклога: Консоль.
+
+  Есть только `scripts/install-macos.sh`. Для Linux нужен аналогичный скрипт (тот же `~/.local`, systemd уже поддержан), для Windows — установка в `%LOCALAPPDATA%` и добавление в PATH. Сборка для других систем (`linux-x64`, `win-x64`) не проверялась.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:25.3196090+00:00
+updatedAt: 2026-10-01T15:51:25.3196090+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 45

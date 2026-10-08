@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 54a730ad-f67d-4b6e-81a4-a74a9de774d0
+title: События для SQLite-вкладок
+description: |-
+  Раздел бэклога: Десктоп.
+
+  Для SQLite событие `unknown` приходит после каждого POST/PATCH/DELETE, включая чтения через MCP (там всё — POST), и изменения БД снаружи не видны.
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:22.0227370+00:00
+updatedAt: 2026-10-01T15:51:22.0227370+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 34

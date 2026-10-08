@@ -1,0 +1,11 @@
+formatVersion: 9
+id: e9ad354f-2522-40e1-bd75-2695d847066e
+title: 'MCP-демон после перезапуска: [invalid] Workspace is not available: opening вместо повторяемой ошибки'
+description: "Стенд (сценарий kill: демон убивается kill -9 и запускается заново): сразу после mcp start, пока область открывается, вызовы получают '[invalid] Workspace ws is not available: opening' (десятки вызовов за секунду). Код invalid не отличает временную недоступность от ошибки агента: нужен отдельный повторяемый код (например unavailable) или ожидание открытия области внутри вызова до таймаута. Воспроизведение: tools/Tasker.Stress --scenarios kill --client mix."
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-02T18:52:41.9167500+00:00
+updatedAt: 2026-10-02T20:11:39.5406800+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 100

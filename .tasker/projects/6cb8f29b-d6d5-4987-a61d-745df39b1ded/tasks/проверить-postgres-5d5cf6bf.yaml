@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 5d5cf6bf-ad75-457e-828b-8b4fbce1782b
+title: Проверить Postgres
+description: |-
+  Раздел бэклога: Данные и хранилища.
+
+  Всё проверялось на SQLite и файлах; на Postgres ни разу не запускалось.
+typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:13.1656790+00:00
+updatedAt: 2026-10-01T15:51:13.1656790+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 4

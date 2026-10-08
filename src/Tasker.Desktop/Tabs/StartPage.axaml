@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Tasker.Desktop.Tabs.StartPage"
+             Background="{DynamicResource PageBrush}">
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="440">
+        <Border Classes="startIcon" HorizontalAlignment="Center">
+            <PathIcon Width="28" Height="28"
+                      Data="M3 6.75C3 5.78 3.78 5 4.75 5H9.2c.46 0 .9.18 1.24.51L11.9 7h7.35c.97 0 1.75.78 1.75 1.75v8.5c0 .97-.78 1.75-1.75 1.75H4.75C3.78 19 3 18.22 3 17.25V6.75Z" />
+        </Border>
+        <TextBlock Classes="startTitle" Text="Откройте папку" HorizontalAlignment="Center" />
+        <TextBlock Classes="startHint" TextWrapping="Wrap" TextAlignment="Center"
+                   Text="Tasker хранит проекты и задачи в файлах внутри выбранной папки — в подпапке .tasker, рядом с кодом и под git." />
+        <Button x:Name="PickButton" Classes="accent startButton" HorizontalAlignment="Center" Margin="0,8,0,0"
+                Content="Выбрать папку…" />
+        <TextBlock x:Name="ErrorText" Classes="startError" TextWrapping="Wrap" TextAlignment="Center" IsVisible="False" />
+    </StackPanel>
+</UserControl>

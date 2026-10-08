@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 3e93c26e-8e8d-4f7a-a120-0ae4a6e137ff
+title: Упаковка
+description: |-
+  Раздел бэклога: Десктоп.
+
+  self-contained publish, установщик.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:22.9017260+00:00
+updatedAt: 2026-10-01T15:51:22.9017260+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 37

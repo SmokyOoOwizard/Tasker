@@ -1,0 +1,24 @@
+formatVersion: 9
+id: de3014d7-622d-4b84-ad21-3610057d3270
+title: Прогнать тесты демона и замену на лету на Linux (systemd)
+description: |
+  Проверить tasker mcp upgrade и DaemonUpgradeTests на Linux: в контейнере dotnet/sdk:10.0 CLI не загружает Microsoft.Extensions.Logging.Abstractions из каталога тестов (разобраться со сборкой), затем прогнать тесты и сценарий upgrade стенда; убедиться в поведении systemd (KillMode, Restart=always) с супервизором и рабочими. Связано с TSK-103.
+
+  ## Итог (TSK-111)
+
+  Проверено на Linux (Ubuntu 24.04, linux-arm64 нативно в Docker на Apple Silicon; `scripts/test-linux.sh`, раздел README «Linux»):
+  - Весь набор Tasker.Tests: 1885 тестов, 1874 пройдено, 0 упало, 11 пропущено (тесты Windows, `PlatformFact`). DaemonUpgradeTests 15/15, DaemonTests, ParallelWorkTests, AutostartTests, ServiceManagerTests проходят.
+  - Стенд tools/Tasker.Stress: сценарий upgrade и все сценарии (--clients 6 --ops 4) — «all invariants hold».
+  - Настоящий systemd --user в привилегированном контейнере (`scripts/test-linux-systemd.sh`): autostart enable/disable/status, tasker mcp start/stop через службу, замена на лету под службой, Restart=always после убийства супервизора, systemctl stop (SIGTERM всему cgroup, штатная остановка), все пункты ok.
+  - Наследование слушающего сокета (fcntl/ListenHandle), SIGTERM, фоновый запуск (setsid), daemon.lock работают.
+
+  Найдено и исправлено: (1) «CLI не находит Microsoft.Extensions.Logging.Abstractions» — общий каркас ASP.NET Core в тестах/стенде не пускал сборку пакета в выходной каталог (`tools/CopyConsoleDependencies.targets`); (2) без ~/.local/share данные Tasker искались в `/Tasker` (SpecialFolderOption.DoNotVerify, тест LinuxHomeTests); (3) `autostart enable` без сеанса systemd --user оставлял unit-файл и не подсказывал причину — теперь откат файла и подсказка.
+
+  Не проверено: linux-amd64 (в Docker Desktop на Apple Silicon образ amd64 не запускается: exec format error), перезагрузка/linger на настоящей машине, дистрибутивы без systemd — чек-лист «ПРОВЕРИТЬ НА LINUX С SYSTEMD» в README, продолжение — TSK-122.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T17:42:43.5305050+00:00
+updatedAt: 2026-10-07T21:42:28.9894420+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 111

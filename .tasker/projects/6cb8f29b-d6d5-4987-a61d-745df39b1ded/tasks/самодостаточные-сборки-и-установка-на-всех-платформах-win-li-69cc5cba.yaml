@@ -1,0 +1,46 @@
+formatVersion: 9
+id: 69cc5cba-4e01-42af-802d-2b7cc4308874
+title: Самодостаточные сборки и установка на всех платформах (win/linux/osx, x64/arm64)
+description: |
+  Сейчас устанавливается только на macOS: scripts/install-macos.sh публикует сборку в ~/.local (dotnet publish, нужен SDK), ставит launchd-агент и подключение автодополнения. Нужна поставка на Windows, Linux и macOS без установленного .NET.
+
+  РЕШЕНИЯ ПОЛЬЗОВАТЕЛЯ (общие для всей фичи «Windows, macOS и Linux»): Windows поддерживается обязательно и на равных с macOS и Linux; автозапуск демона на Windows — Планировщик задач Windows для текущего пользователя (без прав администратора, перезапуск при падении, запуск без окна); поставка на первом этапе — самодостаточные сборки (без установленного .NET) для win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64, osx-x64 и скрипты установки (install.ps1 для Windows, общий install.sh для macOS и Linux вместо install-macos.sh); winget/brew/apt — отдельными задачами позже; бесшовное обновление демона (TSK-103: супервизор и рабочие процессы, общий слушающий сокет) влито для macOS и Linux, на Windows демон пока однопроцессный (режим --single), `tasker mcp upgrade` на Windows работает как перезапуск до задачи про сокет.
+  ВАЖНО: основная машина разработки — macOS; проверить Windows локально нельзя. Нужен способ запускать сборку и тесты на Windows (CI-сервис, виртуальная машина или отдельная машина) — первая задача фичи (CI). Каждая Windows-задача считается готовой, только когда тесты ПРОХОДЯТ НА WINDOWS.
+
+  Что сделать: (1) САМОДОСТАТОЧНЫЕ СБОРКИ (`dotnet publish -r <rid> --self-contained`, по возможности single-file/trimmed без поломки рефлексии и source-gen JSON; проверить размер и время старта, ReadyToRun из TSK-92 не давал выигрыша — перепроверить) для win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64, osx-x64: `tasker` и `tasker-mcpd` (супервизор и рабочий процесс — один исполняемый файл с режимами, как в TSK-103), каталог для десктопа отдельно; архивы zip/tar.gz с контрольными суммами; единый скрипт сборки релиза (`scripts/release`), версия (сейчас версия вида `12ddb58+<sha>` — сделать понятный номер релиза), (2) СКРИПТЫ УСТАНОВКИ: `scripts/install.sh` для macOS и Linux (определение ОС и архитектуры, установка в `~/.local` (бинарь, `share/tasker`, автодополнение zsh/bash), включение автозапуска (launchd/systemd --user), флаги --prefix, --no-completion, --no-autostart, --uninstall, обновление через `tasker mcp upgrade`, как в нынешнем install-macos.sh, который заменяется) и `scripts/install.ps1` для Windows (установка в `%LOCALAPPDATA%\Programs\Tasker`, добавление в пользовательский PATH (без прав администратора, широковещательное уведомление о смене среды), автозапуск через Планировщик задач (задача про автозапуск), автодополнение PowerShell, --Uninstall, обновление); (3) `tasker self-update`/`tasker version` (источник релизов — выбрать: GitHub Releases или каталог; пока достаточно ручного обновления скриптом); (4) тесты установщиков в изолированном домашнем каталоге на каждой платформе (InstallScriptTests на Windows через PowerShell, на Linux через bash); (5) README: установка на трёх платформах одной командой, удаление, обновление; (6) пакетные менеджеры (winget, Homebrew, apt/deb, AUR) — отдельными задачами после этой.
+
+
+  ## СДЕЛАНО (macOS; Linux и Windows — см. ниже)
+
+  - `VERSION` + `Directory.Build.props`: номер релиза из файла, `tasker --version` его показывает (сборка из исходников: `+<коммит>`).
+  - `scripts/release.sh`: самодостаточные сборки `tasker` и `tasker-mcpd` (одна папка `app/`, ReadyToRun) для win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64, osx-x64; архивы `.tar.gz`/`.zip` (около 60 МБ), `.sha256` и `SHA256SUMS`. Единый файл и обрезка не используются (рефлексия Autofac/System.CommandLine/ASP.NET Core; два exe с дублем среды выполнения вдвое больше).
+  - `scripts/install.sh` (macOS и Linux) вместо `install-macos.sh`: `--from`, `--url` (с проверкой SHA256), `--from-source`, `--prefix`, `--no-autostart`, `--no-completion`, `--add-to-path`, `--restart`, `--uninstall`; автозапуск `tasker mcp autostart enable`; работающий демон — `tasker mcp upgrade`, при неудаче без молчаливого перезапуска (причина и подсказка `--restart`).
+  - `scripts/install.ps1` (Windows): `-From`, `-Url`, `-Prefix`, `-NoPath`, `-NoCompletion`, `-NoAutostart`, `-DryRun`/`-WhatIf`, `-Uninstall`; пользовательский PATH через реестр + WM_SETTINGCHANGE; только ASCII и PowerShell 5.1.
+  - Тесты: `InstallScriptTests` (+ `InstallScriptBundleTests`, `InstallScriptReleaseTests`) для install.sh и release.sh на macOS и Linux; `InstallPowerShellTests` — install.ps1 в pwsh (чистые функции и `-DryRun`).
+  - README и мануал `tasker manual install-daemon` обновлены. winget/Homebrew/apt — не делались (в README помечены как будущее). `tasker self-update` не делался (обновление — повтор установщика).
+
+  ## ПРОВЕРИТЬ НА WINDOWS (install.ps1 и архивы win-*; на Windows не запускалось)
+
+  Нужна Windows 10 1809+ (лучше чистая виртуальная машина или отдельная учётная запись: установщик меняет PATH, профили PowerShell и Планировщик). Архив `tasker-<версия>-win-x64.zip` (win-arm64 для ARM) собирает `scripts/release.sh --rid win-x64`. Без прав администратора.
+
+  1. Сухой прогон: `.\install.ps1 -DryRun` (и `-WhatIf`) в распакованном архиве печатает план `[dry-run] ...` и ничего не меняет: PATH прежний (`[Environment]::GetEnvironmentVariable('Path','User')`), нет задачи `Get-ScheduledTask -TaskName "Tasker MCP"`, нет папки `%LOCALAPPDATA%\Programs\Tasker`.
+  2. Windows PowerShell 5.1: `.\install.ps1` из распакованного архива. Нет ошибок разбора (файл ASCII), сообщение `Installed tasker 0.1.0`, файлы в `%LOCALAPPDATA%\Programs\Tasker\app` (`tasker.exe`, `tasker-mcpd.exe`). Если политика выполнения запрещает скрипт — записать, как запускать (`powershell -ExecutionPolicy Bypass -File .\install.ps1`). То же в PowerShell 7.
+  3. PATH: запись `...\Tasker\app` в пользовательском PATH ровно один раз; прежние записи не пострадали; `reg query HKCU\Environment /v Path` показывает REG_EXPAND_SZ, и `%USERPROFILE%`-записи остались неразвёрнутыми. Новое окно cmd, PowerShell, Windows Terminal и окно «Выполнить» (Win+R, cmd) видят `tasker` без выхода из системы (WM_SETTINGCHANGE); старое окно — нет (ожидаемо).
+  4. Повторный запуск идемпотентен: PATH не дублируется, у автодополнения `unchanged`, у автозапуска `already enabled`, папки `app.old` и `.staging-*` не остаются.
+  5. Автозапуск: `Get-ScheduledTask "Tasker MCP"` существует, `tasker mcp status` показывает работающий демон; после выхода из системы и входа демон поднят; без окна консоли (TSK-118).
+  6. Автодополнение: в профилях `Documents\PowerShell\...` и `Documents\WindowsPowerShell\...` один блок `# >>> tasker completion >>>`; в новом окне 5.1 и 7 работает Tab (`tasker ta<Tab>`). С `-NoCompletion` профили не тронуты.
+  7. Обновление при работающем демоне: `tasker mcp start`, затем `.\install.ps1` другой сборки (например, другой версии из `release.sh --version`): демон остановлен перед заменой и запущен снова (новый pid в `tasker mcp status`), нет «Access denied», `tasker --version` новый; задача Планировщика цела. Если в другом окне открыт `tasker`/`tasker-mcpd` из этой папки — сообщение понятное, прежняя установка не повреждена.
+  8. Источники: `-From архив.zip`, `-From папка`, `-Url` (локальный сервер: `python -m http.server` с `.zip` и `.zip.sha256`): неверная сумма — отказ, нет `.sha256` — отказ, с `-NoVerify` — предупреждение. Zip, скачанный браузером (Mark of the Web): после установки `tasker.exe` не вызывает SmartScreen (`Unblock-File`).
+  9. Имя пользователя с пробелом и кириллицей (`C:\Users\Иван Петров`): установка по умолчанию, `tasker --version`, `tasker mcp start`.
+  10. ARM64: на Windows ARM установщик берёт `win-arm64`; архив `win-x64` отклоняется сообщением `this build is for win-x64, but this machine is win-arm64` (решить, нужно ли разрешать x64 через эмуляцию).
+  11. Удаление `.\install.ps1 -Uninstall`: задача Планировщика удалена, демон остановлен, блок профилей убран, запись PATH убрана (остальные целы), папка `app` удалена, `%LOCALAPPDATA%\Tasker` (данные) на месте. Если открыт терминал в папке `app` — понятная ошибка, а не обрыв посередине.
+  12. Архив: `tasker --version` = версия из `VERSION`; `tasker-mcpd.exe --help`; холодный старт `tasker --version` порядка десятых долей секунды (ReadyToRun); Defender не удаляет exe.
+  13. `irm <адрес>/install.ps1 | iex` не поддерживается (нет `$PSScriptRoot`): проверить, что сообщение понятное; рабочий вариант — скачать файл и запустить с `-Url`.
+  14. `dotnet test` на Windows: `InstallPowerShellTests` (с `pwsh`) проходят; `InstallScriptTests` пропускаются.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T18:51:19.3967420+00:00
+updatedAt: 2026-10-07T21:43:51.3216250+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 120

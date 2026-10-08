@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 28fe1bc7-8d4b-486c-9d01-b88dacff8fd1
+title: Текст ошибок MCP
+description: |-
+  Раздел бэклога: Агенты и MCP.
+
+  SDK добавляет к тексту ошибки префикс `An error occurred invoking '<tool>':` — код (`[modified]` и т.п.) виден, но не в начале. Можно возвращать ошибку результатом инструмента без префикса.
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-01T15:51:17.3571810+00:00
+updatedAt: 2026-10-02T10:27:28.2558410+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 18

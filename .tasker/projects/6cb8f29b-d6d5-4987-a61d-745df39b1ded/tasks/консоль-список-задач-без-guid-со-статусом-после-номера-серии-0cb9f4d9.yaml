@@ -1,0 +1,11 @@
+formatVersion: 9
+id: 0cb9f4d9-df08-4854-bca1-e98f94bf6858
+title: 'Консоль: список задач без Guid, со статусом после номера серии'
+description: 'tasker task list (текст): не показывать Guid; после ссылки на серию (TSK-12) выводить текущий статус задачи, затем название. --json не меняется. Делает отдельный агент в своём worktree.'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-01T15:58:57.7597030+00:00
+updatedAt: 2026-10-01T16:50:58.5677480+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 60

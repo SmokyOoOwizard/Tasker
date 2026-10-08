@@ -1,0 +1,11 @@
+formatVersion: 9
+id: 5f7623bb-0f78-4752-9671-9451d25a2e14
+title: 'Удаление проекта во время создания задачи: необработанное InvalidOperationException (тип или набор статусов не найден)'
+description: "Найдено стендом tools/Tasker.Stress (сценарий delete-project): пока идёт tasker project delete, параллельные create_task и task create иногда падают с необработанным исключением: Task type ... of task ... not found (TaskService.GetFields через Describe) или Status set ... of task type ... not found. В MCP агент видит общее 'An error occurred invoking create_task', в консоли 'Unhandled exception'. Ожидание: [not_found] или [invalid] с понятным текстом. Воспроизведение: dotnet run --project tools/Tasker.Stress -- --scenarios delete-project --client mix. Воскрешение папки удалённого проекта уже исправлено в TSK-96."
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-02T18:52:40.0413180+00:00
+updatedAt: 2026-10-02T20:25:12.2111740+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 99

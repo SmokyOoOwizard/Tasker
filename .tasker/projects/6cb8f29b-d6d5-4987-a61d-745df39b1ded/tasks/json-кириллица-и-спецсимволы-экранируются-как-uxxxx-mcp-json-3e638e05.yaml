@@ -1,0 +1,16 @@
+formatVersion: 9
+id: 3e638e05-97af-499a-8ae4-4c4fba7f6e97
+title: 'JSON: кириллица и спецсимволы экранируются как \uXXXX (MCP, --json, REST)'
+description: |-
+  Кириллица в JSON экранируется как `\uXXXX` — и в ответах MCP, и в `--json` у CLI (заодно обратные кавычки и «ёлочки»). Ответ раздувается примерно в шесть раз и не читается: `list_tasks` на 3 задачи вернул около 25 КБ. Для агентов (токены) и людей (`tasker task get X --json` — нечитаемо) это серьёзно.
+
+  Причина: JsonSerializerDefaults.Web использует JavaScriptEncoder.Default, который экранирует всё вне базовой латиницы. Настройки сериализации заданы в нескольких местах: src/Tasker.Mcp/McpCall.cs (Json), src/Tasker.Cli/Context.cs (JsonOptions: Print, ToNode, списки), src/Tasker.Web/Auth/ModeRegistration.cs (ConfigureHttpJsonOptions — REST), также DaemonClient, WorkspaceEvents (SSE-события), SettingsStore, DaemonFiles.
+
+  Что сделать: JavaScriptEncoder.UnsafeRelaxedJsonEscaping (или Create(UnicodeRanges.All) с осознанным выбором: кириллица, обратные кавычки, «ёлочки», эмодзи не экранируются; `<`, `>`, `&` — решить; JSON остаётся валидным и безопасным для передачи как данные, не как HTML) — в одном общем месте (общие настройки в Tasker.Core или общий статический хелпер), чтобы не плодить копии; применить к MCP (в том числе схеме инструментов и структурированным результатам), --json консоли, REST, SSE-событиям. Проверить, что MCP SDK использует именно эти опции для результатов инструментов (если нет — настроить SerializerOptions у MCP-сервера), что клиенты (CLI через DaemonClient, интерфейс, тесты) разбирают ответы по-прежнему. Тесты: ответ MCP, `--json` и REST с кириллицей, кавычками-ёлочками, обратными кавычками, эмодзи, `<>&` содержат символы как есть (без \u) и разбираются обратно; размер ответа list_tasks на кириллических задачах уменьшился. README: упомянуть.
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-02T16:03:39.6516280+00:00
+updatedAt: 2026-10-02T16:37:24.4053160+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 88

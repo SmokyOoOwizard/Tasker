@@ -1,0 +1,168 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Tasker.Desktop.App"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="TitleBarBrush" Color="#DEE1E6" />
+                    <SolidColorBrush x:Key="TitleBarBorderBrush" Color="#C4C8CF" />
+                    <SolidColorBrush x:Key="TabActiveBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="TabHoverBrush" Color="#ECEEF1" />
+                    <SolidColorBrush x:Key="TabForegroundBrush" Color="#1F2328" />
+                    <SolidColorBrush x:Key="TabInactiveForegroundBrush" Color="#5A6270" />
+                    <SolidColorBrush x:Key="TabCloseHoverBrush" Color="#DDE0E5" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#2F6FEB" />
+                    <SolidColorBrush x:Key="PageBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#6B7280" />
+                    <SolidColorBrush x:Key="ErrorTextBrush" Color="#C62828" />
+                    <SolidColorBrush x:Key="StartIconBrush" Color="#EEF2FB" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="TitleBarBrush" Color="#1C1D20" />
+                    <SolidColorBrush x:Key="TitleBarBorderBrush" Color="#2E3035" />
+                    <SolidColorBrush x:Key="TabActiveBrush" Color="#2A2C31" />
+                    <SolidColorBrush x:Key="TabHoverBrush" Color="#25272B" />
+                    <SolidColorBrush x:Key="TabForegroundBrush" Color="#E7E8EB" />
+                    <SolidColorBrush x:Key="TabInactiveForegroundBrush" Color="#9AA1AC" />
+                    <SolidColorBrush x:Key="TabCloseHoverBrush" Color="#3A3D43" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#5B8DEF" />
+                    <SolidColorBrush x:Key="PageBrush" Color="#2A2C31" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#A0A6B0" />
+                    <SolidColorBrush x:Key="ErrorTextBrush" Color="#F28B82" />
+                    <SolidColorBrush x:Key="StartIconBrush" Color="#33363D" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- Строка заголовка с вкладками -->
+        <Style Selector="Border.titleBar">
+            <Setter Property="Background" Value="{DynamicResource TitleBarBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TitleBarBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+
+        <Style Selector="Border.tab">
+            <Setter Property="Height" Value="33" />
+            <Setter Property="Padding" Value="12,0,6,0" />
+            <Setter Property="CornerRadius" Value="8,8,0,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.tab:pointerover">
+            <Setter Property="Background" Value="{DynamicResource TabHoverBrush}" />
+        </Style>
+        <Style Selector="Border.tab.active">
+            <Setter Property="Background" Value="{DynamicResource TabActiveBrush}" />
+        </Style>
+        <Style Selector="Border.tab TextBlock.tabTitle">
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TabInactiveForegroundBrush}" />
+        </Style>
+        <Style Selector="Border.tab.active TextBlock.tabTitle">
+            <Setter Property="Foreground" Value="{DynamicResource TabForegroundBrush}" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+
+        <Style Selector="Button.tabClose">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TabInactiveForegroundBrush}" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Border.tab:pointerover Button.tabClose, Border.tab.active Button.tabClose">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.tabClose:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource TabCloseHoverBrush}" />
+        </Style>
+
+        <Style Selector="Button.titleBarButton">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="Light" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TabInactiveForegroundBrush}" />
+        </Style>
+        <Style Selector="Button.titleBarButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource TabHoverBrush}" />
+        </Style>
+
+        <Style Selector="Border.insertMarker">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="CornerRadius" Value="1.5" />
+        </Style>
+
+        <!-- Стартовая страница пустой вкладки -->
+        <Style Selector="Border.startIcon">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Background" Value="{DynamicResource StartIconBrush}" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style Selector="Border.startIcon PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="TextBlock.startTitle">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TabForegroundBrush}" />
+        </Style>
+        <Style Selector="TextBlock.startHint">
+            <Setter Property="FontSize" Value="13.5" />
+            <Setter Property="LineHeight" Value="20" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="TextBlock.startError">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+        </Style>
+        <Style Selector="Button.startButton">
+            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <!-- Фантом перетаскиваемой вкладки -->
+        <Style Selector="Border.ghostFrame">
+            <Setter Property="Background" Value="{DynamicResource TitleBarBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TitleBarBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="6,6,6,6" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+        <Style Selector="Border.ghostBody">
+            <Setter Property="Background" Value="{DynamicResource PageBrush}" />
+            <Setter Property="CornerRadius" Value="0,6,6,6" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Height" Value="116" />
+        </Style>
+    </Application.Styles>
+</Application>

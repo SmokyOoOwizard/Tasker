@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:tabs="using:Tasker.Desktop.Tabs"
+        x:Class="Tasker.Desktop.WorkspaceWindow"
+        Width="1280" Height="800" MinWidth="520" MinHeight="360"
+        WindowStartupLocation="Manual"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="40"
+        Background="{DynamicResource PageBrush}"
+        Title="Tasker">
+    <DockPanel>
+        <!-- Строка заголовка: вкладки вместо заголовка окна. Пустое место тянет окно (роль TitleBar). -->
+        <Border x:Name="TitleBar" DockPanel.Dock="Top" Height="40" Classes="titleBar">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border x:Name="LeftInset" Width="78" />
+                <Panel Grid.Column="1" ClipToBounds="True">
+                    <tabs:TabStripPanel x:Name="TabStrip" HorizontalAlignment="Left" Margin="0,6,0,0">
+                        <Button x:Name="NewTabButton" Classes="titleBarButton" Content="+" Margin="4,0,0,4" />
+                    </tabs:TabStripPanel>
+                    <Border x:Name="InsertMarker" Classes="insertMarker" Width="3" Margin="0,8,0,6"
+                            HorizontalAlignment="Left" IsVisible="False" IsHitTestVisible="False" />
+                </Panel>
+                <Border x:Name="RightInset" Grid.Column="2" Width="0" />
+            </Grid>
+        </Border>
+        <!-- Содержимое всех вкладок окна; видно только активное. WebView скрытых вкладок живут дальше. -->
+        <Panel x:Name="ContentHost" />
+    </DockPanel>
+</Window>

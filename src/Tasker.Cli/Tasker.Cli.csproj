@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>tasker</AssemblyName>
+    <!-- Скорость старта (TSK-92): процесс живёт доли секунды. Инструментирование PGO нижнего яруса JIT тут только тормозит; фоновая
+         сборка мусора не нужна (поток и его инициализация на каждый запуск). -->
+    <TieredPGO>false</TieredPGO>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Autofac" Version="8.2.1" />
+    <PackageReference Include="System.CommandLine" Version="2.0.12" />
+  </ItemGroup>
+
+  <!-- Страницы справочника `tasker manual`: Manual/<язык>/<тема>.md встраиваются в сборку как manual/<язык>/<тема>.md. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Manual\**\*.md" LogicalName="manual/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Скрипты автодополнения оболочек: их печатает `tasker completion <оболочка>`. Новая оболочка — новый файл и строка в Completion/Shells.cs. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Completion\Shells\*" LogicalName="Shells/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tasker.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tasker.Core\Tasker.Core.csproj" />
+    <ProjectReference Include="..\Tasker.Daemon\Tasker.Daemon.csproj" />
+    <ProjectReference Include="..\Tasker.Global\Tasker.Global.csproj" />
+    <ProjectReference Include="..\Tasker.Storage.Db\Tasker.Storage.Db.csproj" />
+    <ProjectReference Include="..\Tasker.Storage.Files\Tasker.Storage.Files.csproj" />
+  </ItemGroup>
+
+  <!-- Демон (tasker-mcpd) — отдельная программа: консольной утилите веб-слой не нужен, поэтому ссылки на него нет (ссылка на
+       exe-проект тянула бы в публикацию и его запускатель). Для разработки (dotnet run, отладка) собираем демон и кладём рядом
+       с tasker.dll: tasker ищет его в своём каталоге. В публикацию (dotnet publish, задан RuntimeIdentifier) это не попадает:
+       скрипт установки публикует демон отдельно. -->
+  <Target Name="CopyDaemonHostForDevelopment" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
+    <MSBuild Projects="..\Tasker.Daemon.Host\Tasker.Daemon.Host.csproj" Targets="Build" Properties="Configuration=$(Configuration)" />
+    <PropertyGroup>
+      <DaemonHostOutput>$(MSBuildThisFileDirectory)..\Tasker.Daemon.Host\bin\$(Configuration)\$(TargetFramework)\</DaemonHostOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <DaemonHostFiles Include="$(DaemonHostOutput)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DaemonHostFiles)" DestinationFolder="$(OutDir)%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

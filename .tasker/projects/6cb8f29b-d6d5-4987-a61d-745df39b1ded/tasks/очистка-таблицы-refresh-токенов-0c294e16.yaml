@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 0c294e16-f366-4847-b342-2b1f5fe6feaa
+title: Очистка таблицы refresh-токенов
+description: |-
+  Раздел бэклога: Агенты и MCP.
+
+  Использованные и истёкшие токены остаются в `refresh_tokens` навсегда — нужна периодическая чистка (например, фоновая задача раз в сутки).
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:17.9405890+00:00
+updatedAt: 2026-10-01T15:51:17.9405890+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 20

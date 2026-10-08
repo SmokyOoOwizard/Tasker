@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tasker.Cli/Tasker.Cli.csproj" />
+    <Project Path="src/Tasker.Configs/Tasker.Configs.csproj" />
+    <Project Path="src/Tasker.Core/Tasker.Core.csproj" />
+    <Project Path="src/Tasker.Daemon/Tasker.Daemon.csproj" />
+    <Project Path="src/Tasker.Daemon.Host/Tasker.Daemon.Host.csproj" />
+    <Project Path="src/Tasker.Desktop/Tasker.Desktop.csproj" />
+    <Project Path="src/Tasker.Global/Tasker.Global.csproj" />
+    <Project Path="src/Tasker.Mcp/Tasker.Mcp.csproj" />
+    <Project Path="src/Tasker.Server/Tasker.Server.csproj" />
+    <Project Path="src/Tasker.Storage.Db/Tasker.Storage.Db.csproj" />
+    <Project Path="src/Tasker.Storage.Files/Tasker.Storage.Files.csproj" />
+    <Project Path="src/Tasker.Web/Tasker.Web.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Tasker.Stress/Tasker.Stress.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tasker.Tests/Tasker.Tests.csproj" />
+  </Folder>
+</Solution>

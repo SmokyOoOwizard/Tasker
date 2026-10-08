@@ -1,0 +1,5 @@
+formatVersion: 9
+id: fd036b93-cccb-523f-96c7-bc61c9df16b7
+name: Duplicate
+outwardName: duplicates
+inwardName: is duplicated by

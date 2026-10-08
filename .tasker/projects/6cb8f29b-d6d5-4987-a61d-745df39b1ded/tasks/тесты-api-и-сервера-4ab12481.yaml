@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 4ab12481-0949-4503-9805-1dcff17b95d7
+title: Тесты API и сервера
+description: |-
+  Раздел бэклога: Качество.
+
+  Есть тесты CLI и рабочих областей (`tests/Tasker.Tests`), но сквозные проверки API — Python-скрипты вне репозитория. Перенести в тестовый проект (`WebApplicationFactory`, SQLite in-memory + временная папка для файлов) и запускать в CI.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:28.8861960+00:00
+updatedAt: 2026-10-01T15:51:28.8861960+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 57

@@ -1,0 +1,98 @@
+/* Поля, кнопки и сообщения — общие для экрана входа и настроек. */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.form-group input {
+  font-family: inherit;
+  padding: 0.8rem 1rem;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-500);
+  background: var(--surface-solid);
+  box-shadow: 0 0 0 4px var(--surface-tint-strong);
+}
+
+.form-group input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.button {
+  font-family: inherit;
+  padding: 0.85rem 1.4rem;
+  background: var(--accent-gradient);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 16px -6px rgba(99, 102, 241, 0.5);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button:disabled {
+  background: #dedcee;
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.error-message,
+.success-message {
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+}
+
+.error-message {
+  color: #be123c;
+  background: var(--accent-rose-tint);
+  border-left: 3px solid var(--accent-rose);
+}
+
+.success-message {
+  color: #0f766e;
+  background: var(--accent-teal-tint);
+  border-left: 3px solid var(--accent-teal);
+}

@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 3ec5d246-2866-4f4b-8648-61d023973cea
+title: Настоящие launchd и systemd в проверке
+description: |-
+  Раздел бэклога: Консоль.
+
+  Команды `launchctl` и `systemctl` и содержимое plist и unit покрыты тестами с подменой; на настоящих службах системы запуск при входе в систему и перезапуск при падении не проверялись.
+typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:26.8232920+00:00
+updatedAt: 2026-10-01T15:51:26.8232920+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 50

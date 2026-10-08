@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tasker.Tests" />
+  </ItemGroup>
+
+  <!-- Клиентская часть демона: файлы состояния, управление, службы автозапуска, отчёты о сериях. Без веб-слоя:
+       сам демон (ASP.NET Core) — отдельная программа Tasker.Daemon.Host, а консольная утилита и десктоп зависят только от этого проекта. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Tasker.Core\Tasker.Core.csproj" />
+    <ProjectReference Include="..\Tasker.Global\Tasker.Global.csproj" />
+    <ProjectReference Include="..\Tasker.Storage.Db\Tasker.Storage.Db.csproj" />
+    <ProjectReference Include="..\Tasker.Storage.Files\Tasker.Storage.Files.csproj" />
+  </ItemGroup>
+
+</Project>

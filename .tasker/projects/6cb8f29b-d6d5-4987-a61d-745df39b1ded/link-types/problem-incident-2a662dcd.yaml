@@ -1,0 +1,5 @@
+formatVersion: 9
+id: 2a662dcd-25da-c43b-9e10-23c08ed32383
+name: Problem/Incident
+outwardName: causes
+inwardName: is caused by

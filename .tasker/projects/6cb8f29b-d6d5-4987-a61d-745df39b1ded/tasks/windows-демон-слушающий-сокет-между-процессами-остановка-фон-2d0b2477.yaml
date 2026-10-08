@@ -1,0 +1,34 @@
+formatVersion: 9
+id: 2d0b2477-5b90-40a5-bf9c-82647c1eaa0f
+title: 'Windows: демон — слушающий сокет между процессами, остановка, фоновый запуск'
+description: |-
+  TSK-103 даёт бесшовное обновление демона на macOS и Linux (супервизор владеет слушающим сокетом, рабочие процессы наследуют его через Kestrel ListenHandle). На Windows демон остаётся однопроцессным (режим --single), `tasker mcp upgrade` работает как перезапуск: порт закрывается на несколько секунд. Нужен тот же уровень на Windows.
+
+  РЕШЕНИЯ ПОЛЬЗОВАТЕЛЯ (общие для всей фичи «Windows, macOS и Linux»): Windows поддерживается обязательно и на равных с macOS и Linux; автозапуск демона на Windows — Планировщик задач Windows для текущего пользователя (без прав администратора, перезапуск при падении, запуск без окна); поставка на первом этапе — самодостаточные сборки (без установленного .NET) для win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64, osx-x64 и скрипты установки (install.ps1 для Windows, общий install.sh для macOS и Linux вместо install-macos.sh); winget/brew/apt — отдельными задачами позже; бесшовное обновление демона (TSK-103: супервизор и рабочие процессы, общий слушающий сокет) влито для macOS и Linux, на Windows демон пока однопроцессный (режим --single), `tasker mcp upgrade` на Windows работает как перезапуск до задачи про сокет.
+  ВАЖНО: основная машина разработки — macOS; проверить Windows локально нельзя. Нужен способ запускать сборку и тесты на Windows (CI-сервис, виртуальная машина или отдельная машина) — первая задача фичи (CI). Каждая Windows-задача считается готовой, только когда тесты ПРОХОДЯТ НА WINDOWS.
+
+  Что сделать (разведка, затем реализация): (1) передача слушающего сокета рабочему процессу на Windows: у .NET Process.Start нельзя унаследовать произвольный дескриптор, поэтому варианты: Socket.DuplicateAndClose(targetProcessId) + new Socket(SocketInformation) / WSADuplicateSocket (протокольная информация по именованному каналу или аргументам), либо DuplicateHandle в процесс-приёмник и Kestrel ListenHandle по значению SOCKET; проверить на практике прототипом (с затвором «открыть/закрыть приём», как в TSK-103), оценить задержки и поведение очереди соединений (accept backlog) при смене процесса; если невозможно — запасной план: общий порт через SO_REUSEADDR/HTTP-прокси на localhost с минимальным простоем, и честное описание отличия; (2) остановка процессов: нет SIGTERM — использовать именованное событие/именованный канал «shutdown» от супервизора к рабочему и от `tasker mcp stop` к супервизору, `GenerateConsoleCtrlEvent` только как запасной путь, `Process.Kill` в последнюю очередь (drain активных вызовов до CascadeWait, как в TSK-103); (3) фоновый запуск без окна: CreateNoWindow, DETACHED_PROCESS/CREATE_NEW_PROCESS_GROUP, Job Object (завершение дочерних рабочих процессов при убийстве супервизора, но не при закрытии консоли), обработка закрытия окна консоли/выхода пользователя; (4) `mcp/daemon.lock` на Windows (FileShare.None, десктоп уступает порт — TSK-51), определение живого процесса по pid и имени (`Process.GetProcessById`, проверка времени старта), pid-файл; (5) брандмауэр: слушаем только 127.0.0.1 — запрос разрешения Windows Defender Firewall не должен появляться; (6) повтор команд управления (DaemonClient) и `/ready` на Windows; (7) тесты DaemonUpgradeTests/Daemon* на Windows в CI, стенд upgrade на Windows.
+
+  СДЕЛАНО (по коду, macOS/Linux): дизайн и чек-лист — README, «MCP-демон на Windows». Слушающий сокет передаётся дублированием WSADuplicateSocketW в hello (ListenerHandoff, WindowsSockets), порт на Windows исключительный; остановка — запрос /daemon/stop, затем именованное событие Local\tasker-mcp-stop-<хэш>, Kill только по совпавшему pid+времени старта; фон — CreateProcessW (NO_WINDOW, NEW_PROCESS_GROUP, BREAKAWAY, без наследования); Job Object KILL_ON_JOB_CLOSE для рабочих; UTF-8 в канале; супервизор на Windows выключен по умолчанию (TASKER_MCP_SUPERVISOR=1 или --supervised).
+
+  ПРОВЕРИТЬ НА WINDOWS (PowerShell; $env:TASKER_HOME = "$env:TEMP\tasker-check"; $env:TASKER_MCP_SUPERVISOR = "1"; tasker mcp port 5799; добавить область с проектом):
+  1. tasker mcp start — возвращается сразу, окна и запроса брандмауэра нет; tasker mcp status — один рабочий процесс.
+  2. /health и /ready (200) отвечают; netstat -ano | findstr :5799 — LISTENING только на 127.0.0.1; Get-Process tasker-mcpd — два процесса.
+  3. tasker mcp upgrade дважды — «replaced without downtime», pid рабочего другой, pid демона тот же.
+  4. dotnet run --project tools/Tasker.Stress -- --scenarios upgrade — все проверки ok.
+  5. Закрыть окно PowerShell, из которого запускали start — демон жив.
+  6. $out = tasker mcp start не зависает.
+  7. Stop-Process -Force супервизора — рабочий процесс исчез за секунду, повторный start поднимается без чистки.
+  8. tasker mcp stop — секунды, процессов нет, daemon.json удалён, в журнале «Stopping the MCP server», не «killed».
+  9. tasker mcp run + Ctrl+C и Ctrl+Break — штатная остановка.
+  10. Порт занят чужой программой — «Port 5799 is busy» через ~5 с, порт не перехвачен.
+  11. Без TASKER_MCP_SUPERVISOR — один процесс, upgrade = перезапуск с пояснением.
+  12. dotnet test tests/Tasker.Tests --filter "FullyQualifiedName~Daemon" — проходят DaemonWindowsTests.Windows_* и DaemonUpgradeTests.
+  Полный текст чек-листа — README, «ПРОВЕРИТЬ НА WINDOWS».
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T18:51:18.5795100+00:00
+updatedAt: 2026-10-07T20:28:54.7180600+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 117

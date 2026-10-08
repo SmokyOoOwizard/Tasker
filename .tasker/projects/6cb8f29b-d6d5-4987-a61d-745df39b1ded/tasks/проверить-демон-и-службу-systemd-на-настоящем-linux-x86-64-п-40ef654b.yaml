@@ -1,0 +1,11 @@
+formatVersion: 9
+id: 40ef654b-2c0b-4c44-85f0-e6d164e58b5e
+title: Проверить демон и службу systemd на настоящем Linux (x86_64, перезагрузка, linger)
+description: 'Продолжение TSK-111: на Linux в контейнере (arm64, systemd --user) всё проверено, не проверено — настоящая машина или виртуалка x86_64: автозапуск после перезагрузки с linger и без, enable по sudo -u/ssh без сеанса (сообщение с подсказкой), дистрибутивы без systemd, scripts/test-linux.sh --platform linux/amd64 (под эмуляцией Docker Desktop на Apple Silicon образ amd64 не запускается: exec format error). Чек-лист — README, «ПРОВЕРИТЬ НА LINUX С SYSTEMD».'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-07T21:41:44.6133240+00:00
+updatedAt: 2026-10-07T21:41:44.6133240+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 122

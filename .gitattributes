@@ -1,0 +1,3 @@
+# Tasker data files are always LF in the working tree, whatever core.autocrlf says (Windows):
+# a version of an entity is a hash of its file, and a diff of a file with changed line endings is a diff of every line.
+/.tasker/** text eol=lf

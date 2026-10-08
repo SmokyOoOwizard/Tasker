@@ -1,0 +1,11 @@
+formatVersion: 9
+id: bcdd7349-65cc-42a0-a239-875b17f96c0c
+title: Тесты демона и установки зависят от свободного порта 5719
+description: 'Когда на машине работает настоящий демон MCP (порт 5719 по умолчанию, автозапуск launchd), падают DaemonLauncherTests.Tasker_without_the_daemon_next_to_it_says_so_instead_of_failing_obscurely, InstallScriptTests.Install_upgrade_and_uninstall_work_end_to_end и InstallScriptTests.Without_the_daemon_only_the_command_line_tool_is_installed: mcp start в изолированном TASKER_HOME видит чужой демон на дефолтном порту. Нужно задавать каждому такому тесту свободный порт (как делает DaemonFixture) через настройки изолированного каталога.'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-01T16:03:45.7234150+00:00
+updatedAt: 2026-10-02T10:31:29.1210730+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 61

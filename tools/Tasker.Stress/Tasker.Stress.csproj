@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Стенд параллельной работы: десять и более клиентов (консоль, MCP, смесь) в одной рабочей области. Запуск — README, «Параллельная работа». -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>tasker-stress</AssemblyName>
+    <RootNamespace>Tasker.Stress</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Клиенты-консоль запускаются настоящими процессами: tasker.dll и tasker-mcpd лежат рядом с этой программой (как у тестов). -->
+    <ProjectReference Include="..\..\src\Tasker.Cli\Tasker.Cli.csproj" />
+    <ProjectReference Include="..\..\src\Tasker.Daemon.Host\Tasker.Daemon.Host.csproj" />
+  </ItemGroup>
+
+  <!-- Докладывает в каталог стенда сборки консоли, которых там нет (иначе на Linux `dotnet tasker.dll` падает, TSK-111). -->
+  <Import Project="..\CopyConsoleDependencies.targets" />
+
+</Project>
