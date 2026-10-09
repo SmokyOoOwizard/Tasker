@@ -1,0 +1,21 @@
+formatVersion: 9
+id: 6f4f62be-4597-4382-ae0c-fc4cafcb7968
+title: 'Rust, фаза 2: сервисы домена (Project, Status, TaskType, Field, Board, Task, Series, Links, LinkType, EditLock, Cleanup, Health, Usages)'
+description: |-
+  Фаза 2 плана docs/rust-migration-plan.md, п. 3. Сервисы синхронные (без async в домене).
+
+  Project, Status, StatusSet, TaskType (каскады Clear/Keep), Field/FieldEnum/FieldConversion (смена типа, множественности, перечисления), Board/ColumnFilters (взаимоисключающие условия колонок), Task (Create/Update/Delete, фильтры полей со сравнениями, дерево иерархии до глубины 10 и 5000 строк), Series (нумерация под Exclusive, Renumber), TaskLink/LinkCycles (BFS и Тарьян, лимит 20 000), LinkType (дефолтные типы с детерминированными id: MD5 + Uuid::from_bytes_le, как Guid(byte[]) в .NET), EditLock (2 мин, ожидание 30 с), Cleanup, SeriesHealth/LinkHealth, Usages (единый текст 409).
+
+  Критерий: Rust-тесты уровня сервисов повторяют сценарии SeriesCoreTests, TaskFieldsTests, LinkCoreTests, LinkCycleTests, EditLockTests, FieldCatalogTests (~250 тестов).
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:28.4320490+00:00
+updatedAt: 2026-10-09T11:34:35.4010760+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 132
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: f8fdced8-1d08-44d7-a25a-20f9d31c8bf6
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: a10596a5-05b4-4144-8a5c-9cf9ab1ea977

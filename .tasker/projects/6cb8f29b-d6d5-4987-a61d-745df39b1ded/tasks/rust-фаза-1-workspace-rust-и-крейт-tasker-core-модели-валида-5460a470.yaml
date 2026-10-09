@@ -1,0 +1,23 @@
+formatVersion: 9
+id: 5460a470-6fbe-4c87-a056-f06e185b86a8
+title: 'Rust, фаза 1: workspace rust/ и крейт tasker-core — модели, валидация, ShortId, Versioning, JSON, FieldValues, настройки'
+description: |-
+  Фаза 1 плана docs/rust-migration-plan.md, п. 1 и 5.
+
+  Создать Cargo workspace rust/ (Cargo.toml с общим release-профилем: lto fat, codegen-units 1, opt-level s, panic abort, strip) и крейт tasker-core: модели сущностей (проект, задача, тип, статус, набор статусов, серия, поле, перечисление, доска, тип связи, пользователь, агент), Validate, ShortId, TaskReference (PREFIX-N и короткий id), Versioning (первые 16 hex SHA-256 от байтов файла с CRLF→LF без BOM), конвенции JSON TaskerJson (serde_json + свой Formatter: сырые не-ASCII, экранируются только ", \, < 0x20, 0x7F–0x9F, U+2028/2029, одиночные суррогаты), канонизация значений полей FieldValues (007→7, float как R, даты yyyy-MM-dd).
+
+  Настройки: settings.json (userName, mcp.port, mcp.workspaces[{kind,path}]), settings.lock, каталог данных (TASKER_HOME, ~/Library/Application Support/Tasker, $XDG_DATA_HOME/Tasker, %LOCALAPPDATA%\Tasker), UserPath (~), разбор TASKER_* и аргументов с подсказками по опечаткам (Дамерау–Левенштейн).
+
+  Критерий: версии сущностей по golden-корпусу совпадают с эталоном; unit-тесты JSON-экранирования и FieldValues.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:27.3600210+00:00
+updatedAt: 2026-10-09T11:34:33.5570860+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 128
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: aee7ed03-3120-45e1-bff3-3ea9e8bfd308
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 64f62036-77bc-4dfa-a4e6-1a3005b74ddb

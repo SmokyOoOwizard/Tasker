@@ -1,0 +1,19 @@
+formatVersion: 9
+id: d37d447b-24d7-4c12-afa0-57d14bea9bd2
+title: 'Rust, фаза 4: супервизор и воркер — --listen-fd, NDJSON-протокол, AcceptGate, дренаж, backoff, upgrade с require'
+description: |-
+  Фаза 4 плана docs/rust-migration-plan.md, п. 3 и раздел 3.3. Ключ к бесшовному переходу: .NET-супервизор по tasker mcp upgrade запускает Rust-воркер, порт не закрывается.
+
+  Сокет без FD_CLOEXEC и --worker --listen-fd N (tokio TcpListener::from_std), протокол NDJSON по stdin/stdout с префиксом @tasker у строк воркера и сообщениями hello/ready/activate/active/drain/stop/workers/request/reply, AcceptGate (accept только при открытых воротах, Connection: close при дренаже, 503 + Retry-After: 1 в фазе закрытия), перезапуск с backoff 0/1/2/5/10 с и лимитом 5 падений в минуту, upgrade с проверкой require, таймауты дренажа TASKER_MCP_DRAIN_*. Windows (не проверено): Job Object, WSADuplicateSocketW и listenSocket: "wsa:<base64>", --supervised / TASKER_MCP_SUPERVISOR. tasker mcp run (foreground).
+
+  Критерий: DaemonTests, DaemonUpgradeTests, ParallelWorkTests проходят с Rust-бинарниками; тест в Docker: .NET-демон под systemd → upgrade на Rust-воркер без закрытия порта; tools/Tasker.Stress на смешанных клиентах (Rust-консоль + Rust-демон + .NET-десктоп REST) не находит нарушений.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:30.3194430+00:00
+updatedAt: 2026-10-09T11:34:36.5522730+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 139
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: b42508eb-88cb-47e4-a7a5-e5f840c6852e

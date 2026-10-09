@@ -1,0 +1,19 @@
+formatVersion: 9
+id: f8fdced8-1d08-44d7-a25a-20f9d31c8bf6
+title: 'Rust, фаза 3: каркас консоли tasker — clap, Session, Context, таблицы, --json, коды выхода, тексты ошибок'
+description: |-
+  Фаза 3 плана docs/rust-migration-plan.md, п. 1. Крейт tasker-cli, синхронный код без tokio.
+
+  clap builder API (дерево команд по одной ветке, как CliApp.BuildRoot), глобальные опции (-w, --sqlite с явной ошибкой «используйте .NET-сборку», -p, --json, -q, --truncate/--no-truncate/--width), Session (открытие области, проверка папки, TASKER_PROJECT и единственный проект), Context (таблицы с выравниванием, обрезка по ширине, --json без отступов, строка Found N, shown a-b, коды выхода 0/1/2/3, тексты ошибок Not found: / In use: / Locked: / Modified by someone else:), терминал и ширина (COLUMNS/LINES под watch), UTF-8 на Windows, тексты справки.
+
+  Критерий: справка и ошибки совпадают со снапшотами фазы 0 построчно.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:28.9747430+00:00
+updatedAt: 2026-10-09T11:34:34.9399580+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 134
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 782f0568-354a-47cb-8b34-d24e2897f736

@@ -1,0 +1,23 @@
+formatVersion: 9
+id: 3b4aac13-1f14-4862-97e2-65c0cd1cefe7
+title: 'Rust, фаза 2: индекс index-rs.db — схема, Sync по (size, mtime), Refresh, сортировки'
+description: |-
+  Фаза 2 плана docs/rust-migration-plan.md, п. 1–2. Решение: вариант (Б) — свой файл .cache/index-rs.db и своя блокировка index-rs.lock; общий с .NET только write.lock и YAML как источник истины.
+
+  rusqlite (bundled). Своя схема таблиц (data можно упростить до компактного JSON), Sync по (size, mtime), Refresh путей, ошибки чтения в колонке error, полный пересбор при повреждении. Инвариант нумерации серий: max(number) считается после Refresh(tasks/) под write.lock.
+
+  Сортировки как WorkspaceIndex.Sort: бинарная коллация, ранги типов/статусов, числовой порядок серий, lower() как ToLowerInvariant, NULL в конец.
+
+  Критерий: sync и cleanup --check на golden-корпусе дают тот же отчёт, что .NET; порядок task list --sort совпадает со снапшотами.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:28.1627480+00:00
+updatedAt: 2026-10-09T11:34:34.4836130+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 131
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 6f4f62be-4597-4382-ae0c-fc4cafcb7968
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: facf17df-4c20-4ad9-a777-7fc0cc216dcc

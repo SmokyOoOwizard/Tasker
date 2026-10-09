@@ -1,0 +1,21 @@
+formatVersion: 9
+id: 8cfba064-8c6e-4749-badf-170c29b979e3
+title: 'Rust, фаза 0: сквозные тесты с переключаемым бинарником (TASKER_BIN, TASKER_MCPD_BIN)'
+description: |-
+  Фаза 0 плана docs/rust-migration-plan.md, п. 3.
+
+  Сделать существующие сквозные тесты в tests/Tasker.Tests запускаемыми против любого бинарника: в TestWorkspace / TaskerProcess / DaemonFixture добавить переменные TASKER_BIN и TASKER_MCPD_BIN (сейчас запускают dotnet tasker.dll). Без переменных поведение прежнее.
+
+  Составить список тестов, идущих через CliApp.Run в процессе (BoardConsoleTests, FieldCliTests, …) — для Rust они не годятся; самые ценные перевести на запуск процесса, остальные пометить (категория/трейт) как .NET-only, чтобы прогон с TASKER_BIN их пропускал. Это самая дешёвая проверка паритета: ~840 тестов уже написаны.
+
+  Критерий: dotnet test с TASKER_BIN=<путь к текущему .NET tasker> проходит так же, как без переменной.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:26.5683780+00:00
+updatedAt: 2026-10-09T11:34:32.8583760+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 125
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 782f0568-354a-47cb-8b34-d24e2897f736

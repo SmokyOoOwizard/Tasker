@@ -1,0 +1,19 @@
+formatVersion: 9
+id: 782f0568-354a-47cb-8b34-d24e2897f736
+title: 'Rust, фаза 3: команды консоли (task, project, status, status-set, task-type, series, field, enum, board, link-type, lock, whoami, user, agent, sync, cleanup, migrate, hooks, manual, mcp)'
+description: |-
+  Фаза 3 плана docs/rust-migration-plan.md, п. 2. Команды по одной, в порядке частоты использования: task (create/list/get/update/delete/link/unlink/links/import), project, status, status-set, task-type, series, field, enum, board, link-type, lock, whoami, user, agent, sync, cleanup, migrate, hooks install, manual (встроенные md через include_str!), mcp (клиентская часть: DaemonClient по daemon.json через ureq, запуск отсоединённого процесса, автозапуск, mcp status с кодом 3).
+
+  Rust-консоль должна уметь управлять .NET-демоном по тем же daemon.json и /daemon/*, чтобы её можно было отдать пользователям раньше демона.
+
+  Критерий: сквозные тесты фазы 0 проходят с TASKER_BIN=rust; --json совпадает со снапшотами строго, текст — построчно.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:29.2411250+00:00
+updatedAt: 2026-10-09T11:34:35.1671480+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 135
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 3a989b35-c29a-4428-9738-7021cd62247c

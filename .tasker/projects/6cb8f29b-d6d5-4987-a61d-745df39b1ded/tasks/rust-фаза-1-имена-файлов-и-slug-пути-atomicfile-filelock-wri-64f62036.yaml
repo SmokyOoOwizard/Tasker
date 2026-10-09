@@ -1,0 +1,23 @@
+formatVersion: 9
+id: 64f62036-77bc-4dfa-a4e6-1a3005b74ddb
+title: 'Rust, фаза 1: имена файлов и slug, пути, AtomicFile, FileLock, WriteScope, блокировки правки, tasker migrate'
+description: |-
+  Фаза 1 плана docs/rust-migration-plan.md, п. 3, 4, 6.
+
+  Имена файлов <slug>-<id8>.yaml и legacy <guid>.yaml: slug — NFC, только категории L* и Nd (через unicode-general-category, не char::is_alphabetic), ToLowerInvariant как в .NET (посимвольное отображение без спец-правил, тест на İ, умляуты, кириллицу, эмодзи, комбинируемые знаки), не более 60 UTF-16-единиц. WindowsNames, PathRules, CanonicalPath, PathBudget (предупреждение о длине пути).
+
+  AtomicFile (<path>.tmp → rename, без fsync), FileLock (flock LOCK_EX, повторы 1→5 мс до 30 с, реентерабельность в потоке; повторы открытия — только Windows), WriteScope с порядком захвата write.lock → семафор файла → index-rs.lock. Блокировки правки .cache/edit-locks/<Entity>-<guid>.json в PascalCase JSON. Маркеры .cache/deleted-projects/<id>, дописывание .tasker/.gitignore.
+
+  Команда tasker migrate целиком (первая команда, проверяемая на реальной области): переписывает formatVersion и переименовывает файлы в схему <slug>-<id8>.yaml; migrate --check с кодом выхода 2.
+
+  Критерий: migrate на копии golden-корпуса даёт те же файлы (имена и байты), что .NET; тест slug по корпусу строк.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:27.8974510+00:00
+updatedAt: 2026-10-09T11:34:34.0171550+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 130
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 3b4aac13-1f14-4862-97e2-65c0cd1cefe7

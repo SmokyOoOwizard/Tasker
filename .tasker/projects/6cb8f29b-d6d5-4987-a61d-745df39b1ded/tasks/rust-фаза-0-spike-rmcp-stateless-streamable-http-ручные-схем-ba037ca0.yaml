@@ -1,0 +1,22 @@
+formatVersion: 9
+id: ba037ca0-e2f5-44e0-bc39-eec9fc7035f8
+title: 'Rust, фаза 0: spike rmcp (stateless Streamable HTTP, ручные схемы) и собственного YAML-эмиттера'
+description: |-
+  Фаза 0 плана docs/rust-migration-plan.md, раздел 8 п. 4 и риск «зрелость rmcp».
+
+  1. rmcp: поднять эхо-сервер на Streamable HTTP в stateless-режиме, добавить инструмент с вручную собранной inputSchema (нужно добавлять аргумент workspace и убирать projectId из required), проверить claude mcp add и tools/list. Если stateless или ручные схемы не даются — зафиксировать решение: свой JSON-RPC-слой поверх axum (протокол небольшой).
+  2. YAML-эмиттер: на эталонах YamlDotNet из задачи golden-корпуса убедиться, что плоская схема файлов .tasker воспроизводится собственным эмиттером байт в байт дешевле, чем подгонка saphyr/serde_yaml. Набросок API эмиттера.
+
+  По дню на каждый. Итог (выбранные крейты, версии, ограничения) записать в описание задачи и при необходимости поправить план.
+typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:27.1002230+00:00
+updatedAt: 2026-10-09T11:34:32.6266860+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 127
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: aee7ed03-3120-45e1-bff3-3ea9e8bfd308
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 5ef054ed-73dc-4903-8006-73d39d71818f

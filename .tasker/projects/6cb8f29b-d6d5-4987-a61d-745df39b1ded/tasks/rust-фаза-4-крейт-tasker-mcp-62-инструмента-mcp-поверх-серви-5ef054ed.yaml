@@ -1,0 +1,19 @@
+formatVersion: 9
+id: 5ef054ed-73dc-4903-8006-73d39d71818f
+title: 'Rust, фаза 4: крейт tasker-mcp — 62 инструмента MCP поверх сервисов, фильтры workspace/projectId, коды ошибок, экранирование'
+description: |-
+  Фаза 4 плана docs/rust-migration-plan.md, п. 2 и раздел 3.4. По итогам spike — rmcp или свой JSON-RPC-слой.
+
+  Streamable HTTP, stateless, /mcp, только loopback; аргумент workspace у всех инструментов кроме list_workspaces; projectId необязателен при одном проекте (DefaultProject); X-Tasker-Agent и локальный агент; коды [invalid] [forbidden] [not_found] [modified] [locked] [unsupported_format] [in_use] [unavailable] [failed] в начале текста ошибки и isError: true; экранирование на проводе как WireJson (сырой UTF-8).
+
+  Критерий: снапшот tools/list совпадает с эталоном фазы 0 (имена, описания, схемы); *McpTests проходят с TASKER_MCPD_BIN=rust.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:30.0490660+00:00
+updatedAt: 2026-10-09T11:34:36.3222760+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 138
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: d37d447b-24d7-4c12-afa0-57d14bea9bd2

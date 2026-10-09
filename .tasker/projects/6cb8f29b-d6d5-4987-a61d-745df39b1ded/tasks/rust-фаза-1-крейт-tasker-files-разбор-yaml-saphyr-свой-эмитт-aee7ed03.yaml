@@ -1,0 +1,19 @@
+formatVersion: 9
+id: aee7ed03-3120-45e1-bff3-3ea9e8bfd308
+title: 'Rust, фаза 1: крейт tasker-files — разбор YAML (saphyr), свой эмиттер байт в байт, formatVersion'
+description: |-
+  Фаза 1 плана docs/rust-migration-plan.md, п. 2.
+
+  Разбор YAML файлов .tasker через saphyr в модели tasker-core с игнорированием неизвестных ключей. Собственный эмиттер, повторяющий YamlDotNet 18.1: LF, UTF-8 без BOM, camelCase, порядок ключей и пропуск null/false/пустых списков как в Storages/*File.cs, последовательности под ключом без отступа, многострочные строки литеральным блоком |/|-, кавычки только у строк, которые иначе прочитались бы как число/bool/null ('007', 'true'), DateTimeOffset в формате O (7 знаков, +00:00), Guid в форме D. formatVersion: 9 первой строкой; файлы новее не читать; старые читать с апгрейдом в памяти (замена номера).
+
+  Критерий: для каждого файла golden-корпуса parse → emit даёт идентичные байты (кроме файлов старых версий — там совпадение с эталоном после апгрейда).
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:27.6294730+00:00
+updatedAt: 2026-10-09T11:34:33.7869270+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 129
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 64f62036-77bc-4dfa-a4e6-1a3005b74ddb

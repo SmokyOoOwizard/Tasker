@@ -1,0 +1,17 @@
+formatVersion: 9
+id: 3a989b35-c29a-4428-9738-7021cd62247c
+title: 'Rust, фаза 3: автодополнение ([suggest], источники, встроенные скрипты), PerfTrace, размер и скорость бинарника'
+description: |-
+  Фаза 3 плана docs/rust-migration-plan.md, п. 3–4. Директива [suggest] и источники подсказок (как Sources.cs: проекты, задачи по префиксу, статусы, типы, поля…), существующие скрипты tasker.bash/zsh/ps1/fish встраиваются как есть через include_str! и печатаются tasker completion <shell> байт в байт. PerfTrace (TASKER_PROFILE=1), чтобы scripts/perf/bench.py работал без изменений.
+
+  Критерий: bench.py calls показывает целевые времена (единицы-десятки мс на вызов); бинарник статически слинкован и весит единицы МБ; сравнить с базовой линией фазы 0 и записать числа.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:29.5141990+00:00
+updatedAt: 2026-10-09T11:34:36.7766290+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 136
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 18ecf266-3362-49b8-bb5d-22dd39374c58

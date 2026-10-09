@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 18ecf266-3362-49b8-bb5d-22dd39374c58
+title: 'Rust, фаза 5: сборка и релиз — release.sh на cargo, кросс-сборка, install.sh/install.ps1, VERSION через build.rs'
+description: 'Фаза 5 плана docs/rust-migration-plan.md, п. 1–2. scripts/release.sh: cargo build --release --target … вместо dotnet publish; кросс-сборка cargo-zigbuild для Linux/macOS либо матрица GitHub Actions (для windows-msvc надёжнее вторая); цели x86_64/aarch64-unknown-linux-gnu (musl — бонус), aarch64/x86_64-apple-darwin, x86_64/aarch64-pc-windows-msvc. Архив тот же: app/tasker, app/tasker-mcpd, install.sh, release.txt; VERSION читается build.rs. install.sh/install.ps1: убрать --framework-dependent, --from-source собирает cargo; раскладка <prefix>/share/tasker/app и ссылка <prefix>/bin/tasker не меняются, обновление — обычный install.sh --from.'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:30.8606840+00:00
+updatedAt: 2026-10-09T11:34:37.2295700+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 141
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: d25ccb81-c05b-4d3b-8cbb-861b13490c0c

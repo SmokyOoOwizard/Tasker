@@ -1,0 +1,59 @@
+formatVersion: 9
+id: d70d5e23-3290-4e09-8ca9-61d89da29a54
+title: Перевод консоли tasker и демона tasker-mcpd на Rust (эпик)
+description: |-
+  Эпик по плану docs/rust-migration-plan.md. Цель: убрать время запуска .NET (60–230 мс на вызов) и размер релиза (папка app/ со средой выполнения). Ориентир: tasker task get за единицы-десятки мс, два статически слинкованных бинарника по 3–8 МБ.
+
+  Границы: переносятся Tasker.Cli, Tasker.Daemon.Host, Tasker.Daemon (клиент), Tasker.Mcp, Tasker.Core, Tasker.Storage.Files, Tasker.Global/Configs и часть Tasker.Web (реестр областей) — около 25 тыс. строк C#. Десктоп и сервер остаются на .NET, поэтому в переходный период два движка работают над одной папкой .tasker и всё на диске и в локальных протоколах должно совпадать байт в байт (раздел 3 плана).
+
+  Cargo workspace rust/ с крейтами tasker-core, tasker-files, tasker-mcp, tasker-daemon, tasker-cli, tasker-mcpd. Фазы 0–6 — дочерние задачи. Решения по объёму (раздел 1): режим --sqlite в Rust не поддерживается в первом релизе (явная ошибка «используйте .NET-сборку»), Windows переносится в тех же фазах с пометкой «не проверено», индекс — свой файл .cache/index-rs.db (вариант Б).
+
+  Поведение по ходу переноса не меняем (раздел 6): только перенос; найденные golden-тестами баги и идеи улучшений — отдельными задачами.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:26.0624330+00:00
+updatedAt: 2026-10-09T11:34:31.4657450+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 123
+links:
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: e1da176e-f587-4ceb-827d-0f3c4ed84ef7
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 8cfba064-8c6e-4749-badf-170c29b979e3
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 15257595-2dc8-40e8-8e9e-90c65f7d16f5
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: ba037ca0-e2f5-44e0-bc39-eec9fc7035f8
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 5460a470-6fbe-4c87-a056-f06e185b86a8
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: aee7ed03-3120-45e1-bff3-3ea9e8bfd308
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 64f62036-77bc-4dfa-a4e6-1a3005b74ddb
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 3b4aac13-1f14-4862-97e2-65c0cd1cefe7
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 6f4f62be-4597-4382-ae0c-fc4cafcb7968
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: facf17df-4c20-4ad9-a777-7fc0cc216dcc
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: f8fdced8-1d08-44d7-a25a-20f9d31c8bf6
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 782f0568-354a-47cb-8b34-d24e2897f736
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 3a989b35-c29a-4428-9738-7021cd62247c
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: a10596a5-05b4-4144-8a5c-9cf9ab1ea977
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 5ef054ed-73dc-4903-8006-73d39d71818f
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: d37d447b-24d7-4c12-afa0-57d14bea9bd2
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: b42508eb-88cb-47e4-a7a5-e5f840c6852e
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 18ecf266-3362-49b8-bb5d-22dd39374c58
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: d25ccb81-c05b-4d3b-8cbb-861b13490c0c
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 603a9c63-f604-429e-84c7-7610e4abee2a

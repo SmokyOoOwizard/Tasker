@@ -1,0 +1,17 @@
+formatVersion: 9
+id: d25ccb81-c05b-4d3b-8cbb-861b13490c0c
+title: 'Rust, фаза 5: сценарий обновления у пользователя с работающим .NET-демоном, документация, параллельный релиз'
+description: |-
+  Фаза 5 плана docs/rust-migration-plan.md, п. 3–5. Сценарий: install.sh кладёт Rust-бинарники → tasker mcp upgrade (новая Rust-консоль, старый .NET-супервизор) → супервизор запускает tasker-mcpd --worker --listen-fd N (Rust), проверяет ready и require, активирует, дренирует старый воркер; супервизор остаётся .NET до первого mcp restart. Проверить тестом в Docker (на базе test-linux-systemd.sh).
+
+  Документация: wiki Разработка (Rust toolchain вместо .NET SDK для консоли и демона), Установка, Платформы (musl/Alpine, нет требования ICU), README (размер и скорость). Решить, нужен ли один-два релиза с .NET-консолью в архиве как tasker-dotnet (только если фаза 0 выявила зоны риска).
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:31.1288400+00:00
+updatedAt: 2026-10-09T11:34:37.4571640+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 142
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 603a9c63-f604-429e-84c7-7610e4abee2a

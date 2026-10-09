@@ -1,0 +1,17 @@
+formatVersion: 9
+id: b42508eb-88cb-47e4-a7a5-e5f840c6852e
+title: 'Rust, фаза 4: автозапуск демона — launchd plist, systemd unit, Планировщик заданий байт в байт'
+description: |-
+  Фаза 4 плана docs/rust-migration-plan.md, п. 4. Крейт tasker-daemon: autostart enable/disable/status для launchd (plist), systemd (unit с тем же квотированием), Планировщика заданий Windows (XML UTF-16 LE с BOM, conhost --headless; не проверено). Файлы генерировать дословно как сейчас: autostart enable на уже стоящей службе должен давать байт-идентичный файл.
+
+  Критерий: scripts/test-linux-systemd.sh проходит с Rust-бинарниками; сравнение сгенерированных файлов с .NET-версией в тесте.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T11:34:30.5857740+00:00
+updatedAt: 2026-10-09T11:34:37.0044160+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 140
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 18ecf266-3362-49b8-bb5d-22dd39374c58
