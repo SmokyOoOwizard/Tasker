@@ -1,8 +1,9 @@
 //! `tasker cleanup [--resolve-conflicts] [--dry-run] [--check]` (`CleanupCommands` в .NET): единственная команда, которая правит
 //! данные серий и связей после слияния веток git. Работает напрямую с рабочей областью.
-use super::{id, ids, object, opt_id, opt_str, sync::prefix_conflicts_json};
-use crate::CliError;
-use clap::ArgMatches;
+use crate::context::Context;
+use crate::errors::{CliError, Result};
+use crate::json::{id, ids, object, opt_id, opt_int, opt_str};
+use crate::sync::prefix_conflicts_json;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Write;
@@ -12,32 +13,8 @@ use tasker_services::cleanup::{CleanupChange, CleanupOptions, CleanupReport};
 use tasker_services::health::label;
 use uuid::Uuid;
 
-pub const DESCRIPTION: &str = "Removes references to missing series and links to missing tasks or link types after a git merge (with --resolve-conflicts also renumbers duplicate numbers); link cycles are only reported, remove one link with 'task unlink'";
-
 /// Код выхода `--check`: чистка что-то изменила бы или что-то требует внимания.
 pub const NEEDS_CLEANUP: i32 = 2;
-
-pub const HELP: &str = "Description:
-  Removes references to missing series and links to missing tasks or link types after a git merge (with --resolve-conflicts also renumbers duplicate numbers); link cycles are only reported, remove one link with 'task unlink'
-
-Usage:
-  tasker cleanup [options]
-
-Options:
-  --resolve-conflicts          Also give duplicate numbers new ones: the earliest task keeps its number, the others get the next numbers
-  --dry-run                    Write nothing, only show what would change
-  --check                      Write nothing; exit with code 2 if the cleanup would change something or something needs attention (for scripts and CI)
-  -?, -h, --help               Show help and usage information
-  -w, --workspace <workspace>  Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
-  --sqlite <sqlite>            SQLite file with the workspace instead of a folder
-  -p, --project <Tasker>       Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
-  --json                       Print the result as JSON
-  -q, --quiet                  Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention
-  --no-wrap, --truncate        Cut long lines of list output to the window width with an ellipsis instead of wrapping (default: on in a terminal and under watch - COLUMNS and LINES both set; off when redirected)
-  --no-truncate                Never cut lines of list output, even in a terminal
-  --width                      Line width for --truncate in characters (minimum 20); 0 or 'auto' - the terminal width, 'off' - never cut. Default: the TASKER_WIDTH variable (off or 0 - never cut), else the terminal
-
-";
 
 struct ProjectCleanup {
     project: Project,
@@ -87,24 +64,19 @@ fn git_in_progress(folder: &str) -> Option<&'static str> {
     None
 }
 
-pub fn run(matches: &ArgMatches, sub: &ArgMatches, out: &mut dyn Write, err: &mut dyn Write) -> Result<i32, CliError> {
-    let dry_run = sub.get_flag("dry-run");
-    let check = sub.get_flag("check");
-    let resolve = sub.get_flag("resolve-conflicts");
+/// `read_only` (`--dry-run`/`--check`) не трогает файлы; иначе идущее слияние git — ошибка, чистка переждёт.
+pub fn run(ctx: &mut Context<'_>, dry_run: bool, check: bool, resolve: bool) -> Result<()> {
     let read_only = dry_run || check;
-    if !read_only && matches.get_one::<String>("sqlite").is_none() {
-        let folder = crate::locate_folder(matches)?;
-        if let Some(operation) = git_in_progress(folder.path()) {
-            return Err(CliError(format!(
-                "A git {operation} is in progress: cleanup would treat half-merged files as final. Finish or abort it, then run cleanup again (--dry-run and --check work meanwhile)"
-            )));
-        }
+    if !read_only && let Some(operation) = git_in_progress(ctx.session().location().path()) {
+        return Err(CliError::new(format!(
+            "A git {operation} is in progress: cleanup would treat half-merged files as final. Finish or abort it, then run cleanup again (--dry-run and --check work meanwhile)"
+        )));
     }
 
-    let ws = super::open(matches)?;
-    let projects = match super::optional_project(&ws, matches)? {
+    let ws = ctx.session().workspace();
+    let projects = match ctx.optional_project()? {
         Some(project) => vec![project],
-        None => super::all_projects(&ws)?,
+        None => ctx.session().all_projects()?,
     };
     let options = CleanupOptions {
         resolve_conflicts: resolve,
@@ -121,23 +93,26 @@ pub fn run(matches: &ArgMatches, sub: &ArgMatches, out: &mut dyn Write, err: &mu
     }
 
     let attention = results.iter().any(ProjectCleanup::needs_attention);
-    show(&results, dry_run, check, resolve, attention, matches.get_flag("json"), out);
+    let json = ctx.json;
+    show(&results, dry_run, check, resolve, attention, json, ctx.out());
 
     if check {
-        return Ok(if attention { NEEDS_CLEANUP } else { 0 });
+        ctx.exit_code = if attention { NEEDS_CLEANUP } else { 0 };
+        return Ok(());
     }
     if !read_only && results.iter().any(|x| x.report.skipped) {
-        let _ = writeln!(err, "Error: the cleanup was skipped, nothing was changed");
-        return Ok(1);
+        let _ = writeln!(ctx.err(), "Error: the cleanup was skipped, nothing was changed");
+        ctx.exit_code = 1;
+        return Ok(());
     }
     if !read_only && results.iter().any(|x| x.report.links_skip_reason.is_some()) {
         let _ = writeln!(
-            err,
+            ctx.err(),
             "Error: the links between tasks were not checked, the rest was cleaned up (see above)"
         );
-        return Ok(1);
+        ctx.exit_code = 1;
     }
-    Ok(0)
+    Ok(())
 }
 
 fn show(results: &[ProjectCleanup], dry_run: bool, check: bool, resolve: bool, attention: bool, json: bool, out: &mut dyn Write) {
@@ -210,8 +185,8 @@ fn change_json(c: &CleanupChange) -> Value {
         ("taskTitle", Value::String(c.task_title.clone())),
         ("kind", Value::String(c.kind.json_name().into())),
         ("seriesId", opt_id(c.series_id.as_ref())),
-        ("oldNumber", c.old_number.map(Value::from).unwrap_or(Value::Null)),
-        ("newNumber", c.new_number.map(Value::from).unwrap_or(Value::Null)),
+        ("oldNumber", opt_int(c.old_number)),
+        ("newNumber", opt_int(c.new_number)),
         ("description", Value::String(c.description.clone())),
         ("linkTypeId", opt_id(c.link_type_id.as_ref())),
         ("linkTargetId", opt_id(c.link_target_id.as_ref())),

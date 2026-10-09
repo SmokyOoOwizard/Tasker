@@ -46,10 +46,10 @@ fn migrate_rewrites_and_renames_the_corpus_exactly_like_dotnet() {
     std::fs::remove_dir_all(&root).unwrap();
 }
 
+// Справка `migrate --help` сверяется со снапшотом в `tests/help.rs` (из корня репозитория: подсказки значений берутся из его области).
 #[test]
-fn help_matches_the_system_commandline_snapshot_and_errors_use_the_dotnet_texts() {
+fn errors_use_the_dotnet_texts() {
     let (root, _workspace) = fresh_copy();
-    assert_snapshot("cli", "195-help-migrate", &root);
 
     let nowhere = root.join("nowhere");
     let run = tasker(&root, &["migrate", "-w", nowhere.to_str().unwrap()]);
