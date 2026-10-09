@@ -15,6 +15,7 @@ pub mod locks;
 pub mod model;
 pub mod reference;
 pub mod settings;
+pub mod tasks;
 pub mod time;
 pub mod validate;
 pub mod versioning;

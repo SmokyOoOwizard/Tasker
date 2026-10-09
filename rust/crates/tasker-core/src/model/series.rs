@@ -1,7 +1,9 @@
 use crate::error::{Result, TaskerError};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Series {
     pub id: Uuid,
     pub project_id: Uuid,
@@ -10,7 +12,8 @@ pub struct Series {
     pub version: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskSeriesNumber {
     pub series_id: Uuid,
     pub number: i32,

@@ -1,6 +1,6 @@
 [package]
 name = "tasker-files"
-description = "Tasker .tasker files: YAML parsing (saphyr), byte-exact emitter, formatVersion"
+description = "Tasker .tasker files: YAML parsing (saphyr), byte-exact emitter, formatVersion, layout, writes under locks, SQLite index"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -13,6 +13,5 @@ regex.workspace = true
 uuid.workspace = true
 unicode-normalization.workspace = true
 serde_json.workspace = true
-
-[dev-dependencies]
 serde.workspace = true
+rusqlite.workspace = true

@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Условия по полям (`FieldOperator`): в файле досок — camelCase (`greaterOrEqual`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum FieldOperator {
     Equal,
     NotEqual,
@@ -60,14 +62,16 @@ impl FieldOperator {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ColumnFieldFilter {
     pub field_id: Uuid,
     pub operator: FieldOperator,
     pub value: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BoardColumn {
     pub id: Uuid,
     pub name: String,
@@ -86,7 +90,8 @@ impl BoardColumn {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Board {
     pub id: Uuid,
     pub project_id: Uuid,

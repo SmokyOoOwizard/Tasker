@@ -127,6 +127,10 @@ rust/
   область (несколько МБ), каждый сверяется по `(size, mtime)` своим процессом. Инвариант нумерации серий сохраняется, потому
   что `max(number)` считается после `Refresh(tasks/)` под `write.lock` — его повторяем.
 
+Принято (Б), TSK-131: файл `.cache/index-rs.db`, `PRAGMA user_version = 1`, блокировка `.cache/index-rs.lock`; таблицы `files`,
+`task_series`, `task_links`, `task_fields`, `task_field_values` как у .NET, `data` — JSON serde моделей `tasker-core` (camelCase);
+модуль `tasker_files::index`.
+
 После того как десктоп/сервер тоже переедут (вне плана), остаётся один индекс.
 
 ### 3.3 Локальные протоколы демона (читает десктоп на .NET и .NET-консоль в переходный период)
