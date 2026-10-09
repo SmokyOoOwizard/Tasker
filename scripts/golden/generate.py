@@ -918,6 +918,40 @@ def generate(args, bin_dir, root):
     log("done:", out)
 
 
+def mcp_semantic(data: bytes):
+    """Ответ MCP для сравнения по смыслу: конверт JSON-RPC — без учёта порядка ключей и без `isError: false` (.NET его не пишет,
+    rmcp пишет); `text` с JSON внутри — как JSON с порядком ключей (компактная запись), иначе — как есть."""
+    value = json.loads(data.decode("utf-8"))
+
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("isError") is False:
+                node = {k: v for k, v in node.items() if k != "isError"}
+            out = {}
+            for k, v in node.items():
+                if k == "text" and isinstance(v, str):
+                    try:
+                        v = json.dumps(json.loads(v), ensure_ascii=False, separators=(",", ":"))
+                    except ValueError:
+                        pass
+                    out[k] = v
+                else:
+                    out[k] = walk(v)
+            return out
+        if isinstance(node, list):
+            return [walk(x) for x in node]
+        return node
+
+    return walk(value)
+
+
+def mcp_same(a: bytes, b: bytes) -> bool:
+    try:
+        return mcp_semantic(a) == mcp_semantic(b)
+    except ValueError:
+        return False
+
+
 def verify(args, bin_dir, root):
     out = os.path.abspath(args.out)
     home = os.path.join(root, "home")
@@ -932,7 +966,7 @@ def verify(args, bin_dir, root):
         shutil.move(os.path.join(fresh, "yaml-style"), os.path.join(root, "yaml-style"))
     shutil.move(os.path.join(fresh, "versions.json"), os.path.join(root, "versions.json"))
     failures = 0
-    # Сравниваются только снятые разделы: expected/<раздел>, yaml-style и versions.json.
+    # Сравниваются только снятые разделы: expected/<раздел>, yaml-style и versions.json; ответы MCP — по смыслу (`mcp_same`).
     subs = [os.path.join("expected", s) for s in ("cli", "migrate", "mcp") if s in only] + (["yaml-style"] if "yaml-style" in only else []) + ["versions.json"]
     for sub in subs:
         a, b = os.path.join(out, sub), os.path.join(root, sub)
@@ -945,6 +979,8 @@ def verify(args, bin_dir, root):
                 print(f"only in {'expected' if os.path.exists(pa) else 'actual'}: {sub}/{rel}")
                 continue
             da, db = read_bytes(pa), read_bytes(pb)
+            if da != db and sub == os.path.join("expected", "mcp") and rel.endswith(".json") and mcp_same(da, db):
+                continue
             if da != db:
                 failures += 1
                 print(f"differs: {sub}/{rel}")
