@@ -15,6 +15,7 @@
 | `expected/cli/NNN-<имя>.{args,out,err,code}` | Вывод команд консоли на копии области: аргументы (по одному в строке, путь области — `<ROOT>/golden`), stdout, stderr, код выхода. Списки и `get` всех сущностей в тексте и `--json`, фильтры и сортировки `task list`, `sync`, `cleanup --check`, `migrate --check`/`--dry-run`, блокировки, ошибки, справка каждой команды (`help-*`), `completion <shell>`, директива `[suggest:N]`, `manual`. |
 | `expected/migrate/` | `tasker migrate` на копии области: вывод команды, повторный `migrate --check` (код 2 — остаются файл с конфликтом и файл формата 99), `tasker/` — вся область после миграции, `versions.json` — версии файлов после неё. |
 | `expected/mcp/` | Снапшоты демона MCP: `initialize`, `tools-list.json` (имена, описания, inputSchema всех инструментов; `tool-names.txt` — список), ответы инструментов на чтение, `errors/` — по ответу на каждый код ошибки. |
+| `autostart/` | Файлы автозапуска .NET-генераторов — launchd plist, systemd unit, XML Планировщика (UTF-16 LE с BOM) — и вызываемые команды; см. `autostart/README.md` (TSK-140). |
 | `notes.json` | Чем сгенерировано, канонические id проектов, id особых файлов (конфликт, «из будущего»), отвергнутые консолью строки. |
 
 ## Канонизация
