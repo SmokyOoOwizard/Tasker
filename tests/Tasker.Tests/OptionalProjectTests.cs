@@ -7,6 +7,7 @@ namespace Tasker.Tests;
 /// <c>--project</c> можно не указывать, если в рабочей области ровно один проект: команда работает с ним.
 /// Проектов нет или несколько — понятная ошибка; явный параметр и <c>TASKER_PROJECT</c> по-прежнему главнее.
 /// </summary>
+[InProcess]
 public class OptionalProjectTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

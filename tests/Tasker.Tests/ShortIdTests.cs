@@ -15,6 +15,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Короткий id (первые 8 символов Guid): разбор, показ в списках консоли, поиск в обоих хранилищах, команды и MCP.</summary>
+[InProcess]
 public class ShortIdTests
 {
     // ---- разбор ----

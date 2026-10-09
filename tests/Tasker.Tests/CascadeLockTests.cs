@@ -57,6 +57,7 @@ public class CascadeLockTests
         Assert.Empty(env.Get(inSeries.Id).SeriesNumbers);
     }
 
+    [InProcess]
     [Fact]
     public async Task Cleanup_is_refused_before_any_write_when_a_task_it_would_change_is_locked_but_a_dry_run_and_unaffected_locks_are_fine()
     {

@@ -356,7 +356,7 @@ public class DaemonUpgradeTests : IDisposable
     public async Task A_server_started_as_one_process_is_restarted_by_upgrade_and_is_seamless_afterwards()
     {
         await _daemon.Workspace("ws", "Demo");
-        var (file, arguments) = Launcher.DaemonCommand();
+        var (file, arguments) = TaskerProcess.DaemonCommand();
         var info = new ProcessStartInfo(file) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         AppEnvironment.Apply(info);
         foreach (var argument in arguments)

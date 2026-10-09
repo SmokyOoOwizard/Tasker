@@ -4,6 +4,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Тип задачи в текстовой строке <c>task list</c>: <c>ссылка  статус  тип  заголовок</c>.</summary>
+[InProcess]
 public class TaskListTypeTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

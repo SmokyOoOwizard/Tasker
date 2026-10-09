@@ -211,7 +211,7 @@ public class McpSettingsCommandTests : IDisposable
         Directory.Delete(_folder, recursive: true);
     }
 
-    private static Task<CliResult> Cli(params string[] args) => TestWorkspace.Invoke(args);
+    private static Task<CliResult> Cli(params string[] args) => TaskerProcess.Run(args);
 
     private string Folder(string name) => Directory.CreateDirectory(Path.Combine(_folder, name)).FullName;
 
@@ -257,7 +257,7 @@ public class McpSettingsCommandTests : IDisposable
     public async Task Sqlite_file_is_recognised_by_being_a_file()
     {
         var db = Path.Combine(_folder, "tasker.db");
-        Assert.Equal(0, (await TestWorkspace.Invoke(["project", "create", "P", "--sqlite", db])).Code);
+        Assert.Equal(0, (await TaskerProcess.Run("project", "create", "P", "--sqlite", db)).Code);
 
         var added = await Cli("mcp", "workspace", "add", db);
 
