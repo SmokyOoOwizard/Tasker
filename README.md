@@ -14,7 +14,7 @@
 
 ## Платформы
 
-macOS и Linux проверены. Windows поддерживается, но на самой Windows пока не проверялся: см. [страницу Windows](https://github.com/SmokyOoOwizard/Tasker/wiki/Платформы).
+macOS и Linux проверены. Windows поддерживается, но на самой Windows пока не проверялся: подробнее на странице [Платформы](https://github.com/SmokyOoOwizard/Tasker/wiki/Платформы).
 
 ## Установка
 
@@ -51,5 +51,3 @@ claude mcp add --transport http tasker http://127.0.0.1:5719/mcp
 ## Документация
 
 Полное описание — в [вики проекта](https://github.com/SmokyOoOwizard/Tasker/wiki): команды консоли, формат файлов, MCP и демон, поля и связи, REST API, настройки, устройство и сборка.
-
-Страницы вики лежат также в `docs/wiki` и публикуются скриптом `scripts/publish-wiki.sh`.
