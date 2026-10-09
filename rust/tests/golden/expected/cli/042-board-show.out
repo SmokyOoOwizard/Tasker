@@ -1,0 +1,9 @@
+Todo [Priority=High and Tags:set] (0)
+  (no tasks)
+
+Doing [Estimate>=3] (1)
+  BUG-1  In Progress  Bug     Bug with all fields (renamed)
+
+Done (2)
+  GLD-1  Done         Задача  Plain task
+  BUG-3  Done         Bug     Bug done

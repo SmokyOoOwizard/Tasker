@@ -1,0 +1,7 @@
+field
+list
+--json
+-w
+<ROOT>/golden
+-p
+Golden

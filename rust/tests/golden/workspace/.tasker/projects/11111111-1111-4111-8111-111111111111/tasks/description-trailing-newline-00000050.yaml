@@ -1,0 +1,12 @@
+formatVersion: 9
+id: 00000050-0000-4000-8000-000000000050
+title: 'Description: trailing-newline'
+description: |
+  Ends with a newline
+typeId: 0000002c-0000-4000-8000-00000000002c
+statusId: 00000005-0000-4000-8000-000000000005
+createdAt: 2026-01-01T00:35:35.1234850+00:00
+updatedAt: 2026-01-01T00:35:35.1234850+00:00
+series:
+- seriesId: 00000029-0000-4000-8000-000000000029
+  number: 35

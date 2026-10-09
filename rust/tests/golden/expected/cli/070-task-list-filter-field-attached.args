@@ -1,0 +1,9 @@
+task
+list
+--all
+--field
+Ожидание:attached
+-w
+<ROOT>/golden
+-p
+Golden

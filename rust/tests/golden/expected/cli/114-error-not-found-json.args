@@ -1,0 +1,8 @@
+task
+get
+GLD-999
+--json
+-w
+<ROOT>/golden
+-p
+Golden

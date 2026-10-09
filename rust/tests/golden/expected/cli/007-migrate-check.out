@@ -1,0 +1,21 @@
+Nothing is written (dry run):
+  would migrate  projects/22222222-2222-4222-8222-222222222222/boards/legacy-board-00000070.yaml  (format 5 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/enums/00000076-0000-4000-8000-000000000076.yaml  (format 4 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/fields/kind-00000079.yaml  (format 4 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/link-types/blocks-6d62a7a2.yaml  (format 6 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/link-types/parent-child-c8c8fe73.yaml  (format 8 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/link-types/relates-6cad151c.yaml  (format 6 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/project.yaml  (format 1 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/series/old-0000007a.yaml  (format 6 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/status-sets/00000071-0000-4000-8000-000000000071.yaml  (format 2 -> 9)
+  would migrate  projects/22222222-2222-4222-8222-222222222222/statuses/00000075-0000-4000-8000-000000000075.yaml  (format 0 -> 9)
+  ... and 6 more
+  would rename  projects/22222222-2222-4222-8222-222222222222/enums/00000076-0000-4000-8000-000000000076.yaml  ->  kind-00000076.yaml
+  would rename  projects/22222222-2222-4222-8222-222222222222/status-sets/00000071-0000-4000-8000-000000000071.yaml  ->  flow-00000071.yaml
+  would rename  projects/22222222-2222-4222-8222-222222222222/statuses/00000075-0000-4000-8000-000000000075.yaml  ->  closed-00000075.yaml
+  would rename  projects/22222222-2222-4222-8222-222222222222/tasks/0000007d-0000-4000-8000-00000000007d.yaml  ->  legacy-one-0000007d.yaml
+  would rename  projects/22222222-2222-4222-8222-222222222222/tasks/0000007e-0000-4000-8000-00000000007e.yaml  ->  legacy-two-0000007e.yaml
+  skipped  projects/22222222-2222-4222-8222-222222222222/tasks/from-the-future-ffffffff.yaml  (format 99 is newer than this Tasker supports (9): update Tasker)
+  skipped  projects/22222222-2222-4222-8222-222222222222/tasks/conflicted-title-ours-cccccccc.yaml  (Unresolved git merge conflict: fix the file first)
+16 file(s) would be migrated to format 9
+5 file(s) would be renamed after the names of their entities

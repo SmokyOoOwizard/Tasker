@@ -1,0 +1,11 @@
+task
+create
+Bad
+--type
+Bug
+--field
+Estimate=abc
+-w
+<ROOT>/golden
+-p
+Golden

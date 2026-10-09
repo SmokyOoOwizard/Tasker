@@ -1,0 +1,9 @@
+task
+link
+GLD-1
+blocks
+GLD-1
+-w
+<ROOT>/golden
+-p
+Golden

@@ -1,0 +1,22 @@
+id:           00000035-0000-4000-8000-000000000035
+title:        Bug with all fields (renamed)
+type:         Bug (0000002a-0000-4000-8000-00000000002a)
+status:       In Progress (00000006-0000-4000-8000-000000000006)
+series:       BUG-1
+created:      2026-01-01 00:51:51 +00:00
+updated:      2026-01-01 01:11:10 +00:00
+version:      defb9c91742e1156
+fields:
+  Priority (enum, required): High
+  Estimate (int): 7
+  Tags (string[]): alpha, beta, 007
+  Notes (string, extra): Additional catalog field
+  StoryPoints (int, extra): 13
+links:
+  blocks            BUG-2,GLD-51  Backlog   Bug with own fields
+  blocks            GLD-52        Отложено  Feature with values
+  is duplicated by  BUG-3         Done      Bug done
+  causes            BUG-3         Done      Bug done
+
+Bug with all fields.
+Estimate given as 007: stored canonically.

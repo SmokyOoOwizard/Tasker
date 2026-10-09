@@ -1,0 +1,6 @@
+task-type
+list
+-w
+<ROOT>/golden
+-p
+Golden

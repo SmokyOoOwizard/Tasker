@@ -1,0 +1,8 @@
+enum
+get
+Платформа
+--json
+-w
+<ROOT>/golden
+-p
+Golden

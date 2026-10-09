@@ -1,0 +1,7 @@
+task
+get
+OLD-3
+-w
+<ROOT>/golden
+-p
+Legacy

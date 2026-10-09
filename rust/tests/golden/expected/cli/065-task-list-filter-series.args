@@ -1,0 +1,9 @@
+task
+list
+--all
+--series
+BUG
+-w
+<ROOT>/golden
+-p
+Golden

@@ -1,0 +1,7 @@
+link-type
+get
+Depends
+-w
+<ROOT>/golden
+-p
+Golden

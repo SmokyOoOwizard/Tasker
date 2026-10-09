@@ -1,0 +1,14 @@
+id:           0000007f-0000-4000-8000-00000000007f
+title:        Legacy three
+type:         Item (0000007b-0000-4000-8000-00000000007b)
+status:       Closed (00000075-0000-4000-8000-000000000075)
+series:       OLD-3
+created:      2026-01-01 01:19:18 +00:00
+updated:      2026-01-01 01:22:21 +00:00
+version:      cd5ee4273376c51a
+fields:
+  Kind (enum, extra): B
+links:
+  includes  0000007c  Open  Legacy four
+
+Line endings CRLF

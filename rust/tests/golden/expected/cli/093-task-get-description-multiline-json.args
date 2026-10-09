@@ -1,0 +1,8 @@
+task
+get
+00000049-0000-4000-8000-000000000049
+--json
+-w
+<ROOT>/golden
+-p
+Golden

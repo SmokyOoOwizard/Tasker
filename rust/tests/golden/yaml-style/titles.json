@@ -1,0 +1,307 @@
+[
+  {
+    "value": "\"quoted\"",
+    "yaml": "title: '\"quoted\"'",
+    "file": "quoted-00000063.yaml"
+  },
+  {
+    "value": "# starts with hash",
+    "yaml": "title: '# starts with hash'",
+    "file": "starts-with-hash-00000064.yaml"
+  },
+  {
+    "value": "'quoted'",
+    "yaml": "title: \"'quoted'\"",
+    "file": "quoted-00000062.yaml"
+  },
+  {
+    "value": "-",
+    "yaml": "title: '-'",
+    "file": "task-00000067.yaml"
+  },
+  {
+    "value": "---",
+    "yaml": "title: '---'",
+    "file": "task-00000068.yaml"
+  },
+  {
+    "value": "...",
+    "yaml": "title: '...'",
+    "file": "task-00000069.yaml"
+  },
+  {
+    "value": "007",
+    "yaml": "title: \"007\"",
+    "file": "007-0000002d.yaml"
+  },
+  {
+    "value": "0x1F",
+    "yaml": "title: \"0x1F\"",
+    "file": "0x1f-0000002e.yaml"
+  },
+  {
+    "value": "1.5",
+    "yaml": "title: \"1.5\"",
+    "file": "1-5-0000002f.yaml"
+  },
+  {
+    "value": "1e3",
+    "yaml": "title: \"1e3\"",
+    "file": "1e3-00000030.yaml"
+  },
+  {
+    "value": "A very long title that goes on and on past sixty characters so that the slug of the file name is cut while the title itself stays whole in the file",
+    "yaml": "title: A very long title that goes on and on past sixty characters so that the slug of the file name is cut while the title itself stays whole in the file",
+    "file": "a-very-long-title-that-goes-on-and-on-past-sixty-characters-00000031.yaml"
+  },
+  {
+    "value": "Backslash \\ and forward / slashes",
+    "yaml": "title: Backslash \\ and forward / slashes",
+    "file": "backslash-and-forward-slashes-00000032.yaml"
+  },
+  {
+    "value": "Bug done",
+    "yaml": "title: Bug done",
+    "file": "bug-done-00000034.yaml"
+  },
+  {
+    "value": "Bug with all fields (renamed)",
+    "yaml": "title: Bug with all fields (renamed)",
+    "file": "bug-with-all-fields-renamed-00000035.yaml"
+  },
+  {
+    "value": "Bug with own fields",
+    "yaml": "title: Bug with own fields",
+    "file": "bug-with-own-fields-00000037.yaml"
+  },
+  {
+    "value": "Child one",
+    "yaml": "title: Child one",
+    "file": "child-one-0000003e.yaml"
+  },
+  {
+    "value": "Child two",
+    "yaml": "title: Child two",
+    "file": "child-two-00000040.yaml"
+  },
+  {
+    "value": "Colon: in the middle",
+    "yaml": "title: 'Colon: in the middle'",
+    "file": "colon-in-the-middle-00000041.yaml"
+  },
+  {
+    "value": "Combining: é (e + U+0301), precomposed: é",
+    "yaml": "title: 'Combining: é (e + U+0301), precomposed: é'",
+    "file": "combining-é-e-u-0301-precomposed-é-00000042.yaml"
+  },
+  {
+    "value": "Description: bool",
+    "yaml": "title: 'Description: bool'",
+    "file": "description-bool-00000043.yaml"
+  },
+  {
+    "value": "Description: colon",
+    "yaml": "title: 'Description: colon'",
+    "file": "description-colon-00000044.yaml"
+  },
+  {
+    "value": "Description: crlf",
+    "yaml": "title: 'Description: crlf'",
+    "file": "description-crlf-00000045.yaml"
+  },
+  {
+    "value": "Description: hash",
+    "yaml": "title: 'Description: hash'",
+    "file": "description-hash-00000046.yaml"
+  },
+  {
+    "value": "Description: leading-blank",
+    "yaml": "title: 'Description: leading-blank'",
+    "file": "description-leading-blank-00000047.yaml"
+  },
+  {
+    "value": "Description: long-line",
+    "yaml": "title: 'Description: long-line'",
+    "file": "description-long-line-00000048.yaml"
+  },
+  {
+    "value": "Description: multiline",
+    "yaml": "title: 'Description: multiline'",
+    "file": "description-multiline-00000049.yaml"
+  },
+  {
+    "value": "Description: numeric",
+    "yaml": "title: 'Description: numeric'",
+    "file": "description-numeric-0000004a.yaml"
+  },
+  {
+    "value": "Description: percent",
+    "yaml": "title: 'Description: percent'",
+    "file": "description-percent-0000004b.yaml"
+  },
+  {
+    "value": "Description: quotes",
+    "yaml": "title: 'Description: quotes'",
+    "file": "description-quotes-0000004c.yaml"
+  },
+  {
+    "value": "Description: single-space",
+    "yaml": "title: 'Description: single-space'",
+    "file": "description-single-space-0000004d.yaml"
+  },
+  {
+    "value": "Description: spaces-only-line",
+    "yaml": "title: 'Description: spaces-only-line'",
+    "file": "description-spaces-only-line-0000004e.yaml"
+  },
+  {
+    "value": "Description: tab",
+    "yaml": "title: 'Description: tab'",
+    "file": "description-tab-0000004f.yaml"
+  },
+  {
+    "value": "Description: trailing-newline",
+    "yaml": "title: 'Description: trailing-newline'",
+    "file": "description-trailing-newline-00000050.yaml"
+  },
+  {
+    "value": "Description: two-trailing-newlines",
+    "yaml": "title: 'Description: two-trailing-newlines'",
+    "file": "description-two-trailing-newlines-00000051.yaml"
+  },
+  {
+    "value": "Description: unicode",
+    "yaml": "title: 'Description: unicode'",
+    "file": "description-unicode-00000052.yaml"
+  },
+  {
+    "value": "Description: yaml-doc-markers",
+    "yaml": "title: 'Description: yaml-doc-markers'",
+    "file": "description-yaml-doc-markers-00000053.yaml"
+  },
+  {
+    "value": "Ends with colon:",
+    "yaml": "title: 'Ends with colon:'",
+    "file": "ends-with-colon-00000054.yaml"
+  },
+  {
+    "value": "Epic two",
+    "yaml": "title: Epic two",
+    "file": "epic-two-00000056.yaml"
+  },
+  {
+    "value": "Epic: hierarchy",
+    "yaml": "title: 'Epic: hierarchy'",
+    "file": "epic-hierarchy-00000055.yaml"
+  },
+  {
+    "value": "Feature done",
+    "yaml": "title: Feature done",
+    "file": "feature-done-00000057.yaml"
+  },
+  {
+    "value": "Feature with values",
+    "yaml": "title: Feature with values",
+    "file": "feature-with-values-00000036.yaml"
+  },
+  {
+    "value": "Feature without values",
+    "yaml": "title: Feature without values",
+    "file": "feature-without-values-00000058.yaml"
+  },
+  {
+    "value": "Grandchild",
+    "yaml": "title: Grandchild",
+    "file": "grandchild-0000003f.yaml"
+  },
+  {
+    "value": "Hash # in the middle",
+    "yaml": "title: 'Hash # in the middle'",
+    "file": "hash-in-the-middle-00000059.yaml"
+  },
+  {
+    "value": "Leading spaces",
+    "yaml": "title: Leading spaces",
+    "file": "leading-spaces-0000005a.yaml"
+  },
+  {
+    "value": "Multi\nline title",
+    "yaml": "title: |-\n  Multi\n  line title",
+    "file": "multi-line-title-0000005b.yaml"
+  },
+  {
+    "value": "Percent %s and {0} braces and $var and ${env}",
+    "yaml": "title: Percent %s and {0} braces and $var and ${env}",
+    "file": "percent-s-and-0-braces-and-var-and-env-0000005f.yaml"
+  },
+  {
+    "value": "Plain task",
+    "yaml": "title: Plain task",
+    "file": "plain-task-00000060.yaml"
+  },
+  {
+    "value": "Quote 'single' and \"double\"",
+    "yaml": "title: Quote 'single' and \"double\"",
+    "file": "quote-single-and-double-00000061.yaml"
+  },
+  {
+    "value": "Tab\tinside and  double  spaces",
+    "yaml": "title: Tab\tinside and  double  spaces",
+    "file": "tab-inside-and-double-spaces-00000065.yaml"
+  },
+  {
+    "value": "Trailing spaces",
+    "yaml": "title: Trailing spaces",
+    "file": "trailing-spaces-0000006a.yaml"
+  },
+  {
+    "value": "[brackets] {braces} & ampersand * star | pipe > gt ! bang % percent @ at `backtick`",
+    "yaml": "title: '[brackets] {braces} & ampersand * star | pipe > gt ! bang % percent @ at `backtick`'",
+    "file": "brackets-braces-ampersand-star-pipe-gt-bang-percent-at-backt-00000033.yaml"
+  },
+  {
+    "value": "no",
+    "yaml": "title: no",
+    "file": "no-0000005c.yaml"
+  },
+  {
+    "value": "null",
+    "yaml": "title: \"null\"",
+    "file": "null-0000005d.yaml"
+  },
+  {
+    "value": "off",
+    "yaml": "title: off",
+    "file": "off-0000005e.yaml"
+  },
+  {
+    "value": "true",
+    "yaml": "title: \"true\"",
+    "file": "true-0000006b.yaml"
+  },
+  {
+    "value": "yes",
+    "yaml": "title: yes",
+    "file": "yes-0000006c.yaml"
+  },
+  {
+    "value": "~",
+    "yaml": "title: \"~\"",
+    "file": "task-00000066.yaml"
+  },
+  {
+    "value": "Ümläute, İstanbul, ß, Ærø, naïve café",
+    "yaml": "title: Ümläute, İstanbul, ß, Ærø, naïve café",
+    "file": "ümläute-İstanbul-ß-ærø-naïve-café-0000006d.yaml"
+  },
+  {
+    "value": "Кириллица и эмодзи 🚀 ✨, ещё — тире и «ёлочки»",
+    "yaml": "title: \"Кириллица и эмодзи \\U0001F680 ✨, ещё — тире и «ёлочки»\"",
+    "file": "кириллица-и-эмодзи-ещё-тире-и-ёлочки-0000006e.yaml"
+  },
+  {
+    "value": "日本語のタイトル и 中文",
+    "yaml": "title: 日本語のタイトル и 中文",
+    "file": "日本語のタイトル-и-中文-0000006f.yaml"
+  }
+]

@@ -1,0 +1,11 @@
+task
+update
+GLD-1
+--title
+x
+--expected-version
+0000000000000000
+-w
+<ROOT>/golden
+-p
+Golden

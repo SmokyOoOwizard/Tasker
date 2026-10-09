@@ -1,0 +1,8 @@
+field
+get
+Platforms
+--json
+-w
+<ROOT>/golden
+-p
+Golden

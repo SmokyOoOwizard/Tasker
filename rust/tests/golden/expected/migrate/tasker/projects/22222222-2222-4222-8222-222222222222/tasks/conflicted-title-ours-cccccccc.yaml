@@ -1,0 +1,16 @@
+formatVersion: 7
+id: cccccccc-0000-4000-8000-cccccccccccc
+<<<<<<< HEAD
+title: Conflicted title (ours)
+=======
+title: Conflicted title (theirs)
+>>>>>>> feature
+description: Unresolved git merge conflict
+typeId: 0000007b-0000-4000-8000-00000000007b
+statusId: 00000075-0000-4000-8000-000000000075
+createdAt: 2026-01-01T01:19:18.1235280+00:00
+updatedAt: 2026-01-01T01:22:21.1235310+00:00
+fields:
+- id: 00000079-0000-4000-8000-000000000079
+  values:
+  - 00000078-0000-4000-8000-000000000078

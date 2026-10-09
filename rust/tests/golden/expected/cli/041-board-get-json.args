@@ -1,0 +1,8 @@
+board
+get
+Main board
+--json
+-w
+<ROOT>/golden
+-p
+Golden

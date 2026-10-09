@@ -1,0 +1,10 @@
+task
+list
+--all
+--json
+--description-length
+12
+-w
+<ROOT>/golden
+-p
+Golden

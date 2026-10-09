@@ -1,0 +1,13 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[invalid] 'GLD-999' is not a task id: give the full id or its first 8+ hex characters"
+      }
+    ],
+    "isError": true
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

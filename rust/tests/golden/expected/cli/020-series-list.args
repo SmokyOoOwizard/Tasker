@@ -1,0 +1,6 @@
+series
+list
+-w
+<ROOT>/golden
+-p
+Golden

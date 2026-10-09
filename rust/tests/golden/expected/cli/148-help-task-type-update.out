@@ -1,0 +1,29 @@
+Description:
+  Changes a task type
+
+Usage:
+  tasker task-type update <id-or-name> [options]
+
+Arguments:
+  <id-or-name>  Task type (id or name)
+
+Options:
+  --name <name>                          New name
+  -d, --description                      New description; an empty one clears it
+  --status-set <Основной>                New status set (id or name); its statuses must cover the statuses of the type's tasks
+  --field                                Replace the whole list of the type's fields: Name or Name:required (repeat for several; the order is kept)
+  --add-field                            Attach a field, or change whether it is required: Name or Name:required (repeat for several)
+  --remove-field                         Detach a field (name or id; repeat for several). If tasks have its values, choose --drop-values or --keep-values
+  --drop-values                          With a detached field: clear its values from the tasks of the type
+  --keep-values                          With a detached field: keep the values, the field becomes an additional field of the tasks that have values
+  --expected-version <expected-version>  Fail if the entity was changed after this version (as shown by get). Default: the current version
+  -?, -h, --help                         Show help and usage information
+  -w, --workspace <workspace>            Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
+  --sqlite <sqlite>                      SQLite file with the workspace instead of a folder
+  -p, --project <Tasker>                 Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
+  --json                                 Print the result as JSON
+  -q, --quiet                            Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention
+  --no-wrap, --truncate                  Cut long lines of list output to the window width with an ellipsis instead of wrapping (default: on in a terminal and under watch - COLUMNS and LINES both set; off when redirected)
+  --no-truncate                          Never cut lines of list output, even in a terminal
+  --width                                Line width for --truncate in characters (minimum 20); 0 or 'auto' - the terminal width, 'off' - never cut. Default: the TASKER_WIDTH variable (off or 0 - never cut), else the terminal
+

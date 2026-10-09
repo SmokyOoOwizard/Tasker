@@ -1,0 +1,5 @@
+project
+get
+Golden
+-w
+<ROOT>/golden

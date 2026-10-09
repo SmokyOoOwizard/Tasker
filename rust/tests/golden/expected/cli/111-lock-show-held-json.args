@@ -1,0 +1,9 @@
+lock
+show
+task
+GLD-1
+--json
+-w
+<ROOT>/golden
+-p
+Golden

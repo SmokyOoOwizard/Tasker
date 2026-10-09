@@ -1,0 +1,8 @@
+lock
+acquire
+task
+GLD-1
+-w
+<ROOT>/golden
+-p
+Golden

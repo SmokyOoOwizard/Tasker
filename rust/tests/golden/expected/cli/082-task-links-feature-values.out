@@ -1,0 +1,4 @@
+Found 3
+is blocked by  BUG-1   In Progress  Bug with all fields (renamed)
+is cloned by   BUG-4   007          Feature without values
+relates to     GLD-53  Done         Feature done

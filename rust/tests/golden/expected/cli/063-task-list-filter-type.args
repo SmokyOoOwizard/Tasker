@@ -1,0 +1,10 @@
+task
+list
+--all
+--type
+Bug
+Feature
+-w
+<ROOT>/golden
+-p
+Golden

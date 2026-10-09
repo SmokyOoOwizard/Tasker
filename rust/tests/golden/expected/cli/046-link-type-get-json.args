@@ -1,0 +1,8 @@
+link-type
+get
+Depends
+--json
+-w
+<ROOT>/golden
+-p
+Golden

@@ -1,0 +1,12 @@
+id:           0000002a-0000-4000-8000-00000000002a
+name:         Bug
+status set:   Main (00000002-0000-4000-8000-000000000002)
+version:      14175c18602f80ca
+fields:
+  Priority (enum Priority, required)
+  Estimate (int)
+  Tags (string[])
+
+A defect.
+
+Steps: reproduce, fix, verify.

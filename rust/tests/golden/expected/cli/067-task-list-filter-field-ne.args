@@ -1,0 +1,10 @@
+task
+list
+--all
+--field
+Priority!=High
+--json
+-w
+<ROOT>/golden
+-p
+Golden

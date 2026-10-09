@@ -1,0 +1,4 @@
+cleanup
+--check
+-w
+<ROOT>/golden

@@ -1,0 +1,7 @@
+task-type
+get
+Bug
+-w
+<ROOT>/golden
+-p
+Golden

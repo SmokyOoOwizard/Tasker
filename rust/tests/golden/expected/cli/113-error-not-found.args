@@ -1,0 +1,7 @@
+task
+get
+GLD-999
+-w
+<ROOT>/golden
+-p
+Golden

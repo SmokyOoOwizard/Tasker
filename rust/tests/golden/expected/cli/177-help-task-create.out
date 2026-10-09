@@ -1,0 +1,29 @@
+Description:
+  Creates a task
+
+Usage:
+  tasker task create <title> [options]
+
+Arguments:
+  <title>  Task title
+
+Options:
+  --type <R&D|Баг|Фича> (REQUIRED)        Task type (id or name)
+  --status <Бэклог|В работе|Готово|Туду>  Status (id or name). Default: the first status of the type's set
+  -d, --description <description>         Task description
+  --series <TSK>                          Series to put the task into (id or exact prefix); repeat for several series
+  --parent <TSK->                         Make the new task a child of this task (id or reference like TSK-5; repeat or list several: the task gets several parents). Uses the project's hierarchical link type, see --parent-type
+  --parent-type <Parent/Child>            Hierarchical link type for --parent/--add-parent/--remove-parent (id or name); needed only when the project has several
+  --field                                 Value of a field: Name=value (the field of the task's type, an additional or own field of the task, or a field of the catalog: it becomes an additional field). Repeat the option for several values of a field with several values; Name= clears the values. int, float (with a dot), bool (true/false), date (yyyy-MM-dd); enum: the value name or id
+  --custom-field <custom-field>           A field of this task alone: Name:type[:required][:multiple][:enum=Enum][=value], e.g. 'Estimate:int=5', 'Tags:string:multiple=a', 'Risk:enum:required:enum=Priority=High'. Types: string, int, float, bool, date, enum (the enum is a name or id). Repeat the same definition to give several values. Names cannot contain ':' or '='
+  --add-field                             Add a field of the catalog to the task without a value: Name (id or name; repeat for several)
+  -?, -h, --help                          Show help and usage information
+  -w, --workspace <workspace>             Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
+  --sqlite <sqlite>                       SQLite file with the workspace instead of a folder
+  -p, --project <Tasker>                  Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
+  --json                                  Print the result as JSON
+  -q, --quiet                             Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention
+  --no-wrap, --truncate                   Cut long lines of list output to the window width with an ellipsis instead of wrapping (default: on in a terminal and under watch - COLUMNS and LINES both set; off when redirected)
+  --no-truncate                           Never cut lines of list output, even in a terminal
+  --width                                 Line width for --truncate in characters (minimum 20); 0 or 'auto' - the terminal width, 'off' - never cut. Default: the TASKER_WIDTH variable (off or 0 - never cut), else the terminal
+

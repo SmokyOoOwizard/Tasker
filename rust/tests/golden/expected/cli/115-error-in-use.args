@@ -1,0 +1,7 @@
+status
+delete
+Done
+-w
+<ROOT>/golden
+-p
+Golden

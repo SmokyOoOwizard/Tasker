@@ -1,0 +1,8 @@
+task-type
+get
+Bug
+--json
+-w
+<ROOT>/golden
+-p
+Golden

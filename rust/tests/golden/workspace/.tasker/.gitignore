@@ -1,0 +1,3 @@
+# Tasker: local index and locks (rebuilt, not for git) and temporary files of atomic writes
+/.cache/
+*.tmp

@@ -1,0 +1,7 @@
+status-set
+list
+--json
+-w
+<ROOT>/golden
+-p
+Golden

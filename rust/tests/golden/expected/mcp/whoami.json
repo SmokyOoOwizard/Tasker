@@ -1,0 +1,12 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"id\":\"<LOCAL-AGENT-ID>\",\"username\":\"agent\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"<LOCAL-AGENT-CREATED>\",\"version\":\"<LOCAL-AGENT-VERSION>\",\"isAgent\":true}"
+      }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

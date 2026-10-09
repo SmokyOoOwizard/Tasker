@@ -1,0 +1,7 @@
+formatVersion: 9
+id: 1f49682e-283b-de36-8cc8-1a79db113868
+name: Duplicate
+outwardName: duplicates
+inwardName: is duplicated by
+allowCycles: true
+hierarchical: false

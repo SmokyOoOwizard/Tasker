@@ -1,0 +1,4 @@
+migrate
+--dry-run
+-w
+<ROOT>/golden

@@ -1,0 +1,7 @@
+field
+get
+Platforms
+-w
+<ROOT>/golden
+-p
+Golden
