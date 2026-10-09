@@ -10,12 +10,12 @@ use tasker_core::ids::{DEFAULT_LINK_TYPES, default_link_type_id};
 use tasker_core::locks::LockedEntity;
 use tasker_core::model::{LinkType, TaskItem, TaskLink};
 use tasker_core::tasks::{Page, TaskFilter};
+use tasker_files::index::LinkEdge;
+use tasker_services::cleanup::CleanupOptions;
+use tasker_services::link_cycles;
 use tasker_services::link_type::{CreateLinkType, DEFAULT_VERSION, LinkDirection, UpdateLinkType};
 use tasker_services::links::MAX_VIEWED;
 use tasker_services::task::CreateTask;
-use tasker_services::cleanup::CleanupOptions;
-use tasker_services::link_cycles;
-use tasker_files::index::LinkEdge;
 use uuid::Uuid;
 
 fn link_type(env: &Env, name: &str) -> LinkType {
@@ -78,14 +78,23 @@ fn a_project_shows_the_jira_link_types_without_writing_and_saves_them_on_the_fir
         vec!["Blocks", "Cloners", "Duplicate", "Parent/Child", "Problem/Incident", "Relates"]
     );
     assert!(env.ws.get_all::<LinkType>(&env.project).unwrap().is_empty()); // чтение ничего не записало
-    assert_eq!(types.iter().map(|x| x.id).collect::<Vec<_>>(), again.iter().map(|x| x.id).collect::<Vec<_>>());
+    assert_eq!(
+        types.iter().map(|x| x.id).collect::<Vec<_>>(),
+        again.iter().map(|x| x.id).collect::<Vec<_>>()
+    );
     assert_eq!(page.total_count, 6);
     assert_eq!(one.id, types[0].id);
     assert!(types.iter().all(|x| x.version == DEFAULT_VERSION));
 
-    env.ws.link_types().create(&env.project, &CreateLinkType::new("Mine", "x", Some("y"))).unwrap();
+    env.ws
+        .link_types()
+        .create(&env.project, &CreateLinkType::new("Mine", "x", Some("y")))
+        .unwrap();
     assert_eq!(env.ws.get_all::<LinkType>(&env.project).unwrap().len(), 7);
-    env.ws.link_types().create(&env.project, &CreateLinkType::new("Mine2", "x", Some("y"))).unwrap();
+    env.ws
+        .link_types()
+        .create(&env.project, &CreateLinkType::new("Mine2", "x", Some("y")))
+        .unwrap();
     assert_eq!(env.ws.get_all::<LinkType>(&env.project).unwrap().len(), 8);
     let saved: Vec<Uuid> = env
         .ws
@@ -99,7 +108,10 @@ fn a_project_shows_the_jira_link_types_without_writing_and_saves_them_on_the_fir
     assert_eq!(saved, types.iter().map(|x| x.id).collect::<Vec<_>>());
 
     let blocks = types.iter().find(|x| x.name == "Blocks").unwrap();
-    assert_eq!((blocks.outward_name.as_str(), blocks.inward_name.as_str()), ("blocks", "is blocked by"));
+    assert_eq!(
+        (blocks.outward_name.as_str(), blocks.inward_name.as_str()),
+        ("blocks", "is blocked by")
+    );
     assert!(!blocks.is_symmetric());
     assert!(types.iter().find(|x| x.name == "Relates").unwrap().is_symmetric());
     let names = |n: &str| {
@@ -111,7 +123,11 @@ fn a_project_shows_the_jira_link_types_without_writing_and_saves_them_on_the_fir
     assert_eq!(names("Duplicate"), ("duplicates".into(), "is duplicated by".into()));
     // Детерминированные id — те же, что считает ядро.
     for definition in &DEFAULT_LINK_TYPES {
-        assert!(saved.contains(&default_link_type_id(&env.project, definition.key)), "{}", definition.key);
+        assert!(
+            saved.contains(&default_link_type_id(&env.project, definition.key)),
+            "{}",
+            definition.key
+        );
     }
 }
 
@@ -120,7 +136,10 @@ fn default_type_ids_are_stable_per_project_and_differ_between_projects() {
     let project = Uuid::new_v4();
     assert_eq!(default_link_type_id(&project, "blocks"), default_link_type_id(&project, "blocks"));
     assert_ne!(default_link_type_id(&project, "blocks"), default_link_type_id(&project, "relates"));
-    assert_ne!(default_link_type_id(&project, "blocks"), default_link_type_id(&Uuid::new_v4(), "blocks"));
+    assert_ne!(
+        default_link_type_id(&project, "blocks"),
+        default_link_type_id(&Uuid::new_v4(), "blocks")
+    );
     let mut ids: Vec<Uuid> = DEFAULT_LINK_TYPES.iter().map(|x| default_link_type_id(&project, x.key)).collect();
     ids.sort();
     ids.dedup();
@@ -169,11 +188,21 @@ fn a_default_type_read_before_it_was_saved_has_a_stale_version_and_the_client_mu
 fn defaults_are_not_recreated_while_the_project_has_its_own_types() {
     let env = Env::new();
     env.ws.link_types().ensure_defaults(&env.project).unwrap();
-    for t in env.ws.link_types().get_all(&env.project).unwrap().iter().filter(|x| x.name != "Blocks") {
+    for t in env
+        .ws
+        .link_types()
+        .get_all(&env.project)
+        .unwrap()
+        .iter()
+        .filter(|x| x.name != "Blocks")
+    {
         assert!(env.ws.link_types().delete(&env.project, &t.id, Some(&t.version)).unwrap());
     }
     let left = env.ws.link_types().get_all(&env.project).unwrap();
-    assert_eq!(left.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["Blocks", "Parent/Child"]);
+    assert_eq!(
+        left.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["Blocks", "Parent/Child"]
+    );
 
     env.ws
         .link_types()
@@ -189,7 +218,13 @@ fn defaults_are_not_recreated_while_the_project_has_its_own_types() {
     let saved = link_type(&env, "Parent/Child");
     assert!(env.ws.link_types().delete(&env.project, &saved.id, Some(&saved.version)).unwrap());
     assert_eq!(
-        env.ws.link_types().get_all(&env.project).unwrap().iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        env.ws
+            .link_types()
+            .get_all(&env.project)
+            .unwrap()
+            .iter()
+            .map(|x| x.name.as_str())
+            .collect::<Vec<_>>(),
         vec!["Blocks", "Epic link"]
     );
     assert!(parent.hierarchical);
@@ -217,11 +252,17 @@ fn a_link_is_stored_on_the_source_and_each_side_sees_its_own_name() {
 
     let from_a = links_of(&env, &a);
     assert_eq!(from_a.len(), 1);
-    assert_eq!((from_a[0].direction, from_a[0].name.as_str(), from_a[0].type_name.as_str()), (LinkDirection::Outward, "blocks", "Blocks"));
+    assert_eq!(
+        (from_a[0].direction, from_a[0].name.as_str(), from_a[0].type_name.as_str()),
+        (LinkDirection::Outward, "blocks", "Blocks")
+    );
     assert_eq!((from_a[0].task.id, from_a[0].task.title.as_str()), (b.id, "Release"));
     let from_b = links_of(&env, &b);
     assert_eq!(from_b.len(), 1);
-    assert_eq!((from_b[0].direction, from_b[0].name.as_str(), from_b[0].task.id), (LinkDirection::Inward, "is blocked by", a.id));
+    assert_eq!(
+        (from_b[0].direction, from_b[0].name.as_str(), from_b[0].task.id),
+        (LinkDirection::Inward, "is blocked by", a.id)
+    );
 }
 
 #[test]
@@ -267,7 +308,12 @@ fn one_pair_can_have_links_of_different_types_and_both_directions_and_they_are_s
             .iter()
             .map(|x| format!("{}/{}/{}", x.type_name, x.name, x.task.title))
             .collect::<Vec<_>>(),
-        vec!["Blocks/blocks/Beta", "Blocks/blocks/Zeta", "Blocks/is blocked by/Gamma", "Duplicate/duplicates/Zeta"]
+        vec![
+            "Blocks/blocks/Beta",
+            "Blocks/blocks/Zeta",
+            "Blocks/is blocked by/Gamma",
+            "Duplicate/duplicates/Zeta"
+        ]
     );
 }
 
@@ -282,8 +328,14 @@ fn a_symmetric_link_looks_the_same_from_both_sides_is_not_added_twice_and_is_rem
     add(&env, &a, &relates.id, &b).unwrap();
     let reverse = add(&env, &b, &relates.id, &a).unwrap().unwrap();
     assert!(reverse.links.is_empty());
-    assert_eq!(links_of(&env, &a).iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["relates to"]);
-    assert_eq!(links_of(&env, &b).iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["relates to"]);
+    assert_eq!(
+        links_of(&env, &a).iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["relates to"]
+    );
+    assert_eq!(
+        links_of(&env, &b).iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["relates to"]
+    );
 
     // Убираем со стороны B, хотя хранится связь в A.
     remove(&env, &b, &relates.id, &a).unwrap();
@@ -297,7 +349,10 @@ fn invalid_links_are_rejected_with_a_reason() {
     let env = Env::new();
     let blocks = link_type(&env, "Blocks");
     let a = create(&env, "A");
-    assert_eq!(message(add(&env, &a, &blocks.id, &a)), "TargetId: a task cannot be linked to itself");
+    assert_eq!(
+        message(add(&env, &a, &blocks.id, &a)),
+        "TargetId: a task cannot be linked to itself"
+    );
     let missing = Uuid::new_v4();
     assert_eq!(
         message(env.ws.links().add(&env.project, &a.id, &blocks.id, &missing, None)),
@@ -308,12 +363,22 @@ fn invalid_links_are_rejected_with_a_reason() {
         message(env.ws.links().add(&env.project, &a.id, &missing, &b.id, None)),
         format!("TypeId: link type not found in the project: {missing}")
     );
-    assert!(env.ws.links().add(&env.project, &Uuid::new_v4(), &blocks.id, &b.id, None).unwrap().is_none());
+    assert!(
+        env.ws
+            .links()
+            .add(&env.project, &Uuid::new_v4(), &blocks.id, &b.id, None)
+            .unwrap()
+            .is_none()
+    );
     assert!(env.ws.links().get_links(&env.project, &Uuid::new_v4()).unwrap().is_none());
     assert!(env.get(&a.id).links.is_empty());
 
     // Задача другого проекта не может быть целью.
-    let other = env.ws.projects().create(&tasker_services::project::CreateProject { name: "Other".into() }).unwrap();
+    let other = env
+        .ws
+        .projects()
+        .create(&tasker_services::project::CreateProject { name: "Other".into() })
+        .unwrap();
     let mut foreign = env.seed("Foreign", &[]);
     env.ws.tasks().delete(&env.project, &foreign.id, Some(&foreign.version)).unwrap();
     foreign.project_id = other.id;
@@ -348,7 +413,12 @@ fn with_a_version_a_stale_one_is_rejected_and_with_the_current_one_the_task_gets
     assert!(env.get(&a.id).links.is_empty());
 
     env.clock.advance(Duration::from_secs(60));
-    let updated = env.ws.links().add(&env.project, &a.id, &blocks.id, &b.id, Some(&renamed.version)).unwrap().unwrap();
+    let updated = env
+        .ws
+        .links()
+        .add(&env.project, &a.id, &blocks.id, &b.id, Some(&renamed.version))
+        .unwrap()
+        .unwrap();
     assert_ne!(renamed.version, updated.version);
     assert_eq!(updated.version, env.get(&a.id).version);
     assert_eq!(updated.updated_at, env.now());
@@ -384,7 +454,13 @@ fn removing_a_link_is_idempotent_and_deleting_a_task_removes_links_on_both_sides
     let removed = remove(&env, &a, &blocks.id, &b).unwrap().unwrap();
     let again = remove(&env, &a, &blocks.id, &b).unwrap().unwrap();
     assert!(removed.links.is_empty() && again.links.is_empty());
-    assert!(env.ws.links().remove(&env.project, &Uuid::new_v4(), &blocks.id, &b.id, None).unwrap().is_none());
+    assert!(
+        env.ws
+            .links()
+            .remove(&env.project, &Uuid::new_v4(), &blocks.id, &b.id, None)
+            .unwrap()
+            .is_none()
+    );
 
     let c = create(&env, "C");
     add(&env, &a, &blocks.id, &b).unwrap();
@@ -424,8 +500,15 @@ fn links_to_a_missing_task_or_type_are_skipped_when_shown_and_task_details_show_
     let details = env.ws.tasks().describe_by_id(&env.project, &b.id).unwrap().unwrap();
     assert_eq!(details.link_count, 2);
     assert_eq!(
-        details.link_views.iter().map(|x| (x.direction, x.name.as_str(), x.task.id)).collect::<Vec<_>>(),
-        vec![(LinkDirection::Outward, "blocks", c.id), (LinkDirection::Inward, "is blocked by", a.id)]
+        details
+            .link_views
+            .iter()
+            .map(|x| (x.direction, x.name.as_str(), x.task.id))
+            .collect::<Vec<_>>(),
+        vec![
+            (LinkDirection::Outward, "blocks", c.id),
+            (LinkDirection::Inward, "is blocked by", a.id)
+        ]
     );
     assert_eq!(
         details.task.links,
@@ -463,11 +546,20 @@ fn a_task_someone_else_edits_cannot_get_a_link_but_can_be_a_target() {
     let blocks = link_type(&env, "Blocks");
     let a = create(&env, "A");
     let b = create(&env, "B");
-    env.ws.locks().acquire(LockedEntity::Task, &a.id, "Task", Some(env.project)).unwrap();
+    env.ws
+        .locks()
+        .acquire(LockedEntity::Task, &a.id, "Task", Some(env.project))
+        .unwrap();
 
     let anna = env.as_editor("user:anna", "Anna");
-    assert_eq!(err(anna.links().add(&env.project, &a.id, &blocks.id, &b.id, None)).conflict_code(), Some(ConflictCode::Locked));
-    assert_eq!(err(anna.links().remove(&env.project, &a.id, &blocks.id, &b.id, None)).conflict_code(), Some(ConflictCode::Locked));
+    assert_eq!(
+        err(anna.links().add(&env.project, &a.id, &blocks.id, &b.id, None)).conflict_code(),
+        Some(ConflictCode::Locked)
+    );
+    assert_eq!(
+        err(anna.links().remove(&env.project, &a.id, &blocks.id, &b.id, None)).conflict_code(),
+        Some(ConflictCode::Locked)
+    );
     let linked = anna.links().add(&env.project, &b.id, &blocks.id, &a.id, None).unwrap().unwrap();
     assert_eq!(linked.links.len(), 1);
 }
@@ -480,9 +572,15 @@ fn link_types_can_be_created_renamed_and_deleted_when_unused() {
     let depends = env
         .ws
         .link_types()
-        .create(&env.project, &CreateLinkType::new("Depends", "depends on", Some("is a dependency of")))
+        .create(
+            &env.project,
+            &CreateLinkType::new("Depends", "depends on", Some("is a dependency of")),
+        )
         .unwrap();
-    assert_eq!((depends.outward_name.as_str(), depends.inward_name.as_str()), ("depends on", "is a dependency of"));
+    assert_eq!(
+        (depends.outward_name.as_str(), depends.inward_name.as_str()),
+        ("depends on", "is a dependency of")
+    );
     let renamed = env
         .ws
         .link_types()
@@ -502,22 +600,38 @@ fn link_types_can_be_created_renamed_and_deleted_when_unused() {
         (renamed.name.as_str(), renamed.outward_name.as_str(), renamed.inward_name.as_str()),
         ("Dependency", "depends on", "is needed by")
     );
-    assert!(env.ws.link_types().delete(&env.project, &depends.id, Some(&renamed.version)).unwrap());
+    assert!(
+        env.ws
+            .link_types()
+            .delete(&env.project, &depends.id, Some(&renamed.version))
+            .unwrap()
+    );
     assert!(env.ws.link_types().find(&env.project, "Dependency").unwrap().is_none());
 }
 
 #[test]
 fn a_type_without_inward_name_is_symmetric_and_names_must_be_unique_and_valid() {
     let env = Env::new();
-    let same = env.ws.link_types().create(&env.project, &CreateLinkType::new("Pair", "goes with", None)).unwrap();
+    let same = env
+        .ws
+        .link_types()
+        .create(&env.project, &CreateLinkType::new("Pair", "goes with", None))
+        .unwrap();
     assert!(same.is_symmetric());
     assert_eq!(same.inward_name, "goes with");
-    let create = |name: &str, outward: &str, inward: &str| env.ws.link_types().create(&env.project, &CreateLinkType::new(name, outward, Some(inward)));
+    let create = |name: &str, outward: &str, inward: &str| {
+        env.ws
+            .link_types()
+            .create(&env.project, &CreateLinkType::new(name, outward, Some(inward)))
+    };
     assert_eq!(message(create("pair", "x", "y")), "Link type 'pair' already exists in the project");
     assert!(err(create("blocks", "x", "y")).is_in_use());
     assert_eq!(message(create(" ", "x", "y")), "Link type name is required");
     assert_eq!(message(create("N", "", "y")), "Outward name is required");
-    assert_eq!(message(create("N", "x", &"y".repeat(101))), "Inward name must be at most 100 characters");
+    assert_eq!(
+        message(create("N", "x", &"y".repeat(101))),
+        "Inward name must be at most 100 characters"
+    );
 
     let blocks = link_type(&env, "Blocks");
     let update = |id: &Uuid, version: Option<&str>| {
@@ -546,13 +660,19 @@ fn a_type_with_links_cannot_be_deleted_until_they_are_removed_and_a_locked_type_
     blocks = link_type(&env, "Blocks");
     let error = err(env.ws.link_types().delete(&env.project, &blocks.id, Some(&blocks.version)));
     assert_eq!(error.conflict_code(), Some(ConflictCode::InUse));
-    assert_eq!(error.message(), "Link type 'Blocks' is used by links of 1 task(s) and cannot be deleted");
+    assert_eq!(
+        error.message(),
+        "Link type 'Blocks' is used by links of 1 task(s) and cannot be deleted"
+    );
     remove(&env, &a, &blocks.id, &b).unwrap();
     assert!(env.ws.link_types().delete(&env.project, &blocks.id, Some(&blocks.version)).unwrap());
     assert!(!env.ws.link_types().delete(&env.project, &blocks.id, Some(&blocks.version)).unwrap());
 
     let dup = link_type(&env, "Duplicate");
-    env.ws.locks().acquire(LockedEntity::LinkType, &dup.id, "Link type", Some(env.project)).unwrap();
+    env.ws
+        .locks()
+        .acquire(LockedEntity::LinkType, &dup.id, "Link type", Some(env.project))
+        .unwrap();
     let anna = env.as_editor("user:anna", "Anna");
     assert!(
         err(anna.link_types().update(
@@ -698,7 +818,11 @@ fn a_symmetric_type_never_forms_a_cycle_and_a_custom_type_chooses_whether_it_all
     add(&env, &a, &strict_pair.id, &b).unwrap();
     add(&env, &b, &strict_pair.id, &a).unwrap();
 
-    let free = env.ws.link_types().create(&env.project, &CreateLinkType::new("Feeds", "feeds", Some("is fed by"))).unwrap();
+    let free = env
+        .ws
+        .link_types()
+        .create(&env.project, &CreateLinkType::new("Feeds", "feeds", Some("is fed by")))
+        .unwrap();
     let strict = env
         .ws
         .link_types()
@@ -810,15 +934,30 @@ fn an_existing_cycle_is_reported_by_the_health_check_and_cleanup_does_not_remove
     assert!(health.needs_attention());
     assert_eq!(health.cycles.len(), 1);
     assert_eq!(health.cycles[0].type_name, "Blocks");
-    assert_eq!(health.cycles[0].format(&HashMap::from([(tsk.id, "TSK".to_string())])), "TSK-1 → TSK-2 → TSK-3 → TSK-1");
+    assert_eq!(
+        health.cycles[0].format(&HashMap::from([(tsk.id, "TSK".to_string())])),
+        "TSK-1 → TSK-2 → TSK-3 → TSK-1"
+    );
 
     let report = env.ws.cleanup().run(&env.project, CleanupOptions::default()).unwrap();
     assert!(report.changes.is_empty());
     assert_eq!(report.link_cycles.len(), 1);
     assert_eq!([&a, &b, &c].iter().map(|x| env.get(&x.id).version).collect::<Vec<_>>(), versions);
 
-    assert_eq!(links_of(&env, &a).iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["blocks", "is blocked by"]);
-    assert_eq!(env.ws.tasks().describe_by_id(&env.project, &a.id).unwrap().unwrap().link_views.len(), 2);
+    assert_eq!(
+        links_of(&env, &a).iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["blocks", "is blocked by"]
+    );
+    assert_eq!(
+        env.ws
+            .tasks()
+            .describe_by_id(&env.project, &a.id)
+            .unwrap()
+            .unwrap()
+            .link_views
+            .len(),
+        2
+    );
 }
 
 #[test]

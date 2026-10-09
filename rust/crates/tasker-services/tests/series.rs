@@ -29,7 +29,11 @@ fn create_in(env: &Env, title: &str, series: &[Uuid]) -> tasker_services::Result
 #[test]
 fn create_trims_name_and_stores_series() {
     let env = Env::new();
-    let created = env.ws.series().create(&env.project, &CreateSeries::new("  Tasks  ", "TSK")).unwrap();
+    let created = env
+        .ws
+        .series()
+        .create(&env.project, &CreateSeries::new("  Tasks  ", "TSK"))
+        .unwrap();
     assert_eq!(created.name, "Tasks");
     assert_eq!(created.prefix, "TSK");
     assert_eq!(created.project_id, env.project);
@@ -42,7 +46,14 @@ fn create_allows_prefixes_that_differ_only_in_case() {
     let env = Env::new();
     env.ws.series().create(&env.project, &CreateSeries::new("Upper", "TSK")).unwrap();
     env.ws.series().create(&env.project, &CreateSeries::new("Lower", "tsk")).unwrap();
-    let prefixes: Vec<String> = env.ws.series().get_all(&env.project).unwrap().into_iter().map(|x| x.prefix).collect();
+    let prefixes: Vec<String> = env
+        .ws
+        .series()
+        .get_all(&env.project)
+        .unwrap()
+        .into_iter()
+        .map(|x| x.prefix)
+        .collect();
     assert_eq!(prefixes, vec!["TSK", "tsk"]);
 }
 
@@ -60,15 +71,31 @@ fn create_with_taken_prefix_conflicts_and_writes_nothing() {
 fn create_same_prefix_in_another_project_is_fine() {
     let env = Env::new();
     env.ws.series().create(&env.project, &CreateSeries::new("First", "TSK")).unwrap();
-    let other = env.ws.projects().create(&tasker_services::project::CreateProject { name: "Other".into() }).unwrap();
-    env.ws.series().create(&other.id, &CreateSeries::new("Other project", "TSK")).unwrap();
+    let other = env
+        .ws
+        .projects()
+        .create(&tasker_services::project::CreateProject { name: "Other".into() })
+        .unwrap();
+    env.ws
+        .series()
+        .create(&other.id, &CreateSeries::new("Other project", "TSK"))
+        .unwrap();
 }
 
 #[test]
 fn create_validates_input() {
     let env = Env::new();
-    for (name, prefix) in [("", "TSK"), ("  ", "TSK"), ("Name", ""), ("Name", "A-B"), ("Name", "1234567890123456789012")] {
-        assert!(err(env.ws.series().create(&env.project, &CreateSeries::new(name, prefix))).is_validation(), "{name:?} {prefix:?}");
+    for (name, prefix) in [
+        ("", "TSK"),
+        ("  ", "TSK"),
+        ("Name", ""),
+        ("Name", "A-B"),
+        ("Name", "1234567890123456789012"),
+    ] {
+        assert!(
+            err(env.ws.series().create(&env.project, &CreateSeries::new(name, prefix))).is_validation(),
+            "{name:?} {prefix:?}"
+        );
     }
     assert!(env.ws.series().get_all(&env.project).unwrap().is_empty());
 }
@@ -218,7 +245,10 @@ fn delete_missing_series_returns_false_and_checks_version() {
     let series = env.ws.series().create(&env.project, &CreateSeries::new("A", "AAA")).unwrap();
     assert!(!env.ws.series().delete(&env.project, &Uuid::new_v4(), Some("x")).unwrap());
     assert!(err(env.ws.series().delete(&env.project, &series.id, None)).is_validation());
-    assert_eq!(err(env.ws.series().delete(&env.project, &series.id, Some("stale"))).conflict_code(), Some(ConflictCode::Modified));
+    assert_eq!(
+        err(env.ws.series().delete(&env.project, &series.id, Some("stale"))).conflict_code(),
+        Some(ConflictCode::Modified)
+    );
     assert!(env.ws.series().get_by_id(&env.project, &series.id).unwrap().is_some());
     assert!(env.ws.series().delete(&env.project, &series.id, Some(&series.version)).unwrap());
     assert!(env.ws.series().get_by_id(&env.project, &series.id).unwrap().is_none());
@@ -262,7 +292,10 @@ fn delete_series_removes_references_from_more_than_one_page_of_tasks() {
     assert!(env.ws.series().delete(&env.project, &a.id, Some(&a.version)).unwrap());
     let all = env.all_tasks();
     assert_eq!(all.len(), 230);
-    assert!(all.iter().all(|t| t.series_numbers.iter().map(|x| x.series_id).collect::<Vec<_>>() == vec![b.id]));
+    assert!(
+        all.iter()
+            .all(|t| t.series_numbers.iter().map(|x| x.series_id).collect::<Vec<_>>() == vec![b.id])
+    );
 }
 
 #[test]
@@ -337,8 +370,15 @@ fn create_with_missing_duplicate_or_foreign_series_writes_nothing() {
     let missing = Uuid::new_v4();
     let e = err(create_in(&env, "t", &[good.id, missing]));
     assert_eq!(e.message(), format!("SeriesIds: not found in the project: {missing}"));
-    assert_eq!(err(create_in(&env, "t", &[good.id, good.id])).message(), "SeriesIds contains duplicates");
-    let other = env.ws.projects().create(&tasker_services::project::CreateProject { name: "Other".into() }).unwrap();
+    assert_eq!(
+        err(create_in(&env, "t", &[good.id, good.id])).message(),
+        "SeriesIds contains duplicates"
+    );
+    let other = env
+        .ws
+        .projects()
+        .create(&tasker_services::project::CreateProject { name: "Other".into() })
+        .unwrap();
     let foreign = env.ws.series().create(&other.id, &CreateSeries::new("For", "FOR")).unwrap();
     assert!(err(create_in(&env, "t", &[foreign.id])).is_validation());
     assert!(env.all_tasks().is_empty());
@@ -362,7 +402,10 @@ fn create_with_invalid_title_type_or_status_and_series_writes_nothing() {
     };
     assert_eq!(message(create(" ", env.task_type.id, None)), "Title is required");
     let unknown = Uuid::new_v4();
-    assert_eq!(message(create("t", unknown, None)), format!("TypeId: not found in the project: {unknown}"));
+    assert_eq!(
+        message(create("t", unknown, None)),
+        format!("TypeId: not found in the project: {unknown}")
+    );
     assert_eq!(
         message(create("t", env.task_type.id, Some(unknown))),
         format!("StatusId: status {unknown} is not in the status set of task type 'Task'")
@@ -417,7 +460,11 @@ fn parallel_creates_and_add_to_series_get_unique_consecutive_numbers() {
             });
         }
     });
-    let mut numbers_a: Vec<i32> = env.all_tasks().iter().map(|t| t.series_numbers.iter().find(|x| x.series_id == a.id).unwrap().number).collect();
+    let mut numbers_a: Vec<i32> = env
+        .all_tasks()
+        .iter()
+        .map(|t| t.series_numbers.iter().find(|x| x.series_id == a.id).unwrap().number)
+        .collect();
     numbers_a.sort();
     assert_eq!(numbers_a, (1..=20).collect::<Vec<_>>());
     assert!(env.ws.index().number_conflicts(&env.project).unwrap().is_empty());
@@ -447,7 +494,12 @@ fn add_to_series_appends_next_number_and_keeps_existing_order() {
     env.seed("x", &[(b.id, 10)]);
     let task = env.seed("t", &[(b.id, 3)]);
     env.clock.advance(Duration::from_secs(5 * 3600));
-    let result = env.ws.tasks().add_to_series(&env.project, &task.id, &a.id, Some(&task.version)).unwrap().unwrap();
+    let result = env
+        .ws
+        .tasks()
+        .add_to_series(&env.project, &task.id, &a.id, Some(&task.version))
+        .unwrap()
+        .unwrap();
     assert_eq!(sn(&result), vec![(b.id, 3), (a.id, 1)]);
     assert_eq!(result.updated_at, env.now());
     assert_eq!(result, env.get(&task.id));
@@ -459,7 +511,12 @@ fn add_to_series_when_already_member_returns_task_unchanged_without_writing() {
     let env = Env::new();
     let s = env.series("TSK");
     let task = env.seed("t", &[(s.id, 4)]);
-    let result = env.ws.tasks().add_to_series(&env.project, &task.id, &s.id, Some(&task.version)).unwrap().unwrap();
+    let result = env
+        .ws
+        .tasks()
+        .add_to_series(&env.project, &task.id, &s.id, Some(&task.version))
+        .unwrap()
+        .unwrap();
     assert_eq!(result, task);
     assert_eq!(env.get(&task.id).version, task.version);
 }
@@ -469,8 +526,20 @@ fn add_to_series_missing_task_or_series_gives_none_and_bad_version_is_rejected()
     let env = Env::new();
     let s = env.series("TSK");
     let task = env.seed("t", &[]);
-    assert!(env.ws.tasks().add_to_series(&env.project, &Uuid::new_v4(), &s.id, Some("x")).unwrap().is_none());
-    assert!(env.ws.tasks().add_to_series(&env.project, &task.id, &Uuid::new_v4(), Some(&task.version)).unwrap().is_none());
+    assert!(
+        env.ws
+            .tasks()
+            .add_to_series(&env.project, &Uuid::new_v4(), &s.id, Some("x"))
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        env.ws
+            .tasks()
+            .add_to_series(&env.project, &task.id, &Uuid::new_v4(), Some(&task.version))
+            .unwrap()
+            .is_none()
+    );
     assert!(err(env.ws.tasks().add_to_series(&env.project, &task.id, &s.id, None)).is_validation());
     let e = err(env.ws.tasks().add_to_series(&env.project, &task.id, &s.id, Some("stale")));
     assert_eq!(e.conflict_code(), Some(ConflictCode::Modified));
@@ -483,7 +552,18 @@ fn add_to_series_reports_modified_when_task_changed_on_disk() {
     let s = env.series("TSK");
     let task = env.seed("t", &[]);
     // Задачу изменили снаружи: версия, которую видел клиент, устарела.
-    env.ws.tasks().update(&env.project, &task.id, &UpdateTask { title: Some("t2".into()), version: Some(task.version.clone()), ..UpdateTask::default() }).unwrap();
+    env.ws
+        .tasks()
+        .update(
+            &env.project,
+            &task.id,
+            &UpdateTask {
+                title: Some("t2".into()),
+                version: Some(task.version.clone()),
+                ..UpdateTask::default()
+            },
+        )
+        .unwrap();
     let e = err(env.ws.tasks().add_to_series(&env.project, &task.id, &s.id, Some(&task.version)));
     assert_eq!(e.conflict_code(), Some(ConflictCode::Modified));
 }
@@ -496,7 +576,12 @@ fn remove_from_series_removes_only_that_series_and_frees_the_number() {
     let c = env.series("CCC");
     let task = env.seed("t", &[(a.id, 1), (b.id, 2), (c.id, 3)]);
     env.clock.advance(Duration::from_secs(3600));
-    let result = env.ws.tasks().remove_from_series(&env.project, &task.id, &b.id, Some(&task.version)).unwrap().unwrap();
+    let result = env
+        .ws
+        .tasks()
+        .remove_from_series(&env.project, &task.id, &b.id, Some(&task.version))
+        .unwrap()
+        .unwrap();
     assert_eq!(sn(&result), vec![(a.id, 1), (c.id, 3)]);
     assert_eq!(result.updated_at, env.now());
     assert_eq!(result, env.get(&task.id));
@@ -508,8 +593,21 @@ fn remove_from_series_not_a_member_returns_task_as_is_missing_task_is_none_and_v
     let env = Env::new();
     let s = env.series("TSK");
     let task = env.seed("t", &[]);
-    assert_eq!(env.ws.tasks().remove_from_series(&env.project, &task.id, &s.id, Some(&task.version)).unwrap().unwrap(), task);
-    assert!(env.ws.tasks().remove_from_series(&env.project, &Uuid::new_v4(), &s.id, Some("x")).unwrap().is_none());
+    assert_eq!(
+        env.ws
+            .tasks()
+            .remove_from_series(&env.project, &task.id, &s.id, Some(&task.version))
+            .unwrap()
+            .unwrap(),
+        task
+    );
+    assert!(
+        env.ws
+            .tasks()
+            .remove_from_series(&env.project, &Uuid::new_v4(), &s.id, Some("x"))
+            .unwrap()
+            .is_none()
+    );
     assert!(err(env.ws.tasks().remove_from_series(&env.project, &task.id, &s.id, Some(""))).is_validation());
     assert!(err(env.ws.tasks().remove_from_series(&env.project, &task.id, &s.id, Some("stale"))).is_modified());
 }
@@ -519,7 +617,12 @@ fn remove_from_series_also_removes_a_dangling_reference() {
     let env = Env::new();
     let gone = Uuid::new_v4();
     let task = env.seed("t", &[(gone, 2)]);
-    let result = env.ws.tasks().remove_from_series(&env.project, &task.id, &gone, Some(&task.version)).unwrap().unwrap();
+    let result = env
+        .ws
+        .tasks()
+        .remove_from_series(&env.project, &task.id, &gone, Some(&task.version))
+        .unwrap()
+        .unwrap();
     assert!(result.series_numbers.is_empty());
 }
 
@@ -530,11 +633,22 @@ fn remove_from_series_by_number() {
     let b = env.series("BBB");
     let t1 = env.seed("one", &[(a.id, 1), (b.id, 1)]);
     env.seed("two", &[(a.id, 2)]);
-    let result = env.ws.tasks().remove_from_series_by_number(&env.project, &a.id, 1).unwrap().unwrap();
+    let result = env
+        .ws
+        .tasks()
+        .remove_from_series_by_number(&env.project, &a.id, 1)
+        .unwrap()
+        .unwrap();
     assert_eq!(result.id, t1.id);
     assert_eq!(sn(&result), vec![(b.id, 1)]);
     assert_eq!(result, env.get(&t1.id));
-    assert!(env.ws.tasks().remove_from_series_by_number(&env.project, &a.id, 7).unwrap().is_none());
+    assert!(
+        env.ws
+            .tasks()
+            .remove_from_series_by_number(&env.project, &a.id, 7)
+            .unwrap()
+            .is_none()
+    );
 
     let d1 = env.seed("d1", &[(a.id, 9)]);
     let d2 = env.seed("d2", &[(a.id, 9)]);
@@ -550,7 +664,12 @@ fn renumber_to_free_number_keeps_position_of_other_series() {
     let b = env.series("BBB");
     let task = env.seed("t", &[(a.id, 1), (b.id, 2)]);
     env.clock.advance(Duration::from_secs(7200));
-    let result = env.ws.tasks().renumber(&env.project, &task.id, &a.id, Some(40), Some(&task.version)).unwrap().unwrap();
+    let result = env
+        .ws
+        .tasks()
+        .renumber(&env.project, &task.id, &a.id, Some(40), Some(&task.version))
+        .unwrap()
+        .unwrap();
     assert_eq!(sn(&result), vec![(a.id, 40), (b.id, 2)]);
     assert_eq!(result.updated_at, env.now());
     assert_eq!(result, env.get(&task.id));
@@ -579,9 +698,21 @@ fn renumber_to_own_number_is_a_noop_and_without_target_takes_max_plus_one() {
     let env = Env::new();
     let a = env.series("AAA");
     let task = env.seed("t", &[(a.id, 3)]);
-    assert_eq!(env.ws.tasks().renumber(&env.project, &task.id, &a.id, Some(3), Some(&task.version)).unwrap().unwrap(), task);
+    assert_eq!(
+        env.ws
+            .tasks()
+            .renumber(&env.project, &task.id, &a.id, Some(3), Some(&task.version))
+            .unwrap()
+            .unwrap(),
+        task
+    );
     env.seed("other", &[(a.id, 8)]);
-    let result = env.ws.tasks().renumber(&env.project, &task.id, &a.id, None, Some(&task.version)).unwrap().unwrap();
+    let result = env
+        .ws
+        .tasks()
+        .renumber(&env.project, &task.id, &a.id, None, Some(&task.version))
+        .unwrap()
+        .unwrap();
     assert_eq!(sn(&result), vec![(a.id, 9)]);
 }
 
@@ -591,7 +722,8 @@ fn renumber_returns_none_for_missing_task_series_or_membership_and_checks_versio
     let a = env.series("AAA");
     let b = env.series("BBB");
     let task = env.seed("t", &[(a.id, 1)]);
-    let renumber = |task_id: &Uuid, series: &Uuid, version: Option<&str>| env.ws.tasks().renumber(&env.project, task_id, series, Some(5), version);
+    let renumber =
+        |task_id: &Uuid, series: &Uuid, version: Option<&str>| env.ws.tasks().renumber(&env.project, task_id, series, Some(5), version);
     assert!(renumber(&Uuid::new_v4(), &a.id, Some("x")).unwrap().is_none());
     assert!(renumber(&task.id, &Uuid::new_v4(), Some(&task.version)).unwrap().is_none());
     assert!(renumber(&task.id, &b.id, Some(&task.version)).unwrap().is_none());
@@ -604,9 +736,24 @@ fn renumber_returns_none_for_missing_task_series_or_membership_and_checks_versio
 fn resolve_by_guid_prefix_number_and_duplicates() {
     let env = Env::new();
     let task = env.seed("t", &[]);
-    assert_eq!(env.ws.tasks().resolve(&env.project, &task.id.to_string(), false).unwrap(), vec![task.clone()]);
-    assert!(env.ws.tasks().resolve(&env.project, &Uuid::new_v4().to_string(), false).unwrap().is_empty());
-    assert!(env.ws.tasks().resolve(&Uuid::new_v4(), &task.id.to_string(), false).unwrap().is_empty());
+    assert_eq!(
+        env.ws.tasks().resolve(&env.project, &task.id.to_string(), false).unwrap(),
+        vec![task.clone()]
+    );
+    assert!(
+        env.ws
+            .tasks()
+            .resolve(&env.project, &Uuid::new_v4().to_string(), false)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        env.ws
+            .tasks()
+            .resolve(&Uuid::new_v4(), &task.id.to_string(), false)
+            .unwrap()
+            .is_empty()
+    );
 
     let upper = env.series("TSK");
     let lower = env.series("tsk");
@@ -620,10 +767,20 @@ fn resolve_by_guid_prefix_number_and_duplicates() {
 
     let late = env.seed_at("late", &[(upper.id, 2)], Env::at("2026-01-03T00:00:00+00:00"), Uuid::new_v4());
     let early = env.seed_at("early", &[(upper.id, 2)], Env::at("2026-01-02T00:00:00+00:00"), Uuid::new_v4());
-    let ids: Vec<Uuid> = env.ws.tasks().resolve(&env.project, "TSK-2", false).unwrap().iter().map(|x| x.id).collect();
+    let ids: Vec<Uuid> = env
+        .ws
+        .tasks()
+        .resolve(&env.project, "TSK-2", false)
+        .unwrap()
+        .iter()
+        .map(|x| x.id)
+        .collect();
     assert_eq!(ids, vec![early.id, late.id]);
 
-    assert_eq!(message(env.ws.tasks().resolve(&env.project, "hello", false)), "'hello' is neither a task id nor a reference like TSK-5");
+    assert_eq!(
+        message(env.ws.tasks().resolve(&env.project, "hello", false)),
+        "'hello' is neither a task id nor a reference like TSK-5"
+    );
     // Префикс id — только когда разрешён.
     let key = &task.id.simple().to_string()[..8];
     assert!(env.ws.tasks().resolve(&env.project, key, false).is_err());
@@ -676,7 +833,10 @@ fn all_four_counters_are_reported() {
     let mut ids = vec![d1.id, d2.id];
     ids.sort();
     assert_eq!(health.prefix_conflicts.len(), 1);
-    assert_eq!((health.prefix_conflicts[0].prefix.as_str(), &health.prefix_conflicts[0].series_ids), ("DUP", &ids));
+    assert_eq!(
+        (health.prefix_conflicts[0].prefix.as_str(), &health.prefix_conflicts[0].series_ids),
+        ("DUP", &ids)
+    );
     assert_eq!((health.tasks_with_invalid_series, health.unreadable_series_files), (2, 0));
 
     env.unreadable_series_file("broken");
@@ -696,7 +856,17 @@ fn cleanup_nothing_to_do_changes_nothing() {
     let env = Env::new();
     let s = env.series("TSK");
     let t = env.seed("t", &[(s.id, 1)]);
-    let report = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: false }).unwrap();
+    let report = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: false,
+            },
+        )
+        .unwrap();
     assert!(report.changes.is_empty() && report.remaining_number_conflicts.is_empty() && report.prefix_conflicts.is_empty());
     assert!(!report.skipped && report.skip_reason.is_none() && report.links_skip_reason.is_none());
     assert_eq!(env.get(&t.id), t);
@@ -712,8 +882,14 @@ fn cleanup_removes_invalid_references_keeps_valid_ones_and_describes_them() {
     let report = env.ws.cleanup().run(&env.project, CleanupOptions::default()).unwrap();
     assert_eq!(report.changes.len(), 1);
     let change = &report.changes[0];
-    assert_eq!((change.task_id, change.task_title.as_str(), change.kind), (task.id, "Fix login", CleanupChangeKind::RemovedInvalidSeries));
-    assert_eq!((change.series_id, change.old_number, change.new_number), (Some(gone), Some(5), None));
+    assert_eq!(
+        (change.task_id, change.task_title.as_str(), change.kind),
+        (task.id, "Fix login", CleanupChangeKind::RemovedInvalidSeries)
+    );
+    assert_eq!(
+        (change.series_id, change.old_number, change.new_number),
+        (Some(gone), Some(5), None)
+    );
     assert_eq!(change.description, "Task 'Fix login': removed invalid series reference (was #5)");
     let stored = env.get(&task.id);
     assert_eq!(sn(&stored), vec![(s.id, 1)]);
@@ -735,14 +911,31 @@ fn cleanup_several_invalid_references_on_one_task_give_one_change_each() {
 fn cleanup_unreadable_series_skip_everything_but_still_report_conflicts() {
     let env = Env::new();
     let s = env.series("TSK");
-    let t1 = env.seed_at("a", &[(s.id, 1), (Uuid::new_v4(), 3)], Env::at("2026-01-02T00:00:00+00:00"), Uuid::new_v4());
+    let t1 = env.seed_at(
+        "a",
+        &[(s.id, 1), (Uuid::new_v4(), 3)],
+        Env::at("2026-01-02T00:00:00+00:00"),
+        Uuid::new_v4(),
+    );
     let t2 = env.seed_at("b", &[(s.id, 1)], Env::at("2026-01-03T00:00:00+00:00"), Uuid::new_v4());
     env.unreadable_series_file("broken");
-    let report = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: false }).unwrap();
+    let report = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: false,
+            },
+        )
+        .unwrap();
     assert!(report.skipped);
     assert_eq!(
         report.skip_reason.as_deref(),
-        Some("Some series files cannot be read (merge conflict or broken YAML): a series that cannot be read would look missing and references to it would be wiped. Nothing was changed; fix the series files and run cleanup again.")
+        Some(
+            "Some series files cannot be read (merge conflict or broken YAML): a series that cannot be read would look missing and references to it would be wiped. Nothing was changed; fix the series files and run cleanup again."
+        )
     );
     assert!(report.changes.is_empty());
     assert_eq!(report.remaining_number_conflicts.len(), 1);
@@ -764,7 +957,13 @@ fn cleanup_prefix_conflicts_are_always_reported_and_conflicts_left_alone_without
     env.ws.add(&b).unwrap();
     let mut ids = vec![a.id, b.id];
     ids.sort();
-    for options in [CleanupOptions::default(), CleanupOptions { resolve_conflicts: true, dry_run: true }] {
+    for options in [
+        CleanupOptions::default(),
+        CleanupOptions {
+            resolve_conflicts: true,
+            dry_run: true,
+        },
+    ] {
         let report = env.ws.cleanup().run(&env.project, options).unwrap();
         assert_eq!(report.prefix_conflicts.len(), 1);
         assert_eq!(report.prefix_conflicts[0].series_ids, ids);
@@ -775,7 +974,15 @@ fn cleanup_prefix_conflicts_are_always_reported_and_conflicts_left_alone_without
     assert!(report.changes.is_empty());
     assert_eq!(report.remaining_number_conflicts[0].task_ids, vec![t1.id, t2.id]);
     env.unreadable_series_file("broken");
-    assert_eq!(env.ws.cleanup().run(&env.project, CleanupOptions::default()).unwrap().prefix_conflicts.len(), 1);
+    assert_eq!(
+        env.ws
+            .cleanup()
+            .run(&env.project, CleanupOptions::default())
+            .unwrap()
+            .prefix_conflicts
+            .len(),
+        1
+    );
 }
 
 #[test]
@@ -785,10 +992,23 @@ fn cleanup_two_conflicting_tasks_the_earliest_keeps_the_number() {
     let later = env.seed_at("later", &[(s.id, 3)], Env::at("2026-01-03T00:00:00+00:00"), Uuid::new_v4());
     let earlier = env.seed_at("earlier", &[(s.id, 3)], Env::at("2026-01-02T00:00:00+00:00"), Uuid::new_v4());
     env.seed("top", &[(s.id, 7)]);
-    let report = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: false }).unwrap();
+    let report = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: false,
+            },
+        )
+        .unwrap();
     assert_eq!(report.changes.len(), 1);
     let change = &report.changes[0];
-    assert_eq!((change.task_id, change.kind, change.series_id, change.old_number, change.new_number), (later.id, CleanupChangeKind::Renumbered, Some(s.id), Some(3), Some(8)));
+    assert_eq!(
+        (change.task_id, change.kind, change.series_id, change.old_number, change.new_number),
+        (later.id, CleanupChangeKind::Renumbered, Some(s.id), Some(3), Some(8))
+    );
     assert_eq!(change.description, "Task 'later': duplicate number TSK-3 changed to TSK-8");
     assert_eq!(sn(&env.get(&earlier.id)), vec![(s.id, 3)]);
     assert_eq!(sn(&env.get(&later.id)), vec![(s.id, 8)]);
@@ -805,8 +1025,22 @@ fn cleanup_three_tasks_with_equal_created_at_are_ordered_by_guid() {
     let first = env.seed_at("first", &[(s.id, 2)], when, g(1));
     let second = env.seed_at("second", &[(s.id, 2)], when, g(2));
     env.seed("top", &[(s.id, 10)]);
-    let report = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: false }).unwrap();
-    let changes: Vec<(Uuid, i32, i32)> = report.changes.iter().map(|x| (x.task_id, x.old_number.unwrap(), x.new_number.unwrap())).collect();
+    let report = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: false,
+            },
+        )
+        .unwrap();
+    let changes: Vec<(Uuid, i32, i32)> = report
+        .changes
+        .iter()
+        .map(|x| (x.task_id, x.old_number.unwrap(), x.new_number.unwrap()))
+        .collect();
     assert_eq!(changes, vec![(second.id, 2, 11), (third.id, 2, 12)]);
     assert_eq!(sn(&env.get(&first.id)), vec![(s.id, 2)]);
     assert_eq!(sn(&env.get(&second.id)), vec![(s.id, 11)]);
@@ -826,8 +1060,25 @@ fn cleanup_several_series_conflicts_invalid_references_and_a_task_in_two_groups_
     let a2 = env.seed_at("a2", &[(a.id, 1), (b.id, 1), (gone, 9)], t2, Uuid::new_v4());
     let a3 = env.seed_at("a3", &[(a.id, 1)], t3, Uuid::new_v4());
     let b2 = env.seed("b2", &[(b.id, 5)]);
-    let report = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: false }).unwrap();
-    assert_eq!(report.changes.iter().filter(|x| x.kind == CleanupChangeKind::RemovedInvalidSeries).count(), 1);
+    let report = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: false,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        report
+            .changes
+            .iter()
+            .filter(|x| x.kind == CleanupChangeKind::RemovedInvalidSeries)
+            .count(),
+        1
+    );
     assert_eq!(report.changes.iter().filter(|x| x.kind == CleanupChangeKind::Renumbered).count(), 3);
     assert_eq!(sn(&env.get(&a1.id)), vec![(a.id, 1), (b.id, 1)]);
     assert_eq!(sn(&env.get(&a2.id)), vec![(a.id, 2), (b.id, 6)]);
@@ -844,7 +1095,17 @@ fn cleanup_duplicates_inside_a_nonexistent_series_are_not_renumbered() {
     env.seed("a", &[(gone, 1)]);
     env.seed("b", &[(gone, 1)]);
     for dry in [true, false] {
-        let report = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: dry }).unwrap();
+        let report = env
+            .ws
+            .cleanup()
+            .run(
+                &env.project,
+                CleanupOptions {
+                    resolve_conflicts: true,
+                    dry_run: dry,
+                },
+            )
+            .unwrap();
         assert!(report.changes.iter().all(|c| c.kind == CleanupChangeKind::RemovedInvalidSeries));
         assert_eq!(report.changes.len(), 2);
         assert!(report.remaining_number_conflicts.is_empty());
@@ -863,9 +1124,29 @@ fn cleanup_dry_run_writes_nothing_and_matches_the_real_run_and_second_run_change
     env.seed_at("w", &[(b.id, 4)], Env::at("2026-01-05T00:00:00+00:00"), Uuid::new_v4());
     let before = env.all_tasks();
 
-    let dry = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: true }).unwrap();
+    let dry = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: true,
+            },
+        )
+        .unwrap();
     assert_eq!(env.all_tasks(), before);
-    let real = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: false }).unwrap();
+    let real = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: false,
+            },
+        )
+        .unwrap();
     assert_eq!(dry.changes, real.changes);
     assert_eq!(dry.remaining_number_conflicts, real.remaining_number_conflicts);
     assert!(!real.changes.is_empty());
@@ -873,7 +1154,17 @@ fn cleanup_dry_run_writes_nothing_and_matches_the_real_run_and_second_run_change
     assert!(!env.ws.series_health().check(&env.project).unwrap().needs_attention());
 
     let snapshot = env.all_tasks();
-    let second = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: true, dry_run: false }).unwrap();
+    let second = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: true,
+                dry_run: false,
+            },
+        )
+        .unwrap();
     assert!(second.changes.is_empty());
     assert_eq!(env.all_tasks(), snapshot);
 }
@@ -885,7 +1176,17 @@ fn cleanup_dry_run_without_resolve_reports_conflicts_of_valid_series_only() {
     let gone = Uuid::new_v4();
     let t1 = env.seed_at("a", &[(s.id, 1), (gone, 1)], Env::at("2026-01-02T00:00:00+00:00"), Uuid::new_v4());
     let t2 = env.seed_at("b", &[(s.id, 1), (gone, 1)], Env::at("2026-01-03T00:00:00+00:00"), Uuid::new_v4());
-    let dry = env.ws.cleanup().run(&env.project, CleanupOptions { resolve_conflicts: false, dry_run: true }).unwrap();
+    let dry = env
+        .ws
+        .cleanup()
+        .run(
+            &env.project,
+            CleanupOptions {
+                resolve_conflicts: false,
+                dry_run: true,
+            },
+        )
+        .unwrap();
     let real = env.ws.cleanup().run(&env.project, CleanupOptions::default()).unwrap();
     assert_eq!(dry.remaining_number_conflicts.len(), 1);
     assert_eq!(dry.remaining_number_conflicts[0].task_ids, vec![t1.id, t2.id]);

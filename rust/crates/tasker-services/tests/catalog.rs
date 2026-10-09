@@ -24,7 +24,14 @@ fn new_enum(env: &Env, project: &Uuid, name: &str, values: &[&str]) -> tasker_se
     )
 }
 
-fn new_field(env: &Env, project: &Uuid, name: &str, field_type: FieldType, multiple: Option<bool>, enum_id: Option<Uuid>) -> tasker_services::Result<FieldDefinition> {
+fn new_field(
+    env: &Env,
+    project: &Uuid,
+    name: &str,
+    field_type: FieldType,
+    multiple: Option<bool>,
+    enum_id: Option<Uuid>,
+) -> tasker_services::Result<FieldDefinition> {
     env.ws.fields().create(
         project,
         &CreateField {
@@ -58,7 +65,13 @@ fn rename_enum(ws: &Workspace, project: &Uuid, id: &Uuid, name: &str, version: O
         .map(|x| x.map(|r| r.value))
 }
 
-fn rename_field(ws: &Workspace, project: &Uuid, id: &Uuid, name: &str, version: Option<&str>) -> tasker_services::Result<Option<FieldDefinition>> {
+fn rename_field(
+    ws: &Workspace,
+    project: &Uuid,
+    id: &Uuid,
+    name: &str,
+    version: Option<&str>,
+) -> tasker_services::Result<Option<FieldDefinition>> {
     ws.fields().update(
         project,
         id,
@@ -78,7 +91,10 @@ fn an_enum_is_created_with_values_that_have_ids_listed_by_name_and_read_back_by_
     let p = &env.project;
     let priority = new_enum(&env, p, "Priority", &["Low", "Medium", "High"]).unwrap();
     new_enum(&env, p, "Area", &["UI", "API"]).unwrap();
-    assert_eq!(priority.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["Low", "Medium", "High"]);
+    assert_eq!(
+        priority.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["Low", "Medium", "High"]
+    );
     let mut ids: Vec<Uuid> = priority.values.iter().map(|x| x.id).collect();
     ids.sort();
     ids.dedup();
@@ -116,7 +132,13 @@ fn enum_names_are_unique_in_the_project_ignoring_case_but_not_across_projects() 
 
     let area = new_enum(&env, p, "Area", &[]).unwrap();
     assert!(err(rename_enum(&env.ws, p, &area.id, "PRIORITY", Some(&area.version))).is_in_use());
-    assert_eq!(rename_enum(&env.ws, p, &area.id, "AREA", Some(&area.version)).unwrap().unwrap().name, "AREA");
+    assert_eq!(
+        rename_enum(&env.ws, p, &area.id, "AREA", Some(&area.version))
+            .unwrap()
+            .unwrap()
+            .name,
+        "AREA"
+    );
 }
 
 #[test]
@@ -133,7 +155,10 @@ fn an_enum_without_values_or_with_repeated_or_empty_values_is_rejected() {
         )),
         "Enum must contain at least one value"
     );
-    assert_eq!(message(new_enum(&env, p, "E", &["Low", "low"])), "Enum value 'low' is repeated: values must be unique");
+    assert_eq!(
+        message(new_enum(&env, p, "E", &["Low", "low"])),
+        "Enum value 'low' is repeated: values must be unique"
+    );
     assert_eq!(message(new_enum(&env, p, "E", &["Low", " "])), "Enum value is required");
     assert_eq!(message(new_enum(&env, p, " ", &["Low"])), "Enum name is required");
     assert!(env.ws.enums().get_all(p).unwrap().is_empty());
@@ -175,13 +200,19 @@ fn updating_an_enum_renames_values_keeping_their_ids_adds_removes_and_reorders()
         .unwrap()
         .value;
     assert_eq!(updated.name, "Prio");
-    assert_eq!(updated.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["Critical", "Low", "Urgent"]);
+    assert_eq!(
+        updated.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["Critical", "Low", "Urgent"]
+    );
     assert_eq!((updated.values[0].id, updated.values[1].id), (high.id, low.id));
     assert!(!updated.values.iter().any(|x| x.id == medium.id));
     assert!(![low.id, medium.id, high.id].contains(&updated.values[2].id));
     assert_ne!(e.version, updated.version);
     let read = env.ws.enums().get_by_id(p, &e.id).unwrap().unwrap();
-    assert_eq!((read.values.clone(), read.version.clone()), (updated.values.clone(), updated.version.clone()));
+    assert_eq!(
+        (read.values.clone(), read.version.clone()),
+        (updated.values.clone(), updated.version.clone())
+    );
     let renamed_only = rename_enum(&env.ws, p, &e.id, "P2", Some(&updated.version)).unwrap().unwrap();
     assert_eq!(renamed_only.values, updated.values);
 }
@@ -218,8 +249,14 @@ fn changing_or_deleting_an_enum_requires_the_current_version() {
     let e = new_enum(&env, p, "Priority", &[]).unwrap();
     assert!(message(rename_enum(&env.ws, p, &e.id, "X", None)).contains("Version is required"));
     let first = rename_enum(&env.ws, p, &e.id, "First", Some(&e.version)).unwrap().unwrap();
-    assert_eq!(err(rename_enum(&env.ws, p, &e.id, "Second", Some(&e.version))).conflict_code(), Some(ConflictCode::Modified));
-    assert_eq!(err(env.ws.enums().delete(p, &e.id, Some(&e.version))).conflict_code(), Some(ConflictCode::Modified));
+    assert_eq!(
+        err(rename_enum(&env.ws, p, &e.id, "Second", Some(&e.version))).conflict_code(),
+        Some(ConflictCode::Modified)
+    );
+    assert_eq!(
+        err(env.ws.enums().delete(p, &e.id, Some(&e.version))).conflict_code(),
+        Some(ConflictCode::Modified)
+    );
     assert_eq!(env.ws.enums().get_by_id(p, &e.id).unwrap().unwrap().name, "First");
     assert!(env.ws.enums().delete(p, &e.id, Some(&first.version)).unwrap());
     assert!(env.ws.enums().get_by_id(p, &e.id).unwrap().is_none());
@@ -251,16 +288,25 @@ fn a_field_is_created_for_each_type_listed_by_name_and_read_back() {
         assert_eq!(&env.ws.fields().get_by_id(p, &f.id).unwrap().unwrap(), f);
         assert_eq!(all.iter().find(|x| x.id == f.id).unwrap(), f);
     }
-    assert_eq!((created[1].field_type, created[1].multiple, created[1].enum_id), (FieldType::Int, false, None));
+    assert_eq!(
+        (created[1].field_type, created[1].multiple, created[1].enum_id),
+        (FieldType::Int, false, None)
+    );
     assert_eq!((created[5].field_type, created[5].multiple), (FieldType::String, true));
-    assert_eq!((created[6].field_type, created[6].multiple, created[6].enum_id), (FieldType::Enum, false, Some(priority.id)));
+    assert_eq!(
+        (created[6].field_type, created[6].multiple, created[6].enum_id),
+        (FieldType::Enum, false, Some(priority.id))
+    );
     let page = env.ws.fields().get_range(p, Page::new(2, 3)).unwrap();
     assert_eq!((page.total_count, page.data.len()), (8, 3));
     let other = new_project(&env);
     assert!(env.ws.fields().get_all(&other).unwrap().is_empty());
     assert!(env.ws.fields().get_by_id(p, &Uuid::new_v4()).unwrap().is_none());
     assert_eq!(env.ws.fields().find(p, "level").unwrap().unwrap().id, created[6].id);
-    assert_eq!(env.ws.fields().find(p, &created[6].id.to_string()).unwrap().unwrap().id, created[6].id);
+    assert_eq!(
+        env.ws.fields().find(p, &created[6].id.to_string()).unwrap().unwrap().id,
+        created[6].id
+    );
     assert!(env.ws.fields().find(p, "nope").unwrap().is_none());
 }
 
@@ -281,7 +327,10 @@ fn an_enum_field_needs_an_existing_enum_of_the_same_project_and_other_fields_mus
         message(new_field(&env, p, "D", FieldType::Int, None, Some(priority.id))),
         "EnumId: only a field of type enum has an enum"
     );
-    assert_eq!(message(new_field(&env, p, " ", FieldType::String, None, None)), "Field name is required");
+    assert_eq!(
+        message(new_field(&env, p, " ", FieldType::String, None, None)),
+        "Field name is required"
+    );
     assert!(env.ws.fields().get_all(p).unwrap().is_empty());
 }
 
@@ -297,7 +346,13 @@ fn field_names_are_unique_in_the_project_ignoring_case_but_not_across_projects()
     new_field(&env, &new_project(&env), "Estimate", FieldType::Int, None, None).unwrap();
     let weight = new_field(&env, p, "Weight", FieldType::Float, None, None).unwrap();
     assert!(err(rename_field(&env.ws, p, &weight.id, "ESTIMATE", Some(&weight.version))).is_in_use());
-    assert_eq!(rename_field(&env.ws, p, &estimate.id, "ESTIMATE", Some(&estimate.version)).unwrap().unwrap().name, "ESTIMATE");
+    assert_eq!(
+        rename_field(&env.ws, p, &estimate.id, "ESTIMATE", Some(&estimate.version))
+            .unwrap()
+            .unwrap()
+            .name,
+        "ESTIMATE"
+    );
 }
 
 #[test]
@@ -342,10 +397,15 @@ fn an_enum_used_by_a_field_cannot_be_deleted_until_the_field_is_gone() {
     new_field(&env, p, "Level2", FieldType::Enum, Some(true), Some(priority.id)).unwrap();
     let error = err(env.ws.enums().delete(p, &priority.id, Some(&priority.version)));
     assert_eq!(error.conflict_code(), Some(ConflictCode::InUse));
-    assert_eq!(error.message(), "Enum 'Priority' is used by field 'Level'; field 'Level2' and cannot be deleted");
+    assert_eq!(
+        error.message(),
+        "Enum 'Priority' is used by field 'Level'; field 'Level2' and cannot be deleted"
+    );
     assert!(env.ws.enums().get_by_id(p, &priority.id).unwrap().is_some());
 
-    let renamed = rename_enum(&env.ws, p, &priority.id, "Prio", Some(&priority.version)).unwrap().unwrap();
+    let renamed = rename_enum(&env.ws, p, &priority.id, "Prio", Some(&priority.version))
+        .unwrap()
+        .unwrap();
     assert_eq!(env.ws.fields().get_by_id(p, &level.id).unwrap().unwrap().enum_id, Some(priority.id));
     assert!(env.ws.enums().delete(p, &spare.id, Some(&spare.version)).unwrap());
     for f in env.ws.fields().get_all(p).unwrap() {
@@ -365,10 +425,15 @@ fn a_field_or_enum_locked_by_someone_else_cannot_be_changed_or_deleted() {
     let ivan = env.as_editor("user:ivan", "Ivan");
     let anna = env.as_editor("user:anna", "Anna");
     ivan.locks().acquire(LockedEntity::Field, &f.id, "Field 'Note'", Some(*p)).unwrap();
-    ivan.locks().acquire(LockedEntity::Enum, &priority.id, "Enum 'Priority'", Some(*p)).unwrap();
+    ivan.locks()
+        .acquire(LockedEntity::Enum, &priority.id, "Enum 'Priority'", Some(*p))
+        .unwrap();
 
     let field409 = err(rename_field(&anna, p, &f.id, "X", Some(&f.version)));
-    assert_eq!((field409.conflict_code(), field409.message().as_str()), (Some(ConflictCode::Locked), "Field 'Note' is being edited by Ivan"));
+    assert_eq!(
+        (field409.conflict_code(), field409.message().as_str()),
+        (Some(ConflictCode::Locked), "Field 'Note' is being edited by Ivan")
+    );
     assert!(err(anna.fields().delete(p, &f.id, Some(&f.version))).is_locked());
     let enum409 = err(rename_enum(&anna, p, &priority.id, "X", Some(&priority.version)));
     assert_eq!(enum409.message(), "Enum 'Priority' is being edited by Ivan");
@@ -389,8 +454,14 @@ fn entity_locks_name_fields_and_enums_and_do_not_find_missing_ones() {
     let locks = env.ws.entity_locks();
     let field_lock = locks.acquire(Some(*p), LockedEntity::Field, &f.id).unwrap().unwrap();
     let enum_lock = locks.acquire(Some(*p), LockedEntity::Enum, &priority.id).unwrap().unwrap();
-    assert_eq!((field_lock.entity, field_lock.id, field_lock.mine), (LockedEntity::Field, f.id, true));
-    assert_eq!((enum_lock.entity, enum_lock.id, enum_lock.mine), (LockedEntity::Enum, priority.id, true));
+    assert_eq!(
+        (field_lock.entity, field_lock.id, field_lock.mine),
+        (LockedEntity::Field, f.id, true)
+    );
+    assert_eq!(
+        (enum_lock.entity, enum_lock.id, enum_lock.mine),
+        (LockedEntity::Enum, priority.id, true)
+    );
     assert!(locks.get(LockedEntity::Field, &f.id).is_some());
     assert_eq!(locks.get_by_project(p).len(), 2);
     assert!(locks.acquire(Some(*p), LockedEntity::Field, &Uuid::new_v4()).unwrap().is_none());
@@ -454,9 +525,17 @@ fn fields_and_enums_are_files_in_their_own_folders_and_unreadable_files_are_coun
     };
     let enum_text = read(project.enums(), &priority.id);
     assert!(enum_text.starts_with("formatVersion: 9\n"));
-    assert!(enum_text.contains("name: Приоритет") && enum_text.contains(&format!("id: {}", priority.values[0].id)) && enum_text.contains("name: Низкий"));
+    assert!(
+        enum_text.contains("name: Приоритет")
+            && enum_text.contains(&format!("id: {}", priority.values[0].id))
+            && enum_text.contains("name: Низкий")
+    );
     let field_text = read(project.fields(), &level.id);
-    assert!(field_text.contains("type: enum") && field_text.contains(&format!("enum: {}", priority.id)) && field_text.contains("multiple: true"));
+    assert!(
+        field_text.contains("type: enum")
+            && field_text.contains(&format!("enum: {}", priority.id))
+            && field_text.contains("multiple: true")
+    );
     let plain_text = read(project.fields(), &plain.id);
     assert!(!plain_text.contains("multiple:") && !plain_text.contains("enum:"));
 
@@ -468,11 +547,23 @@ fn fields_and_enums_are_files_in_their_own_folders_and_unreadable_files_are_coun
 
     // Рукописный файл без formatVersion читается; конфликт слияния, неизвестный тип и формат новее — проблемы области.
     let good = Uuid::new_v4();
-    std::fs::write(project.fields().join(format!("{good}.yaml")), format!("id: {good}\nname: Hand\ntype: INT\n")).unwrap();
+    std::fs::write(
+        project.fields().join(format!("{good}.yaml")),
+        format!("id: {good}\nname: Hand\ntype: INT\n"),
+    )
+    .unwrap();
     std::fs::write(project.fields().join(format!("{}.yaml", Uuid::new_v4())), "<<<<<<< HEAD\n").unwrap();
-    std::fs::write(project.fields().join(format!("{}.yaml", Uuid::new_v4())), "id: 1\nname: x\ntype: banana\n").unwrap();
+    std::fs::write(
+        project.fields().join(format!("{}.yaml", Uuid::new_v4())),
+        "id: 1\nname: x\ntype: banana\n",
+    )
+    .unwrap();
     std::fs::write(project.enums().join(format!("{}.yaml", Uuid::new_v4())), "<<<<<<< HEAD\n").unwrap();
-    std::fs::write(project.enums().join(format!("{}.yaml", Uuid::new_v4())), "formatVersion: 99\nid: x\n").unwrap();
+    std::fs::write(
+        project.enums().join(format!("{}.yaml", Uuid::new_v4())),
+        "formatVersion: 99\nid: x\n",
+    )
+    .unwrap();
     env.ws.index().sync().unwrap();
     let names: Vec<String> = env.ws.fields().get_all(p).unwrap().into_iter().map(|x| x.name).collect();
     assert_eq!(names, vec!["Hand", "Level", "Note"]);

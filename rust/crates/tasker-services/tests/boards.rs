@@ -206,7 +206,10 @@ fn a_column_stores_conditions_by_id_and_collects_the_matching_tasks_by_itself() 
         )
         .unwrap();
     let stored = &board.columns[0].field_conditions[0];
-    assert_eq!((stored.field_id, stored.operator, stored.value.clone()), (p.level.id, FieldOperator::Equal, Some(p.high())));
+    assert_eq!(
+        (stored.field_id, stored.operator, stored.value.clone()),
+        (p.level.id, FieldOperator::Equal, Some(p.high()))
+    );
     assert_eq!(board.columns[1].field_conditions[0].operator, FieldOperator::NotEqual);
     assert!(board.columns[2].field_conditions.is_empty());
 
@@ -275,7 +278,10 @@ fn a_column_stores_conditions_by_id_and_collects_the_matching_tasks_by_itself() 
     assert_eq!(p.titles(&board, 0, &[]), vec!["a", "b"]);
     assert_eq!(p.titles(&board, 1, &[]), vec!["c"]);
     assert_eq!(p.titles(&board, 0, &["Severity=Critical", "Estimate>=5"]), vec!["a"]);
-    assert_eq!(env.ws.boards().describe_filters(&env.project, &board.columns[0]).unwrap(), vec!["Severity=Critical"]);
+    assert_eq!(
+        env.ws.boards().describe_filters(&env.project, &board.columns[0]).unwrap(),
+        vec!["Severity=Critical"]
+    );
 
     // Условия живут вместе с доской: правка без колонок и колонки без fieldFilters их сохраняют.
     let read = p.reload(&board);
@@ -309,7 +315,10 @@ fn a_column_stores_conditions_by_id_and_collects_the_matching_tasks_by_itself() 
         )
         .unwrap()
         .unwrap();
-    assert_eq!((kept.columns[0].field_conditions.len(), kept.columns[1].field_conditions.len()), (1, 1));
+    assert_eq!(
+        (kept.columns[0].field_conditions.len(), kept.columns[1].field_conditions.len()),
+        (1, 1)
+    );
 
     // [] — условий нет (колонки с общим статусом пересекаются: отказ), другой текст — заменяет.
     let cleared = err(env.ws.boards().update(
@@ -341,7 +350,10 @@ fn a_column_stores_conditions_by_id_and_collects_the_matching_tasks_by_itself() 
         .unwrap()
         .unwrap();
     let c = &changed.columns[0].field_conditions[0];
-    assert_eq!((c.operator, c.field_id, c.value.as_deref()), (FieldOperator::GreaterOrEqual, p.estimate.id, Some("5")));
+    assert_eq!(
+        (c.operator, c.field_id, c.value.as_deref()),
+        (FieldOperator::GreaterOrEqual, p.estimate.id, Some("5"))
+    );
     assert_eq!(p.titles(&changed, 0, &[]), vec!["a"]);
     assert_eq!(p.titles(&changed, 1, &[]), vec!["b"]);
 }
@@ -394,7 +406,9 @@ fn conditions_are_validated_against_the_catalog_and_a_shared_status_needs_exclus
     exclusive(&["Estimate:unset"], &["Estimate>=0"]);
     exclusive(&["Level=High", "Estimate>=3"], &["Level=High", "Estimate<3"]);
 
-    let board = p.board("Dup", vec![p.column("A", vec![p.open()], &["Level=High", "level=high"])]).unwrap();
+    let board = p
+        .board("Dup", vec![p.column("A", vec![p.open()], &["Level=High", "level=high"])])
+        .unwrap();
     assert_eq!(board.columns[0].field_conditions.len(), 1);
 
     // Прочие проверки доски.
@@ -410,8 +424,14 @@ fn conditions_are_validated_against_the_catalog_and_a_shared_status_needs_exclus
         )
     };
     assert_eq!(message(create("X", vec![], vec![])), "Board must include at least one status set");
-    assert_eq!(message(create("X", vec![env.set.id], vec![])), "Board must have at least one column");
-    assert_eq!(message(create(" ", vec![env.set.id], vec![p.column("A", vec![p.open()], &[])])), "Board name is required");
+    assert_eq!(
+        message(create("X", vec![env.set.id], vec![])),
+        "Board must have at least one column"
+    );
+    assert_eq!(
+        message(create(" ", vec![env.set.id], vec![p.column("A", vec![p.open()], &[])])),
+        "Board name is required"
+    );
     let unknown = Uuid::new_v4();
     assert_eq!(
         message(create("X", vec![env.set.id], vec![p.column("A", vec![unknown], &[])])),
@@ -448,7 +468,10 @@ fn a_field_used_by_a_column_is_not_deleted_or_retyped_but_may_be_renamed() {
 
     let deleted = err(env.ws.fields().delete(&env.project, &spare.id, Some(&spare.version)));
     assert_eq!(deleted.conflict_code(), Some(ConflictCode::InUse));
-    assert_eq!(deleted.message(), "Field 'Spare' is used by board 'Main' (column 'Big') and cannot be deleted");
+    assert_eq!(
+        deleted.message(),
+        "Field 'Spare' is used by board 'Main' (column 'Big') and cannot be deleted"
+    );
     let change = |update: UpdateField| env.ws.fields().update(&env.project, &spare.id, &update);
     let retyped = err(change(UpdateField {
         version: Some(spare.version.clone()),
@@ -527,7 +550,10 @@ fn a_removed_enum_value_used_by_a_column_needs_a_choice_clear_drops_the_conditio
         refused.message(),
         "Value(s) 'High' of Enum 'LevelValues' are used in the field conditions of board 'Main' (column 'Critical'), board 'Main' (column 'Closed') and cannot be removed: choose to clear them (from the tasks, and the conditions from the columns) or to reassign them to another value of the enum"
     );
-    assert_eq!(env.ws.enums().get_by_id(&env.project, &p.levels.id).unwrap().unwrap().values.len(), 2);
+    assert_eq!(
+        env.ws.enums().get_by_id(&env.project, &p.levels.id).unwrap().unwrap().values.len(),
+        2
+    );
 
     let reassigned = env
         .ws
@@ -545,7 +571,10 @@ fn a_removed_enum_value_used_by_a_column_needs_a_choice_clear_drops_the_conditio
     assert_eq!(after.columns[1].field_conditions[0].value, Some(p.low()));
     assert_eq!(after.columns[1].field_conditions[1].operator, FieldOperator::GreaterOrEqual);
     let json = reassigned.to_json();
-    assert_eq!((json["affectedTasks"].as_u64(), json["affectedColumns"].as_u64()), (Some(0), Some(2)));
+    assert_eq!(
+        (json["affectedTasks"].as_u64(), json["affectedColumns"].as_u64()),
+        (Some(0), Some(2))
+    );
 
     // «Убрать»: условие на значение исчезает из колонки, остальные условия остаются.
     let more = env
@@ -580,7 +609,11 @@ fn a_removed_enum_value_used_by_a_column_needs_a_choice_clear_drops_the_conditio
             &board.id,
             &UpdateBoard {
                 columns: Some(p.keep_columns(&board_now, |name| {
-                    Some(if name == "Closed" { vec!["Level=Extra".into(), "Estimate>=1".into()] } else { vec!["Level=Extra".into()] })
+                    Some(if name == "Closed" {
+                        vec!["Level=Extra".into(), "Estimate>=1".into()]
+                    } else {
+                        vec!["Level=Extra".into()]
+                    })
                 })),
                 version: Some(board_now.version.clone()),
                 ..UpdateBoard::default()
@@ -590,7 +623,11 @@ fn a_removed_enum_value_used_by_a_column_needs_a_choice_clear_drops_the_conditio
     let cleared = env
         .ws
         .enums()
-        .update(&env.project, &p.levels.id, &only_low(Some(RemovedEnumValues::clear()), &more.version))
+        .update(
+            &env.project,
+            &p.levels.id,
+            &only_low(Some(RemovedEnumValues::clear()), &more.version),
+        )
         .unwrap()
         .unwrap();
     assert_eq!(cleared.affected_columns, 2);
@@ -607,7 +644,10 @@ fn a_removed_enum_value_is_refused_when_the_change_would_make_two_columns_show_t
     let board = p
         .board(
             "Main",
-            vec![p.column("Critical", vec![p.open()], &["Level=High"]), p.column("Rest", vec![p.open()], &["Level!=High"])],
+            vec![
+                p.column("Critical", vec![p.open()], &["Level=High"]),
+                p.column("Rest", vec![p.open()], &["Level!=High"]),
+            ],
         )
         .unwrap();
     let levels = env.ws.enums().get_by_id(&env.project, &p.levels.id).unwrap().unwrap();
@@ -620,17 +660,27 @@ fn a_removed_enum_value_is_refused_when_the_change_would_make_two_columns_show_t
         version: Some(levels.version.clone()),
         removed: Some(removed),
     };
-    let refused = err(env.ws.enums().update(&env.project, &p.levels.id, &only_low(RemovedEnumValues::clear())));
+    let refused = err(env
+        .ws
+        .enums()
+        .update(&env.project, &p.levels.id, &only_low(RemovedEnumValues::clear())));
     assert_eq!(
         refused.message(),
         "Board 'Main': after the change columns 'Critical' and 'Rest' would show the same tasks (the same status and conditions that no longer exclude each other): change their conditions on the board first"
     );
-    assert_eq!(env.ws.enums().get_by_id(&env.project, &p.levels.id).unwrap().unwrap().values.len(), 2);
+    assert_eq!(
+        env.ws.enums().get_by_id(&env.project, &p.levels.id).unwrap().unwrap().values.len(),
+        2
+    );
     assert_eq!(p.reload(&board).columns[0].field_conditions[0].value, Some(p.high()));
     let reassigned = env
         .ws
         .enums()
-        .update(&env.project, &p.levels.id, &only_low(RemovedEnumValues::reassign(p.levels.values[0].id)))
+        .update(
+            &env.project,
+            &p.levels.id,
+            &only_low(RemovedEnumValues::reassign(p.levels.values[0].id)),
+        )
         .unwrap()
         .unwrap();
     assert_eq!(reassigned.affected_columns, 2);
@@ -643,7 +693,10 @@ fn a_task_that_does_not_match_the_conditions_of_the_column_is_not_moved_into_it(
     let board = p
         .board(
             "Main",
-            vec![p.column("Critical", vec![p.open()], &["Level=High", "Estimate>=3"]), p.column("Done", vec![p.closed()], &[])],
+            vec![
+                p.column("Critical", vec![p.open()], &["Level=High", "Estimate>=3"]),
+                p.column("Done", vec![p.closed()], &[]),
+            ],
         )
         .unwrap();
     let (critical, done) = (board.columns[0].id, board.columns[1].id);
@@ -695,7 +748,21 @@ fn a_task_that_does_not_match_the_conditions_of_the_column_is_not_moved_into_it(
 
     // Нет доски, колонки или задачи — None; нет правила переноса — ошибка.
     assert!(mv(&Uuid::new_v4(), &moved).unwrap().is_none());
-    assert!(env.ws.boards().move_task(&env.project, &Uuid::new_v4(), &critical, &MoveTask { task_id: moved.id, version: None }).unwrap().is_none());
+    assert!(
+        env.ws
+            .boards()
+            .move_task(
+                &env.project,
+                &Uuid::new_v4(),
+                &critical,
+                &MoveTask {
+                    task_id: moved.id,
+                    version: None
+                }
+            )
+            .unwrap()
+            .is_none()
+    );
     let no_rule = p
         .board(
             "NoRule",
@@ -706,7 +773,15 @@ fn a_task_that_does_not_match_the_conditions_of_the_column_is_not_moved_into_it(
         )
         .unwrap();
     assert_eq!(
-        message(env.ws.boards().move_task(&env.project, &no_rule.id, &no_rule.columns[0].id, &MoveTask { task_id: moved.id, version: None })),
+        message(env.ws.boards().move_task(
+            &env.project,
+            &no_rule.id,
+            &no_rule.columns[0].id,
+            &MoveTask {
+                task_id: moved.id,
+                version: None
+            }
+        )),
         "Column 'Only' has no drop rule for tasks of type 'Bug'"
     );
 }
@@ -716,7 +791,13 @@ fn a_board_file_keeps_conditions_by_id_and_is_read_back_by_a_fresh_workspace() {
     let p = P::new();
     let env = &p.env;
     let board = p
-        .board("Main", vec![p.column("Big", vec![p.open()], &["Estimate>=3", "Level:unset"]), p.column("Rest", vec![p.closed()], &[])])
+        .board(
+            "Main",
+            vec![
+                p.column("Big", vec![p.open()], &["Estimate>=3", "Level:unset"]),
+                p.column("Rest", vec![p.closed()], &[]),
+            ],
+        )
         .unwrap();
     let folder = env.ws.directory().project(&env.project).boards();
     let file = std::fs::read_dir(&folder).unwrap().flatten().next().unwrap().path();
@@ -726,12 +807,21 @@ fn a_board_file_keeps_conditions_by_id_and_is_read_back_by_a_fresh_workspace() {
         "  fieldFilters:\n  - field: {}\n    op: greaterOrEqual\n    value: \"3\"\n  - field: {}\n    op: unset\n",
         p.estimate.id, p.level.id
     )));
-    let read = tasker_services::Workspace::open(&env.dir).unwrap().boards().get_by_id(&env.project, &board.id).unwrap().unwrap();
+    let read = tasker_services::Workspace::open(&env.dir)
+        .unwrap()
+        .boards()
+        .get_by_id(&env.project, &board.id)
+        .unwrap()
+        .unwrap();
     assert_eq!(read.columns[0].field_conditions, board.columns[0].field_conditions);
     assert!(read.columns[1].field_conditions.is_empty());
 
     // Файл с неизвестным оператором (записан более новым Tasker) не читается молча.
-    std::fs::write(&file, text + &format!("  fieldFilters:\n  - field: {}\n    op: matches\n    value: x\n", Uuid::new_v4())).unwrap();
+    std::fs::write(
+        &file,
+        text + &format!("  fieldFilters:\n  - field: {}\n    op: matches\n    value: x\n", Uuid::new_v4()),
+    )
+    .unwrap();
     let error = err(env.ws.boards().get_by_id(&env.project, &board.id));
     assert_eq!(error.conflict_code(), Some(ConflictCode::UnsupportedFormat));
     assert!(error.message().contains("unknown field filter operator 'matches': update Tasker"));

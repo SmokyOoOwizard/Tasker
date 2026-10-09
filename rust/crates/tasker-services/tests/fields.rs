@@ -148,7 +148,12 @@ fn names(env: &Env, task: &TaskItem) -> Vec<String> {
     view(env, task).into_iter().map(|x| x.name).collect()
 }
 
-fn update_type(env: &Env, task_type: &TaskType, fields: Option<Vec<TaskTypeField>>, choice: Option<RemovedFieldValues>) -> tasker_services::Result<TaskType> {
+fn update_type(
+    env: &Env,
+    task_type: &TaskType,
+    fields: Option<Vec<TaskTypeField>>,
+    choice: Option<RemovedFieldValues>,
+) -> tasker_services::Result<TaskType> {
     let current = env.ws.task_types().get_by_id(&env.project, &task_type.id).unwrap().unwrap();
     env.ws
         .task_types()
@@ -190,7 +195,10 @@ fn anna(env: &Env) -> Workspace {
 }
 
 fn anna_locks(env: &Env, task: &TaskItem) {
-    anna(env).locks().acquire(LockedEntity::Task, &task.id, "Task", Some(env.project)).unwrap();
+    anna(env)
+        .locks()
+        .acquire(LockedEntity::Task, &task.id, "Task", Some(env.project))
+        .unwrap();
 }
 
 fn anna_releases(env: &Env, task: &TaskItem) {
@@ -205,11 +213,23 @@ fn a_task_type_keeps_its_fields_in_order_with_the_required_flag_and_they_are_rea
     let estimate = field(&env, "Estimate", FieldType::Int);
     let note = field(&env, "Note", FieldType::String);
     let task_type = env.type_with("Bug", vec![tf(&note, false), tf(&estimate, true)]);
-    assert_eq!(task_type.fields.iter().map(|x| x.field_id).collect::<Vec<_>>(), vec![note.id, estimate.id]);
+    assert_eq!(
+        task_type.fields.iter().map(|x| x.field_id).collect::<Vec<_>>(),
+        vec![note.id, estimate.id]
+    );
     let read = env.ws.task_types().get_by_id(&env.project, &task_type.id).unwrap().unwrap();
     assert_eq!(read.fields, vec![tf(&note, false), tf(&estimate, true)]);
     assert_eq!(read.version, task_type.version);
-    assert_eq!(env.ws.task_types().get_all(&env.project).unwrap().iter().filter(|x| x.id == task_type.id).count(), 1);
+    assert_eq!(
+        env.ws
+            .task_types()
+            .get_all(&env.project)
+            .unwrap()
+            .iter()
+            .filter(|x| x.id == task_type.id)
+            .count(),
+        1
+    );
 
     let updated = update_type(&env, &task_type, Some(vec![tf(&estimate, false), tf(&note, true)]), None).unwrap();
     assert_eq!(updated.fields, vec![tf(&estimate, false), tf(&note, true)]);
@@ -235,7 +255,11 @@ fn a_task_type_keeps_its_fields_in_order_with_the_required_flag_and_they_are_rea
 fn type_fields_must_exist_in_the_catalog_and_not_repeat() {
     let env = Env::new();
     let f = field(&env, "Note", FieldType::String);
-    let other = env.ws.projects().create(&tasker_services::project::CreateProject { name: "Other".into() }).unwrap();
+    let other = env
+        .ws
+        .projects()
+        .create(&tasker_services::project::CreateProject { name: "Other".into() })
+        .unwrap();
     let foreign = env
         .ws
         .fields()
@@ -260,7 +284,13 @@ fn type_fields_must_exist_in_the_catalog_and_not_repeat() {
             },
         )
     };
-    assert!(message(create(vec![TaskTypeField { field_id: Uuid::new_v4(), required: false }])).contains("not found in the project"));
+    assert!(
+        message(create(vec![TaskTypeField {
+            field_id: Uuid::new_v4(),
+            required: false
+        }]))
+        .contains("not found in the project")
+    );
     assert!(message(create(vec![tf(&foreign, false)])).contains("not found in the project"));
     assert_eq!(message(create(vec![tf(&f, false), tf(&f, true)])), "Fields contains duplicates");
     assert_eq!(env.ws.task_types().get_all(&env.project).unwrap().len(), 1);
@@ -278,7 +308,10 @@ fn values_are_checked_by_type_stored_in_canonical_form_and_shown_with_enum_names
     let due = field(&env, "Due", FieldType::Date);
     let level = field_with(&env, "Level", FieldType::Enum, false, Some(prio.id));
     let note = field(&env, "Note", FieldType::String);
-    let bug = env.type_with("Bug", [&number, &ratio, &flag, &due, &level, &note].iter().map(|f| tf(f, false)).collect());
+    let bug = env.type_with(
+        "Bug",
+        [&number, &ratio, &flag, &due, &level, &note].iter().map(|f| tf(f, false)).collect(),
+    );
 
     let task = new_task(
         &env,
@@ -320,7 +353,10 @@ fn wrong_values_are_rejected_and_several_values_need_a_multiple_field() {
     let due = field(&env, "Due", FieldType::Date);
     let level = field_with(&env, "Level", FieldType::Enum, false, Some(prio.id));
     let tags = field_with(&env, "Tags", FieldType::String, true, None);
-    let bug = env.type_with("Bug", [&number, &ratio, &flag, &due, &level, &tags].iter().map(|f| tf(f, false)).collect());
+    let bug = env.type_with(
+        "Bug",
+        [&number, &ratio, &flag, &due, &level, &tags].iter().map(|f| tf(f, false)).collect(),
+    );
     let invalid = |changes: TaskFieldChanges| message(new_task(&env, &bug, "T", Some(changes)));
 
     assert_eq!(invalid(set(&[(&number, &["1.5"])])), "Field 'Number': '1.5' is not an integer");
@@ -335,9 +371,7 @@ fn wrong_values_are_rejected_and_several_values_need_a_multiple_field() {
     assert!(invalid(set(&[(&number, &["1", "2"])])).contains("single value"));
     assert!(invalid(set(&[(&tags, &["a", "A", "a"])])).contains("repeated"));
     assert!(invalid(set_id(Uuid::new_v4(), &["x"])).contains("the task has no field"));
-    assert!(
-        invalid(TaskFieldChanges::values(vec![(tags.id, vec!["a"]), (tags.id, vec!["b"])])).contains("duplicates")
-    );
+    assert!(invalid(TaskFieldChanges::values(vec![(tags.id, vec!["a"]), (tags.id, vec!["b"])])).contains("duplicates"));
     assert!(
         invalid(TaskFieldChanges {
             remove_fields: Some(vec![tags.id]),
@@ -376,7 +410,10 @@ fn a_required_field_without_a_value_fails_creation_listing_the_fields() {
 
     let error = message(new_task(&env, &bug, "T", Some(set(&[(&owner, &["Ann"])]))));
     assert_eq!(error, "Required fields have no value: 'Estimate'");
-    assert_eq!(message(new_task(&env, &bug, "T", None)), "Required fields have no value: 'Estimate', 'Owner'");
+    assert_eq!(
+        message(new_task(&env, &bug, "T", None)),
+        "Required fields have no value: 'Estimate', 'Owner'"
+    );
     assert!(env.all_tasks().is_empty());
     let task = new_task(&env, &bug, "T", Some(set(&[(&estimate, &["3"]), (&owner, &["Ann"])]))).unwrap();
     assert_eq!(env.get(&task.id).fields.len(), 2);
@@ -465,7 +502,13 @@ fn a_task_gets_extra_catalog_fields_and_own_fields_and_can_remove_them_but_not_t
     assert_eq!(names(&env, &changed), vec!["Typed", "Extra", "Valued", "Hours", "Mood"]);
     assert_eq!(
         v.iter().map(|x| x.source).collect::<Vec<_>>(),
-        vec![TaskFieldSource::Type, TaskFieldSource::Extra, TaskFieldSource::Extra, TaskFieldSource::Own, TaskFieldSource::Own]
+        vec![
+            TaskFieldSource::Type,
+            TaskFieldSource::Extra,
+            TaskFieldSource::Extra,
+            TaskFieldSource::Own,
+            TaskFieldSource::Own
+        ]
     );
     let hours = v.iter().find(|x| x.name == "Hours").unwrap();
     assert_eq!((hours.field_type, hours.required, hours.multiple), (FieldType::Float, true, true));
@@ -476,7 +519,11 @@ fn a_task_gets_extra_catalog_fields_and_own_fields_and_can_remove_them_but_not_t
 
     let read = env.get(&changed.id);
     assert_eq!(
-        read.fields.iter().find(|x| x.own.as_ref().is_some_and(|o| o.name == "Hours")).unwrap().own,
+        read.fields
+            .iter()
+            .find(|x| x.own.as_ref().is_some_and(|o| o.name == "Hours"))
+            .unwrap()
+            .own,
         Some(OwnField {
             name: "Hours".into(),
             field_type: FieldType::Float,
@@ -498,7 +545,10 @@ fn a_task_gets_extra_catalog_fields_and_own_fields_and_can_remove_them_but_not_t
     };
     assert_eq!(
         message(remove(vec![typed.id])),
-        format!("RemoveFields: {} is a field of the task type 'Bug' and cannot be removed from the task", typed.id)
+        format!(
+            "RemoveFields: {} is a field of the task type 'Bug' and cannot be removed from the task",
+            typed.id
+        )
     );
     assert!(message(remove(vec![Uuid::new_v4()])).contains("no additional or own field"));
     let removed = remove(vec![extra.id, hours.field_id]).unwrap();
@@ -531,7 +581,13 @@ fn own_fields_are_validated_names_stay_unique_in_the_task_and_a_required_own_fie
         }])
         .contains("enum not found")
     );
-    assert!(invalid(vec![NewOwnField::new("Same", FieldType::Int), NewOwnField::new("SAME", FieldType::Bool)]).contains("already has a field with this name"));
+    assert!(
+        invalid(vec![
+            NewOwnField::new("Same", FieldType::Int),
+            NewOwnField::new("SAME", FieldType::Bool)
+        ])
+        .contains("already has a field with this name")
+    );
     assert!(invalid(vec![own_field("X", FieldType::Int, &["z"])]).contains("is not an integer"));
     assert!(env.get(&task.id).fields.is_empty());
 
@@ -564,7 +620,10 @@ fn a_catalog_field_that_is_not_the_tasks_becomes_an_extra_field_when_a_value_is_
     let task = new_task(&env, &bug, "T", None).unwrap();
     let changed = edit(&env, &task, Some(set(&[(&extra, &["4"])]))).unwrap();
     let f = view(&env, &changed).remove(0);
-    assert_eq!((f.source, f.required, f.values), (TaskFieldSource::Extra, false, vec!["4".to_string()]));
+    assert_eq!(
+        (f.source, f.required, f.values),
+        (TaskFieldSource::Extra, false, vec!["4".to_string()])
+    );
     let other = field(&env, "Other", FieldType::String);
     let same = edit(&env, &changed, Some(set(&[(&other, &[])]))).unwrap();
     assert_eq!(env.get(&same.id).fields.len(), 1);
@@ -587,7 +646,10 @@ fn removing_a_type_field_without_values_needs_no_choice_but_with_values_it_needs
         error.message(),
         "1 task(s) of type 'Bug' have values in the field(s) being removed ('Area'): choose to clear those values or to keep them as additional fields of the tasks"
     );
-    assert_eq!(env.ws.task_types().get_by_id(&env.project, &bug.id).unwrap().unwrap().fields.len(), 2);
+    assert_eq!(
+        env.ws.task_types().get_by_id(&env.project, &bug.id).unwrap().unwrap().fields.len(),
+        2
+    );
 
     let cleared = edit(&env, &two, Some(set(&[(&area, &[])]))).unwrap();
     let current = env.ws.task_types().get_by_id(&env.project, &bug.id).unwrap().unwrap();
@@ -617,7 +679,9 @@ fn removing_a_type_field_with_the_choice_to_clear_removes_the_values_of_all_task
     let note = field(&env, "Note", FieldType::String);
     let bug = env.type_with("Bug", vec![tf(&note, false)]);
     let sibling = env.type_with("Story", vec![tf(&note, false)]);
-    let tasks: Vec<TaskItem> = (0..3).map(|i| new_task(&env, &bug, &format!("Bug{i}"), Some(set(&[(&note, &[&format!("v{i}")])]))).unwrap()).collect();
+    let tasks: Vec<TaskItem> = (0..3)
+        .map(|i| new_task(&env, &bug, &format!("Bug{i}"), Some(set(&[(&note, &[&format!("v{i}")])]))).unwrap())
+        .collect();
     let untouched = new_task(&env, &sibling, "Story", Some(set(&[(&note, &["keep"])]))).unwrap();
     let plain = env.type_with("Plain", vec![]);
     let extra_of_other = new_task(&env, &plain, "Plain", Some(set(&[(&note, &["extra"])]))).unwrap();
@@ -684,7 +748,10 @@ fn removing_a_type_field_with_the_choice_to_keep_turns_it_into_an_optional_addit
     assert_eq!(kept.affected_tasks, 1);
     assert_eq!(env.get(&with_value.id).version, with_value.version);
     let f = view(&env, &with_value).remove(0);
-    assert_eq!((f.source, f.required, f.values), (TaskFieldSource::Extra, false, vec!["v".to_string()]));
+    assert_eq!(
+        (f.source, f.required, f.values),
+        (TaskFieldSource::Extra, false, vec!["v".to_string()])
+    );
     assert!(view(&env, &empty).is_empty());
 
     let edited = edit_with(
@@ -724,7 +791,10 @@ fn changing_the_type_keeps_old_fields_as_additional_ones_keeps_shared_values_and
     let v = view(&env, &changed);
     assert_eq!(names(&env, &changed), vec!["Shared", "Needed", "OldOnly"]);
     assert_eq!(values(&env, &changed, "Shared"), vec!["s"]);
-    assert_eq!(v.iter().map(|x| x.source).collect::<Vec<_>>(), vec![TaskFieldSource::Type, TaskFieldSource::Type, TaskFieldSource::Extra]);
+    assert_eq!(
+        v.iter().map(|x| x.source).collect::<Vec<_>>(),
+        vec![TaskFieldSource::Type, TaskFieldSource::Type, TaskFieldSource::Extra]
+    );
     assert_eq!(v.iter().map(|x| x.required).collect::<Vec<_>>(), vec![true, true, false]);
     assert_eq!(values(&env, &changed, "OldOnly"), vec!["o"]);
 }
@@ -759,18 +829,32 @@ fn removing_an_enum_value_that_no_task_uses_needs_no_choice_and_one_that_tasks_u
     new_task(&env, &bug, "A", Some(set(&[(&level, &["High"])]))).unwrap();
     new_task(&env, &bug, "B", Some(set(&[(&level, &["High"])]))).unwrap();
 
-    let medium_result = env.ws.enums().update(&env.project, &prio.id, &without(&prio, &[medium.id], None, &prio.version)).unwrap().unwrap();
+    let medium_result = env
+        .ws
+        .enums()
+        .update(&env.project, &prio.id, &without(&prio, &[medium.id], None, &prio.version))
+        .unwrap()
+        .unwrap();
     assert_eq!(medium_result.affected_tasks, 0);
     let after = medium_result.value;
-    assert_eq!(after.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["Low", "High"]);
+    assert_eq!(
+        after.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["Low", "High"]
+    );
 
-    let error = err(env.ws.enums().update(&env.project, &prio.id, &without(&after, &[high.id], None, &after.version)));
+    let error = err(env
+        .ws
+        .enums()
+        .update(&env.project, &prio.id, &without(&after, &[high.id], None, &after.version)));
     assert_eq!(error.conflict_code(), Some(ConflictCode::InUse));
     assert_eq!(
         error.message(),
         "Value(s) 'High' of Enum 'Priority' are selected in 2 task(s) and cannot be removed: choose to clear them (from the tasks, and the conditions from the columns) or to reassign them to another value of the enum"
     );
-    assert_eq!(env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version, after.version);
+    assert_eq!(
+        env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version,
+        after.version
+    );
     let _ = low;
 }
 
@@ -799,7 +883,11 @@ fn removing_a_used_enum_value_can_clear_it_from_the_tasks_including_required_fie
     let result = env
         .ws
         .enums()
-        .update(&env.project, &prio.id, &without(&prio, &[high.id], Some(RemovedEnumValues::clear()), &prio.version))
+        .update(
+            &env.project,
+            &prio.id,
+            &without(&prio, &[high.id], Some(RemovedEnumValues::clear()), &prio.version),
+        )
         .unwrap()
         .unwrap();
     assert_eq!(result.affected_tasks, 3);
@@ -835,7 +923,11 @@ fn removing_a_used_enum_value_can_reassign_it_without_duplicates() {
         }])),
     )
     .unwrap();
-    let remove = |choice: RemovedEnumValues| env.ws.enums().update(&env.project, &prio.id, &without(&prio, &[high.id], Some(choice), &prio.version));
+    let remove = |choice: RemovedEnumValues| {
+        env.ws
+            .enums()
+            .update(&env.project, &prio.id, &without(&prio, &[high.id], Some(choice), &prio.version))
+    };
 
     assert!(message(remove(RemovedEnumValues::reassign(high.id))).contains("not among the values the enum keeps"));
     assert!(message(remove(RemovedEnumValues::reassign(Uuid::new_v4()))).contains("not among the values the enum keeps"));
@@ -847,10 +939,16 @@ fn removing_a_used_enum_value_can_reassign_it_without_duplicates() {
         .contains("exactly one")
     );
     assert!(message(remove(RemovedEnumValues::default())).contains("exactly one"));
-    assert_eq!(env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version, prio.version);
+    assert_eq!(
+        env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version,
+        prio.version
+    );
 
     let reassigned = remove(RemovedEnumValues::reassign(low.id)).unwrap().unwrap();
-    assert_eq!(reassigned.value.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["Low", "Medium"]);
+    assert_eq!(
+        reassigned.value.values.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["Low", "Medium"]
+    );
     assert_eq!(reassigned.affected_tasks, 3);
     assert_eq!(env.get(&both.id).fields[0].values, vec![guid_d(&low.id)]);
     assert_eq!(env.get(&single.id).fields[0].values, vec![guid_d(&low.id)]);
@@ -919,7 +1017,10 @@ fn a_field_used_by_a_type_or_a_task_cannot_be_deleted_and_an_enum_used_by_an_own
     let by_type = err(env.ws.fields().delete(&env.project, &typed.id, Some(&typed.version)));
     assert_eq!(by_type.conflict_code(), Some(ConflictCode::InUse));
     assert_eq!(by_type.message(), "Field 'Typed' is used by task type 'Bug' and cannot be deleted");
-    assert_eq!(message(env.ws.fields().delete(&env.project, &added.id, Some(&added.version))), "Field 'Added' is used by 1 task(s) and cannot be deleted");
+    assert_eq!(
+        message(env.ws.fields().delete(&env.project, &added.id, Some(&added.version))),
+        "Field 'Added' is used by 1 task(s) and cannot be deleted"
+    );
     assert_eq!(
         message(env.ws.enums().delete(&env.project, &prio.id, Some(&prio.version))),
         "Enum 'Priority' is used by own fields of 1 task(s) and cannot be deleted"
@@ -970,12 +1071,19 @@ fn changing_fields_uses_the_version_and_edit_locks_of_the_task_and_the_type() {
     assert_eq!(env.get(&first.id).fields.len(), 1);
 
     let anna = anna(&env);
-    anna.locks().acquire(LockedEntity::Task, &task.id, "Task", Some(env.project)).unwrap();
-    anna.locks().acquire(LockedEntity::TaskType, &bug.id, "Type", Some(env.project)).unwrap();
+    anna.locks()
+        .acquire(LockedEntity::Task, &task.id, "Task", Some(env.project))
+        .unwrap();
+    anna.locks()
+        .acquire(LockedEntity::TaskType, &bug.id, "Type", Some(env.project))
+        .unwrap();
     let locked = err(edit(&env, &first, Some(set(&[(&note, &["d"])]))));
     assert_eq!(locked.conflict_code(), Some(ConflictCode::Locked));
     assert_eq!(locked.message(), "Task 'T' is being edited by Anna");
-    assert_eq!(err(update_type(&env, &bug, Some(vec![]), None)).conflict_code(), Some(ConflictCode::Locked));
+    assert_eq!(
+        err(update_type(&env, &bug, Some(vec![]), None)).conflict_code(),
+        Some(ConflictCode::Locked)
+    );
 }
 
 #[test]
@@ -1013,7 +1121,9 @@ fn concurrent_edits_of_one_task_do_not_lose_the_task_and_exactly_one_stale_edit_
 fn note_tasks(env: &Env, count: usize) -> (FieldDefinition, TaskType, Vec<TaskItem>) {
     let note = field(env, "Note", FieldType::String);
     let bug = env.type_with("Bug", vec![tf(&note, false)]);
-    let tasks = (0..count).map(|i| new_task(env, &bug, &format!("Bug{i}"), Some(set(&[(&note, &["v"])]))).unwrap()).collect();
+    let tasks = (0..count)
+        .map(|i| new_task(env, &bug, &format!("Bug{i}"), Some(set(&[(&note, &["v"])]))).unwrap())
+        .collect();
     (note, bug, tasks)
 }
 
@@ -1034,7 +1144,10 @@ fn a_clear_waits_out_the_timeout_on_a_task_locked_by_someone_else_then_fails_wit
     for task in &tasks {
         assert_eq!(env.get(&task.id).version, task.version);
     }
-    assert_eq!(env.ws.task_types().get_by_id(&env.project, &bug.id).unwrap().unwrap().fields.len(), 1);
+    assert_eq!(
+        env.ws.task_types().get_by_id(&env.project, &bug.id).unwrap().unwrap().fields.len(),
+        1
+    );
 }
 
 #[test]
@@ -1078,12 +1191,20 @@ fn a_reassign_of_an_enum_value_follows_the_same_lock_rule() {
     anna_locks(&env, &locked);
     anna_locks(&env, &unrelated);
 
-    let command = without(&prio, &[prio.values[2].id], Some(RemovedEnumValues::reassign(prio.values[0].id)), &prio.version);
+    let command = without(
+        &prio,
+        &[prio.values[2].id],
+        Some(RemovedEnumValues::reassign(prio.values[0].id)),
+        &prio.version,
+    );
     let error = err(env.ws.enums().update(&env.project, &prio.id, &command));
     assert_eq!(error.conflict_code(), Some(ConflictCode::Locked));
     assert_eq!(error.message(), "Task 'Locked' is being edited by Anna");
     assert_eq!(env.get(&free.id).version, free.version);
-    assert_eq!(env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version, prio.version);
+    assert_eq!(
+        env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version,
+        prio.version
+    );
 
     anna_releases(&env, &locked);
     assert!(env.ws.enums().update(&env.project, &prio.id, &command).unwrap().is_some());
@@ -1142,9 +1263,33 @@ fn tasks_are_filtered_by_field_values_with_and_semantics_paging_and_total_count(
     let ratio = field(&env, "Ratio", FieldType::Float);
     let bug = env.type_with("Bug", vec![tf(&estimate, false), tf(&tags, false), tf(&level, false)]);
 
-    new_task(&env, &bug, "a", Some(set(&[(&estimate, &["3"]), (&tags, &["ui", "api"]), (&level, &["High"]), (&due, &["2026-10-02"]), (&ratio, &["0.5"])]))).unwrap();
-    new_task(&env, &bug, "b", Some(set(&[(&estimate, &["5"]), (&tags, &["api"]), (&level, &["Low"])]))).unwrap();
-    new_task(&env, &bug, "c", Some(set(&[(&estimate, &["3"]), (&tags, &["db"]), (&level, &["High"])]))).unwrap();
+    new_task(
+        &env,
+        &bug,
+        "a",
+        Some(set(&[
+            (&estimate, &["3"]),
+            (&tags, &["ui", "api"]),
+            (&level, &["High"]),
+            (&due, &["2026-10-02"]),
+            (&ratio, &["0.5"]),
+        ])),
+    )
+    .unwrap();
+    new_task(
+        &env,
+        &bug,
+        "b",
+        Some(set(&[(&estimate, &["5"]), (&tags, &["api"]), (&level, &["Low"])])),
+    )
+    .unwrap();
+    new_task(
+        &env,
+        &bug,
+        "c",
+        Some(set(&[(&estimate, &["3"]), (&tags, &["db"]), (&level, &["High"])])),
+    )
+    .unwrap();
     new_task(&env, &bug, "d", None).unwrap();
 
     assert_eq!(titles_by(&env, &["Estimate=3"]), vec!["a", "c"]);
@@ -1159,20 +1304,50 @@ fn tasks_are_filtered_by_field_values_with_and_semantics_paging_and_total_count(
     assert!(titles_by(&env, &["Estimate=4"]).is_empty());
 
     let filter = vec!["Estimate=3".to_string()];
-    let first = env.ws.tasks().list(&env.project, None, Some(&filter), Page::new(0, 1), -1, None).unwrap();
-    let second = env.ws.tasks().list(&env.project, None, Some(&filter), Page::new(1, 1), -1, None).unwrap();
-    assert_eq!((first.total_count, first.data.len(), second.total_count, second.data.len()), (2, 1, 2, 1));
+    let first = env
+        .ws
+        .tasks()
+        .list(&env.project, None, Some(&filter), Page::new(0, 1), -1, None)
+        .unwrap();
+    let second = env
+        .ws
+        .tasks()
+        .list(&env.project, None, Some(&filter), Page::new(1, 1), -1, None)
+        .unwrap();
     assert_eq!(
-        first.data.iter().chain(second.data.iter()).map(|x| x.task.title.as_str()).collect::<Vec<_>>(),
+        (first.total_count, first.data.len(), second.total_count, second.data.len()),
+        (2, 1, 2, 1)
+    );
+    assert_eq!(
+        first
+            .data
+            .iter()
+            .chain(second.data.iter())
+            .map(|x| x.task.title.as_str())
+            .collect::<Vec<_>>(),
         vec!["a", "c"]
     );
 
-    let b = env.ws.tasks().list(&env.project, None, Some(&["Estimate=5".to_string()]), Page::first(50), -1, None).unwrap().data.remove(0).task;
+    let b = env
+        .ws
+        .tasks()
+        .list(&env.project, None, Some(&["Estimate=5".to_string()]), Page::first(50), -1, None)
+        .unwrap()
+        .data
+        .remove(0)
+        .task;
     edit(&env, &b, Some(set(&[(&estimate, &["3"])]))).unwrap();
     assert_eq!(titles_by(&env, &["Estimate=3"]), vec!["a", "b", "c"]);
     edit(&env, &env.get(&b.id), Some(set(&[(&estimate, &[])]))).unwrap();
     assert_eq!(titles_by(&env, &["Estimate=3"]), vec!["a", "c"]);
-    let doomed = env.ws.tasks().list(&env.project, None, Some(&filter), Page::first(50), -1, None).unwrap().data.remove(0).task;
+    let doomed = env
+        .ws
+        .tasks()
+        .list(&env.project, None, Some(&filter), Page::first(50), -1, None)
+        .unwrap()
+        .data
+        .remove(0)
+        .task;
     assert!(env.ws.tasks().delete(&env.project, &doomed.id, Some(&doomed.version)).unwrap());
     assert_eq!(titles_by(&env, &["Estimate=3"]).len(), 1);
 }
@@ -1211,9 +1386,37 @@ fn comparisons_work_for_int_float_and_date_alone_and_as_a_range_of_two_condition
     let due = field(&env, "Due", FieldType::Date);
     let scores = field_with(&env, "Scores", FieldType::Int, true, None);
     let bug = env.type_with("Bug", vec![tf(&estimate, false)]);
-    new_task(&env, &bug, "a", Some(set(&[(&estimate, &["-5"]), (&ratio, &["0.1"]), (&due, &["2026-01-09"]), (&scores, &["1", "20"])]))).unwrap();
-    new_task(&env, &bug, "b", Some(set(&[(&estimate, &["3"]), (&ratio, &["0.25"]), (&due, &["2026-10-02"]), (&scores, &["5"])]))).unwrap();
-    new_task(&env, &bug, "c", Some(set(&[(&estimate, &["10"]), (&ratio, &["1e2"]), (&due, &["2027-03-01"])]))).unwrap();
+    new_task(
+        &env,
+        &bug,
+        "a",
+        Some(set(&[
+            (&estimate, &["-5"]),
+            (&ratio, &["0.1"]),
+            (&due, &["2026-01-09"]),
+            (&scores, &["1", "20"]),
+        ])),
+    )
+    .unwrap();
+    new_task(
+        &env,
+        &bug,
+        "b",
+        Some(set(&[
+            (&estimate, &["3"]),
+            (&ratio, &["0.25"]),
+            (&due, &["2026-10-02"]),
+            (&scores, &["5"]),
+        ])),
+    )
+    .unwrap();
+    new_task(
+        &env,
+        &bug,
+        "c",
+        Some(set(&[(&estimate, &["10"]), (&ratio, &["1e2"]), (&due, &["2027-03-01"])])),
+    )
+    .unwrap();
     new_task(&env, &bug, "d", None).unwrap();
 
     assert_eq!(titles_by(&env, &["Estimate>3"]), vec!["c"]);
@@ -1260,9 +1463,15 @@ fn comparisons_are_refused_for_string_enum_and_bool_and_bad_operands_are_rejecte
     assert!(list_error(&env, &["Due<tomorrow"]).contains("yyyy-MM-dd"));
     assert!(list_error(&env, &["Estimate>"]).contains("must not be empty"));
     assert!(list_error(&env, &["Level!=Huge"]).contains("is not a value of enum"));
-    assert_eq!(list_error(&env, &["Estimate:soon"]), "Field filter 'Estimate:soon': unknown ':soon' (use :set, :unset, :attached or :detached)");
+    assert_eq!(
+        list_error(&env, &["Estimate:soon"]),
+        "Field filter 'Estimate:soon': unknown ':soon' (use :set, :unset, :attached or :detached)"
+    );
     assert!(list_error(&env, &[">=3"]).contains("expected 'Name=value'"));
-    assert_eq!(list_error(&env, &["Estimate!3"]), "Field filter 'Estimate!3': expected one of = != > >= < <= after the name 'Estimate'");
+    assert_eq!(
+        list_error(&env, &["Estimate!3"]),
+        "Field filter 'Estimate!3': expected one of = != > >= < <= after the name 'Estimate'"
+    );
     assert!(list_error(&env, &["Nope:set"]).contains("no field 'Nope'"));
     titles_by(&env, &["Note!=a", "Level!=low", "Flag=TRUE", "Estimate:SET", "Due:Unset"]);
 }
@@ -1276,7 +1485,13 @@ fn not_equal_means_no_value_equals_it_and_includes_tasks_without_a_value_and_com
     let level = field_with(&env, "Level", FieldType::Enum, false, Some(levels.id));
     let bug = env.type_with("Bug", vec![tf(&estimate, false), tf(&tags, false)]);
     let plain = env.type_with("Plain", vec![]);
-    new_task(&env, &bug, "a", Some(set(&[(&estimate, &["3"]), (&tags, &["ui", "api"]), (&level, &["High"])]))).unwrap();
+    new_task(
+        &env,
+        &bug,
+        "a",
+        Some(set(&[(&estimate, &["3"]), (&tags, &["ui", "api"]), (&level, &["High"])])),
+    )
+    .unwrap();
     new_task(&env, &bug, "b", Some(set(&[(&estimate, &["5"]), (&tags, &["api"])]))).unwrap();
     new_task(&env, &bug, "empty", None).unwrap();
     new_task(&env, &plain, "detached", None).unwrap();
@@ -1319,10 +1534,19 @@ fn presence_predicates_tell_values_from_connection_and_follow_task_type_and_fiel
 
     assert_eq!(titles_by(&env, &["Estimate:set"]), vec!["extra-valued", "own", "valued"]);
     assert_eq!(titles_by(&env, &["Estimate:unset"]), vec!["extra-empty", "none", "typed-empty"]);
-    assert_eq!(titles_by(&env, &["Estimate:attached"]), vec!["extra-empty", "extra-valued", "own", "typed-empty", "valued"]);
+    assert_eq!(
+        titles_by(&env, &["Estimate:attached"]),
+        vec!["extra-empty", "extra-valued", "own", "typed-empty", "valued"]
+    );
     assert_eq!(titles_by(&env, &["Estimate:detached"]), vec!["none"]);
-    assert_eq!(titles_by(&env, &["Estimate:attached", "Estimate:unset"]), vec!["extra-empty", "typed-empty"]);
-    assert_eq!(titles_by(&env, &["Estimate:set", "Estimate:attached"]), vec!["extra-valued", "own", "valued"]);
+    assert_eq!(
+        titles_by(&env, &["Estimate:attached", "Estimate:unset"]),
+        vec!["extra-empty", "typed-empty"]
+    );
+    assert_eq!(
+        titles_by(&env, &["Estimate:set", "Estimate:attached"]),
+        vec!["extra-valued", "own", "valued"]
+    );
     assert!(titles_by(&env, &["Estimate:set", "Estimate:detached"]).is_empty());
     assert!(titles_by(&env, &["Note:attached"]).is_empty());
     assert_eq!(titles_by(&env, &["Note:detached"]).len(), 6);
@@ -1332,14 +1556,22 @@ fn presence_predicates_tell_values_from_connection_and_follow_task_type_and_fiel
     edit_with(&env, &by_title("typed-empty"), None, None, Some(plain.id), None).unwrap();
     assert_eq!(titles_by(&env, &["Estimate:attached", "Estimate:unset"]), vec!["extra-empty"]);
     edit_with(&env, &by_title("valued"), None, None, Some(plain.id), None).unwrap();
-    assert_eq!(titles_by(&env, &["Estimate:attached", "Estimate:set"]), vec!["extra-valued", "own", "valued"]);
+    assert_eq!(
+        titles_by(&env, &["Estimate:attached", "Estimate:set"]),
+        vec!["extra-valued", "own", "valued"]
+    );
     assert!(titles_by(&env, &["Estimate:detached"]).contains(&"typed-empty".to_string()));
     edit_with(&env, &by_title("none"), None, None, Some(with_estimate.id), None).unwrap();
     assert!(titles_by(&env, &["Estimate:attached", "Estimate:unset"]).contains(&"none".to_string()));
     assert!(!titles_by(&env, &["Estimate:detached"]).contains(&"none".to_string()));
 
     update_type(&env, &plain, Some(vec![tf(&note, false)]), None).unwrap();
-    let mut of_plain: Vec<String> = env.all_tasks().into_iter().filter(|x| x.type_id == plain.id).map(|x| x.title).collect();
+    let mut of_plain: Vec<String> = env
+        .all_tasks()
+        .into_iter()
+        .filter(|x| x.type_id == plain.id)
+        .map(|x| x.title)
+        .collect();
     of_plain.sort();
     assert_eq!(titles_by(&env, &["Note:attached"]), of_plain);
     update_type(&env, &plain, Some(vec![]), Some(RemovedFieldValues::Keep)).unwrap();
@@ -1366,22 +1598,52 @@ fn a_filter_by_a_catalog_field_name_also_finds_own_fields_of_the_same_name_and_t
     let with_estimate = env.type_with("WithEstimate", vec![tf(&estimate, false)]);
     new_task(&env, &with_estimate, "catalog3", Some(set(&[(&estimate, &["3"])]))).unwrap();
     new_task(&env, &with_estimate, "catalog-empty", None).unwrap();
-    new_task(&env, &plain, "own10", Some(own(vec![own_field("estimate", FieldType::Int, &["10"])]))).unwrap();
+    new_task(
+        &env,
+        &plain,
+        "own10",
+        Some(own(vec![own_field("estimate", FieldType::Int, &["10"])])),
+    )
+    .unwrap();
     new_task(&env, &plain, "own3", Some(own(vec![own_field("ESTIMATE", FieldType::Int, &["3"])]))).unwrap();
-    new_task(&env, &plain, "own-empty", Some(own(vec![NewOwnField::new("Estimate", FieldType::Int)]))).unwrap();
-    new_task(&env, &plain, "own-string", Some(own(vec![own_field("Estimate", FieldType::String, &["3"])]))).unwrap();
+    new_task(
+        &env,
+        &plain,
+        "own-empty",
+        Some(own(vec![NewOwnField::new("Estimate", FieldType::Int)])),
+    )
+    .unwrap();
+    new_task(
+        &env,
+        &plain,
+        "own-string",
+        Some(own(vec![own_field("Estimate", FieldType::String, &["3"])])),
+    )
+    .unwrap();
     new_task(&env, &plain, "none", None).unwrap();
 
     assert_eq!(titles_by(&env, &["Estimate=3"]), vec!["catalog3", "own3"]);
-    assert_eq!(titles_by(&env, &["Estimate!=3"]), vec!["catalog-empty", "none", "own-empty", "own-string", "own10"]);
+    assert_eq!(
+        titles_by(&env, &["Estimate!=3"]),
+        vec!["catalog-empty", "none", "own-empty", "own-string", "own10"]
+    );
     assert_eq!(titles_by(&env, &["Estimate>3"]), vec!["own10"]);
     assert_eq!(titles_by(&env, &["Estimate>=3"]), vec!["catalog3", "own10", "own3"]);
     assert_eq!(titles_by(&env, &["estimate>=3", "ESTIMATE<=3"]), vec!["catalog3", "own3"]);
     assert_eq!(titles_by(&env, &["Estimate:set"]), vec!["catalog3", "own10", "own3"]);
-    assert_eq!(titles_by(&env, &["Estimate:unset"]), vec!["catalog-empty", "none", "own-empty", "own-string"]);
-    assert_eq!(titles_by(&env, &["Estimate:attached"]), vec!["catalog-empty", "catalog3", "own-empty", "own10", "own3"]);
+    assert_eq!(
+        titles_by(&env, &["Estimate:unset"]),
+        vec!["catalog-empty", "none", "own-empty", "own-string"]
+    );
+    assert_eq!(
+        titles_by(&env, &["Estimate:attached"]),
+        vec!["catalog-empty", "catalog3", "own-empty", "own10", "own3"]
+    );
     assert_eq!(titles_by(&env, &["Estimate:detached"]), vec!["none", "own-string"]);
-    assert_eq!(titles_by(&env, &["Estimate:attached", "Estimate:unset"]), vec!["catalog-empty", "own-empty"]);
+    assert_eq!(
+        titles_by(&env, &["Estimate:attached", "Estimate:unset"]),
+        vec!["catalog-empty", "own-empty"]
+    );
     assert!(list_error(&env, &["Estimate=abc"]).contains("is not an integer"));
 }
 
@@ -1406,7 +1668,16 @@ fn a_filter_by_an_own_field_name_without_a_catalog_field_reads_the_value_by_its_
         ])),
     )
     .unwrap();
-    new_task(&env, &plain, "h2", Some(own(vec![own_field("hours", FieldType::Float, &["2"]), own_field("Done", FieldType::Bool, &["true"])]))).unwrap();
+    new_task(
+        &env,
+        &plain,
+        "h2",
+        Some(own(vec![
+            own_field("hours", FieldType::Float, &["2"]),
+            own_field("Done", FieldType::Bool, &["true"]),
+        ])),
+    )
+    .unwrap();
     new_task(&env, &plain, "h3", Some(own(vec![NewOwnField::new("Hours", FieldType::Float)]))).unwrap();
     new_task(&env, &plain, "x", Some(own(vec![own_field("Code", FieldType::Int, &["5"])]))).unwrap();
     new_task(&env, &plain, "y", Some(own(vec![own_field("Code", FieldType::String, &["abc"])]))).unwrap();
@@ -1456,7 +1727,14 @@ fn own_field_values_follow_the_task_when_it_is_edited_and_deleted_and_own_field_
     )
     .unwrap();
     assert!(list_error(&env, &["Hours=9"]).contains("no field 'Hours'"));
-    assert!(message(edit(&env, &removed, Some(own(vec![NewOwnField::new("Story points", FieldType::Int)])))).contains("letters and digits"));
+    assert!(
+        message(edit(
+            &env,
+            &removed,
+            Some(own(vec![NewOwnField::new("Story points", FieldType::Int)]))
+        ))
+        .contains("letters and digits")
+    );
     assert!(message(edit(&env, &removed, Some(own(vec![NewOwnField::new("A:B", FieldType::Int)])))).contains("letters and digits"));
     let again = edit(&env, &removed, Some(own(vec![own_field("Hours", FieldType::Int, &["1"])]))).unwrap();
     assert_eq!(titles_by(&env, &["Hours=1"]), vec!["t"]);
@@ -1470,7 +1748,19 @@ fn field_names_consist_of_letters_and_digits_and_a_legacy_name_stays_usable() {
     for good in ["Estimate", "Оценка", "Story2", "Ёж"] {
         new_field(&env, good).unwrap();
     }
-    for bad in ["Story points", "Story_points", "Story-points", "A=B", "A!", "A<B", "A>B", "A:B", "A.B", "A,B", "Оценка!"] {
+    for bad in [
+        "Story points",
+        "Story_points",
+        "Story-points",
+        "A=B",
+        "A!",
+        "A<B",
+        "A>B",
+        "A:B",
+        "A.B",
+        "A,B",
+        "Оценка!",
+    ] {
         assert!(message(new_field(&env, bad)).contains("letters and digits"), "{bad}");
     }
     assert_eq!(new_field(&env, "  Padded ").unwrap().name, "Padded");
@@ -1700,7 +1990,10 @@ fn a_choice_is_not_needed_when_no_task_is_affected_and_an_extra_field_stays_when
     assert_eq!((kept.field_id, kept.values.is_empty()), (f.id, true));
     assert_eq!(current(&env, &f).field_type, FieldType::Date);
     let unused = field(&env, "Unused", FieldType::String);
-    assert_eq!(change(&env, &unused, Some(FieldType::Bool), None, None, None).unwrap().field_type, FieldType::Bool);
+    assert_eq!(
+        change(&env, &unused, Some(FieldType::Bool), None, None, None).unwrap().field_type,
+        FieldType::Bool
+    );
 }
 
 #[test]
@@ -1713,12 +2006,37 @@ fn a_string_field_becomes_enum_matching_values_by_name_or_by_an_explicit_mapping
 
     let error = message(change(&env, &f, Some(FieldType::Enum), None, Some(prio.id), None));
     assert!(error.contains("1 task(s)") && error.contains("'Urgent'") && error.ends_with("or map them to values of the enum"));
-    assert!(message(change(&env, &f, Some(FieldType::Enum), None, Some(prio.id), Some(mapping("Urgent", "Nope")))).contains("is not a value"));
+    assert!(
+        message(change(
+            &env,
+            &f,
+            Some(FieldType::Enum),
+            None,
+            Some(prio.id),
+            Some(mapping("Urgent", "Nope"))
+        ))
+        .contains("is not a value")
+    );
     assert_eq!(
-        message(change(&env, &f, Some(FieldType::String), None, None, Some(mapping("Urgent", "High")))),
+        message(change(
+            &env,
+            &f,
+            Some(FieldType::String),
+            None,
+            None,
+            Some(mapping("Urgent", "High"))
+        )),
         "Choice.Mapping: only when the new type is enum"
     );
-    let changed = change(&env, &f, Some(FieldType::Enum), None, Some(prio.id), Some(mapping("Urgent", "Medium"))).unwrap();
+    let changed = change(
+        &env,
+        &f,
+        Some(FieldType::Enum),
+        None,
+        Some(prio.id),
+        Some(mapping("Urgent", "Medium")),
+    )
+    .unwrap();
     assert_eq!((changed.field_type, changed.enum_id), (FieldType::Enum, Some(prio.id)));
     assert_eq!(values_of(&env, &task), vec![guid_d(&prio.values[2].id), guid_d(&prio.values[1].id)]);
 }
@@ -1735,7 +2053,10 @@ fn an_enum_field_moves_to_another_enum_by_name_by_mapping_or_clearing_and_become
     let (low_new, critical_new) = (guid_d(&severity.values[0].id), guid_d(&severity.values[1].id));
 
     assert!(message(change(&env, &f, None, None, Some(severity.id), None)).contains("'High'"));
-    assert!(message(change(&env, &f, None, None, Some(severity.id), Some(mapping("Nope", "Critical")))).contains("is not a value of enum 'Priority'"));
+    assert!(
+        message(change(&env, &f, None, None, Some(severity.id), Some(mapping("Nope", "Critical"))))
+            .contains("is not a value of enum 'Priority'")
+    );
     assert_eq!(current(&env, &f).enum_id, Some(prio.id));
 
     let mapped = change(&env, &f, None, None, Some(severity.id), Some(mapping("High", "Critical"))).unwrap();
@@ -1771,7 +2092,10 @@ fn the_enum_of_own_fields_and_the_enum_itself_are_not_touched_by_a_field_change(
     let entry = env.get(&own_task.id).fields.remove(0);
     assert_eq!(entry.values, vec![guid_d(&prio.values[2].id)]);
     assert_eq!(entry.own.unwrap().field_type, FieldType::Enum);
-    assert_eq!(env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version, prio.version);
+    assert_eq!(
+        env.ws.enums().get_by_id(&env.project, &prio.id).unwrap().unwrap().version,
+        prio.version
+    );
 }
 
 #[test]
@@ -1814,7 +2138,15 @@ fn type_and_multiplicity_can_change_together_and_the_converted_values_decide_whe
     let merged = new_task(&env, &bug, "Merged", Some(set(&[(&f, &["07", "7"])]))).unwrap();
     let split = new_task(&env, &bug, "Split", Some(set(&[(&f, &["1", "2"])]))).unwrap();
     assert!(message(change(&env, &f, Some(FieldType::Int), Some(false), None, None)).contains("1 task(s)"));
-    change(&env, &f, Some(FieldType::Int), Some(false), None, Some(several(SeveralValues::KeepFirst))).unwrap();
+    change(
+        &env,
+        &f,
+        Some(FieldType::Int),
+        Some(false),
+        None,
+        Some(several(SeveralValues::KeepFirst)),
+    )
+    .unwrap();
     assert_eq!(values_of(&env, &merged), vec!["7"]);
     assert_eq!(values_of(&env, &split), vec!["1"]);
 }
@@ -1825,8 +2157,14 @@ fn a_field_change_is_validated_against_the_enum_and_the_version() {
     let prio = priority(&env);
     let f = field(&env, "Level", FieldType::String);
     let enum_field = field_with(&env, "Prio", FieldType::Enum, false, Some(prio.id));
-    assert_eq!(message(change(&env, &f, Some(FieldType::Enum), None, None, None)), "EnumId: a field of type enum must refer to an enum of the project");
-    assert_eq!(message(change(&env, &f, None, None, Some(prio.id), None)), "EnumId: only a field of type enum has an enum");
+    assert_eq!(
+        message(change(&env, &f, Some(FieldType::Enum), None, None, None)),
+        "EnumId: a field of type enum must refer to an enum of the project"
+    );
+    assert_eq!(
+        message(change(&env, &f, None, None, Some(prio.id), None)),
+        "EnumId: only a field of type enum has an enum"
+    );
     assert!(message(change(&env, &enum_field, Some(FieldType::String), None, Some(prio.id), None)).contains("only a field of type enum"));
     assert!(message(change(&env, &f, Some(FieldType::Enum), None, Some(Uuid::new_v4()), None)).contains("enum not found"));
     assert!(
@@ -1840,7 +2178,10 @@ fn a_field_change_is_validated_against_the_enum_and_the_version() {
         ))
         .contains("Version is required")
     );
-    assert_eq!(err(change_v(&env, &f, Some(FieldType::Int), None, None, None, Some("stale"))).conflict_code(), Some(ConflictCode::Modified));
+    assert_eq!(
+        err(change_v(&env, &f, Some(FieldType::Int), None, None, None, Some("stale"))).conflict_code(),
+        Some(ConflictCode::Modified)
+    );
     assert!(
         env.ws
             .fields()
@@ -1856,7 +2197,10 @@ fn a_field_change_is_validated_against_the_enum_and_the_version() {
             .unwrap()
             .is_none()
     );
-    assert_eq!(change(&env, &enum_field, None, Some(true), None, None).unwrap().enum_id, Some(prio.id));
+    assert_eq!(
+        change(&env, &enum_field, None, Some(true), None, None).unwrap().enum_id,
+        Some(prio.id)
+    );
     assert_eq!(current(&env, &f).field_type, FieldType::String);
 }
 
@@ -1880,7 +2224,10 @@ fn a_field_change_that_hits_a_locked_task_changes_nothing_and_a_stale_version_le
     assert_eq!(env.get(&free.id).version, free.version);
 
     anna_releases(&env, &locked);
-    assert_eq!(change(&env, &f, Some(FieldType::Int), None, None, None).unwrap().field_type, FieldType::Int);
+    assert_eq!(
+        change(&env, &f, Some(FieldType::Int), None, None, None).unwrap().field_type,
+        FieldType::Int
+    );
     assert_eq!(values_of(&env, &locked), vec!["1"]);
     assert_eq!(values_of(&env, &free), vec!["2"]);
 }
@@ -1893,7 +2240,10 @@ fn fields_of_tasks_and_types_survive_a_fresh_workspace_and_the_index_finds_them_
     task.fields = vec![
         tasker_core::model::TaskField {
             field_id,
-            values: ["null", "true", "007", "~", "a: b", "- x", "multi\nline"].iter().map(|x| x.to_string()).collect(),
+            values: ["null", "true", "007", "~", "a: b", "- x", "multi\nline"]
+                .iter()
+                .map(|x| x.to_string())
+                .collect(),
             own: None,
         },
         tasker_core::model::TaskField {

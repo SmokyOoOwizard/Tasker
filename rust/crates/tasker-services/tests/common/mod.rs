@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tasker_core::Timestamp;
 use tasker_core::model::{Series, Status, StatusSet, TaskItem, TaskSeriesNumber, TaskType};
-use tasker_services::series::CreateSeries;
 use tasker_services::clock::{Clock, FakeClock};
 use tasker_services::project::CreateProject;
+use tasker_services::series::CreateSeries;
 use tasker_services::status::CreateStatus;
 use tasker_services::status_set::CreateStatusSet;
 use tasker_services::task::CreateTask;
@@ -141,7 +141,11 @@ impl Env {
     pub fn unreadable_series_file(&self, name: &str) {
         let folder = self.ws.directory().project(&self.project).series();
         std::fs::create_dir_all(&folder).unwrap();
-        std::fs::write(folder.join(format!("{name}-0000000a.yaml")), b"formatVersion: 9\n<<<<<<< HEAD\nid: x\n=======\nid: y\n>>>>>>> theirs\n").unwrap();
+        std::fs::write(
+            folder.join(format!("{name}-0000000a.yaml")),
+            b"formatVersion: 9\n<<<<<<< HEAD\nid: x\n=======\nid: y\n>>>>>>> theirs\n",
+        )
+        .unwrap();
         self.ws.index().sync().unwrap();
     }
 

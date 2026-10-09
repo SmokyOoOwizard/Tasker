@@ -51,7 +51,10 @@ fn lock_expires_and_can_then_be_taken_by_another() {
     env.clock.advance(DURATION + Duration::from_secs(1));
     let anna = anna(&env);
     assert!(anna.locks().get(LockedEntity::Task, &id).is_none());
-    assert_eq!(anna.locks().acquire(LockedEntity::Task, &id, "Task 'A'", None).unwrap().holder.name, "Anna");
+    assert_eq!(
+        anna.locks().acquire(LockedEntity::Task, &id, "Task 'A'", None).unwrap().holder.name,
+        "Anna"
+    );
 }
 
 #[test]
@@ -75,7 +78,9 @@ fn task_update_is_rejected_while_someone_else_edits_it_and_passes_otherwise() {
     let env = Env::new();
     let (ivan, anna) = (ivan(&env), anna(&env));
     let task = env.task("Fix login");
-    ivan.locks().acquire(LockedEntity::Task, &task.id, "Task", Some(env.project)).unwrap();
+    ivan.locks()
+        .acquire(LockedEntity::Task, &task.id, "Task", Some(env.project))
+        .unwrap();
     let update = |ws: &tasker_services::Workspace, title: &str| {
         ws.tasks().update(
             &env.project,
@@ -134,7 +139,9 @@ fn task_delete_is_rejected_for_others_and_removes_the_lock_for_the_holder() {
     let env = Env::new();
     let (ivan, anna) = (ivan(&env), anna(&env));
     let task = env.task("A");
-    ivan.locks().acquire(LockedEntity::Task, &task.id, "Task", Some(env.project)).unwrap();
+    ivan.locks()
+        .acquire(LockedEntity::Task, &task.id, "Task", Some(env.project))
+        .unwrap();
     assert!(err(anna.tasks().delete(&env.project, &task.id, Some(&task.version))).is_locked());
     assert!(env.ws.tasks().get_by_id(&env.project, &task.id).unwrap().is_some());
     assert!(ivan.tasks().delete(&env.project, &task.id, Some(&task.version)).unwrap());
@@ -157,13 +164,27 @@ fn series_operations_on_a_locked_task_and_a_locked_series_are_rejected() {
             },
         )
         .unwrap();
-    ivan.locks().acquire(LockedEntity::Task, &task.id, "Task", Some(env.project)).unwrap();
-    assert!(err(anna.tasks().remove_from_series(&env.project, &task.id, &series.id, Some(&task.version))).is_locked());
+    ivan.locks()
+        .acquire(LockedEntity::Task, &task.id, "Task", Some(env.project))
+        .unwrap();
+    assert!(
+        err(anna
+            .tasks()
+            .remove_from_series(&env.project, &task.id, &series.id, Some(&task.version)))
+        .is_locked()
+    );
     assert!(err(anna.tasks().remove_from_series_by_number(&env.project, &series.id, 1)).is_locked());
-    assert!(err(anna.tasks().renumber(&env.project, &task.id, &series.id, Some(5), Some(&task.version))).is_locked());
+    assert!(
+        err(anna
+            .tasks()
+            .renumber(&env.project, &task.id, &series.id, Some(5), Some(&task.version)))
+        .is_locked()
+    );
     assert_eq!(env.get(&task.id).series_numbers.len(), 1);
 
-    ivan.locks().acquire(LockedEntity::Series, &series.id, "Series", Some(env.project)).unwrap();
+    ivan.locks()
+        .acquire(LockedEntity::Series, &series.id, "Series", Some(env.project))
+        .unwrap();
     assert!(
         err(anna.series().update(
             &env.project,
@@ -184,9 +205,18 @@ fn entity_locks_check_the_entity_exists_name_it_and_list_the_project_locks() {
     let env = Env::new();
     let task = env.task("Fix login");
     let ivan = ivan(&env);
-    let info = ivan.entity_locks().acquire(Some(env.project), LockedEntity::Task, &task.id).unwrap().unwrap();
+    let info = ivan
+        .entity_locks()
+        .acquire(Some(env.project), LockedEntity::Task, &task.id)
+        .unwrap()
+        .unwrap();
     assert_eq!((info.holder.as_str(), info.mine, info.entity), ("Ivan", true, LockedEntity::Task));
-    assert!(ivan.entity_locks().acquire(Some(env.project), LockedEntity::Task, &Uuid::new_v4()).unwrap().is_none());
+    assert!(
+        ivan.entity_locks()
+            .acquire(Some(env.project), LockedEntity::Task, &Uuid::new_v4())
+            .unwrap()
+            .is_none()
+    );
     assert_eq!(
         message(ivan.entity_locks().acquire(None, LockedEntity::Status, &env.backlog.id)),
         "ProjectId is required to lock a Status"
@@ -197,11 +227,20 @@ fn entity_locks_check_the_entity_exists_name_it_and_list_the_project_locks() {
     assert!(!anna_view.mine);
 
     // Проект блокируется сам по себе и попадает в свои же блокировки.
-    ivan.entity_locks().acquire(None, LockedEntity::Project, &env.project).unwrap().unwrap();
+    ivan.entity_locks()
+        .acquire(None, LockedEntity::Project, &env.project)
+        .unwrap()
+        .unwrap();
     let listed = ivan.entity_locks().get_by_project(&env.project);
-    assert_eq!(listed.iter().map(|x| x.entity).collect::<Vec<_>>(), vec![LockedEntity::Task, LockedEntity::Project]);
+    assert_eq!(
+        listed.iter().map(|x| x.entity).collect::<Vec<_>>(),
+        vec![LockedEntity::Task, LockedEntity::Project]
+    );
 
-    assert_eq!(EntityLockService::parse_entity(Some("status-set")).unwrap(), LockedEntity::StatusSet);
+    assert_eq!(
+        EntityLockService::parse_entity(Some("status-set")).unwrap(),
+        LockedEntity::StatusSet
+    );
     assert_eq!(EntityLockService::parse_entity(Some("taskType")).unwrap(), LockedEntity::TaskType);
     assert_eq!(
         message(EntityLockService::parse_entity(Some("note"))),
