@@ -1,0 +1,21 @@
+[package]
+name = "tasker-cli"
+description = "Tasker command line (tasker): migrate — the first command checked against a real workspace"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "tasker"
+path = "src/main.rs"
+
+[dependencies]
+tasker-core = { path = "../tasker-core" }
+tasker-files = { path = "../tasker-files" }
+clap.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+uuid.workspace = true
+serde_json.workspace = true
