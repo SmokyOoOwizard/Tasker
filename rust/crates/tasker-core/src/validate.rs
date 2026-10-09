@@ -14,8 +14,8 @@ pub fn utf16_len(text: &str) -> usize {
 /// `string.Equals(a, b, OrdinalIgnoreCase)`: посимвольное сравнение после простого приведения к верхнему регистру
 /// (без спец-правил вроде ß → SS).
 pub fn eq_ignore_case(a: &str, b: &str) -> bool {
-    let mut x = a.encode_utf16().map(upper_unit);
-    let mut y = b.encode_utf16().map(upper_unit);
+    let mut x = a.chars().map(upper_char);
+    let mut y = b.chars().map(upper_char);
     loop {
         match (x.next(), y.next()) {
             (None, None) => return true,
@@ -25,39 +25,40 @@ pub fn eq_ignore_case(a: &str, b: &str) -> bool {
     }
 }
 
-fn upper_unit(u: u16) -> u16 {
-    match char::from_u32(u as u32) {
-        Some(c) => {
-            let mut upper = c.to_uppercase();
-            match (upper.next(), upper.next()) {
-                (Some(single), None) if (single as u32) <= 0xFFFF => single as u16,
-                _ => u,
-            }
-        }
-        None => u,
+/// Простое (однознаковое) соответствие верхнего регистра, как `u_toupper` в ICU, которым пользуется .NET для инвариантной
+/// культуры: многознаковые правила (ß → SS) не применяются. Исключение .NET (`pal_casing.c`): ı (U+0131) не меняется.
+fn upper_char(c: char) -> char {
+    if c == '\u{0131}' {
+        return c;
+    }
+    let mut upper = c.to_uppercase();
+    match (upper.next(), upper.next()) {
+        (Some(single), None) => single,
+        _ => c,
     }
 }
 
-/// `ToLowerInvariant` по единицам UTF-16: только простые однозначные соответствия (как в .NET).
-pub fn to_lower_invariant(text: &str) -> String {
-    let units: Vec<u16> = text
-        .encode_utf16()
-        .map(|u| match char::from_u32(u as u32) {
-            // Простое соответствие UnicodeData: единственное многознаковое — İ (U+0130) → i + U+0307, простое даёт i.
-            Some(c) => match c.to_lowercase().next() {
-                Some(single) if (single as u32) <= 0xFFFF => single as u16,
-                _ => u,
-            },
-            None => u,
-        })
-        .collect();
-    String::from_utf16_lossy(&units)
+/// Простое соответствие нижнего регистра. Исключение .NET (`pal_casing.c`): İ (U+0130) не меняется — поэтому в имени файла
+/// `ümläute-İstanbul-…` корпуса заглавная İ остаётся.
+fn lower_char(c: char) -> char {
+    if c == '\u{0130}' {
+        return c;
+    }
+    let mut lower = c.to_lowercase();
+    match (lower.next(), lower.next()) {
+        (Some(single), None) => single,
+        _ => c,
+    }
 }
 
-/// `ToUpperInvariant` по единицам UTF-16.
+/// `ToLowerInvariant` .NET: по знакам Unicode (суррогатные пары — один знак), только простые однозначные соответствия.
+pub fn to_lower_invariant(text: &str) -> String {
+    text.chars().map(lower_char).collect()
+}
+
+/// `ToUpperInvariant` .NET: по знакам Unicode, только простые однозначные соответствия.
 pub fn to_upper_invariant(text: &str) -> String {
-    let units: Vec<u16> = text.encode_utf16().map(upper_unit).collect();
-    String::from_utf16_lossy(&units)
+    text.chars().map(upper_char).collect()
 }
 
 /// Название сущности: обрезка пробелов, непустое, не длиннее `max_length` единиц UTF-16.
@@ -118,6 +119,19 @@ pub fn is_letter_or_digit(c: char) -> bool {
                 | GeneralCategory::OtherLetter
                 | GeneralCategory::DecimalNumber
         )
+}
+
+/// `Rune.IsLetterOrDigit`: категории L* и Nd для знака Unicode, в том числе вне BMP (в отличие от `char.IsLetterOrDigit`).
+pub fn rune_is_letter_or_digit(c: char) -> bool {
+    matches!(
+        get_general_category(c),
+        GeneralCategory::UppercaseLetter
+            | GeneralCategory::LowercaseLetter
+            | GeneralCategory::TitlecaseLetter
+            | GeneralCategory::ModifierLetter
+            | GeneralCategory::OtherLetter
+            | GeneralCategory::DecimalNumber
+    )
 }
 
 /// Описание: пустое или из одних пробелов — None.
@@ -233,8 +247,12 @@ mod tests {
 
     #[test]
     fn invariant_case_mapping_is_per_unit() {
-        assert_eq!(to_lower_invariant("İSTANBUL ß Ü"), "istanbul ß ü");
-        assert_eq!(to_upper_invariant("straße"), "STRAßE");
+        // .NET (ICU, pal_casing.c): İ (U+0130) и ı (U+0131) инвариантная культура не меняет.
+        assert_eq!(to_lower_invariant("İSTANBUL ß Ü"), "İstanbul ß ü");
+        assert_eq!(to_upper_invariant("straße ı"), "STRAßE ı");
+        assert_eq!(to_lower_invariant("\u{10400}"), "\u{10428}"); // дезеретская буква вне BMP — один знак
+        assert!(rune_is_letter_or_digit('\u{1D49C}'));
+        assert!(!is_letter_or_digit('\u{1D49C}'));
         assert!(eq_ignore_case("Relates To", "relates to"));
         assert!(!eq_ignore_case("ß", "SS"));
     }
