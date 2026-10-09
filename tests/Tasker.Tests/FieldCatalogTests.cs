@@ -494,6 +494,7 @@ public sealed class FilesFieldCatalogTests : FieldCatalogContract
         Assert.Equal(priority.Values, enums.Single().Values);
     }
 
+    [InProcess]
     [Fact]
     public async Task Migration_covers_the_field_and_enum_folders_and_reports_files_of_a_newer_format()
     {

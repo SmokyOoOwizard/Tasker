@@ -8,6 +8,7 @@ namespace Tasker.Tests;
 /// Блокировка на время правки снаружи: REST десктопа, команды консоли и MCP. Держатели разные
 /// (интерфейс — <c>local</c>, консоль — <c>cli</c>, агент — свой пользователь), поэтому блокировка одного останавливает другого.
 /// </summary>
+[InProcess]
 public class EditLockInterfaceTests
 {
     // Настройки (имя для whoami) — в каталоге данных Tasker. Подмена TASKER_HOME живёт в AsyncLocal и не выходит из async-метода,

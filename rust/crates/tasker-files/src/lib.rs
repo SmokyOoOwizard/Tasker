@@ -4,7 +4,8 @@
 //! Модели файлов работают с байтами: [`parse`](files::project::parse) принимает содержимое файла и путь (для текстов ошибок),
 //! [`serialize`](files::project::serialize) возвращает байты для записи (LF, UTF-8 без BOM). Поверх них (TSK-130): имена файлов
 //! `<slug>-<id8>.yaml` ([`names`]), раскладка `.tasker` ([`layout`]), запись под блокировками ([`write`]), блокировки правки
-//! ([`edit_locks`]) и `tasker migrate` ([`migration`]); индекс области в SQLite `.cache/index-rs.db` ([`index`], TSK-131).
+//! ([`edit_locks`]) и `tasker migrate` ([`migration`]); индекс области в SQLite `.cache/index-rs.db` ([`index`], TSK-131) и
+//! наблюдатель файлов для демона ([`watch`], TSK-133).
 //!
 //! Правило переноса: поведение `Tasker.Storage.Files` (.NET) воспроизводится буквально — ключи, их порядок, правила пропуска
 //! (null, false, пустые списки, пустое описание), стиль скаляров YamlDotNet, тексты ошибок. Эталоны — `rust/tests/golden`.
@@ -17,6 +18,7 @@ pub mod index;
 pub mod layout;
 pub mod migration;
 pub mod names;
+pub mod watch;
 pub mod write;
 pub mod yaml;
 

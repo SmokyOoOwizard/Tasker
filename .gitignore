@@ -500,3 +500,5 @@ tasker.db-wal
 
 # Rust (перенос консоли и демона, rust/)
 rust/target/
+# Rust
+rust/**/target/

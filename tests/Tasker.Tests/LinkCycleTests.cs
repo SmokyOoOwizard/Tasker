@@ -199,6 +199,7 @@ public class LinkCycleTests
 
     // ---- существующие циклы (после слияния git) ----
 
+    [InProcess]
     [Fact]
     public async Task An_existing_cycle_is_reported_by_the_health_check_and_cleanup_does_not_remove_it()
     {

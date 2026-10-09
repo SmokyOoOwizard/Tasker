@@ -9,6 +9,7 @@ namespace Tasker.Tests;
 /// Описание у статусов и типов задач (TSK-104): REST и консоль на обеих реализациях хранилища, формат файлов (ключ только у непустого
 /// описания, старый файл без описания читается), MCP через настоящий демон.
 /// </summary>
+[InProcess]
 public class EntityDescriptionTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();
