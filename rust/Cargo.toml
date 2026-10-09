@@ -1,0 +1,27 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "MIT"
+rust-version = "1.85"
+
+[workspace.dependencies]
+uuid = { version = "1", features = ["v4"] }
+sha2 = "0.11"
+md-5 = "0.11"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+unicode-general-category = "1"
+rustix = { version = "1", features = ["fs"] }
+
+# Release-профиль по плану: статический бинарник в единицы МБ, без размотки паники.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = "s"
+panic = "abort"
+strip = true

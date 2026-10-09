@@ -498,5 +498,7 @@ tasker.db-shm
 tasker.db-wal
 *.sqlite
 
+# Rust (перенос консоли и демона, rust/)
+rust/target/
 # Rust
 rust/**/target/
