@@ -17,6 +17,20 @@ pub struct Timestamp {
     pub offset_minutes: i32,
 }
 
+/// В JSON индекса и настроек — строка формата `O` (как `DateTimeOffset` в System.Text.Json, с полными тиками).
+impl serde::Serialize for Timestamp {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.format_o())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Timestamp {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = <String as serde::Deserialize>::deserialize(deserializer)?;
+        Timestamp::parse(&text).ok_or_else(|| serde::de::Error::custom(format!("'{text}' is not a timestamp")))
+    }
+}
+
 impl Timestamp {
     pub const UNIX_EPOCH: Timestamp = Timestamp {
         year: 1970,

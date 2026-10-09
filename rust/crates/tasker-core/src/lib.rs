@@ -1,6 +1,6 @@
 //! Домен Tasker на Rust (TSK-128, фаза 1 плана `docs/rust-migration-plan.md`): сущности, валидация, короткие id и ссылки
 //! на задачи, версии сущностей, конвенции JSON (`TaskerJson`), канонизация значений полей, глобальные настройки,
-//! диагностика переменных `TASKER_*`, атомарная запись и блокировки файлов.
+//! диагностика переменных `TASKER_*`, атомарная запись и блокировки файлов, блокировки на время правки (`locks`).
 //!
 //! Правило переноса: поведение .NET-версии воспроизводится буквально (тексты ошибок, форматы, крайние случаи), поскольку
 //! в переходный период над одной папкой `.tasker` работают оба движка. Эталоны — `rust/tests/golden`.
@@ -11,9 +11,11 @@ pub mod fields;
 pub mod ids;
 pub mod io;
 pub mod json;
+pub mod locks;
 pub mod model;
 pub mod reference;
 pub mod settings;
+pub mod tasks;
 pub mod time;
 pub mod validate;
 pub mod versioning;

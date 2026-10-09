@@ -86,8 +86,8 @@ fn parse_long(text: &str) -> Option<i64> {
     text.parse::<i64>().ok()
 }
 
-/// `double.TryParse(NumberStyles.Float)`: знак, цифры, точка, экспонента, пробелы по краям уже обрезаны.
-fn parse_double(text: &str) -> Option<f64> {
+/// `double.TryParse(NumberStyles.Float, InvariantCulture)`: знак, цифры, точка, экспонента; пробелы по краям уже обрезаны.
+pub fn parse_double(text: &str) -> Option<f64> {
     let lowered = text.to_ascii_lowercase();
     let body = lowered.strip_prefix(['+', '-']).unwrap_or(&lowered);
     let (mantissa, exponent) = match body.split_once('e') {

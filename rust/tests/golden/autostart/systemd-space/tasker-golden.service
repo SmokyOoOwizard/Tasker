@@ -1,0 +1,11 @@
+[Unit]
+Description=Tasker MCP server
+
+[Service]
+ExecStart=<DOTNET> <BIN>/tasker-mcpd.dll --detached
+Environment="TASKER_HOME=<ROOT>/tasker home"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
