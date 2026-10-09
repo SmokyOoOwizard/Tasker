@@ -10,12 +10,12 @@ description: |-
   По дню на каждый. Итог (выбранные крейты, версии, ограничения) записать в описание задачи и при необходимости поправить план.
 
   ИТОГ (2026-10-09, rust/spikes/README.md):
-  1. rmcp 3.5.1 подходит: stateless через legacy_session_mode=false + NeverSessionManager (tools/call без initialize, без Mcp-Session-Id), схемы руками через Tool::new с произвольным JSON Schema (workspace добавлен, projectId не required), заголовки HTTP из context.extensions (X-Tasker-Agent), CallToolResult::error даёт isError и текст с кодом, проверка Host по умолчанию (чужой → 403), ответ text/event-stream с одной строкой data:. Свой JSON-RPC-слой не нужен. Учесть: rmcp не валидирует аргументы по inputSchema (делать самим — нужно и для текстов [invalid]); порядок ключей в ответе и isError:false отличаются от .NET SDK — снапшоты MCP сравнивать семантически, inputSchema строить с preserve_order. claude mcp add проверен до «Pending approval» (проектная область требует интерактивного одобрения), протокол — запросами, идентичными тестовому клиенту.
+  1. rmcp 3.5.1 подходит: stateless через legacy_session_mode=false + NeverSessionManager (tools/call без initialize, без Mcp-Session-Id), схемы руками через Tool::new с произвольным JSON Schema (workspace добавлен, projectId не required), заголовки HTTP из context.extensions (X-Tasker-Agent), CallToolResult::error даёт isError и текст с кодом, проверка Host по умолчанию (чужой → 403), ответ text/event-stream с одной строкой data:. Свой JSON-RPC-слой не нужен. Учесть: rmcp не валидирует аргументы по inputSchema (делать самим — нужно и для текстов [invalid]); порядок ключей в ответе и isError:false отличаются от .NET SDK — снапшоты MCP сравнивать семантически, inputSchema строить с preserve_order. claude mcp add + claude mcp list → ✔ Connected: Claude Code проходит initialize/tools/list против stateless-сервера rmcp.
   2. Свой YAML-эмиттер оправдан: порт AnalyzeScalar/SelectScalarStyle YamlDotNet (~300 строк) + saphyr для чтения; на golden-корпусе все строки-пробы и все 120 файлов области воспроизводятся байт в байт (тесты в rust/spikes/yaml-emitter). Неочевидное: анализ по UTF-16-единицам (эмодзи → двойные кавычки с \U0001F680), регулярное выражение QuotingNecessaryStrings YAML 1.2 (yes/no/off без кавычек), хвостовые переводы строки литерала (|, |+) заменяют конец строки документа, ширина строки не ограничена.
 typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
 statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-09T11:34:27.1002230+00:00
-updatedAt: 2026-10-09T12:48:47.6941110+00:00
+updatedAt: 2026-10-09T12:53:45.7202330+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 127

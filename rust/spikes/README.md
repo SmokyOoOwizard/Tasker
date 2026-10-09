@@ -28,8 +28,9 @@
 - Порядок ключей и `isError: false` в успешном ответе: rmcp пишет `{"jsonrpc","id","result"}` и `"isError":false`, .NET —
   `{"result","id","jsonrpc"}` и без `isError`. Сравнение со снапшотами `expected/mcp/` — семантическое (разбор JSON), не байтовое;
   `inputSchema` для `tools/list` строить с сохранением порядка ключей (`serde_json` с `preserve_order`).
-- `claude mcp add` проверить до конца не удалось: сервер проектной области ждёт интерактивного одобрения в `claude`
-  (`⏸ Pending approval`); протокол проверен запросами, идентичными тем, что шлёт тестовый клиент .NET.
+- `claude mcp add --transport http echo-spike http://127.0.0.1:5799/mcp` + `claude mcp list` → `✔ Connected`: Claude Code
+  проходит `initialize`/`tools/list` против stateless-сервера rmcp без сессий. Сервер проектной области (`-s project`) до
+  интерактивного одобрения показывается как `Pending approval` — это поведение Claude Code, не сервера.
 
 Решение: **rmcp подходит**, свой JSON-RPC-слой не нужен.
 
