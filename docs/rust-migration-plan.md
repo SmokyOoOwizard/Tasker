@@ -72,7 +72,7 @@ rust/
 | SQLite | `rusqlite` с `bundled` | индекс области, статически в бинарнике |
 | HTTP-сервер | `axum` + `hyper` на `tokio` | демон; `tokio::net::TcpListener::from_std` принимает унаследованный дескриптор |
 | MCP | `rmcp` (официальный Rust SDK MCP) — транспорт Streamable HTTP, stateless | проверить в фазе 0, что текущая версия даёт stateless-режим и ручное формирование `inputSchema` (нам нужно добавлять `workspace` и убирать `projectId` из `required`); если нет — реализовать JSON-RPC-слой самим, протокол небольшой |
-| слежение за файлами | `notify` + `notify-debouncer-full` | окно 300 мс / потолок 2 с как сейчас |
+| слежение за файлами | `notify` + собственный сборщик окон (`tasker-files::watch`) | окно 300 мс / потолок 2 с / порог 500 путей как сейчас; `notify-debouncer-full` не подходит: на FSEvents пара `Create` + `Remove` одного файла схлопывается в ничего, и удаление теряется |
 | блокировки, setsid, fcntl | `nix`, `rustix` | `flock(LOCK_EX)` — совместимо с тем, как .NET реализует `FileShare.None` на Unix |
 | Windows API | `windows-sys` | Job Object, `CreateProcessW`, `WSADuplicateSocketW`, именованное событие |
 | хэши, id | `sha2`, `md5`, `uuid` | id типов связей по умолчанию — MD5 + `Uuid::from_bytes_le` (конструктор .NET `Guid(byte[])` little-endian!) |
