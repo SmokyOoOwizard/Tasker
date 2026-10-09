@@ -61,6 +61,15 @@ impl From<std::io::Error> for CliError {
     }
 }
 
+impl From<tasker_services::Error> for CliError {
+    fn from(e: tasker_services::Error) -> Self {
+        match e {
+            tasker_services::Error::Tasker(e) => CliError::Domain(e),
+            tasker_services::Error::Io(e) => CliError::Io(e),
+        }
+    }
+}
+
 impl From<SettingsError> for CliError {
     fn from(e: SettingsError) -> Self {
         match e {

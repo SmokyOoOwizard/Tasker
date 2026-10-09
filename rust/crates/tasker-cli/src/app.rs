@@ -7,7 +7,7 @@ use crate::hints::Hints;
 use crate::session::Session;
 use crate::spec::{self, Arity, CommandSpec, GLOBAL_OPTIONS, OptKind, ValueKind};
 use crate::terminal::{self, Terminal};
-use crate::{help, migrate};
+use crate::{cleanup, help, migrate, sync};
 use clap::ArgMatches;
 use clap::error::{ContextKind, ContextValue, ErrorKind};
 use std::io::Write;
@@ -161,6 +161,13 @@ fn dispatch(names: &[&str], leaf: &ArgMatches, globals: &Globals, terminal: &Ter
             let (dry_run, check) = (leaf.get_flag("dry-run"), leaf.get_flag("check"));
             with_workspace(globals, terminal, out, err, |ctx| migrate::run(ctx, dry_run, check))
         }
+        ["cleanup"] => {
+            let (dry_run, check, resolve) = (leaf.get_flag("dry-run"), leaf.get_flag("check"), leaf.get_flag("resolve-conflicts"));
+            with_workspace(globals, terminal, out, err, |ctx| cleanup::run(ctx, dry_run, check, resolve))
+        }
+        ["sync"] => plain(globals, terminal, out, err, |ctx| {
+            sync::run(ctx, globals.workspace.as_deref(), globals.sqlite.as_deref())
+        }),
         // Остальные команды дерева — TSK-135. До реализации они ведут себя как .NET до самого действия: открывают область и
         // выбирают проект (ошибки `Folder not found:`, `Project is required:`, `No project '…'`), затем сообщают, что их нет.
         [group, ..] => match Scope::of(group) {
@@ -491,7 +498,7 @@ mod tests {
         let (out, err, code) = run_text(&["sync", "-w", "/nonexistent"]);
         assert_eq!(
             (code, out.as_str(), err.as_str()),
-            (1, "", "Error: not implemented in this build\n")
+            (1, "", "Error: Folder not found: /nonexistent\n")
         );
         let (_, err, code) = run_text(&["task", "list", "-w", "/nonexistent"]);
         assert_eq!((code, err.as_str()), (1, "Error: Folder not found: /nonexistent\n"));

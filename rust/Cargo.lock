@@ -604,6 +604,7 @@ dependencies = [
  "serde_json",
  "tasker-core",
  "tasker-files",
+ "tasker-services",
  "unicode-general-category",
  "unicode-segmentation",
  "uuid",
@@ -644,6 +645,18 @@ dependencies = [
  "serde_json",
  "tasker-core",
  "unicode-normalization",
+ "uuid",
+]
+
+[[package]]
+name = "tasker-services"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tasker-core",
+ "tasker-files",
+ "unicode-segmentation",
  "uuid",
 ]
 

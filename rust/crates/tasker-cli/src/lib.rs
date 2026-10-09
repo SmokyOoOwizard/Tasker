@@ -4,15 +4,17 @@
 //! выполнение строки ([`app`]). Синхронно, без tokio. Поведение .NET-консоли (`Tasker.Cli`) воспроизводится буквально:
 //! эталоны в `rust/tests/golden/expected/cli`.
 //!
-//! Реализованы пока `migrate` (TSK-130) и каркас; остальные команды дерева отвечают `Error: not implemented in this build`
-//! (их заполняет TSK-135).
+//! Команды дерева — по модулю на группу (TSK-135): поведение .NET-консоли (`Tasker.Cli/Commands/*.cs`) воспроизводится буквально.
 pub mod app;
+pub mod cleanup;
 pub mod context;
 pub mod errors;
 pub mod help;
 pub mod hints;
+pub mod json;
 pub mod migrate;
 pub mod session;
 pub mod spec;
+pub mod sync;
 pub mod table;
 pub mod terminal;

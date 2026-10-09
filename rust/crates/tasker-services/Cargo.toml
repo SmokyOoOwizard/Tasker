@@ -1,0 +1,15 @@
+[package]
+name = "tasker-services"
+description = "Tasker domain services over .tasker files and the index: projects, statuses, types, fields, boards, tasks, series, links, locks, cleanup, health"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tasker-core = { path = "../tasker-core" }
+tasker-files = { path = "../tasker-files" }
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+unicode-segmentation.workspace = true

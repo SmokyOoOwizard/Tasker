@@ -13,6 +13,7 @@ use tasker_core::tasks::Page;
 use tasker_core::validate::to_upper_invariant;
 use tasker_files::index::{IndexQuery, WorkspaceIndex};
 use tasker_files::layout::TaskerDirectory;
+use tasker_services::Workspace;
 use uuid::Uuid;
 
 /// Текст ошибки `--sqlite`: режим не поддерживается этой сборкой (решение (б) раздела 1 плана).
@@ -20,8 +21,7 @@ pub const SQLITE_NOT_SUPPORTED: &str = "--sqlite is not supported by this build:
 
 pub struct Session {
     location: WorkspaceLocation,
-    directory: TaskerDirectory,
-    index: WorkspaceIndex,
+    workspace: Workspace,
 }
 
 impl Session {
@@ -56,33 +56,41 @@ impl Session {
         if for_completion && !Self::exists(&location) {
             return Err(CliError::new(format!("No workspace at {}", location.path())));
         }
-        let directory = TaskerDirectory::new(location.path());
-        if !for_completion {
-            directory.ensure_created()?;
+        // Консоль — отдельный держатель блокировок правки («<имя> (console)», ключ cli): блокировка интерфейса останавливает и команды.
+        let workspace = if for_completion {
+            Workspace::attach(location.path())?
+        } else {
+            Workspace::open(location.path())?
         }
-        let index = WorkspaceIndex::open(&directory)?;
-        Ok(Session {
-            location,
-            directory,
-            index,
-        })
+        .with_editor(tasker_services::locks::console_editor(&editor_name()));
+        Ok(Session { location, workspace })
+    }
+
+    /// Имя держателя блокировок консоли: имя из глобальных настроек (`tasker whoami <name>`), иначе имя пользователя ОС
+    /// (`SettingsLocalEditor.Name`); нечитаемые настройки — как отсутствующие.
+    pub fn editor_name() -> String {
+        editor_name()
     }
 
     pub fn location(&self) -> &WorkspaceLocation {
         &self.location
     }
 
+    pub fn workspace(&self) -> &Workspace {
+        &self.workspace
+    }
+
     pub fn directory(&self) -> &TaskerDirectory {
-        &self.directory
+        self.workspace.directory()
     }
 
     pub fn index(&self) -> &WorkspaceIndex {
-        &self.index
+        self.workspace.index()
     }
 
     /// Все проекты области (в порядке индекса: по имени).
     pub fn all_projects(&self) -> Result<Vec<Project>> {
-        Ok(self.index.all::<Project>(&IndexQuery::default())?)
+        Ok(self.index().all::<Project>(&IndexQuery::default())?)
     }
 
     /// Проект по id или имени.
@@ -98,7 +106,7 @@ impl Session {
             return Ok(self.find_project(reference)?.id);
         }
         // Достаточно двух: нужно знать только «один ли».
-        let page = self.index.range::<Project>(&IndexQuery::default(), Page::first(2))?;
+        let page = self.index().range::<Project>(&IndexQuery::default(), Page::first(2))?;
         match page.total_count {
             1 => Ok(page.data[0].id),
             0 => Err(CliError::new(
@@ -117,6 +125,15 @@ impl Session {
             None => Ok(None),
         }
     }
+}
+
+fn editor_name() -> String {
+    let configured = tasker_core::settings::SettingsStore::new(None)
+        .load()
+        .ok()
+        .and_then(|s| s.user_name)
+        .filter(|n| !n.trim().is_empty());
+    configured.unwrap_or_else(tasker_core::settings::os_user_name)
 }
 
 /// Ссылки на сущности в командах (`Refs` в .NET): полный Guid, имя, затем короткий id — префикс Guid из 8 и более
