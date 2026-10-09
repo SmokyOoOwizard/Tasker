@@ -1,5 +1,6 @@
-//! `tasker sync` и `tasker cleanup` на копии golden-корпуса: вывод, коды выхода и JSON — как у .NET (`expected/cli/001-006`,
-//! `194-help-cleanup`, `213-help-sync`); после `migrate` сверка показывает только два известных нечитаемых файла.
+//! `tasker sync` и `tasker cleanup` на копии golden-корпуса: вывод, коды выхода и JSON — как у .NET (`expected/cli/001-006`;
+//! справка `194-help-cleanup`, `213-help-sync` — в `tests/help.rs`); после `migrate` сверка показывает только два известных
+//! нечитаемых файла.
 mod common;
 
 use common::*;
@@ -14,8 +15,6 @@ fn sync_and_cleanup_check_on_the_untouched_corpus_match_the_cli_snapshots() {
     assert_snapshot("cli", "004-cleanup-check", &root);
     assert_snapshot("cli", "005-cleanup-check-json", &root);
     assert_snapshot("cli", "006-cleanup-dry-run", &root);
-    assert_snapshot("cli", "194-help-cleanup", &root);
-    assert_snapshot("cli", "213-help-sync", &root);
     // Ничего не записано: те же файлы с теми же байтами.
     assert_eq!(files(&workspace.join(".tasker")), before);
     std::fs::remove_dir_all(&root).unwrap();

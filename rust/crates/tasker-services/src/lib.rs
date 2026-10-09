@@ -80,6 +80,20 @@ impl Workspace {
         })
     }
 
+    /// Открывает папку с уже существующей областью, ничего не создавая, кроме индекса (автодополнение и справка консоли:
+    /// `Session.Open(forCompletion: true)` в .NET).
+    pub fn attach(folder: impl AsRef<Path>) -> std::io::Result<Workspace> {
+        let directory = TaskerDirectory::new(folder);
+        let index = WorkspaceIndex::open(&directory)?;
+        Ok(Workspace {
+            directory,
+            index,
+            clock: Arc::new(SystemClock),
+            editor: EditHolder::new(tasker_core::locks::LOCAL_KEY, tasker_core::locks::LOCAL_NAME),
+            cascade_timeout: locks::CASCADE_WAIT,
+        })
+    }
+
     /// Та же папка, другой держатель блокировок (другой пользователь или клиент).
     pub fn with_editor(mut self, editor: EditHolder) -> Workspace {
         self.editor = editor;
