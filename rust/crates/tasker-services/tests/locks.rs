@@ -226,7 +226,9 @@ fn entity_locks_check_the_entity_exists_name_it_and_list_the_project_locks() {
     let anna_view = anna(&env).entity_locks().get(LockedEntity::Task, &task.id).unwrap();
     assert!(!anna_view.mine);
 
-    // Проект блокируется сам по себе и попадает в свои же блокировки.
+    // Проект блокируется сам по себе и попадает в свои же блокировки. Часы сдвигаются: список упорядочен по времени
+    // взятия, а при равном времени — по id, и случайные id делали бы порядок случайным.
+    env.clock.advance(Duration::from_secs(1));
     ivan.entity_locks()
         .acquire(None, LockedEntity::Project, &env.project)
         .unwrap()
