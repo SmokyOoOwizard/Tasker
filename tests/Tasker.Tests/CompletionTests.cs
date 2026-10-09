@@ -9,6 +9,7 @@ namespace Tasker.Tests;
 /// Автодополнение по Tab: директива <c>[suggest]</c> (команды, параметры, значения из хранилища области) и скрипты оболочек
 /// (<c>tasker completion zsh|bash</c>).
 /// </summary>
+[InProcess]
 public class CompletionTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

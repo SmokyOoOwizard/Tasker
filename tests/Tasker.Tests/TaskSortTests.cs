@@ -9,6 +9,7 @@ namespace Tasker.Tests;
 /// обе реализации хранилища (папка с индексом и SQLite), по каждому типу ключа, составные ключи, обратный порядок, пустые значения (всегда в конце),
 /// стабильность страниц, сочетание с фильтром, доска и автодополнение.
 /// </summary>
+[InProcess]
 public class TaskSortTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();
