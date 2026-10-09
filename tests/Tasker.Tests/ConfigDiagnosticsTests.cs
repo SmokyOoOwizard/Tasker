@@ -285,6 +285,7 @@ public partial class ConfigDiagnosticsTests
         Assert.Empty(sink.Warnings);
     }
 
+    [InProcess]
     [Fact]
     public async Task The_cli_warns_on_stderr_about_a_mistyped_variable_and_keeps_stdout_clean()
     {
@@ -303,6 +304,7 @@ public partial class ConfigDiagnosticsTests
         Assert.NotNull(System.Text.Json.Nodes.JsonNode.Parse(output.ToString()));
     }
 
+    [InProcess]
     [Fact]
     public async Task The_cli_is_silent_when_variables_are_right()
     {

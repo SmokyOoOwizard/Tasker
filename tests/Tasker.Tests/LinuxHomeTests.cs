@@ -16,13 +16,10 @@ public sealed class LinuxHomeTests
         var home = Directory.CreateTempSubdirectory("tasker-home-").FullName;
         try
         {
-            var info = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = home };
+            var info = TaskerProcess.StartInfo(home, "mcp", "status");
             info.Environment["HOME"] = home;
             info.Environment.Remove("TASKER_HOME");
             info.Environment.Remove("XDG_DATA_HOME");
-            info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "tasker.dll"));
-            info.ArgumentList.Add("mcp");
-            info.ArgumentList.Add("status");
             using var process = Process.Start(info)!;
             var error = process.StandardError.ReadToEndAsync();
             await process.StandardOutput.ReadToEndAsync();

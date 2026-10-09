@@ -7,6 +7,7 @@ namespace Tasker.Tests;
 /// Циклы связей (TSK-97) снаружи: консоль на настоящем git. Две ветки независимо добавляют «A blocks B» и «B blocks A» — файлы разные,
 /// git конфликта не видит, а после слияния цикл есть.
 /// </summary>
+[InProcess]
 public class LinkCycleCliTests : IDisposable
 {
     private readonly SeriesRepo _r = new();

@@ -3,6 +3,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary><c>tasker board tasks</c> (задачи колонки) и <c>tasker board show</c> (вся доска по колонкам).</summary>
+[InProcess]
 public class BoardConsoleTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
