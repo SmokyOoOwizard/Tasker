@@ -1,0 +1,3 @@
+launchctl bootout gui/<UID>/com.tasker.golden-autostart
+launchctl bootstrap gui/<UID> <ROOT>/service/com.tasker.golden-autostart.plist
+launchctl print gui/<UID>/com.tasker.golden-autostart

@@ -1650,6 +1650,7 @@ public sealed class FilesTaskFieldsTests : TaskFieldsContract
         Assert.Equal(0, await tasks.Count(project, new TaskFilter { FieldIds = [field] }));
     }
 
+    [InProcess]
     [Fact]
     public async Task Files_of_format_3_are_read_without_fields_and_migrated_to_4_keeping_their_content()
     {

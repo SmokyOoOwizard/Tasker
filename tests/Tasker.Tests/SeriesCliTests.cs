@@ -5,6 +5,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Команды <c>tasker series</c>, <c>task --series</c> и ссылки <c>TSK-5</c> — на папке с файлами и на SQLite.</summary>
+[InProcess]
 public class SeriesCliTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
