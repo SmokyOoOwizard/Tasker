@@ -1154,11 +1154,17 @@ name = "tasker-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "rustix",
  "serde_json",
  "tasker-core",
+ "tasker-daemon",
  "tasker-files",
  "tasker-services",
+ "unicode-general-category",
+ "unicode-segmentation",
+ "ureq",
  "uuid",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

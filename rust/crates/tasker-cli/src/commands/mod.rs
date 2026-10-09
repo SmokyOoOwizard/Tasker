@@ -1,95 +1,132 @@
-//! Команды консоли поверх сервисов (`tasker-services`): пока `sync` и `cleanup` — средство проверки паритета сервисов на реальной
-//! области. Общее: открытие области ([`open`]), проект по `-p` ([`find_project`]), вывод JSON по конвенциям `TaskerJson`.
-pub mod cleanup;
-pub mod sync;
+//! Команды дерева по группам (`Commands/*.cs` в .NET). Каждая группа — функция `run(ctx, subcommand, matches)`, которая
+//! выполняет подкоманду по имени; вывод и ошибки — через [`crate::context::Context`].
+pub mod board;
+pub mod completion;
+pub mod field;
+pub mod hooks;
+pub mod link_type;
+pub mod lock;
+pub mod manual;
+pub mod mcp;
+pub mod project;
+pub mod series;
+pub mod status;
+pub mod task;
+pub mod task_fields;
+pub mod task_type;
+pub mod user;
 
-use crate::CliError;
-use clap::ArgMatches;
-use serde_json::{Map, Value};
-use tasker_core::ShortId;
-use tasker_core::ids::{guid_d, parse_guid};
-use tasker_core::model::Project;
-use tasker_core::validate::eq_ignore_case;
-use tasker_services::Workspace;
+use crate::context::Context;
+use crate::errors::{CliError, Result};
+use crate::session::refs;
+use tasker_core::model::{Board, FieldDefinition, FieldEnum, LinkType, Series, Status, StatusSet, TaskType};
 use uuid::Uuid;
 
-/// Открывает область по `-w` (как `Session.Open`): `.tasker` создаётся, индекс сверяется с файлами.
-pub(crate) fn open(matches: &ArgMatches) -> Result<Workspace, CliError> {
-    let location = crate::locate_folder(matches)?;
-    let name = tasker_core::settings::os_user_name();
-    Ok(Workspace::open(location.path())?.with_editor(tasker_services::locks::console_editor(&name)))
+/// Сущность проекта по ссылке (`Refs.FindItem` над `GetAll`).
+pub fn find_status(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<Status> {
+    let all = ctx.session().workspace().statuses().get_all(project_id)?;
+    refs::find_item(&all, reference, |x| x.id, |x| &x.name, "status", false).cloned()
 }
 
-/// Все проекты области по имени (`Context.AllProjects`).
-pub(crate) fn all_projects(ws: &Workspace) -> Result<Vec<Project>, CliError> {
-    Ok(ws.projects().get_all()?)
+pub fn find_status_set(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<StatusSet> {
+    let all = ctx.session().workspace().status_sets().get_all(project_id)?;
+    refs::find_item(&all, reference, |x| x.id, |x| &x.name, "status set", false).cloned()
 }
 
-/// Проект из `-p` или `TASKER_PROJECT`; None — не указан (команда работает со всеми проектами).
-pub(crate) fn optional_project(ws: &Workspace, matches: &ArgMatches) -> Result<Option<Project>, CliError> {
-    let reference = matches
-        .get_one::<String>("project")
-        .cloned()
-        .or_else(|| std::env::var("TASKER_PROJECT").ok())
-        .filter(|r| !r.trim().is_empty());
-    match reference {
-        None => Ok(None),
-        Some(reference) => Ok(Some(find_project(ws, &reference)?)),
+pub fn find_task_type(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<TaskType> {
+    let all = ctx.session().workspace().task_types().get_all(project_id)?;
+    refs::find_item(&all, reference, |x| x.id, |x| &x.name, "task type", false).cloned()
+}
+
+pub fn find_link_type(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<LinkType> {
+    let all = ctx.session().workspace().link_types().get_all(project_id)?;
+    refs::find_item(&all, reference, |x| x.id, |x| &x.name, "link type", false).cloned()
+}
+
+pub fn find_field(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<FieldDefinition> {
+    let all = ctx.session().workspace().fields().get_all(project_id)?;
+    refs::find_item(&all, reference, |x| x.id, |x| &x.name, "field", false).cloned()
+}
+
+pub fn find_enum(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<FieldEnum> {
+    let all = ctx.session().workspace().enums().get_all(project_id)?;
+    refs::find_item(&all, reference, |x| x.id, |x| &x.name, "enum", false).cloned()
+}
+
+pub fn find_board(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<Board> {
+    let all = ctx.session().workspace().boards().get_all(project_id)?;
+    refs::find_item(&all, reference, |x| x.id, |x| &x.name, "board", false).cloned()
+}
+
+/// Серия по id или по префиксу (регистр важен); затем — по короткому id (`SeriesCommands.Find`).
+pub fn find_series(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<Series> {
+    let ws = ctx.session().workspace();
+    if let Some(found) = ws.series().find(project_id, reference)? {
+        return Ok(found);
     }
-}
-
-/// Проект по id, имени (без учёта регистра) или префиксу id (`Refs.FindItem`).
-pub(crate) fn find_project(ws: &Workspace, reference: &str) -> Result<Project, CliError> {
-    let all = all_projects(ws)?;
-    if let Some(id) = parse_guid(reference)
-        && let Some(found) = all.iter().find(|x| x.id == id)
-    {
+    let all = ws.series().get_all(project_id)?;
+    if let Some(found) = refs::by_id_prefix(&all, reference, |x| x.id, "series")? {
         return Ok(found.clone());
     }
-    let by_name: Vec<&Project> = all.iter().filter(|x| eq_ignore_case(&x.name, reference)).collect();
-    if by_name.len() > 1 {
-        return Err(CliError(format!(
-            "Several projects are named '{reference}', use the id: {}",
-            by_name.iter().map(|x| guid_d(&x.id)).collect::<Vec<_>>().join(", ")
-        )));
-    }
-    if let Some(found) = by_name.first() {
-        return Ok((*found).clone());
-    }
-    if let Some(key) = ShortId::try_key(Some(reference)) {
-        let found: Vec<&Project> = all.iter().filter(|x| ShortId::matches(&x.id, &key)).collect();
-        match found.len() {
-            0 => {}
-            1 => return Ok(found[0].clone()),
-            _ => {
-                return Err(CliError(format!(
-                    "Several projects start with '{}', use a longer prefix or the full id: {}",
-                    reference.trim(),
-                    found.iter().map(|x| guid_d(&x.id)).collect::<Vec<_>>().join(", ")
-                )));
+    Err(CliError::new(format!(
+        "No series '{reference}': give the id, the short id or the exact prefix (case matters)"
+    )))
+}
+
+/// Серии для фильтра списка («ИЛИ» внутри параметра); повторы убираются, неизвестная — ошибка с перечнем префиксов.
+pub fn find_series_distinct(ctx: &Context<'_>, project_id: &Uuid, references: &[String]) -> Result<Vec<Uuid>> {
+    let ws = ctx.session().workspace();
+    let mut found: Vec<Uuid> = Vec::new();
+    for reference in references {
+        let series = match ws.series().find(project_id, reference)? {
+            Some(series) => series,
+            None => {
+                let all = ws.series().get_all(project_id)?;
+                match refs::by_id_prefix(&all, reference, |x| x.id, "series")? {
+                    Some(series) => series.clone(),
+                    None => {
+                        let mut prefixes: Vec<&str> = all.iter().map(|x| x.prefix.as_str()).collect();
+                        prefixes.sort_unstable();
+                        return Err(CliError::new(format!(
+                            "No series '{reference}': give the id, the short id or the exact prefix (case matters). Available: {}",
+                            prefixes.join(", ")
+                        )));
+                    }
+                }
             }
+        };
+        if !found.contains(&series.id) {
+            found.push(series.id);
         }
     }
-    Err(CliError(format!("No project '{reference}'")))
+    Ok(found)
 }
 
-/// JSON-объект с полями в заданном порядке (анонимные объекты .NET сериализуются в порядке объявления).
-pub(crate) fn object(pairs: Vec<(&str, Value)>) -> Value {
-    Value::Object(pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect::<Map<_, _>>())
+/// Названия перечислений проекта по id (`FieldCommands.EnumNames`).
+pub fn enum_names(ctx: &Context<'_>, project_id: &Uuid) -> Result<std::collections::HashMap<Uuid, String>> {
+    Ok(ctx
+        .session()
+        .workspace()
+        .enums()
+        .get_all(project_id)?
+        .into_iter()
+        .map(|x| (x.id, x.name))
+        .collect())
 }
 
-pub(crate) fn id(id: &Uuid) -> Value {
-    Value::String(guid_d(id))
+/// Тип поля одной строкой: `string`, `int[]` (несколько значений), `enum Priority`.
+pub fn type_text(field_type: tasker_core::model::FieldType, multiple: bool, enum_name: Option<&str>) -> String {
+    format!(
+        "{}{}{}",
+        field_type.name(),
+        if multiple { "[]" } else { "" },
+        enum_name.map(|n| format!(" {n}")).unwrap_or_default()
+    )
 }
 
-pub(crate) fn ids(list: &[Uuid]) -> Value {
-    Value::Array(list.iter().map(id).collect())
-}
-
-pub(crate) fn opt_id(id: Option<&Uuid>) -> Value {
-    id.map(self::id).unwrap_or(Value::Null)
-}
-
-pub(crate) fn opt_str(text: Option<&str>) -> Value {
-    text.map(|t| Value::String(t.to_string())).unwrap_or(Value::Null)
+pub fn field_type_text(field: &FieldDefinition, enum_names: &std::collections::HashMap<Uuid, String>) -> String {
+    let enum_name = field
+        .enum_id
+        .map(|id| enum_names.get(&id).cloned().unwrap_or_else(|| tasker_core::ids::guid_d(&id)));
+    type_text(field.field_type, field.multiple, enum_name.as_deref())
 }

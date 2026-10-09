@@ -1,6 +1,6 @@
 [package]
 name = "tasker-cli"
-description = "Tasker command line (tasker): migrate — the first command checked against a real workspace"
+description = "Tasker command line (tasker): the clap command tree, System.CommandLine-style help and errors, workspace session, output and exit codes; migrate"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -14,10 +14,19 @@ path = "src/main.rs"
 tasker-core = { path = "../tasker-core" }
 tasker-files = { path = "../tasker-files" }
 tasker-services = { path = "../tasker-services" }
+tasker-daemon = { path = "../tasker-daemon" }
 uuid.workspace = true
 clap.workspace = true
 serde_json.workspace = true
+unicode-general-category.workspace = true
+unicode-segmentation = "1"
+ureq = { version = "3", default-features = false }
+
+[target.'cfg(not(windows))'.dependencies]
+rustix = { workspace = true, features = ["termios", "stdio"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Console", "Win32_Foundation"] }
 
 [dev-dependencies]
-tasker-services = { path = "../tasker-services" }
 serde_json.workspace = true

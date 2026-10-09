@@ -75,7 +75,7 @@ impl LocalAgent {
         if let Some(id) = *id {
             return Ok(id);
         }
-        let agent = ws.users().ensure_local_agent()?;
+        let agent = ws.agents().ensure_local_agent()?;
         *id = Some(agent.id);
         Ok(agent.id)
     }
