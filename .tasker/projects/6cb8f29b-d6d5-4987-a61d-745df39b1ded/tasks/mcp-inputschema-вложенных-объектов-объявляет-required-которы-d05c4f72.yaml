@@ -1,0 +1,11 @@
+formatVersion: 9
+id: d05c4f72-2f9c-4b62-96a3-89f013313361
+title: 'MCP: inputSchema вложенных объектов объявляет required, которые не обязательны'
+description: 'Схемы инструментов .NET (create_board/update_board: columns[].required = [id, name, statusIds, dropStatuses]; create_task_type/update_task_type: fields[].required = [fieldId, required] и др.) перечисляют в required все параметры конструктора записи C#. Но SDK вложенные объекты разбирает JsonSerializer, и пропущенное свойство становится null/значением по умолчанию: тесты (FieldsMcpTests, BoardFieldFilterMcpTests) сами шлют колонки без id. Клиент, который проверяет аргументы по схеме, вынужден слать id: null и dropStatuses: null. Найдено при переносе MCP на Rust (TSK-138): Rust-сервер повторяет поведение .NET — required проверяется только у аргументов верхнего уровня. Исправить: убрать из required вложенных схем nullable-свойства и свойства со значением по умолчанию (или пометить их как необязательные в записях).'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T23:25:50.2663480+00:00
+updatedAt: 2026-10-09T23:25:50.2663480+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 148

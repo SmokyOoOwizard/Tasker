@@ -2,12 +2,24 @@
 //! связывает аргументы с параметрами через `JsonSerializer`, и пропущенный обязательный или значение не того типа — ошибка
 //! `An error occurred invoking '<tool>'.` Здесь то же самое выражено схемой: `required`, `type` (в том числе списком с `null`),
 //! `format: uuid` (форма D, как `Utf8JsonReader.GetGuid`), `enum` (без учёта регистра, как `JsonStringEnumConverter`), `items`,
-//! вложенные `properties` и `additionalProperties`. Лишние свойства не мешают — SDK их игнорирует.
+//! вложенные `properties` и `additionalProperties`. Лишние свойства не мешают — SDK их игнорирует. `required` проверяется только у
+//! самих аргументов: вложенные объекты (`columns[]`, `fields`) — записи C#, которые `JsonSerializer` собирает и без части свойств
+//! (пропущенное — null/значение по умолчанию), хотя схема .NET и перечисляет их в `required`.
 use serde_json::{Map, Value};
 use tasker_core::ids::parse_guid;
 
 /// true — аргументы подходят под схему.
 pub fn validate(schema: &Map<String, Value>, value: &Value) -> bool {
+    if let (Some(required), Value::Object(object)) = (schema.get("required").and_then(Value::as_array), value)
+        && required.iter().filter_map(Value::as_str).any(|name| !object.contains_key(name))
+    {
+        return false;
+    }
+    matches(schema, value)
+}
+
+/// Тип, формат, перечисление и вложенные значения — без `required` (см. описание модуля).
+fn matches(schema: &Map<String, Value>, value: &Value) -> bool {
     if !type_matches(schema, value) {
         return false;
     }
@@ -23,23 +35,18 @@ pub fn validate(schema: &Map<String, Value>, value: &Value) -> bool {
             }
         }
         Value::Array(items) => match schema.get("items").and_then(Value::as_object) {
-            Some(item_schema) => items.iter().all(|item| validate(item_schema, item)),
+            Some(item_schema) => items.iter().all(|item| matches(item_schema, item)),
             None => true,
         },
         Value::Object(object) => {
-            if let Some(required) = schema.get("required").and_then(Value::as_array)
-                && required.iter().filter_map(Value::as_str).any(|name| !object.contains_key(name))
-            {
-                return false;
-            }
             let properties = schema.get("properties").and_then(Value::as_object);
             let additional = schema.get("additionalProperties").and_then(Value::as_object);
             object.iter().all(|(name, item)| {
                 match properties.and_then(|p| p.get(name)).and_then(Value::as_object) {
-                    Some(property) => validate(property, item),
+                    Some(property) => matches(property, item),
                     None => match additional {
                         // Словарь `Dictionary<Guid, Guid>`: ключи — Guid, значения по схеме.
-                        Some(additional) => parse_guid(name).is_some() && validate(additional, item),
+                        Some(additional) => parse_guid(name).is_some() && matches(additional, item),
                         None => true,
                     },
                 }
@@ -129,7 +136,8 @@ mod tests {
         assert!(validate(&s, &json!({"taskId": "x", "kind": "INT"})));
         assert!(!validate(&s, &json!({"taskId": "x", "kind": "float"})));
         assert!(validate(&s, &json!({"taskId": "x", "fields": {"values": [{"fieldId": G}]}})));
-        assert!(!validate(&s, &json!({"taskId": "x", "fields": {"values": [{"values": []}]}})));
+        // Вложенный `required` не проверяется: запись C# собирается и без `fieldId` (Guid.Empty).
+        assert!(validate(&s, &json!({"taskId": "x", "fields": {"values": [{"values": []}]}})));
         assert!(validate(&s, &json!({"taskId": "x", "drop": {G: G}})));
         assert!(!validate(&s, &json!({"taskId": "x", "drop": {"a": G}})));
         assert!(!validate(&s, &json!({"taskId": "x", "drop": {G: "b"}})));

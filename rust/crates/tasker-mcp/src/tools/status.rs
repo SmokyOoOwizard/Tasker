@@ -100,12 +100,13 @@ pub fn list_task_types(call: &Call) -> Result<Output> {
     Ok(Output::Json(json::page(&page, json::task_type_list_item)))
 }
 
-/// `TaskTypeField[]` из аргумента `fields`.
+/// `TaskTypeField[]` из аргумента `fields`; пропущенное свойство записи — значение по умолчанию (`Guid.Empty`, `false`), как у
+/// `JsonSerializer`.
 fn type_fields(call: &Call) -> Result<Option<Vec<TaskTypeField>>> {
     call.args.objects("fields", |item| {
         Ok(TaskTypeField {
-            field_id: item.required_guid("fieldId")?,
-            required: item.bool("required")?.ok_or(ToolError::Failed)?,
+            field_id: item.guid("fieldId")?.unwrap_or_default(),
+            required: item.bool("required")?.unwrap_or(false),
         })
     })
 }
