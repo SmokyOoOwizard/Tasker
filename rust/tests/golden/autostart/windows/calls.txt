@@ -1,0 +1,3 @@
+schtasks	/create	/tn	Tasker MCP Golden	/xml	<ROOT>/out/windows/Tasker MCP Golden.xml	/f
+schtasks	/end	/tn	Tasker MCP Golden
+schtasks	/run	/tn	Tasker MCP Golden
