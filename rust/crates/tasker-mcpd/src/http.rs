@@ -1,6 +1,7 @@
-//! HTTP демона (.NET `McpDaemon.MapControl` + `TaskerWebExtensions.MapTaskerMcpHost`): управление `/daemon/*` с секретом в заголовке
-//! `X-Tasker-Control`, готовность `/ready`, живость `/health` и `/api/health`, фильтр «только с этой машины» по `Host`/`Origin`
-//! (`LoopbackOnly`), ответы на адреса десктопа `/w/{key}/…` (`UseWorkspaces`). `/mcp` в этой сборке ещё нет (TSK-138): 501.
+//! HTTP демона (.NET `McpDaemon.MapControl` + `TaskerWebExtensions.MapTaskerMcpHost`): MCP на `/mcp` (служба rmcp из `tasker-mcp`,
+//! без сессий), управление `/daemon/*` с секретом в заголовке `X-Tasker-Control`, готовность `/ready`, живость `/health` и
+//! `/api/health`, фильтр «только с этой машины» по `Host`/`Origin` (`LoopbackOnly`) — он же закрывает и MCP, — ответы на адреса
+//! десктопа `/w/{key}/…` (`UseWorkspaces`).
 //!
 //! Коды и тела повторяют .NET: 401 без тела у управления без секрета, 403 `{"error":"Only local requests are allowed"}` у чужого
 //! Host/Origin, 409 на `/daemon/upgrade` (демон в одном процессе заменить на лету нельзя), 503 с `Retry-After` у неготового `/ready`.
@@ -14,8 +15,11 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
+use rmcp::transport::streamable_http_server::StreamableHttpService;
+use rmcp::transport::streamable_http_server::session::never::NeverSessionManager;
 use serde_json::{Value, json};
 use std::sync::Arc;
+use tasker_mcp::TaskerMcp;
 use tasker_core::settings::{SettingsStore, WorkspaceKind, WorkspaceLocation};
 use tracing::info;
 
@@ -31,10 +35,13 @@ pub struct App {
     pub store: SettingsStore,
     pub token: String,
     pub shutdown: Arc<Shutdown>,
+    /// Служба MCP (`tasker-mcp` на rmcp): один адрес на все области, область — аргумент `workspace` инструмента.
+    pub mcp: StreamableHttpService<TaskerMcp, NeverSessionManager>,
 }
 
 pub fn router(app: Arc<App>) -> Router {
     Router::new()
+        .route_service(MCP_PATH, app.mcp.clone())
         .route("/daemon/status", get(status))
         .route("/daemon/sync", post(sync))
         .route("/daemon/stop", post(stop))
@@ -42,7 +49,6 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/ready", get(ready))
         .route("/health", get(health))
         .route("/api/health", get(api_health))
-        .route(MCP_PATH, axum::routing::any(mcp))
         .fallback(fallback)
         .layer(middleware::from_fn(loopback_only))
         .with_state(app)
@@ -219,14 +225,6 @@ async fn health(State(app): State<Arc<App>>) -> Response {
 
 async fn api_health() -> Response {
     json(StatusCode::OK, &json!({"status": "ok", "mode": "McpDaemon"}))
-}
-
-/// MCP появится в TSK-138 (rmcp). Пока — 501, чтобы клиент отличал «нет в этой сборке» от «демон не готов» (503 у `/ready`).
-async fn mcp() -> Response {
-    json(
-        StatusCode::NOT_IMPLEMENTED,
-        &json!({"error": "MCP is not implemented in this build of tasker-mcpd yet: use the .NET build (TSK-138)"}),
-    )
 }
 
 /// `UseWorkspaces` без REST и фронтенда: `/w/{key}/mcp` — подсказка про общий адрес, `/w/{key}/…` — область не открыта,

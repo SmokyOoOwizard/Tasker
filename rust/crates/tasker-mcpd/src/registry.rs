@@ -12,14 +12,16 @@ use std::sync::{Arc, Mutex};
 use tasker_core::settings::{WorkspaceKind, WorkspaceLocation};
 use tasker_core::validate::{is_letter_or_digit, to_upper_invariant};
 use tasker_files::watch::{WatchEvent, WatcherHandle, WorkspaceWatcher};
+use tasker_mcp::LocalAgent;
 use tasker_services::Workspace;
 use tracing::{info, warn};
 
-/// Открытая область: ключ, сервисы домена и наблюдатель файлов. Закрывается, когда отпущена последняя ссылка.
+/// Открытая область: ключ, сервисы домена, локальный агент MCP и наблюдатель файлов. Закрывается, когда отпущена последняя ссылка.
 pub struct OpenWorkspace {
     location: WorkspaceLocation,
     key: String,
     workspace: Workspace,
+    agent: Arc<LocalAgent>,
     _watcher: WatcherHandle,
 }
 
@@ -35,6 +37,11 @@ impl OpenWorkspace {
 
     pub fn workspace(&self) -> &Workspace {
         &self.workspace
+    }
+
+    /// Локальный агент области: от его имени идут вызовы MCP без заголовка `X-Tasker-Agent` (id запоминается, пока область открыта).
+    pub fn local_agent(&self) -> &Arc<LocalAgent> {
+        &self.agent
     }
 }
 
@@ -164,6 +171,7 @@ impl WorkspaceRegistry {
             location: location.clone(),
             key,
             workspace,
+            agent: Arc::new(LocalAgent::new()),
             _watcher: watcher,
         })
     }

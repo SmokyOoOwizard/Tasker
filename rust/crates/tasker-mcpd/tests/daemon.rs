@@ -294,8 +294,8 @@ fn control_endpoints_need_the_secret_and_a_local_host() {
         "{\"error\":\"The MCP server runs as a single process and cannot be replaced on the fly: restart it\"}"
     );
 
-    // MCP ещё нет; адреса десктопа отвечают как .NET.
-    assert_eq!(daemon.post("/mcp", None, "{}").unwrap().0, 501);
+    // MCP (rmcp) требует Accept с обоими типами — как .NET SDK; адреса десктопа отвечают как .NET.
+    assert_eq!(daemon.post("/mcp", None, "{}").unwrap().0, 406);
     let (code, body) = daemon.post("/w/a/mcp", None, "{}").unwrap();
     assert_eq!(code, 404);
     assert!(body.contains("MCP has no per-workspace address"), "{body}");

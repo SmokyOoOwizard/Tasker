@@ -7,6 +7,7 @@
 //! Порядок шагов и тексты журнала — как в .NET: консоль читает хвост журнала при неудачном старте.
 use crate::files::{DaemonFiles, DaemonInfo, new_token};
 use crate::http::{self, App};
+use crate::mcp::DaemonWorkspaces;
 use crate::registry::WorkspaceRegistry;
 use crate::shutdown::Shutdown;
 use crate::state::{DaemonState, mcp_url};
@@ -82,14 +83,16 @@ async fn serve(files: DaemonFiles) -> i32 {
     let state = Arc::new(DaemonState::new(port, port));
     let token = new_token();
     let registry = Arc::new(WorkspaceRegistry::new());
-    let sync = Arc::new(WorkspaceSync::new(registry, state.clone(), port));
+    let sync = Arc::new(WorkspaceSync::new(registry.clone(), state.clone(), port));
     let shutdown = Arc::new(Shutdown::new());
+    let mcp = tasker_mcp::http_service(tasker_mcp::TaskerMcp::new(Arc::new(DaemonWorkspaces::new(registry, state.clone()))));
     let app = Arc::new(App {
         state: state.clone(),
         sync: sync.clone(),
         store: SettingsStore::new(None),
         token: token.clone(),
         shutdown: shutdown.clone(),
+        mcp,
     });
 
     sync.prepare(settings.mcp.workspaces.clone());

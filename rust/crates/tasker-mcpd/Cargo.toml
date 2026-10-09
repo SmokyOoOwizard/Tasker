@@ -1,6 +1,6 @@
 [package]
 name = "tasker-mcpd"
-description = "Tasker MCP daemon (tasker-mcpd): single-process mode — daemon.lock/daemon.json, /health, /ready, /daemon/*, workspace registry, settings watch, log"
+description = "Tasker MCP daemon (tasker-mcpd): single-process mode — daemon.lock/daemon.json, /health, /ready, /daemon/*, /mcp (tasker-mcp), workspace registry, settings watch, log"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -14,6 +14,8 @@ path = "src/main.rs"
 tasker-core = { path = "../tasker-core" }
 tasker-files = { path = "../tasker-files" }
 tasker-services = { path = "../tasker-services" }
+tasker-mcp = { path = "../tasker-mcp" }
+rmcp.workspace = true
 tokio.workspace = true
 axum.workspace = true
 http.workspace = true
@@ -30,3 +32,4 @@ rustix = { workspace = true, features = ["process"] }
 
 [dev-dependencies]
 ureq.workspace = true
+regex.workspace = true
