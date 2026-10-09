@@ -4,6 +4,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Статистика проекта и подтверждение удаления: консоль и REST, папка и SQLite.</summary>
+[InProcess]
 public class ProjectDeleteTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

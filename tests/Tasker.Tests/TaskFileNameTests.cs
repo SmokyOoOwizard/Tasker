@@ -12,6 +12,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Имя файла задачи по заголовку: правила, создание, переименование, старые файлы и <c>tasker migrate</c>.</summary>
+[InProcess]
 public class TaskFileNameTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));

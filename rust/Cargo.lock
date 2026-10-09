@@ -1177,6 +1177,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tasker-daemon"
+version = "0.1.0"
+dependencies = [
+ "rustix",
+ "tasker-core",
+]
+
+[[package]]
 name = "tasker-files"
 version = "0.1.0"
 dependencies = [

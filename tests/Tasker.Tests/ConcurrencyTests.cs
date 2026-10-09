@@ -87,7 +87,7 @@ public class ConcurrencyTests : IDisposable
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Parallel_processes_all_write_to_one_workspace(string storage)
     {
-        using var ws = TestWorkspace.Create(storage);
+        using var ws = TestWorkspace.Create(storage, asProcess: true);
         await ws.Run("project", "create", "Demo");
         await ws.Run("status", "create", "Todo", "-p", "Demo");
         await ws.Run("status-set", "create", "Flow", "--status", "Todo", "-p", "Demo");
@@ -105,7 +105,7 @@ public class ConcurrencyTests : IDisposable
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Of_two_processes_changing_the_same_version_only_one_wins(string storage)
     {
-        using var ws = TestWorkspace.Create(storage);
+        using var ws = TestWorkspace.Create(storage, asProcess: true);
         await ws.Run("project", "create", "Demo");
         await ws.Run("status", "create", "Todo", "-p", "Demo");
         var status = (await ws.Run("status", "get", "Todo", "-p", "Demo", "--json")).Json;
@@ -124,7 +124,7 @@ public class ConcurrencyTests : IDisposable
     [Fact]
     public async Task Idle_workspace_holds_no_locks()
     {
-        using var ws = TestWorkspace.Create("files");
+        using var ws = TestWorkspace.Create("files", asProcess: true);
         await ws.Run("project", "create", "Demo");
         await ws.Run("project", "list");
 
@@ -136,7 +136,7 @@ public class ConcurrencyTests : IDisposable
     [Fact]
     public async Task Reading_waits_for_the_index_lock_and_goes_on_after_release()
     {
-        using var ws = TestWorkspace.Create("files");
+        using var ws = TestWorkspace.Create("files", asProcess: true);
         await ws.Run("project", "create", "Demo");
         var indexLock = Path.Combine(ws.Root, ".tasker", ".cache", "index.lock");
 
@@ -156,7 +156,7 @@ public class ConcurrencyTests : IDisposable
     [Fact]
     public async Task Writing_waits_for_the_write_lock()
     {
-        using var ws = TestWorkspace.Create("files");
+        using var ws = TestWorkspace.Create("files", asProcess: true);
         await ws.Run("project", "create", "Demo");
         var writeLock = Path.Combine(ws.Root, ".tasker", ".cache", "write.lock");
 
@@ -176,7 +176,7 @@ public class ConcurrencyTests : IDisposable
     [Fact]
     public async Task Two_processes_open_the_same_folder_and_see_each_others_changes()
     {
-        using var ws = TestWorkspace.Create("files");
+        using var ws = TestWorkspace.Create("files", asProcess: true);
         await ws.Run("project", "create", "First");
 
         // Первый процесс (как десктоп или демон) держит папку открытой: индекс и наблюдатель за файлами.

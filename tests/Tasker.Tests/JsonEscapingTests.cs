@@ -103,6 +103,7 @@ public class JsonEscapingTests : IDisposable
         Assert.True(escaped.Length > rest.Length * 1.3, $"{escaped.Length} vs {rest.Length}");
     }
 
+    [InProcess]
     [Fact]
     public async Task Cli_json_in_process()
     {

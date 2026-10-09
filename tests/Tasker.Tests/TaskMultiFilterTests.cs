@@ -9,6 +9,7 @@ namespace Tasker.Tests;
 /// <c>statusIds</c> MCP — то же для типа и серии. Значения одного параметра — ИЛИ, разные параметры (статус, тип, серия, поля) — И.
 /// Обе реализации хранилища (папка с индексом и SQLite), одно значение, неизвестное имя, статус не из набора типа, сочетание с полями, сортировкой и страницами, автодополнение.
 /// </summary>
+[InProcess]
 public class TaskMultiFilterTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();

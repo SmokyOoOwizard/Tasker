@@ -10,6 +10,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Сверка серий: <c>tasker sync</c> напрямую и через демон, сообщения в логе демона.</summary>
+[InProcess]
 public class SeriesSyncTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();

@@ -9,6 +9,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Справочник <c>tasker manual</c>: страницы, встроенные в сборку, поиск, язык, <c>--json</c>; и главное — команды в примерах существуют.</summary>
+[InProcess]
 public class ManualTests
 {
     private static readonly ManualCatalog Catalog = ManualCatalog.Embedded;

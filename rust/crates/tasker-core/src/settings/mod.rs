@@ -15,6 +15,6 @@ pub use canonical_path::{canonical_path, normalize_root, strip_extended_prefix};
 pub use global_settings::{DEFAULT_PORT, GlobalSettings, MAX_USER_NAME_LENGTH, McpSettings, WorkspaceEntry};
 pub use os_user::{normalize_user_name, os_user_name};
 pub use store::{SettingsError, SettingsStore};
-pub use user_path::{expand_user_path, expand_user_path_in};
+pub use user_path::{expand_user_path, expand_user_path_in, home_dir};
 pub use watch::{SettingsWatch, WATCH_QUIET};
 pub use workspace_location::{WorkspaceKind, WorkspaceLocation};
