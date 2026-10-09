@@ -1,0 +1,9 @@
+task
+create
+Bad
+--type
+Bug
+-w
+<ROOT>/golden
+-p
+Golden

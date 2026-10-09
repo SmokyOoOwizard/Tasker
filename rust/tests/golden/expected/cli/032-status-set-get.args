@@ -1,0 +1,7 @@
+status-set
+get
+Extended
+-w
+<ROOT>/golden
+-p
+Golden

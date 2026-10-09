@@ -1,0 +1,15 @@
+{
+  "result": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "logging": {},
+      "tools": {}
+    },
+    "serverInfo": {
+      "name": "tasker",
+      "version": "1.0.0"
+    }
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

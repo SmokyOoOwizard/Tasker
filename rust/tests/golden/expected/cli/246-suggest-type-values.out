@@ -1,0 +1,14 @@
+--help
+--json
+--no-truncate
+--no-wrap
+--project
+--quiet
+--sqlite
+--truncate
+--width
+--workspace
+-h
+-p
+-q
+-w

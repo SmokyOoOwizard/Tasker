@@ -1,0 +1,5 @@
+formatVersion: 9
+id: 0000000d-0000-4000-8000-00000000000d
+name: Priority
+type: enum
+enum: 00000013-0000-4000-8000-000000000013

@@ -1,0 +1,10 @@
+task
+list
+--all
+--sort
+-series
+--flat
+-w
+<ROOT>/golden
+-p
+Golden

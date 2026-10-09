@@ -1,0 +1,6 @@
+task
+list
+-w
+<ROOT>/golden
+-p
+Nope

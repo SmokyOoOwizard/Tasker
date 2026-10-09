@@ -1,0 +1,3 @@
+Nothing is written (dry run):
+Project 'Legacy':
+  links skipped: 2 task or link type file(s) cannot be read (merge conflict or broken YAML): a task or a type that cannot be read would look missing and the links to it would be wiped. The links were not checked; fix the files and run cleanup again.

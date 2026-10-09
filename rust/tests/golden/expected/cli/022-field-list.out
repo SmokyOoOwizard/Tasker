@@ -1,0 +1,13 @@
+Found 12
+0000001c  Dates        date[]
+0000001d  Due          date
+00000011  Estimate     int
+0000001e  Notes        string
+0000001f  Numbers      int[]
+00000020  Platforms    enum[] Платформа
+0000000d  Priority     enum Priority
+00000021  Score        float
+00000022  StoryPoints  int
+0000000f  Tags         string[]
+00000023  Urgent       bool
+00000024  Ожидание     bool

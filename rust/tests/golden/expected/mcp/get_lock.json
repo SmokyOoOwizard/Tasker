@@ -1,0 +1,12 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"lock\":null}"
+      }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

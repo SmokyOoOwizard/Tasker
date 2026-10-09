@@ -1,0 +1,9 @@
+task
+list
+--all
+--field
+Tags:set
+-w
+<ROOT>/golden
+-p
+Golden

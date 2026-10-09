@@ -1,0 +1,7 @@
+task
+get
+ffffffff-0000-4000-8000-ffffffffffff
+-w
+<ROOT>/golden
+-p
+Legacy

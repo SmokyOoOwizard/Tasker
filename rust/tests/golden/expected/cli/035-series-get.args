@@ -1,0 +1,7 @@
+series
+get
+GLD
+-w
+<ROOT>/golden
+-p
+Golden

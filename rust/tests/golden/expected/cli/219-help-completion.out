@@ -1,0 +1,24 @@
+Description:
+  Prints the Tab completion script of a shell: commands, options and values (projects, statuses, tasks...) of the current workspace
+
+Usage:
+  tasker completion <shell> [options]
+
+Arguments:
+  <bash|powershell|pwsh|zsh>  Shell: zsh, bash, pwsh
+
+Options:
+  --install                    pwsh only: save the script and add one marked block to your PowerShell profile ($PROFILE) that loads it (a copy <profile>.tasker-backup is made before the first change; repeating is safe)
+  --uninstall                  pwsh only: remove the block from your PowerShell profile (the saved script is deleted too)
+  --profile <profile>          pwsh only, with --install or --uninstall: profile file to change (repeatable). Default: the profiles of PowerShell 7 and Windows PowerShell 5.1 (Windows) or of pwsh (macOS, Linux)
+  --script <script>            pwsh only, with --install: where to save the script. Default: <Tasker data folder>/completions/tasker.ps1
+  -?, -h, --help               Show help and usage information
+  -w, --workspace <workspace>  Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
+  --sqlite <sqlite>            SQLite file with the workspace instead of a folder
+  -p, --project <Tasker>       Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
+  --json                       Print the result as JSON
+  -q, --quiet                  Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention
+  --no-wrap, --truncate        Cut long lines of list output to the window width with an ellipsis instead of wrapping (default: on in a terminal and under watch - COLUMNS and LINES both set; off when redirected)
+  --no-truncate                Never cut lines of list output, even in a terminal
+  --width                      Line width for --truncate in characters (minimum 20); 0 or 'auto' - the terminal width, 'off' - never cut. Default: the TASKER_WIDTH variable (off or 0 - never cut), else the terminal
+

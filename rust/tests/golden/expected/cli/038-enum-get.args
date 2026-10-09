@@ -1,0 +1,7 @@
+enum
+get
+Платформа
+-w
+<ROOT>/golden
+-p
+Golden

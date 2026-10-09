@@ -1,0 +1,7 @@
+status
+get
+In Progress
+-w
+<ROOT>/golden
+-p
+Golden

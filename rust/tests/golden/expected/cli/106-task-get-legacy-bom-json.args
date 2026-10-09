@@ -1,0 +1,8 @@
+task
+get
+Legacy four
+--json
+-w
+<ROOT>/golden
+-p
+Legacy

@@ -1,0 +1,28 @@
+Description:
+  Changes an enum: its name and values
+
+Usage:
+  tasker enum update <id-or-name> [options]
+
+Arguments:
+  <id-or-name>  Enum (id or name)
+
+Options:
+  --name <name>                          New name
+  --values <values>                      Replace the whole list of values and their order; a value with the same name stays the same value (selected in tasks)
+  --add-value <add-value>                Add values at the end of the list
+  --remove-value                         Remove values (id or name). If tasks have them selected, choose --drop or --replace-with
+  --rename-value                         Rename a value: Old=New (repeat for several); the value stays the same in tasks
+  --drop                                 With --remove-value: clear the removed values from the tasks that have them selected
+  --replace-with                         With --remove-value: give the tasks this value instead (a value the enum keeps: id or name)
+  --expected-version <expected-version>  Fail if the entity was changed after this version (as shown by get). Default: the current version
+  -?, -h, --help                         Show help and usage information
+  -w, --workspace <workspace>            Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
+  --sqlite <sqlite>                      SQLite file with the workspace instead of a folder
+  -p, --project <Tasker>                 Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
+  --json                                 Print the result as JSON
+  -q, --quiet                            Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention
+  --no-wrap, --truncate                  Cut long lines of list output to the window width with an ellipsis instead of wrapping (default: on in a terminal and under watch - COLUMNS and LINES both set; off when redirected)
+  --no-truncate                          Never cut lines of list output, even in a terminal
+  --width                                Line width for --truncate in characters (minimum 20); 0 or 'auto' - the terminal width, 'off' - never cut. Default: the TASKER_WIDTH variable (off or 0 - never cut), else the terminal
+

@@ -1,0 +1,10 @@
+formatVersion: 9
+id: 00000033-0000-4000-8000-000000000033
+title: '[brackets] {braces} & ampersand * star | pipe > gt ! bang % percent @ at `backtick`'
+typeId: 0000002c-0000-4000-8000-00000000002c
+statusId: 00000005-0000-4000-8000-000000000005
+createdAt: 2026-01-01T00:22:22.1234720+00:00
+updatedAt: 2026-01-01T00:22:22.1234720+00:00
+series:
+- seriesId: 00000029-0000-4000-8000-000000000029
+  number: 22

@@ -1,0 +1,7 @@
+board
+show
+Main board
+-w
+<ROOT>/golden
+-p
+Golden

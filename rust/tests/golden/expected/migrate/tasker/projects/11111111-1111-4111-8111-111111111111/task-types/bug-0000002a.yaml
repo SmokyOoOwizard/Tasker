@@ -1,0 +1,13 @@
+formatVersion: 9
+id: 0000002a-0000-4000-8000-00000000002a
+name: Bug
+description: |-
+  A defect.
+
+  Steps: reproduce, fix, verify.
+statusSetId: 00000002-0000-4000-8000-000000000002
+fields:
+- field: 0000000d-0000-4000-8000-00000000000d
+  required: true
+- field: 00000011-0000-4000-8000-000000000011
+- field: 0000000f-0000-4000-8000-00000000000f

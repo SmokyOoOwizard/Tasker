@@ -1,0 +1,7 @@
+formatVersion: 9
+id: 00000027-0000-4000-8000-000000000027
+name: Epic
+outwardName: contains
+inwardName: belongs to
+allowCycles: false
+hierarchical: true

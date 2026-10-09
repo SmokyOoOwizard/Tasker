@@ -1,0 +1,10 @@
+task
+list
+--all
+--truncate
+--width
+60
+-w
+<ROOT>/golden
+-p
+Golden

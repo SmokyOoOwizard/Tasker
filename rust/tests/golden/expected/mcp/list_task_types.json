@@ -1,0 +1,12 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"totalCount\":3,\"offset\":0,\"limit\":50,\"data\":[{\"descriptionTruncated\":false,\"descriptionLength\":41,\"id\":\"0000002a-0000-4000-8000-00000000002a\",\"projectId\":\"11111111-1111-4111-8111-111111111111\",\"name\":\"Bug\",\"description\":\"A defect.\\n\\nSteps: reproduce, fix, verify.\",\"statusSetId\":\"00000002-0000-4000-8000-000000000002\",\"fields\":[{\"fieldId\":\"0000000d-0000-4000-8000-00000000000d\",\"required\":true},{\"fieldId\":\"00000011-0000-4000-8000-000000000011\",\"required\":false},{\"fieldId\":\"0000000f-0000-4000-8000-00000000000f\",\"required\":false}],\"version\":\"14175c18602f80ca\"},{\"descriptionTruncated\":false,\"descriptionLength\":0,\"id\":\"0000002b-0000-4000-8000-00000000002b\",\"projectId\":\"11111111-1111-4111-8111-111111111111\",\"name\":\"Feature\",\"description\":\"\",\"statusSetId\":\"00000003-0000-4000-8000-000000000003\",\"fields\":[{\"fieldId\":\"00000021-0000-4000-8000-000000000021\",\"required\":false},{\"fieldId\":\"0000001d-0000-4000-8000-00000000001d\",\"required\":false},{\"fieldId\":\"00000020-0000-4000-8000-000000000020\",\"required\":false},{\"fieldId\":\"00000023-0000-4000-8000-000000000023\",\"required\":false}],\"version\":\"cb9eacd362af8ac3\"},{\"descriptionTruncated\":false,\"descriptionLength\":47,\"id\":\"0000002c-0000-4000-8000-00000000002c\",\"projectId\":\"11111111-1111-4111-8111-111111111111\",\"name\":\"Задача\",\"description\":\"Тип без полей: # не комментарий, ключ: значение\",\"statusSetId\":\"00000002-0000-4000-8000-000000000002\",\"fields\":[],\"version\":\"7d226aad6756705a\"}]}"
+      }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

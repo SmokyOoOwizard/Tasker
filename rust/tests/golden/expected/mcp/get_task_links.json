@@ -1,0 +1,12 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"links\":[{\"typeId\":\"f2c08172-c042-fd3e-90b7-525af53a9753\",\"typeName\":\"Blocks\",\"direction\":\"outward\",\"name\":\"blocks\",\"task\":{\"id\":\"00000037-0000-4000-8000-000000000037\",\"title\":\"Bug with own fields\",\"statusId\":\"00000005-0000-4000-8000-000000000005\",\"seriesNumbers\":[{\"seriesId\":\"00000028-0000-4000-8000-000000000028\",\"number\":2},{\"seriesId\":\"00000029-0000-4000-8000-000000000029\",\"number\":51}]}},{\"typeId\":\"f2c08172-c042-fd3e-90b7-525af53a9753\",\"typeName\":\"Blocks\",\"direction\":\"outward\",\"name\":\"blocks\",\"task\":{\"id\":\"00000036-0000-4000-8000-000000000036\",\"title\":\"Feature with values\",\"statusId\":\"00000007-0000-4000-8000-000000000007\",\"seriesNumbers\":[{\"seriesId\":\"00000029-0000-4000-8000-000000000029\",\"number\":52}]}},{\"typeId\":\"1f49682e-283b-de36-8cc8-1a79db113868\",\"typeName\":\"Duplicate\",\"direction\":\"inward\",\"name\":\"is duplicated by\",\"task\":{\"id\":\"00000034-0000-4000-8000-000000000034\",\"title\":\"Bug done\",\"statusId\":\"00000009-0000-4000-8000-000000000009\",\"seriesNumbers\":[{\"seriesId\":\"00000028-0000-4000-8000-000000000028\",\"number\":3}]}},{\"typeId\":\"48dfd507-f78e-4f37-b647-d023bc7896d4\",\"typeName\":\"Problem/Incident\",\"direction\":\"outward\",\"name\":\"causes\",\"task\":{\"id\":\"00000034-0000-4000-8000-000000000034\",\"title\":\"Bug done\",\"statusId\":\"00000009-0000-4000-8000-000000000009\",\"seriesNumbers\":[{\"seriesId\":\"00000028-0000-4000-8000-000000000028\",\"number\":3}]}}]}"
+      }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

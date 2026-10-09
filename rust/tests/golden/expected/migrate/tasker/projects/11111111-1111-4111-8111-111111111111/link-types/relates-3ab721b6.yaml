@@ -1,0 +1,7 @@
+formatVersion: 9
+id: 3ab721b6-aa3c-6f3c-9070-62693a7999f0
+name: Relates
+outwardName: relates to
+inwardName: relates to
+allowCycles: true
+hierarchical: false

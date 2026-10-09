@@ -1,0 +1,9 @@
+task
+list
+--all
+--sort
+status,-updated
+-w
+<ROOT>/golden
+-p
+Golden

@@ -1,0 +1,6 @@
+status-set
+list
+-w
+<ROOT>/golden
+-p
+Golden

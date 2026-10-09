@@ -1,0 +1,11 @@
+formatVersion: 9
+id: 00000052-0000-4000-8000-000000000052
+title: 'Description: unicode'
+description: "Кириллица, 日本語, emoji \U0001F389, combining é, zero-width​space, nbsp here"
+typeId: 0000002c-0000-4000-8000-00000000002c
+statusId: 00000005-0000-4000-8000-000000000005
+createdAt: 2026-01-01T00:44:44.1234940+00:00
+updatedAt: 2026-01-01T00:44:44.1234940+00:00
+series:
+- seriesId: 00000029-0000-4000-8000-000000000029
+  number: 44

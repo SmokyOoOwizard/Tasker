@@ -1,0 +1,10 @@
+task
+list
+--all
+--field
+Platforms=Linux
+Urgent=false
+-w
+<ROOT>/golden
+-p
+Golden

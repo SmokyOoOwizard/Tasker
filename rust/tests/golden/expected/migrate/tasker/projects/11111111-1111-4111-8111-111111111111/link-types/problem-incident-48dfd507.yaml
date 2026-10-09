@@ -1,0 +1,7 @@
+formatVersion: 9
+id: 48dfd507-f78e-4f37-b647-d023bc7896d4
+name: Problem/Incident
+outwardName: causes
+inwardName: is caused by
+allowCycles: true
+hierarchical: false

@@ -1,0 +1,12 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"totalCount\":2,\"offset\":0,\"limit\":50,\"data\":[{\"path\":\"projects/22222222-2222-4222-8222-222222222222/tasks/conflicted-title-ours-cccccccc.yaml\",\"error\":\"Unresolved git merge conflict (line 3)\"},{\"path\":\"projects/22222222-2222-4222-8222-222222222222/tasks/from-the-future-ffffffff.yaml\",\"error\":\"from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (9): update Tasker\"}]}"
+      }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

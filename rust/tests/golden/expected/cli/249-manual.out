@@ -1,0 +1,15 @@
+Tasker manual (ru): 'tasker manual <topic>' shows a recipe, 'tasker manual <word>' searches
+
+  first-project   Проект и первая доска
+  tasks           Задачи и статусы
+  series          Серии и ссылки TSK-N
+  links           Связи между задачами
+  boards          Просмотр доски и колонок
+  fields          Поля задач и перечисления
+  locks           Блокировка на время правки
+  agent           Подключить агента
+  migrate         Миграция формата файлов
+  sync-cleanup    Sync и cleanup после git
+  install-daemon  Установка и MCP-демон
+  statuses-types  Статусы и типы задач с описанием
+  windows         Windows: PowerShell, кодировка, кавычки, Tab

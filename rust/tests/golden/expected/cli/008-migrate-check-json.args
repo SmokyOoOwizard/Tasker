@@ -1,0 +1,5 @@
+migrate
+--check
+--json
+-w
+<ROOT>/golden

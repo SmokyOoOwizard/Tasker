@@ -1,0 +1,13 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[failed] Workspace 'broken' could not be opened: <ROOT>/broken does not exist; fix the folder (the server retries on its own every 30 s) or check status in list_workspaces"
+      }
+    ],
+    "isError": true
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

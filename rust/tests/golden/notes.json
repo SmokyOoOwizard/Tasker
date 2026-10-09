@@ -1,0 +1,12 @@
+{
+  "generatedWith": "0.1.0",
+  "rejected": [],
+  "legacy": {
+    "conflict": "cccccccc-0000-4000-8000-cccccccccccc",
+    "future": "ffffffff-0000-4000-8000-ffffffffffff"
+  },
+  "projects": {
+    "Golden": "11111111-1111-4111-8111-111111111111",
+    "Legacy": "22222222-2222-4222-8222-222222222222"
+  }
+}

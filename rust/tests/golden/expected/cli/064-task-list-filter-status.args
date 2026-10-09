@@ -1,0 +1,11 @@
+task
+list
+--all
+--status
+Done
+--status
+007
+-w
+<ROOT>/golden
+-p
+Golden

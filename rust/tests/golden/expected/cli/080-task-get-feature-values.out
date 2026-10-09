@@ -1,0 +1,19 @@
+id:           00000036-0000-4000-8000-000000000036
+title:        Feature with values
+type:         Feature (0000002b-0000-4000-8000-00000000002b)
+status:       Отложено (00000007-0000-4000-8000-000000000007)
+series:       GLD-52
+created:      2026-01-01 00:53:53 +00:00
+updated:      2026-01-01 01:06:05 +00:00
+version:      4e275260978c13a1
+fields:
+  Score (float): 1.5
+  Due (date): 2026-12-31
+  Platforms (enum[]): Linux, Web: browser
+  Urgent (bool): false
+  Numbers (int[], extra): 1, -2, 3
+  Dates (date[], extra): 2026-01-01, 2025-12-31
+links:
+  is blocked by  BUG-1   In Progress  Bug with all fields (renamed)
+  is cloned by   BUG-4   007          Feature without values
+  relates to     GLD-53  Done         Feature done

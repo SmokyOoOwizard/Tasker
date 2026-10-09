@@ -1,0 +1,7 @@
+formatVersion: 9
+id: 00000026-0000-4000-8000-000000000026
+name: Documents
+outwardName: documents
+inwardName: documents
+allowCycles: true
+hierarchical: false

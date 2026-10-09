@@ -1,0 +1,7 @@
+formatVersion: 9
+id: f2c08172-c042-fd3e-90b7-525af53a9753
+name: Blocks
+outwardName: blocks
+inwardName: is blocked by
+allowCycles: false
+hierarchical: false

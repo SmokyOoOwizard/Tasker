@@ -1,0 +1,6 @@
+formatVersion: 8
+id: c8c8fe73-19e7-d833-b147-5c3c0d7b1f9e
+name: Parent/Child
+outwardName: includes
+inwardName: is part of
+allowCycles: false

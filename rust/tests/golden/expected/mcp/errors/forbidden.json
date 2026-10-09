@@ -1,0 +1,13 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[forbidden] X-Tasker-Agent: no agent with id '99999999-9999-4999-8999-999999999999' in workspace 'golden'"
+      }
+    ],
+    "isError": true
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

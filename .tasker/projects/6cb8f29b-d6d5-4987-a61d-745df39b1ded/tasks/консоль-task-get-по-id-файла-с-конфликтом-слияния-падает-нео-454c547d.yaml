@@ -1,0 +1,14 @@
+formatVersion: 9
+id: 454c547d-ebdd-4f48-8681-a050bc7a2aff
+title: 'Консоль: task get по id файла с конфликтом слияния падает необработанным исключением YamlDotNet'
+description: |-
+  Найдено golden-корпусом (TSK-124, rust/tests/golden, задача conflicted-title-ours-cccccccc.yaml в проекте Legacy).
+
+  tasker sync и task list корректно показывают файл с маркерами <<<<<<< / ======= / >>>>>>> как «Unresolved git merge conflict» и исключают его из списков, migrate пропускает его. Но tasker task get <id> этого файла (по полному id или по первым 8 знакам) не проверяет маркеры и отдаёт пользователю необработанное исключение YamlDotNet.Core.SemanticErrorException со стеком (TaskService.Resolve → EntityFiles.GetById → YamlFile.Read). Ожидается аккуратная ошибка вида «Unresolved git merge conflict: fix the file first» с кодом выхода 1; то же для MCP get_task (скорее всего, тот же путь). Проверить и другие сущности (status get, board get по id). Тест на процесс в сквозных тестах; при исправлении добавить снапшот task-get-conflict в scripts/golden/generate.py (сейчас намеренно не снимается).
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T12:02:10.1976280+00:00
+updatedAt: 2026-10-09T12:02:10.1976280+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 144

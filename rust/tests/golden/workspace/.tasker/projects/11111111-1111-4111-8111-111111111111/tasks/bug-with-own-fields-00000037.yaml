@@ -1,0 +1,51 @@
+formatVersion: 9
+id: 00000037-0000-4000-8000-000000000037
+title: Bug with own fields
+typeId: 0000002a-0000-4000-8000-00000000002a
+statusId: 00000005-0000-4000-8000-000000000005
+createdAt: 2026-01-01T00:52:52.1235020+00:00
+updatedAt: 2026-01-01T00:52:52.1235020+00:00
+series:
+- seriesId: 00000028-0000-4000-8000-000000000028
+  number: 2
+- seriesId: 00000029-0000-4000-8000-000000000029
+  number: 51
+fields:
+- id: 00000024-0000-4000-8000-000000000024
+- id: 0000000d-0000-4000-8000-00000000000d
+  values:
+  - 00000014-0000-4000-8000-000000000014
+- id: 00000038-0000-4000-8000-000000000038
+  name: Severity
+  type: enum
+  enum: 00000013-0000-4000-8000-000000000013
+  required: true
+  values:
+  - 00000015-0000-4000-8000-000000000015
+- id: 00000039-0000-4000-8000-000000000039
+  name: Reporters
+  type: string
+  multiple: true
+  values:
+  - alice
+  - Боб
+- id: 0000003a-0000-4000-8000-00000000003a
+  name: Reproducible
+  type: bool
+  values:
+  - "true"
+- id: 0000003b-0000-4000-8000-00000000003b
+  name: Seen
+  type: date
+  values:
+  - 2028-02-29
+- id: 0000003c-0000-4000-8000-00000000003c
+  name: Ratio
+  type: float
+  values:
+  - "0.5"
+- id: 0000003d-0000-4000-8000-00000000003d
+  name: Attempts
+  type: int
+  values:
+  - "-3"

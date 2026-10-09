@@ -1,0 +1,6 @@
+enum
+list
+-w
+<ROOT>/golden
+-p
+Golden

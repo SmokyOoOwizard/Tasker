@@ -1,0 +1,5 @@
+project
+list
+--json
+-w
+<ROOT>/golden

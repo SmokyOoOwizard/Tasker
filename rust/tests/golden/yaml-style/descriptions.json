@@ -1,0 +1,92 @@
+[
+  {
+    "value": "Bug with all fields.\nEstimate given as 007: stored canonically.",
+    "yaml": "description: |-\n  Bug with all fields.\n  Estimate given as 007: stored canonically.",
+    "file": "bug-with-all-fields-renamed-00000035.yaml"
+  },
+  {
+    "value": "true",
+    "yaml": "description: \"true\"",
+    "file": "description-bool-00000043.yaml"
+  },
+  {
+    "value": "a: b",
+    "yaml": "description: 'a: b'",
+    "file": "description-colon-00000044.yaml"
+  },
+  {
+    "value": "Windows\nline\nendings",
+    "yaml": "description: |-\n  Windows\n  line\n  endings",
+    "file": "description-crlf-00000045.yaml"
+  },
+  {
+    "value": "#hashtag",
+    "yaml": "description: '#hashtag'",
+    "file": "description-hash-00000046.yaml"
+  },
+  {
+    "value": "\nStarts with a blank line",
+    "yaml": "description: |2-\n\n  Starts with a blank line",
+    "file": "description-leading-blank-00000047.yaml"
+  },
+  {
+    "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "yaml": "description: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "file": "description-long-line-00000048.yaml"
+  },
+  {
+    "value": "First line.\n\nThird line after a blank one.\n  Indented line.\nLine with trailing spaces   \n# A hash line\nkey: value\n- a dash item\nLast line without newline",
+    "yaml": "description: |-\n  First line.\n\n  Third line after a blank one.\n    Indented line.\n  Line with trailing spaces   \n  # A hash line\n  key: value\n  - a dash item\n  Last line without newline",
+    "file": "description-multiline-00000049.yaml"
+  },
+  {
+    "value": "007",
+    "yaml": "description: \"007\"",
+    "file": "description-numeric-0000004a.yaml"
+  },
+  {
+    "value": "100% done, 50%",
+    "yaml": "description: 100% done, 50%",
+    "file": "description-percent-0000004b.yaml"
+  },
+  {
+    "value": "'single' \"double\" `back`",
+    "yaml": "description: \"'single' \\\"double\\\" `back`\"",
+    "file": "description-quotes-0000004c.yaml"
+  },
+  {
+    "value": "Above\n   \nBelow",
+    "yaml": "description: \"Above\\n   \\nBelow\"",
+    "file": "description-spaces-only-line-0000004e.yaml"
+  },
+  {
+    "value": "col1\tcol2\n\tindented with a tab",
+    "yaml": "description: |-\n  col1\tcol2\n  \tindented with a tab",
+    "file": "description-tab-0000004f.yaml"
+  },
+  {
+    "value": "Ends with a newline\n",
+    "yaml": "description: |\n  Ends with a newline",
+    "file": "description-trailing-newline-00000050.yaml"
+  },
+  {
+    "value": "Ends with two newlines\n\n",
+    "yaml": "description: |+\n  Ends with two newlines",
+    "file": "description-two-trailing-newlines-00000051.yaml"
+  },
+  {
+    "value": "Кириллица, 日本語, emoji 🎉, combining é, zero-width​space, nbsp here",
+    "yaml": "description: \"Кириллица, 日本語, emoji \\U0001F389, combining é, zero-width​space, nbsp here\"",
+    "file": "description-unicode-00000052.yaml"
+  },
+  {
+    "value": "---\nnot a document\n...",
+    "yaml": "description: |-\n  ---\n  not a document\n  ...",
+    "file": "description-yaml-doc-markers-00000053.yaml"
+  },
+  {
+    "value": "Updated description",
+    "yaml": "description: Updated description",
+    "file": "plain-task-00000060.yaml"
+  }
+]
