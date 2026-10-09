@@ -3,10 +3,9 @@
 //! состояние серий и связей проектов.
 use crate::context::Context;
 use crate::errors::{CliError, Result};
-use crate::json::{id, ids, object, opt_str};
+use crate::json::object;
 use crate::session::Session;
 use serde_json::Value;
-use tasker_core::ids::guid_d;
 use tasker_core::tasks::Page;
 use tasker_files::layout::NAME;
 use tasker_services::health::{self, ProjectSeriesHealth};
@@ -100,67 +99,11 @@ pub fn run(ctx: &mut Context<'_>, workspace: Option<&str>, sqlite: Option<&str>)
     Ok(())
 }
 
-/// `ProjectSeriesHealth` в JSON: порядок полей — как у записи .NET.
+/// `ProjectSeriesHealth` в JSON: порядок полей — как у записи .NET (общая с демоном форма — `health::to_json`).
 pub(crate) fn health_json(h: &ProjectSeriesHealth) -> Value {
-    object(vec![
-        ("projectId", id(&h.project_id)),
-        ("projectName", Value::String(h.project_name.clone())),
-        (
-            "numberConflicts",
-            Value::Array(
-                h.number_conflicts
-                    .iter()
-                    .map(|x| {
-                        object(vec![
-                            ("reference", Value::String(x.reference.clone())),
-                            ("seriesId", id(&x.series_id)),
-                            ("number", Value::from(x.number)),
-                            ("taskIds", ids(&x.task_ids)),
-                        ])
-                    })
-                    .collect(),
-            ),
-        ),
-        ("prefixConflicts", prefix_conflicts_json(&h.prefix_conflicts)),
-        ("tasksWithInvalidSeries", Value::from(h.tasks_with_invalid_series)),
-        ("unreadableSeriesFiles", Value::from(h.unreadable_series_files)),
-        ("error", opt_str(h.error.as_deref())),
-        ("tasksWithInvalidLinks", Value::from(h.tasks_with_invalid_links)),
-        ("unreadableLinkFiles", Value::from(h.unreadable_link_files)),
-        (
-            "linkCycles",
-            Value::Array(
-                h.link_cycles
-                    .iter()
-                    .map(|c| {
-                        object(vec![
-                            ("typeId", id(&c.type_id)),
-                            ("typeName", Value::String(c.type_name.clone())),
-                            ("path", Value::String(c.path.clone())),
-                            ("taskIds", ids(&c.task_ids)),
-                        ])
-                    })
-                    .collect(),
-            ),
-        ),
-        ("hasProblems", Value::Bool(h.has_problems())),
-        ("hasLinkProblems", Value::Bool(h.has_link_problems())),
-    ])
+    health::to_json(h)
 }
 
 pub(crate) fn prefix_conflicts_json(conflicts: &[health::PrefixConflict]) -> Value {
-    Value::Array(
-        conflicts
-            .iter()
-            .map(|x| {
-                object(vec![
-                    ("prefix", Value::String(x.prefix.clone())),
-                    (
-                        "seriesIds",
-                        Value::Array(x.series_ids.iter().map(|i| Value::String(guid_d(i))).collect()),
-                    ),
-                ])
-            })
-            .collect(),
-    )
+    health::prefix_conflicts_to_json(conflicts)
 }

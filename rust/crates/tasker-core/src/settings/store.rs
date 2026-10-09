@@ -44,6 +44,11 @@ impl SettingsStore {
         }
     }
 
+    /// Каталог настроек (данных приложения).
+    pub fn directory(&self) -> &std::path::Path {
+        &self.directory
+    }
+
     pub fn file_path(&self) -> PathBuf {
         self.directory.join("settings.json")
     }
