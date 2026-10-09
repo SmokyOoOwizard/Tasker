@@ -345,3 +345,80 @@ pub fn cycle_line(cycle: &LinkCycleProblem) -> String {
         cycle.path, cycle.type_name
     )
 }
+
+/// `ProjectSeriesHealth` в JSON (`--json` консоли, `/daemon/sync` демона): порядок полей — как у записи .NET.
+pub fn to_json(h: &ProjectSeriesHealth) -> serde_json::Value {
+    use serde_json::{Map, Value};
+    let ids = |list: &[Uuid]| Value::Array(list.iter().map(|i| Value::String(guid_d(i))).collect());
+    let object = |pairs: Vec<(&str, Value)>| Value::Object(pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect::<Map<_, _>>());
+    object(vec![
+        ("projectId", Value::String(guid_d(&h.project_id))),
+        ("projectName", Value::String(h.project_name.clone())),
+        (
+            "numberConflicts",
+            Value::Array(
+                h.number_conflicts
+                    .iter()
+                    .map(|x| {
+                        object(vec![
+                            ("reference", Value::String(x.reference.clone())),
+                            ("seriesId", Value::String(guid_d(&x.series_id))),
+                            ("number", Value::from(x.number)),
+                            ("taskIds", ids(&x.task_ids)),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+        ("prefixConflicts", prefix_conflicts_to_json(&h.prefix_conflicts)),
+        ("tasksWithInvalidSeries", Value::from(h.tasks_with_invalid_series)),
+        ("unreadableSeriesFiles", Value::from(h.unreadable_series_files)),
+        (
+            "error",
+            h.error.as_deref().map(|t| Value::String(t.to_string())).unwrap_or(Value::Null),
+        ),
+        ("tasksWithInvalidLinks", Value::from(h.tasks_with_invalid_links)),
+        ("unreadableLinkFiles", Value::from(h.unreadable_link_files)),
+        (
+            "linkCycles",
+            Value::Array(
+                h.link_cycles
+                    .iter()
+                    .map(|c| {
+                        object(vec![
+                            ("typeId", Value::String(guid_d(&c.type_id))),
+                            ("typeName", Value::String(c.type_name.clone())),
+                            ("path", Value::String(c.path.clone())),
+                            ("taskIds", ids(&c.task_ids)),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+        ("hasProblems", Value::Bool(h.has_problems())),
+        ("hasLinkProblems", Value::Bool(h.has_link_problems())),
+    ])
+}
+
+/// `PrefixConflict[]` в JSON.
+pub fn prefix_conflicts_to_json(conflicts: &[PrefixConflict]) -> serde_json::Value {
+    use serde_json::{Map, Value};
+    Value::Array(
+        conflicts
+            .iter()
+            .map(|x| {
+                Value::Object(
+                    [
+                        ("prefix".to_string(), Value::String(x.prefix.clone())),
+                        (
+                            "seriesIds".to_string(),
+                            Value::Array(x.series_ids.iter().map(|i| Value::String(guid_d(i))).collect()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect::<Map<_, _>>(),
+                )
+            })
+            .collect(),
+    )
+}

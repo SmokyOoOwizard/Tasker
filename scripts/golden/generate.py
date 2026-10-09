@@ -9,6 +9,7 @@ Golden-корпус для переноса консоли и демона на 
 
   scripts/golden/generate.py [--bin <каталог с tasker и tasker-mcpd>] [--out rust/tests/golden] [--keep]
   scripts/golden/generate.py --verify [--bin <каталог>]      снять эталоны заново с указанного бинарника и сравнить с rust/tests/golden
+  scripts/golden/generate.py --verify --bin <каталог> --only cli,migrate   только консоль и migrate (без демона: для Rust-сборки без tasker-mcpd)
 
 Без --bin консоль и демон собираются из этого репозитория (dotnet build) во временный каталог. Ничего не трогает в настоящей
 установке: TASKER_HOME, рабочая область и демон (на свободном порту) живут во временном каталоге и удаляются в конце
@@ -854,25 +855,34 @@ def snapshot_migrate(t: Tasker, canonical_tasker, root, out_dir):
 
 # ----------------------------------------------------------------------------- main
 
-def snapshot_all(t: Tasker, canonical_tasker, root, out_dir, legacy_ids):
-    """Все эталоны с канонической области: консоль, MCP, migrate, versions, стиль YAML."""
+SECTIONS = ("cli", "migrate", "mcp", "yaml-style")
+
+
+def snapshot_all(t: Tasker, canonical_tasker, root, out_dir, legacy_ids, only=None):
+    """Все эталоны с канонической области: консоль, MCP, migrate, versions, стиль YAML. `only` — какие разделы снимать
+    (`--only cli,migrate`: без демона — для сборок, где его ещё нет)."""
+    only = set(only or SECTIONS)
     run_ws = os.path.join(root, "run", "golden")
     copy_workspace(canonical_tasker, run_ws)
     t.run("whoami", "golden-user")  # имя держателя блокировок в снапшотах не должно зависеть от пользователя ОС
     write(os.path.join(out_dir, "versions.json"), json.dumps(versions(canonical_tasker), indent=2, ensure_ascii=False) + "\n")
     log("console snapshots")
-    by_title = snapshot_cli(t, run_ws, out_dir, legacy_ids)
+    by_title = snapshot_cli(t, run_ws, out_dir, legacy_ids) if "cli" in only else {
+        x["title"]: x for x in json.loads(t.run("task", "list", "--all", "--json", ws=run_ws, project="Golden").out)["data"]}
     # Версии из консоли должны совпасть с посчитанными по байтам.
     computed = versions(canonical_tasker)
     for title, task in by_title.items():
         matches = [v for rel, v in computed.items() if rel.endswith(f"-{task['id'][:8]}.yaml") and PROJECT_IDS["Golden"] in rel]
         if task["version"] not in matches:
             raise RuntimeError(f"version mismatch for {title!r}: console {task['version']}, files {matches}")
-    log("migrate snapshots")
-    snapshot_migrate(t, canonical_tasker, root, out_dir)
-    log("MCP snapshots")
-    snapshot_mcp(t, run_ws, out_dir, legacy_ids, by_title)
-    yaml_style(canonical_tasker, out_dir, by_title)
+    if "migrate" in only:
+        log("migrate snapshots")
+        snapshot_migrate(t, canonical_tasker, root, out_dir)
+    if "mcp" in only:
+        log("MCP snapshots")
+        snapshot_mcp(t, run_ws, out_dir, legacy_ids, by_title)
+    if "yaml-style" in only:
+        yaml_style(canonical_tasker, out_dir, by_title)
 
 
 def generate(args, bin_dir, root):
@@ -895,8 +905,9 @@ def generate(args, bin_dir, root):
         rmtree(os.path.join(out, name)) if os.path.isdir(os.path.join(out, name)) else (os.remove(os.path.join(out, name)) if os.path.exists(os.path.join(out, name)) else None)
     shutil.copytree(tasker_root, os.path.join(out, "workspace", ".tasker"))
     expected = os.path.join(out, "expected")
-    snapshot_all(t, tasker_root, root, expected, legacy_ids)
-    shutil.move(os.path.join(expected, "yaml-style"), os.path.join(out, "yaml-style"))
+    snapshot_all(t, tasker_root, root, expected, legacy_ids, args.only)
+    if "yaml-style" in args.only:
+        shutil.move(os.path.join(expected, "yaml-style"), os.path.join(out, "yaml-style"))
     shutil.move(os.path.join(expected, "versions.json"), os.path.join(out, "versions.json"))
     write(os.path.join(out, "notes.json"), json.dumps({
         "generatedWith": t.run("--version").out.strip(),
@@ -915,11 +926,15 @@ def verify(args, bin_dir, root):
     notes = json.load(open(os.path.join(out, "notes.json"), encoding="utf-8"))
     canonical = os.path.join(out, "workspace", ".tasker")
     fresh = os.path.join(root, "expected")
-    snapshot_all(t, canonical, root, fresh, notes["legacy"])
-    shutil.move(os.path.join(fresh, "yaml-style"), os.path.join(root, "yaml-style"))
+    only = args.only
+    snapshot_all(t, canonical, root, fresh, notes["legacy"], only)
+    if "yaml-style" in only:
+        shutil.move(os.path.join(fresh, "yaml-style"), os.path.join(root, "yaml-style"))
     shutil.move(os.path.join(fresh, "versions.json"), os.path.join(root, "versions.json"))
     failures = 0
-    for sub in ("expected", "yaml-style", "versions.json"):
+    # Сравниваются только снятые разделы: expected/<раздел>, yaml-style и versions.json.
+    subs = [os.path.join("expected", s) for s in ("cli", "migrate", "mcp") if s in only] + (["yaml-style"] if "yaml-style" in only else []) + ["versions.json"]
+    for sub in subs:
         a, b = os.path.join(out, sub), os.path.join(root, sub)
         files_a = {os.path.relpath(os.path.join(d, f), a) for d, _, fs in os.walk(a) for f in fs} if os.path.isdir(a) else {""}
         files_b = {os.path.relpath(os.path.join(d, f), b) for d, _, fs in os.walk(b) for f in fs} if os.path.isdir(b) else {""}
@@ -948,7 +963,14 @@ def main():
     parser.add_argument("--verify", action="store_true", help="снять эталоны заново и сравнить с --out, ничего не перезаписывая")
     parser.add_argument("--diff", action="store_true", help="с --verify: печатать построчные различия")
     parser.add_argument("--keep", action="store_true", help="не удалять временный каталог")
+    parser.add_argument("--only", default=",".join(SECTIONS),
+                        help="какие разделы снимать и сравнивать, через запятую: cli, migrate, mcp, yaml-style (по умолчанию все); "
+                             "например --only cli,migrate — без демона")
     args = parser.parse_args()
+    args.only = [s.strip() for s in args.only.split(",") if s.strip()]
+    unknown = [s for s in args.only if s not in SECTIONS]
+    if unknown:
+        parser.error(f"--only: unknown sections {', '.join(unknown)}; expected {', '.join(SECTIONS)}")
     root = tempfile.mkdtemp(prefix="tasker-golden-")
     try:
         bin_dir = os.path.abspath(args.bin) if args.bin else os.path.join(root, "bin")

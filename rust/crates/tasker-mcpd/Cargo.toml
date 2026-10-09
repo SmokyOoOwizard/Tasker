@@ -1,0 +1,32 @@
+[package]
+name = "tasker-mcpd"
+description = "Tasker MCP daemon (tasker-mcpd): single-process mode — daemon.lock/daemon.json, /health, /ready, /daemon/*, workspace registry, settings watch, log"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "tasker-mcpd"
+path = "src/main.rs"
+
+[dependencies]
+tasker-core = { path = "../tasker-core" }
+tasker-files = { path = "../tasker-files" }
+tasker-services = { path = "../tasker-services" }
+tokio.workspace = true
+axum.workspace = true
+http.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+chrono.workspace = true
+rand.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true, features = ["process"] }
+
+[dev-dependencies]
+ureq.workspace = true

@@ -14,11 +14,13 @@ path = "src/main.rs"
 tasker-core = { path = "../tasker-core" }
 tasker-files = { path = "../tasker-files" }
 tasker-services = { path = "../tasker-services" }
+tasker-daemon = { path = "../tasker-daemon" }
 uuid.workspace = true
 clap.workspace = true
 serde_json.workspace = true
 unicode-general-category.workspace = true
 unicode-segmentation = "1"
+ureq = { version = "3", default-features = false }
 
 [target.'cfg(not(windows))'.dependencies]
 rustix = { workspace = true, features = ["termios", "stdio"] }

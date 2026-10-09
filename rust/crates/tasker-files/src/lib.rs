@@ -4,7 +4,7 @@
 //! Модели файлов работают с байтами: [`parse`](files::project::parse) принимает содержимое файла и путь (для текстов ошибок),
 //! [`serialize`](files::project::serialize) возвращает байты для записи (LF, UTF-8 без BOM). Поверх них (TSK-130): имена файлов
 //! `<slug>-<id8>.yaml` ([`names`]), раскладка `.tasker` ([`layout`]), запись под блокировками ([`write`]), блокировки правки
-//! ([`edit_locks`]) и `tasker migrate` ([`migration`]); индекс области в SQLite `.cache/index-rs.db` ([`index`], TSK-131) и
+//! ([`edit_locks`]) и `tasker migrate` ([`migration`]); индекс области в SQLite `.cache/index-rs.db` ([`index`], TSK-131);
 //! наблюдатель файлов для демона ([`watch`], TSK-133).
 //!
 //! Правило переноса: поведение `Tasker.Storage.Files` (.NET) воспроизводится буквально — ключи, их порядок, правила пропуска

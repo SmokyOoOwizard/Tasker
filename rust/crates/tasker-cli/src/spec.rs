@@ -349,8 +349,9 @@ impl OptSpec {
                 .value_name(long),
             OptKind::Value { multiple, per_token, .. } => {
                 let arg = arg.value_name(long);
+                // Значение с дефисом (`--sort -series`) System.CommandLine принимает: у параметра с одним значением — тоже.
                 match (multiple, per_token) {
-                    (false, _) => arg.action(ArgAction::Set).num_args(1),
+                    (false, _) => arg.action(ArgAction::Set).num_args(1).allow_hyphen_values(true),
                     (true, false) => arg.action(ArgAction::Append).num_args(1),
                     (true, true) => arg.action(ArgAction::Append).num_args(1..),
                 }
