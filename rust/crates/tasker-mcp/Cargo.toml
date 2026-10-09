@@ -1,0 +1,18 @@
+[package]
+name = "tasker-mcp"
+description = "Tasker MCP tools (62) on top of tasker-services: tool table with hand-written schemas, workspace/projectId filters, error codes, rmcp server handler"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tasker-core = { path = "../tasker-core" }
+tasker-files = { path = "../tasker-files" }
+tasker-services = { path = "../tasker-services" }
+rmcp.workspace = true
+tokio.workspace = true
+http.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+uuid.workspace = true

@@ -40,6 +40,7 @@ pub mod task_fields;
 pub mod task_filters;
 pub mod task_type;
 pub mod usages;
+pub mod users;
 
 pub use cascade::CascadeResult;
 pub use clock::{Clock, FakeClock, SystemClock};
@@ -194,5 +195,9 @@ impl Workspace {
 
     pub fn link_health(&self) -> health::LinkHealthService<'_> {
         health::LinkHealthService::new(self)
+    }
+
+    pub fn users(&self) -> users::UserService<'_> {
+        users::UserService::new(self)
     }
 }

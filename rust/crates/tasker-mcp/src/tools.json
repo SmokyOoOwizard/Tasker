@@ -1,0 +1,2776 @@
+[
+  {
+    "name": "link_tasks",
+    "description": "Links two tasks of the same project: 'task <link> otherTask', e.g. task 'blocks' otherTask or task 'is blocked by' otherTask. Adding a link that already exists changes nothing. A link that would close a cycle ('A blocks B' while B already blocks A, directly or through a chain) is rejected with [invalid] and the cycle path unless the link type allows cycles (Blocks does not). Returns all links of `taskId`. `taskId` and `otherTaskId` are task ids, full or short (the first 8 or more hex characters). `link` is a link type name or one of its two side names, case-insensitive: 'Blocks' or 'blocks' means the task blocks the other one; 'is blocked by' means the task is blocked by the other one. Call list_link_types to see them.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string"
+        },
+        "otherTaskId": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskId",
+        "link",
+        "otherTaskId"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "get_lock",
+    "description": "Shows who is editing an entity and until when (`mine` tells whether it is you). `lock` is null if nobody is. `entity` is one of: project, task, taskType, linkType, field, enum, status, statusSet, board, series. `entityId` is the entity's id (for `project` it may be omitted: the project itself).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "entity": {
+          "type": "string"
+        },
+        "entityId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "entity"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "list_tasks",
+    "description": "Lists tasks of a project in creation order (or in the order of `sort`), optionally filtered by task types, statuses, series (tasks that have a number in it) and/or fields (catalog fields and own fields of tasks; field: [\"Estimate>=3\", \"Level!=Low\", \"Due:set\"], all must hold; Name is letters and digits only; operators = != (any type; != also takes tasks without a value; for a multiple field = means contains the value and != means none equals it; enum value by name or id) and > >= < <= (int, float, date only); Name:set / Name:unset - has a value or not; Name:attached / Name:detached - the field is connected to the task (its type has it or it was added) or not (for an own field: the task has it). A name found in the catalog is read by the catalog field's type and also matches own fields of that name and type (other types are skipped); a name only own fields have is read by their type, several types - an error). Paged: offset/limit (limit 1-200, default 50). Filters: typeIds / statusIds / seriesIds (arrays; the single typeId / statusId / seriesId are the same and are merged with them). Values of one parameter are alternatives (OR: statusIds [A, B] - tasks in A or B); different parameters (types, statuses, series, field) must all hold (AND). A status the task's type does not have simply matches nothing. `sort` (optional) orders the tasks: keys separated by commas, '-' before a key for descending order, e.g. \"status,-updated,Estimate\". Keys: status (position in the status set of the task's type; tasks of different sets: position, then set and status name), type (type name), title (ignoring case), created, updated, series (number in a series: TSK-9 before TSK-12) or a field name (catalog field or own field of tasks - same naming rules as `field`; int/float by value, date by date, bool false before true, enum by the order of its values, string ignoring case; a multiple field by its first value). Tasks without a value go last in both directions; equal keys keep the creation order, so pages never overlap. totalCount and filters are not affected. An unknown key is an error listing the valid ones. Each task in the list carries a preview of its description: `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, never cut in the middle of an emoji or accented letter, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of a task is the length of its full description, `linksCount` the number of its links (outgoing and incoming), `parentIds` the ids of its parents (tasks that include it by a hierarchical link type such as Parent/Child) and `childCount` the number of its child tasks (> 0: an epic). The list is always flat, the hierarchy is in these two fields. Get the full text with get_task or by repeating the call with descriptionLength -1.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "typeId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "statusId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "seriesId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "typeIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": null
+        },
+        "statusIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": null
+        },
+        "seriesIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": null
+        },
+        "field": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "descriptionLength": {
+          "type": "integer",
+          "default": 200
+        },
+        "sort": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "update_task",
+    "description": "Changes a task: title, description (\"\" clears it), type and/or status; null keeps a field. The status must be in the status set of the (new) type. fields (optional) changes the task's fields, see `fields` is an object, every part optional (applied in this order): removeFields [fieldId] - remove extra and own fields with their values (fields of the task type cannot be removed); addFields [fieldId] - add catalog fields without values; values [{fieldId, values: [text]}] - set values (an empty list clears them; a catalog field the task does not have yet is added as extra); newOwnFields [{name, type, values?, required?, multiple?, enumId?}] - fields defined in this task only. fieldId is a field of the task type, an extra field, or an own field (its id is in `fieldViews`). Values are text: int, float (decimal point), bool (true/false), date (yyyy-MM-dd), enum (value id or name); several only for a `multiple` field. `fieldViews` of get_task shows the task's fields, list_fields the catalog. Changing the type keeps the old type's fields that have values as extra fields; required fields of the new type must get values in the same call. Required fields are checked when the title, description, type or fields change, not on a status-only change. `version` is the task's current version (from get_task); if someone changed the task since, the call fails with [modified] — re-read and retry. `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "typeId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "statusId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "fields": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "values": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "fieldId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "values": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "fieldId",
+                  "values"
+                ]
+              }
+            },
+            "addFields": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "newOwnFields": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "int",
+                      "float",
+                      "bool",
+                      "date",
+                      "enum"
+                    ]
+                  },
+                  "values": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "default": null
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "multiple": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "enumId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "default": null
+                  }
+                },
+                "required": [
+                  "name",
+                  "type"
+                ]
+              }
+            },
+            "removeFields": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "list_task_types",
+    "description": "Lists task types (e.g. Bug, Feature) with their descriptions. Each type points to the status set its tasks use. Paged: offset/limit (limit 1-200, default 50); the result has totalCount. Each entry carries `description` (what the entity means and when to use it; empty - none): `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of an entry is the length of its full description; repeat the call with descriptionLength -1 for the full text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "descriptionLength": {
+          "type": "integer",
+          "default": 200
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_link_type",
+    "description": "Creates a link type. `outwardName` is how the link reads for the task it starts from ('depends on'), `inwardName` for the task it points to ('is a dependency of'); omit `inwardName` for a link without direction ('relates to'). The name must be unique in the project. `allowCycles` (default true): false makes link_tasks reject a link that closes a cycle of this type (A blocks B, B blocks A) with [invalid] and the cycle path. `hierarchical` (default false): true makes the type a parent/child one - a task may have several parents, cycles are always rejected (allowCycles true is an error) and the two names must differ.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "outwardName": {
+          "type": "string"
+        },
+        "inwardName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "allowCycles": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "hierarchical": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "outwardName"
+      ]
+    }
+  },
+  {
+    "name": "list_statuses",
+    "description": "Lists statuses of a project (name, #RRGGBB color, description). Their order is defined by status sets. Paged: offset/limit (limit 1-200, default 50); the result has totalCount. Each entry carries `description` (what the entity means and when to use it; empty - none): `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of an entry is the length of its full description; repeat the call with descriptionLength -1 for the full text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "descriptionLength": {
+          "type": "integer",
+          "default": 200
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "get_board",
+    "description": "Gets a board together with the tasks in each column (first `tasksPerColumn` tasks per column, 1-200; each column reports totalCount). Each column also lists its own fieldFilters (stored conditions: a task is in the column only if its status AND all of them fit). field (optional): [\"Name=value\", \"Name>=value\", \"Name:set\", ...] shows only tasks matching the field conditions (catalog or own fields), in every column, in addition to the column's own (a view filter, not stored; see list_tasks). `sort` (optional) orders the tasks: keys separated by commas, '-' before a key for descending order, e.g. \"status,-updated,Estimate\". Keys: status (position in the status set of the task's type; tasks of different sets: position, then set and status name), type (type name), title (ignoring case), created, updated, series (number in a series: TSK-9 before TSK-12) or a field name (catalog field or own field of tasks - same naming rules as `field`; int/float by value, date by date, bool false before true, enum by the order of its values, string ignoring case; a multiple field by its first value). Tasks without a value go last in both directions; equal keys keep the creation order, so pages never overlap. totalCount and filters are not affected. An unknown key is an error listing the valid ones. In get_board the order applies inside every column. Each task in the list carries a preview of its description: `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, never cut in the middle of an emoji or accented letter, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of a task is the length of its full description, `linksCount` the number of its links (outgoing and incoming), `parentIds` the ids of its parents (tasks that include it by a hierarchical link type such as Parent/Child) and `childCount` the number of its child tasks (> 0: an epic). The list is always flat, the hierarchy is in these two fields. Get the full text with get_task or by repeating the call with descriptionLength -1.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "boardId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tasksPerColumn": {
+          "type": "integer",
+          "default": 50
+        },
+        "field": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        },
+        "descriptionLength": {
+          "type": "integer",
+          "default": 200
+        },
+        "sort": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "boardId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_status",
+    "description": "Creates a status. Color is #RRGGBB. `description` (optional) says what the status means and when to set it. `description` is free text (Unicode, line breaks); an empty string clears it.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "color"
+      ]
+    }
+  },
+  {
+    "name": "remove_task_from_series",
+    "description": "Takes a task out of a series; its number there becomes free and may be given to another task later. Not in the series: returns the task unchanged. `series` is a series id (Guid) or its exact prefix (case matters: TSK and tsk are different series). `version` is the task's current version (from get_task). `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "series": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "series",
+        "taskId",
+        "version"
+      ]
+    }
+  },
+  {
+    "name": "list_status_sets",
+    "description": "Lists status sets: ordered lists of statuses a task type allows. Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "update_project",
+    "description": "Renames a project. `version` is the project's current version (from get_project); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "get_project",
+    "description": "Gets a project by id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_task_type",
+    "description": "Creates a task type that uses the given status set. `description` (optional) says when to use the type. `description` is free text (Unicode, line breaks); an empty string clears it. `fields` (optional): fields of the catalog (list_fields) connected to the type, [{fieldId, required}] in display order: every task of the type has them and cannot lose them; required ones need a value when a task is created or edited.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "statusSetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "fields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "fieldId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "fieldId",
+              "required"
+            ]
+          },
+          "default": null
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "statusSetId"
+      ]
+    }
+  },
+  {
+    "name": "delete_link_type",
+    "description": "Deletes a link type. Fails with [in_use] while tasks still have links of this type: remove them first. `version` is the link type's current version (from the list call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "linkTypeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "linkTypeId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "get_task",
+    "description": "Gets a task by id (`taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.), including its current `version` needed to update or delete it. `fieldViews` lists the task's fields with definitions: fieldId, name, type, multiple, required, source (type: field of its task type, extra: field added from the catalog, own: defined in the task), values (enum: value ids) and texts (enum: value names). `fields` holds only the stored values. `linkViews` lists the task's links from both sides (the ones it starts and the ones pointing at it, same shape as get_task_links: typeId, typeName, direction outward|inward, name from this task's side such as 'blocks' / 'is blocked by', task {id, title, statusId, seriesNumbers}); `linkCount` is the total (linkViews holds at most 100, use get_task_links for all). `links` holds only the stored outgoing links (typeId, targetId); list_tasks has no linkViews.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "update_field",
+    "description": "Changes a field: its name, `type`, `multiple` and enum (`enumId`); null keeps. The values already chosen in tasks are converted atomically (all values and the field, or nothing). Allowed type changes: any type to string (the value becomes text; for enum its name), int to float, string to int/float/bool/date (every value must parse) or to enum (matched by name); enum to another enum (`enumId`; matched by name). Other changes (e.g. float to int) are refused: go through string. A field that becomes enum needs `enumId`; one that stops being enum must not pass it. `multiple`: one to several makes the value a list; several to one needs a choice for tasks having several values. If tasks are affected and their values cannot be kept as they are, the call fails with [in_use] giving the number of tasks (and example values); repeat it with a choice: clearUnconvertible=true clears the values that do not parse / have no counterpart in the new enum (the others are converted); mapping=[{from, to}] matches old values to values of the new enum explicitly (from: the old value or, for enum, its id or name; to: a value id or name); several=keepFirst keeps the first value of tasks that have several, several=clear clears them. A required field left empty by a choice stays empty on the task until its next content edit. A field used in the conditions of board columns keeps its type, enum and `multiple` (fails with [in_use] naming the columns; remove the conditions first); renaming it is fine. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "fieldId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "string",
+            "int",
+            "float",
+            "bool",
+            "date",
+            "enum",
+            null
+          ],
+          "default": null
+        },
+        "multiple": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "enumId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "clearUnconvertible": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "several": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "keepFirst",
+            "clear",
+            null
+          ],
+          "default": null
+        },
+        "mapping": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "to": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ]
+          },
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "fieldId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "update_board",
+    "description": "Changes a board (null keeps a field). columns replaces all columns: a column with `id` keeps it, without `id` is new, missing columns are removed. A column's fieldFilters: omitted (null) keeps the existing column's conditions (none for a new column), [] removes them, a list replaces them. `version` is the board's current version (from list_boards/get_board); on [modified] re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "boardId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "statusSetIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": null
+        },
+        "columns": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "statusIds": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "dropStatuses": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "fieldFilters": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "statusIds",
+              "dropStatuses"
+            ]
+          },
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "boardId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "delete_status",
+    "description": "Deletes a status. Fails with [in_use] listing tasks, status sets and board columns that still use it. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "statusId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "statusId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "create_enum",
+    "description": "Creates an enum from value names in display order: at least one, no repeats (case-insensitive). The name is unique in the project (fails with [in_use] if taken). Use it in a field: create_field with type enum and this enum's id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "values"
+      ]
+    }
+  },
+  {
+    "name": "unlock_entity",
+    "description": "Releases your lock on an entity. Nothing to release (or someone else's lock) is not an error. `entity` is one of: project, task, taskType, linkType, field, enum, status, statusSet, board, series. `entityId` is the entity's id (for `project` it may be omitted: the project itself).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "entity": {
+          "type": "string"
+        },
+        "entityId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "entity"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "update_series",
+    "description": "Changes a series name and/or prefix (null keeps the value). A new prefix renames the series: task numbers stay, but references written elsewhere with the old prefix (commit messages, chats) stop working. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "seriesId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "seriesId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "series_health",
+    "description": "Read-only check of the project's series: number conflicts (several tasks with the same number in a series, usually after a git merge), prefix conflicts (several series with one prefix — rename one with update_series), tasks referencing series that do not exist, and unreadable series files. Fixing invalid references and number conflicts is done with `tasker cleanup` on the command line or renumber_task.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "delete_enum",
+    "description": "Deletes an enum. Fails with [in_use] if catalog fields or own fields of tasks refer to it. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "enumId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "enumId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "whoami",
+    "description": "Returns the user this agent acts as. Agents are regular users: they see only projects they are members of.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "delete_status_set",
+    "description": "Deletes a status set. Fails with [in_use] if task types or boards use it. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "statusSetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "statusSetId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "list_boards",
+    "description": "Lists boards of a project with their columns, drop rules and field conditions (fieldConditions: fieldId, operator, value - an enum value is its id; get_board shows them as text). Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "unlink_tasks",
+    "description": "Removes the link 'task <link> otherTask' (the same phrases as link_tasks). A link that does not exist is not an error. Returns all links of `taskId`. `taskId` and `otherTaskId` are task ids, full or short (the first 8 or more hex characters). `link` is a link type name or one of its two side names, case-insensitive: 'Blocks' or 'blocks' means the task blocks the other one; 'is blocked by' means the task is blocked by the other one. Call list_link_types to see them.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string"
+        },
+        "otherTaskId": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskId",
+        "link",
+        "otherTaskId"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "list_workspace_problems",
+    "description": "Desktop app with file storage only: lists .tasker files that could not be read (unresolved git merge conflicts, invalid YAML, id not matching the file name). Their entities are hidden from all lists until the file is fixed; the files are plain YAML, and a fixed file shows up in lists again by itself. Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "get_field",
+    "description": "Gets a field of the catalog by id or name, including its current `version`. `field` is a field id (Guid) or its name (case-insensitive).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "field": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "field"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_project",
+    "description": "Creates a project. On the server the agent becomes its member.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "name": "list_link_types",
+    "description": "Lists link types of a project (Blocks, Duplicate, Cloners, Relates, Problem/Incident by default, plus your own). Each has `outwardName` (the side the link starts from, e.g. 'blocks'), `inwardName` (the side it points to, e.g. 'is blocked by') and `allowCycles` (false: a link closing a cycle of this type is rejected; Blocks by default) and `hierarchical` (Parent/Child by default: 'includes' / 'is part of'; the source task is the parent - an epic - and the target its child; list_tasks reports `parentIds` and `childCount` from such links, and the console lists them as a tree). Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "list_enums",
+    "description": "Lists the enums of a project by name. An enum is a named list of values (each with its own `id` and `name`) that fields of type enum choose from; one enum can be used by several fields. Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_field",
+    "description": "Creates a field in the catalog. type: string, int, float, bool, date or enum. multiple: the field may hold several values (default: one). A field of type enum needs `enumId` (an enum of this project, see list_enums); other types must not have one. The name is unique in the project (fails with [in_use] if taken). Type, `multiple` and enum can be changed later with update_field. A new field is not used anywhere yet: connect it to a task type with the `fields` parameter of create_task_type/update_task_type, or give a task its value with the `fields` parameter of create_task/update_task.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "int",
+            "float",
+            "bool",
+            "date",
+            "enum"
+          ]
+        },
+        "multiple": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "enumId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ]
+    }
+  },
+  {
+    "name": "update_enum",
+    "description": "Renames an enum and/or replaces its values (full ordered list; null keeps). Each value is {id?, name}: a value with an `id` stays the same value (this is how to rename or reorder it), one without `id` is new, one missing from the list is removed. Removing a value that tasks have selected needs a choice, one for all removed values: removedValues=clear removes it from those tasks, removedValues=reassign with reassignTo=<id of a remaining value> selects that value instead. Without a choice the call fails with [in_use] giving the number of tasks. A required field left empty by `clear` stays empty on the task until its next content edit. A removed value that is used in the field conditions of board columns (see create_board fieldFilters) needs the same choice: clear drops the condition from the column, reassign replaces the value in it; if that would make columns sharing a status show the same tasks, the call fails with [in_use] and the board must be changed first. The result is the enum plus `affectedTasks`: how many tasks were rewritten by the choice (0 when no task used a removed value), and `affectedColumns` (only when not 0): how many board column conditions were dropped or replaced. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "enumId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "values": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "default": null
+        },
+        "removedValues": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "clear",
+            "reassign",
+            null
+          ],
+          "default": null
+        },
+        "reassignTo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "enumId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "delete_board",
+    "description": "Deletes a board (tasks stay). `version` is the board's current version.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "boardId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "boardId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "update_status_set",
+    "description": "Renames a status set and/or replaces its statuses (full ordered list; null keeps). Removing a status still used by tasks or boards fails with [in_use]. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "statusSetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "statusIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "statusSetId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "add_task_to_series",
+    "description": "Puts a task into a series: it gets the next number (the highest number in the series + 1; the first is 1). A task can be in several series, with a number in each. Already in the series: returns the task unchanged. `series` is a series id (Guid) or its exact prefix (case matters: TSK and tsk are different series). `version` is the task's current version (from get_task). `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "series": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "series",
+        "taskId",
+        "version"
+      ]
+    }
+  },
+  {
+    "name": "delete_task_type",
+    "description": "Deletes a task type. Fails with [in_use] if it has tasks. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskTypeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskTypeId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "list_project_members",
+    "description": "Lists members of a project (server only: in the desktop app every project is open to everyone). Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "delete_task",
+    "description": "Deletes a task. `version` is the task's current version (from get_task). `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "update_status",
+    "description": "Changes a status name, color and/or description (null keeps the value). `description` is free text (Unicode, line breaks); an empty string clears it. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "statusId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "color": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "statusId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "list_fields",
+    "description": "Lists the field catalog of a project by name. A field has a name, a value `type` (string, int, float, bool, date, enum), `multiple` (several values) and, for enum, `enumId`. Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "renumber_task",
+    "description": "Changes the number of a task in a series: `to` is the wanted number (must be free, otherwise [in_use]); omit it to take the next free number (highest + 1). Use it to resolve a number conflict reported by series_health. The task must already be in the series ([not_found] otherwise). `series` is a series id (Guid) or its exact prefix (case matters: TSK and tsk are different series). `version` is the task's current version (from get_task). `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "series": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "to": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "series",
+        "taskId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "get_series",
+    "description": "Gets a series by id or by prefix, including its current `version` needed to update or delete it. `series` is a series id (Guid) or its exact prefix (case matters: TSK and tsk are different series).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "series": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "series"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "get_task_links",
+    "description": "Shows all links of a task, both the ones it starts and the ones pointing at it, each named from this task's side: 'blocks' for the task that blocks and 'is blocked by' for the blocked one. Every link has the other task (id, title, statusId). `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_status_set",
+    "description": "Creates a status set from status ids, in display order.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "statusIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "statusIds"
+      ]
+    }
+  },
+  {
+    "name": "update_link_type",
+    "description": "Changes a link type name, its two side names, `allowCycles` and/or `hierarchical` (null keeps the value; allowCycles false makes link_tasks reject a link that closes a cycle of this type, existing links are not touched; hierarchical true makes it a parent/child type, which forbids cycles and needs two different side names). `version` is the link type's current version (from the list call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "linkTypeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "outwardName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "inwardName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "allowCycles": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "hierarchical": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "linkTypeId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "delete_series",
+    "description": "Deletes a series. A series that has tasks can be deleted: their numbers in it are removed from the tasks (the tasks themselves stay). Numbers cannot be restored afterwards. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "seriesId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "seriesId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "list_users",
+    "description": "Lists all users (people and agents), e.g. to find a user id. Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "move_task",
+    "description": "Moves a task to a board column: the task gets the status from the column's drop rule for its task type's status set. A task that does not match the column's field conditions is refused (a move does not change fields): update its fields first. `version` is the task's current version (from get_task). `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "boardId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "columnId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "boardId",
+        "columnId",
+        "taskId",
+        "version"
+      ]
+    }
+  },
+  {
+    "name": "list_series",
+    "description": "Lists task series of a project ordered by prefix. A series numbers tasks 1, 2, 3... so they can be referenced as PREFIX-number (e.g. TSK-5). Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "update_task_type",
+    "description": "Renames a task type, changes its description, switches its status set and/or replaces its fields (null keeps). `description` is free text (Unicode, line breaks); an empty string clears it. Switching fails with [in_use] if some tasks have statuses missing in the new set. `fields` is the full ordered list [{fieldId, required}] of catalog fields (list_fields) every task of the type has. Adding a field or changing `required` does not touch existing tasks (a required field is checked when a task is created or edited). Removing a field whose values some tasks hold needs a choice in `removedFields`, one for all removed fields: clear removes the values from the tasks, keep leaves them (the field becomes an optional extra field of those tasks). Without a choice the call fails with [in_use] giving the number of tasks. The result is the task type plus `affectedTasks`: how many tasks lost the values (clear) or kept them as an extra field (keep); 0 when no task had values of a removed field. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "taskTypeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "statusSetId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "fields": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "fieldId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "fieldId",
+              "required"
+            ]
+          },
+          "default": null
+        },
+        "removedFields": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "clear",
+            "keep",
+            null
+          ],
+          "default": null
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "taskTypeId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "list_workspaces",
+    "description": "Lists the workspaces (folders with their own projects and tasks) this MCP server gives access to: name, path, status (open/opening/failed) and the number of projects. Every other tool takes the workspace name in its optional `workspace` argument; it can be omitted when exactly one workspace is available. Only these workspaces can be used: any other folder is not found.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_series",
+    "description": "Creates a task series. prefix: 1-20 Latin letters or digits, case-sensitive, unique in the project (fails with [in_use] if taken, [invalid] if malformed). Creating a series does not number any tasks: add them with add_task_to_series or the `seriesIds` parameter of create_task.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "prefix"
+      ]
+    }
+  },
+  {
+    "name": "find_tasks_by_reference",
+    "description": "Finds tasks by a reference: a task id (Guid, or its first 8 or more hex characters) or PREFIX-number such as TSK-5 (prefix is case-sensitive). Returns all matches: normally one, several if the number is duplicated in the series (see series_health), none if nothing matches ([invalid] if the text is neither an id nor a reference). Each task in the list carries a preview of its description: `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, never cut in the middle of an emoji or accented letter, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of a task is the length of its full description, `linksCount` the number of its links (outgoing and incoming), `parentIds` the ids of its parents (tasks that include it by a hierarchical link type such as Parent/Child) and `childCount` the number of its child tasks (> 0: an epic). The list is always flat, the hierarchy is in these two fields. Get the full text with get_task or by repeating the call with descriptionLength -1.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "reference": {
+          "type": "string"
+        },
+        "descriptionLength": {
+          "type": "integer",
+          "default": 200
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "reference"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "lock_entity",
+    "description": "Locks an entity for editing so nobody else can change or delete it until you unlock it; calling it again renews your lock. The lock expires by itself after 2 minutes, so renew it while you work. If someone else holds it, fails with [locked] naming the holder — wait or ask them. A free entity can be changed without locking. `entity` is one of: project, task, taskType, linkType, field, enum, status, statusSet, board, series. `entityId` is the entity's id (for `project` it may be omitted: the project itself).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "entity": {
+          "type": "string"
+        },
+        "entityId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "entity"
+      ]
+    }
+  },
+  {
+    "name": "get_enum",
+    "description": "Gets an enum by id or name with its values and current `version`. `enumeration` is an enum id (Guid) or its name (case-insensitive).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "enumeration": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "enumeration"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_board",
+    "description": "Creates a board. statusSetIds: status sets whose tasks appear on the board. columns (left to right): name, statusIds (tasks with these statuses show in the column), dropStatuses (status set id -> status id a task of that set gets when moved into the column; must be one of the column's statuses), fieldFilters (optional, text as in list_tasks `field`: [\"Component=API\", \"Estimate>=3\", \"Owner:set\"]; a task is in the column only if its status AND all conditions fit; stored by field id, so renaming a field keeps working). A status may be in several columns only if their conditions exclude each other (e.g. Component=API and Component!=API); otherwise one column only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "name": {
+          "type": "string"
+        },
+        "statusSetIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "statusIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "dropStatuses": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "fieldFilters": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "statusIds",
+              "dropStatuses"
+            ]
+          }
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "name",
+        "statusSetIds",
+        "columns"
+      ]
+    }
+  },
+  {
+    "name": "delete_field",
+    "description": "Deletes a field from the catalog. Fails with [in_use] naming the task types the field is connected to, the number of tasks that have values or the field added, and the board columns with a condition on it: disconnect/clear it or remove the condition first. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "fieldId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "fieldId",
+        "version"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "list_projects",
+    "description": "Lists projects visible to the agent. Everything else (statuses, task types, tasks, boards) lives inside a project. Paged: offset/limit (limit 1-200, default 50); the result has totalCount.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "create_task",
+    "description": "Creates a task. statusId must be in the status set of the task type; omit it to use the set's first status. seriesIds (optional): ids of series the new task joins, it gets the next number in each (see the result's seriesNumbers; reference it as PREFIX-number). fields (optional): values and extra fields, see `fields` is an object, every part optional (applied in this order): removeFields [fieldId] - remove extra and own fields with their values (fields of the task type cannot be removed); addFields [fieldId] - add catalog fields without values; values [{fieldId, values: [text]}] - set values (an empty list clears them; a catalog field the task does not have yet is added as extra); newOwnFields [{name, type, values?, required?, multiple?, enumId?}] - fields defined in this task only. fieldId is a field of the task type, an extra field, or an own field (its id is in `fieldViews`). Values are text: int, float (decimal point), bool (true/false), date (yyyy-MM-dd), enum (value id or name); several only for a `multiple` field. `fieldViews` of get_task shows the task's fields, list_fields the catalog. Required fields of the task type must get values, otherwise the call fails with [invalid].",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+        },
+        "title": {
+          "type": "string"
+        },
+        "typeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "statusId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null
+        },
+        "seriesIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": null
+        },
+        "fields": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "values": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "fieldId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "values": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "fieldId",
+                  "values"
+                ]
+              }
+            },
+            "addFields": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "newOwnFields": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "int",
+                      "float",
+                      "bool",
+                      "date",
+                      "enum"
+                    ]
+                  },
+                  "values": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "default": null
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "multiple": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "enumId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "default": null
+                  }
+                },
+                "required": [
+                  "name",
+                  "type"
+                ]
+              }
+            },
+            "removeFields": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "default": null
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+        }
+      },
+      "required": [
+        "title",
+        "typeId"
+      ]
+    }
+  }
+]
