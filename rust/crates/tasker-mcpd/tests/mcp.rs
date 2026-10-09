@@ -1,7 +1,8 @@
 //! MCP демона на golden-корпусе (`tests/golden/expected/mcp`): `tasker-mcpd` на свободном порту с изолированным `TASKER_HOME`, область
 //! `golden` — копия корпуса, область `broken` — несуществующая папка (как у `scripts/golden/generate.py`). Те же вызовы, что снимал
 //! скрипт, сравниваются с эталонами .NET семантически: разбор JSON, нормализация `<ROOT>`, `<WSID:…>`, `<LOCAL-AGENT-*>`, `<TIME>`;
-//! `isError: false` и порядок ключей конверта не считаются различием, а `tools/list` сверяется и по порядку ключей схем.
+//! `isError: false` и порядок ключей конверта не считаются различием; `text` с JSON внутри сравнивается как JSON с порядком ключей,
+//! а `tools/list` сверяется и по порядку ключей схем.
 use serde_json::{Map, Value, json};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
@@ -63,8 +64,11 @@ impl Fixture {
         std::fs::write(root.join("home/settings.json"), settings).unwrap();
         let child = Command::new(BIN)
             .env("TASKER_HOME", root.join("home"))
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .env("TASKER_SERVICE_DIR", root.join("home/service"))
+            .env("TASKER_SERVICE_LABEL", format!("com.tasker.mcp-test-{port}"))
+            .env_remove("TASKER_MCP_OPEN_WAIT_MS")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .spawn()
             .unwrap();
         let fixture = Fixture {
@@ -124,7 +128,10 @@ impl Fixture {
 
     /// Текст результата инструмента, разобранный как JSON.
     fn result_json(&self, tool: &str, arguments: Value) -> Value {
-        let text = self.call(tool, arguments)["result"]["content"][0]["text"].as_str().unwrap().to_string();
+        let text = self.call(tool, arguments)["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
         serde_json::from_str(&text).unwrap_or_else(|_| panic!("{tool}: {text}"))
     }
 }
@@ -153,6 +160,7 @@ impl Snapshots {
         }
         let mut value: Value = serde_json::from_str(&text).unwrap();
         strip_false_is_error(&mut value);
+        canonical_texts(&mut value);
         value
     }
 
@@ -179,6 +187,27 @@ fn strip_false_is_error(value: &mut Value) {
     }
 }
 
+/// `text` с JSON внутри — компактная запись с исходным порядком ключей (`preserve_order`): различие в пробелах и экранировании не
+/// в счёт, порядок полей ответа — в счёт.
+fn canonical_texts(value: &mut Value) {
+    match value {
+        Value::Object(map) => {
+            for (key, item) in map.iter_mut() {
+                match item {
+                    Value::String(text) if key == "text" => {
+                        if let Ok(parsed) = serde_json::from_str::<Value>(text) {
+                            *text = serde_json::to_string(&parsed).unwrap();
+                        }
+                    }
+                    _ => canonical_texts(item),
+                }
+            }
+        }
+        Value::Array(items) => items.iter_mut().for_each(canonical_texts),
+        _ => {}
+    }
+}
+
 fn scrub_times(value: &Value) -> Value {
     let text = serde_json::to_string(value).unwrap();
     let re = regex::Regex::new(r"\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(\.\d+)? ?\+00:00").unwrap();
@@ -202,13 +231,20 @@ fn mcp_answers_match_the_dotnet_snapshots() {
         failures: Vec::new(),
     };
     let g = |extra: Value| -> Value {
-        let mut map: Map<String, Value> = json!({"workspace": "golden", "projectId": GOLDEN_PROJECT}).as_object().unwrap().clone();
+        let mut map: Map<String, Value> = json!({"workspace": "golden", "projectId": GOLDEN_PROJECT})
+            .as_object()
+            .unwrap()
+            .clone();
         map.extend(extra.as_object().unwrap().clone());
         Value::Object(map)
     };
 
     let me = f.result_json("whoami", json!({"workspace": "golden"}));
-    for (key, marker) in [("id", "<LOCAL-AGENT-ID>"), ("createdAt", "<LOCAL-AGENT-CREATED>"), ("version", "<LOCAL-AGENT-VERSION>")] {
+    for (key, marker) in [
+        ("id", "<LOCAL-AGENT-ID>"),
+        ("createdAt", "<LOCAL-AGENT-CREATED>"),
+        ("version", "<LOCAL-AGENT-VERSION>"),
+    ] {
         snapshots
             .replacements
             .push((me[key].as_str().unwrap().to_string(), marker.to_string()));
@@ -288,10 +324,7 @@ fn mcp_answers_match_the_dotnet_snapshots() {
         "list_workspace_problems",
         &f.call("list_workspace_problems", json!({"workspace": "golden"})),
     );
-    snapshots.check(
-        "get_lock",
-        &f.call("get_lock", g(json!({"entity": "task", "entityId": BUG_ID}))),
-    );
+    snapshots.check("get_lock", &f.call("get_lock", g(json!({"entity": "task", "entityId": BUG_ID}))));
 
     // По ошибке каждого кода.
     snapshots.check(
@@ -322,10 +355,7 @@ fn mcp_answers_match_the_dotnet_snapshots() {
         .unwrap();
     snapshots.check(
         "errors/in_use",
-        &f.call(
-            "delete_status",
-            g(json!({"statusId": done["id"], "version": done["version"]})),
-        ),
+        &f.call("delete_status", g(json!({"statusId": done["id"], "version": done["version"]}))),
     );
     snapshots.check(
         "errors/forbidden",
@@ -345,9 +375,7 @@ fn mcp_answers_match_the_dotnet_snapshots() {
     snapshots.check("errors/failed", &f.call("list_projects", json!({"workspace": "broken"})));
 
     // `tasker lock acquire task <id>` консолью от имени golden-user: блокировка правки в `.cache/edit-locks`.
-    let console = Workspace::open(&golden_path)
-        .unwrap()
-        .with_editor(console_editor("golden-user"));
+    let console = Workspace::open(&golden_path).unwrap().with_editor(console_editor("golden-user"));
     let bug_uuid = uuid::Uuid::parse_str(BUG_ID).unwrap();
     let project = uuid::Uuid::parse_str(GOLDEN_PROJECT).unwrap();
     console
@@ -355,10 +383,7 @@ fn mcp_answers_match_the_dotnet_snapshots() {
         .acquire(Some(project), LockedEntity::Task, &bug_uuid)
         .unwrap()
         .unwrap();
-    let locked = f.call(
-        "update_task",
-        g(json!({"taskId": BUG_ID, "title": "x", "version": bug_version})),
-    );
+    let locked = f.call("update_task", g(json!({"taskId": BUG_ID, "title": "x", "version": bug_version})));
     snapshots.check("errors/locked", &scrub_times(&locked));
     console.entity_locks().release(LockedEntity::Task, &bug_uuid).unwrap();
 

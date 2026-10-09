@@ -19,8 +19,8 @@ use rmcp::transport::streamable_http_server::StreamableHttpService;
 use rmcp::transport::streamable_http_server::session::never::NeverSessionManager;
 use serde_json::{Value, json};
 use std::sync::Arc;
-use tasker_mcp::TaskerMcp;
 use tasker_core::settings::{SettingsStore, WorkspaceKind, WorkspaceLocation};
+use tasker_mcp::TaskerMcp;
 use tracing::info;
 
 /// Заголовок с секретом управления демоном (из `daemon.json`).
