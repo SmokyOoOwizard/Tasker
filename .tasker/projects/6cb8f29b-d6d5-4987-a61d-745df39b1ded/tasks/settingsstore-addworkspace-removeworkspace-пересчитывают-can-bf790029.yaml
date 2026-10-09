@@ -1,0 +1,11 @@
+formatVersion: 9
+id: bf790029-9efe-418e-8802-e6c42e692f55
+title: SettingsStore.AddWorkspace/RemoveWorkspace пересчитывают CanonicalPath всех записей на каждом вызове
+description: 'Найдено при переносе на Rust (TSK-128). SettingsStore.AddWorkspace и RemoveWorkspace сравнивают области через x.Location.Id, а WorkspaceEntry.Location каждый раз строит WorkspaceLocation заново: CanonicalPath.Of перечисляет каталог (EnumerateFileSystemInfos) на каждом компоненте пути каждой записи. На macOS, где во временном каталоге ~50 тыс. записей, 20 последовательных AddWorkspace заняли ~12 с в Rust-порте с тем же алгоритмом; у .NET тот же порядок затрат. Варианты: кэшировать Location в WorkspaceEntry или сравнивать канонический путь без повторного раскрытия. Поведение (детерминизм Id) менять нельзя; чинить в обеих реализациях, Rust-порт — rust/crates/tasker-core/src/settings/store.rs.'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T13:15:29.9674740+00:00
+updatedAt: 2026-10-09T13:15:29.9674740+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 146
