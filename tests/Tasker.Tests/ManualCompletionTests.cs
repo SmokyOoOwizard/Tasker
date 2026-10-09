@@ -5,6 +5,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Автодополнение справочника <c>manual</c>/<c>howto</c> (темы, <c>--lang</c>) и сторож: у аргументов команд есть источник значений.</summary>
+[InProcess]
 public class ManualCompletionTests
 {
     // Тестовый каталог: ru и en переведены частично, de — язык, которого нет в сборке; тема only-en есть только на en.

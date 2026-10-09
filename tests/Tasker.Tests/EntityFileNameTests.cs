@@ -17,6 +17,7 @@ namespace Tasker.Tests;
 /// Имена файлов остальных сущностей проекта (серии, типы задач, статусы, наборы, доски, типы связей, поля, перечисления):
 /// название + короткий id, как у задач (TSK-77). Раскладка, чтение обоих вариантов имён, переименование при смене названия, миграция.
 /// </summary>
+[InProcess]
 public class EntityFileNameTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));

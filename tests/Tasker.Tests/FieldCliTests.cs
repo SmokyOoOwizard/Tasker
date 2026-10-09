@@ -5,6 +5,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Консоль для полей, перечислений и значений у задач: оба хранилища.</summary>
+[InProcess]
 public class FieldCliTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

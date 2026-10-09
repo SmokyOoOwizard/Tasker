@@ -3,6 +3,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary><c>--all</c> в командах <c>list</c>: всё без ограничения по количеству, а не страница по 50.</summary>
+[InProcess]
 public class ListAllTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
