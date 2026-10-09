@@ -11,7 +11,8 @@ tasker-core = { path = "../tasker-core" }
 saphyr-parser.workspace = true
 regex.workspace = true
 uuid.workspace = true
+unicode-normalization.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 serde.workspace = true
-serde_json.workspace = true
