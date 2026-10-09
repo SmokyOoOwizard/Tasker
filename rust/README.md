@@ -7,7 +7,7 @@ Cargo workspace переноса консоли и демона MCP на Rust п
 |---|---|
 | `crates/tasker-core` | домен: сущности, валидация, `ShortId` и ссылки `PREFIX-N`, версии (хэш файла), конвенции JSON, канонизация значений полей, временные метки, атомарная запись и блокировки файлов, блокировки на время правки (`locks`), глобальные настройки (`settings.json`), диагностика `TASKER_*` |
 | `crates/tasker-files` | файлы `.tasker`: разбор YAML через saphyr в модели `tasker-core` (неизвестные ключи игнорируются), собственный эмиттер байт в байт как YamlDotNet, `formatVersion` с апгрейдом старых версий в памяти, модели файлов всех видов сущностей; имена файлов `<slug>-<id8>.yaml` (`names`), раскладка `.tasker` и `.gitignore` (`layout`), запись под блокировками `write.lock` → очередь на файл (`write`, крючок `IndexRefresh` для индекса TSK-131), блокировки правки `.cache/edit-locks/*.json` (`edit_locks`), миграция файлов (`migration`); индекс области `.cache/index-rs.db` на SQLite (`index`, rusqlite bundled, TSK-131): своя схема `user_version = 1` и блокировка `index-rs.lock`, Sync по `(size, mtime)` и `Refresh(paths)` одной транзакцией, ошибки чтения как проблемы области, пересбор при повреждении; списки с пагинацией, фильтры и сортировки задач как `WorkspaceIndex.Sort` (.NET), серии, связи, поля — проверяется на снапшотах `task-list`/`*-list-json`/`sync` |
-| `crates/tasker-cli` | бинарник `tasker` (clap, синхронный): пока только `migrate [--dry-run] [--check]` с глобальными `-w`, `--json`, `-q` — первая команда, проверяемая на реальной области; вывод, коды выхода (0; 2 у `--check`; 1 при ошибке) и справка команды — как у .NET |
+| `crates/tasker-cli` | бинарник `tasker` (clap, синхронный) и его каркас (TSK-134): декларативное дерево всех 112 команд с их аргументами, параметрами и описаниями (`spec`), по которому строится дерево clap и печатается справка в формате System.CommandLine — разделы, выравнивание колонок, `[default: …]`, `(REQUIRED)`, подсказки значений из текущей области (`help`, `hints`), подсказки опечаток и тексты ошибок разбора (`Required command was not provided.`, `Unrecognized command or argument '…'.`, `Option '…' is required.`); область и выбор проекта (`session`: `-p`, `TASKER_PROJECT`, единственный проект; `--sqlite` — ошибка «используйте .NET-сборку»), вывод (`context`: таблицы с выравниванием по ширине знаков и обрезкой «…», `Found N, shown a-b`, `-q`, компактный `--json`, коды выхода), терминал и ширина (`terminal`: `--truncate`/`--width`/`TASKER_WIDTH`, `COLUMNS`+`LINES` под watch, UTF-8 на Windows), тексты ошибок `Not found:`/`In use:`/`Locked:`/`Modified by someone else:`/`Error:` (`errors`). Реализована пока `migrate`; остальные команды до TSK-135 открывают область и проект, затем отвечают `Error: not implemented in this build` (код 1) |
 | `tests/golden` | эталоны поведения .NET-сборки (TSK-124): область `.tasker`, версии файлов, стиль YAML, вывод консоли, снапшоты MCP — см. `tests/golden/README.md` |
 
 Дальше по плану: сервисы домена (TSK-132), наблюдатель файлов (TSK-133), остальные команды консоли, `tasker-mcpd`.
@@ -25,9 +25,11 @@ cargo fmt                                             # rustfmt.toml: max_width 
 cargo build --release                                 # профиль из Cargo.toml: lto fat, opt-level s, panic abort, strip
 ```
 
-Тесты пишут временные файлы в `target/tmp`, системный временный каталог не трогают. Интеграционный тест `tasker-cli` копирует
-`tests/golden/workspace` в `target/tmp` и сверяет `tasker migrate` с `tests/golden/expected/migrate` (дерево и байты файлов,
-вывод, коды выхода); тест индекса (`tasker-files/tests/index.rs`) строит `index-rs.db` по копии области и сверяет порядок списков,
+Тесты пишут временные файлы в `target/tmp`, системный временный каталог не трогают. Интеграционные тесты `tasker-cli` копируют
+`tests/golden/workspace` в `target/tmp` и сверяют `tasker migrate` с `tests/golden/expected/migrate` (дерево и байты файлов,
+вывод, коды выхода), ошибки области и разбора — с `expected/cli/*error-*`, а справку всех 112 команд — байт в байт с
+`expected/cli/*help-*` (`tests/help.rs`; бинарник запускается из корня репозитория, как при снятии эталонов: подсказки
+`<R&D|Баг|Фича>`, `<Tasker>` берутся из его области `.tasker`); тест индекса (`tasker-files/tests/index.rs`) строит `index-rs.db` по копии области и сверяет порядок списков,
 фильтры и сортировки `task list` с `expected/cli/*task-list*` (параметры из `.args`), списки сущностей — с `*-list-json`,
 проблемы области — с `001-sync`.
 
@@ -41,4 +43,6 @@ cargo run -p tasker-cli -- migrate -w <папка>                     # пер�
 cargo run -p tasker-cli -- migrate --help
 ```
 
-Область SQLite (`--sqlite`) этой сборкой пока не открывается.
+`tasker --help` и `tasker <команда> --help` печатают справку как .NET-консоль; команды, ещё не перенесённые, отвечают
+`Error: not implemented in this build`. Область SQLite (`--sqlite`) этой сборкой не открывается: `Error: --sqlite is not supported
+by this build: use the .NET build of Tasker`.
