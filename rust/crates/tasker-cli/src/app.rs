@@ -2,7 +2,7 @@
 //! справка и `--version`, проверки и тексты ошибок разбора как у System.CommandLine, открытие области и выполнение команды с
 //! переводом ошибок в сообщение и код 1.
 use crate::context::Context;
-use crate::errors::{CliError, ERROR_EXIT_CODE, Result};
+use crate::errors::{ERROR_EXIT_CODE, Result};
 use crate::hints::Hints;
 use crate::session::Session;
 use crate::spec::{self, Arity, CommandSpec, GLOBAL_OPTIONS, OptKind, ValueKind};
@@ -50,13 +50,18 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
     // Переменная TASKER_PROJCT вместо TASKER_PROJECT иначе молча не подействует. В stderr: stdout (в том числе --json) не портим.
     // Дополнение по Tab (директива [suggest]) молчит всегда: на каждое нажатие клавиши предупреждение было бы лишним шумом.
     let completing = args.first().is_some_and(|a| a.starts_with("[suggest"));
+    if completing {
+        return crate::suggest::run(args, out);
+    }
     if !completing {
         for warning in tasker_core::config::check_process_environment() {
             let _ = writeln!(err, "Warning: {warning}");
         }
     }
 
+    crate::perf::mark("env-check");
     let root = spec::root();
+    crate::perf::mark("build-root");
     let terminal = Terminal::current();
     let help_width = if terminal.is_output && terminal.columns > 0 {
         terminal.columns
@@ -69,7 +74,8 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
         .any(|a| matches!(a.as_str(), "-h" | "-?" | "--help"));
 
     let parsed = spec::clap_root(&root).try_get_matches_from(std::iter::once("tasker".to_string()).chain(args.iter().cloned()));
-    match parsed {
+    crate::perf::mark("parse");
+    let code = match parsed {
         Ok(matches) => invoke(&root, &matches, args, out, err, &terminal, help_width),
         Err(error) => {
             let (path, rest) = walk(&root, args);
@@ -80,7 +86,9 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
             }
             parse_error(&error, &path, &rest, args, out, err, help_width)
         }
-    }
+    };
+    crate::perf::dump(err);
+    code
 }
 
 impl Hints {
@@ -154,8 +162,10 @@ fn invoke(
     dispatch(&names, leaf, &globals, terminal, out, err)
 }
 
-/// Выполнение команды по её пути. Команды без реализации в этой сборке — ошибка с кодом 1 (их заполняет TSK-135).
+/// Выполнение команды по её пути (`CliApp.BuildRoot`: группа → модуль команд).
 fn dispatch(names: &[&str], leaf: &ArgMatches, globals: &Globals, terminal: &Terminal, out: &mut dyn Write, err: &mut dyn Write) -> i32 {
+    use crate::commands;
+    let sub = names.get(1).copied().unwrap_or_default();
     match names {
         ["migrate"] => {
             let (dry_run, check) = (leaf.get_flag("dry-run"), leaf.get_flag("check"));
@@ -168,39 +178,27 @@ fn dispatch(names: &[&str], leaf: &ArgMatches, globals: &Globals, terminal: &Ter
         ["sync"] => plain(globals, terminal, out, err, |ctx| {
             sync::run(ctx, globals.workspace.as_deref(), globals.sqlite.as_deref())
         }),
-        // Остальные команды дерева — TSK-135. До реализации они ведут себя как .NET до самого действия: открывают область и
-        // выбирают проект (ошибки `Folder not found:`, `Project is required:`, `No project '…'`), затем сообщают, что их нет.
-        [group, ..] => match Scope::of(group) {
-            Scope::Project => with_workspace(globals, terminal, out, err, |ctx| {
-                ctx.project_id()?;
-                Err(not_implemented())
-            }),
-            Scope::Workspace => with_workspace(globals, terminal, out, err, |_| Err(not_implemented())),
-            Scope::Plain => plain(globals, terminal, out, err, |_| Err(not_implemented())),
-        },
-        [] => ERROR_EXIT_CODE,
-    }
-}
-
-fn not_implemented() -> CliError {
-    CliError::new("not implemented in this build")
-}
-
-/// Что нужно команде верхнего уровня до действия: проект (`ctx.ProjectId()` в .NET), только область (`Kit.Leaf`) или ничего
-/// (`Kit.Plain`).
-enum Scope {
-    Project,
-    Workspace,
-    Plain,
-}
-
-impl Scope {
-    fn of(group: &str) -> Scope {
-        match group {
-            "status" | "status-set" | "task-type" | "link-type" | "field" | "enum" | "board" | "task" | "series" => Scope::Project,
-            "project" | "user" | "agent" | "lock" | "cleanup" | "migrate" => Scope::Workspace,
-            _ => Scope::Plain,
-        }
+        ["project", _] => with_workspace(globals, terminal, out, err, |ctx| commands::project::run(ctx, sub, leaf)),
+        ["status", _] => with_workspace(globals, terminal, out, err, |ctx| commands::status::run_status(ctx, sub, leaf)),
+        ["status-set", _] => with_workspace(globals, terminal, out, err, |ctx| commands::status::run_status_set(ctx, sub, leaf)),
+        ["task-type", _] => with_workspace(globals, terminal, out, err, |ctx| commands::task_type::run(ctx, sub, leaf)),
+        ["link-type", _] => with_workspace(globals, terminal, out, err, |ctx| commands::link_type::run(ctx, sub, leaf)),
+        ["field", _] => with_workspace(globals, terminal, out, err, |ctx| commands::field::run_field(ctx, sub, leaf)),
+        ["enum", _] => with_workspace(globals, terminal, out, err, |ctx| commands::field::run_enum(ctx, sub, leaf)),
+        ["board", _] => with_workspace(globals, terminal, out, err, |ctx| commands::board::run(ctx, sub, leaf)),
+        ["task", _] => with_workspace(globals, terminal, out, err, |ctx| commands::task::run(ctx, sub, leaf)),
+        ["series", _] => with_workspace(globals, terminal, out, err, |ctx| commands::series::run(ctx, sub, leaf)),
+        ["user", _] => with_workspace(globals, terminal, out, err, |ctx| commands::user::run(ctx, "user", sub, leaf)),
+        ["agent", _] => with_workspace(globals, terminal, out, err, |ctx| commands::user::run(ctx, "agent", sub, leaf)),
+        ["lock", _] => with_workspace(globals, terminal, out, err, |ctx| commands::lock::run(ctx, sub, leaf)),
+        ["whoami"] => plain(globals, terminal, out, err, |ctx| commands::lock::whoami(ctx, leaf)),
+        ["hooks", _] => plain(globals, terminal, out, err, |ctx| {
+            commands::hooks::run(ctx, sub, leaf, globals.workspace.as_deref())
+        }),
+        ["manual"] => plain(globals, terminal, out, err, |ctx| commands::manual::run(ctx, leaf)),
+        ["completion"] => plain(globals, terminal, out, err, |ctx| commands::completion::run(ctx, leaf)),
+        ["mcp", ..] => plain(globals, terminal, out, err, |ctx| commands::mcp::run(ctx, &names[1..], leaf)),
+        _ => ERROR_EXIT_CODE,
     }
 }
 
@@ -214,7 +212,9 @@ fn with_workspace(
 ) -> i32 {
     let project = globals.project.clone().or_else(|| std::env::var("TASKER_PROJECT").ok());
     let run = |out: &mut dyn Write, err: &mut dyn Write| -> Result<i32> {
+        crate::perf::mark("invoke");
         let session = Session::open(globals.workspace.as_deref(), globals.sqlite.as_deref(), false)?;
+        crate::perf::mark("session-open");
         let max_width = terminal.limit(globals.truncate, globals.no_truncate, globals.width.as_deref())?;
         let mut ctx = Context::new(out, err, Some(session), project);
         ctx.json = globals.json;
@@ -222,6 +222,7 @@ fn with_workspace(
         ctx.max_width = max_width;
         ctx.is_interactive = terminal::stdin_is_terminal();
         action(&mut ctx)?;
+        crate::perf::mark("action");
         Ok(ctx.exit_code)
     };
     guard(run(out, err), err)

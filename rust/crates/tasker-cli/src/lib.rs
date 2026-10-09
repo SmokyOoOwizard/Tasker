@@ -7,14 +7,20 @@
 //! Команды дерева — по модулю на группу (TSK-135): поведение .NET-консоли (`Tasker.Cli/Commands/*.cs`) воспроизводится буквально.
 pub mod app;
 pub mod cleanup;
+pub mod commands;
 pub mod context;
+pub mod daemon;
+pub mod entities;
 pub mod errors;
 pub mod help;
 pub mod hints;
 pub mod json;
+pub mod kit;
 pub mod migrate;
+pub mod perf;
 pub mod session;
 pub mod spec;
+pub mod suggest;
 pub mod sync;
 pub mod table;
 pub mod terminal;
