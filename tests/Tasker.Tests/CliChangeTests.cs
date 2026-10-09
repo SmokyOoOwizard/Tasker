@@ -3,6 +3,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>get, update и delete команды tasker — на папке с файлами и на SQLite.</summary>
+[InProcess]
 public class CliChangeTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

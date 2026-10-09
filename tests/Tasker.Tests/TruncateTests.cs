@@ -5,6 +5,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Обрезка строк списков по ширине окна (<c>--truncate</c>, <c>--width</c>, <c>TASKER_WIDTH</c>): <see cref="Table.Truncate"/>, <see cref="Terminal.Limit"/> и команды.</summary>
+[InProcess]
 public class TruncateTests
 {
     // ---- Table: один общий приём ----

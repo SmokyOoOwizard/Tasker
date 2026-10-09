@@ -48,16 +48,15 @@ public class CliHelpTests
     [Theory, MemberData(nameof(CommandPaths))]
     public async Task Dash_h_prints_help_of_every_command(string path)
     {
-        var output = new StringWriter();
-        var error = new StringWriter();
         var args = path.Split(' ').Skip(1).Append("-h").ToArray();
 
-        var code = await CliApp.Run(args, output, error);
+        // Отдельным процессом: список команд и их описания берутся из сборки, а справку печатает проверяемый tasker.
+        var result = await TaskerProcess.Run(args);
 
-        Assert.Equal(0, code);
-        Assert.Contains("Usage:", output.ToString());
-        Assert.Empty(error.ToString());
+        Assert.Equal(0, result.Code);
+        Assert.Contains("Usage:", result.Out);
+        Assert.Empty(result.Err);
         var command = AllCommands(Root()).Single(x => PathOf(x) == path);
-        Assert.Contains(command.Description!, output.ToString());
+        Assert.Contains(command.Description!, result.Out);
     }
 }

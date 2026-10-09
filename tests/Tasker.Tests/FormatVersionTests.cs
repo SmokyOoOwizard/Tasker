@@ -110,6 +110,7 @@ public class FormatVersionTests
         }
     }
 
+    [InProcess]
     [Fact]
     public async Task Every_kind_of_file_is_written_with_the_format_version_as_the_first_line()
     {
@@ -125,6 +126,7 @@ public class FormatVersionTests
             Assert.Equal($"formatVersion: {FormatVersions.Current}", File.ReadLines(file).First());
     }
 
+    [InProcess]
     [Fact]
     public async Task Old_files_without_a_version_are_read_everywhere_and_reading_does_not_change_them()
     {
@@ -144,6 +146,7 @@ public class FormatVersionTests
         Assert.Equal(before, Snapshot(ws)); // чтение файлы не трогает
     }
 
+    [InProcess]
     [Fact]
     public async Task Writing_an_old_file_stamps_that_file_only_and_keeps_the_rest_of_its_text()
     {
@@ -165,6 +168,7 @@ public class FormatVersionTests
         Assert.All(after.Where(x => x.Key != changed[0]), x => Assert.DoesNotContain($"formatVersion: {FormatVersions.Current}", x.Value));
     }
 
+    [InProcess]
     [Fact]
     public async Task A_description_line_that_looks_like_the_version_does_not_confuse_anything()
     {
@@ -181,6 +185,7 @@ public class FormatVersionTests
 
     // ---- файлы более нового формата ----
 
+    [InProcess]
     [Fact]
     public async Task A_newer_file_is_not_listed_is_reported_as_a_problem_and_cannot_be_read_or_written()
     {
@@ -225,7 +230,7 @@ public class FormatVersionTests
     public async Task Migrate_check_dry_run_and_the_real_run_work_step_by_step()
     {
         using var home = new IsolatedHome();
-        using var ws = TestWorkspace.Create("files");
+        using var ws = TestWorkspace.Create("files", asProcess: true);
         await Seed(ws);
         var files = YamlFiles(ws).Length;
         var current = Snapshot(ws);
@@ -266,7 +271,7 @@ public class FormatVersionTests
     public async Task Migrate_json_describes_the_files_and_newer_or_broken_files_are_left_alone()
     {
         using var home = new IsolatedHome();
-        using var ws = TestWorkspace.Create("files");
+        using var ws = TestWorkspace.Create("files", asProcess: true);
         await Seed(ws);
         MakeLegacy(ws);
         var files = YamlFiles(ws);
@@ -300,7 +305,7 @@ public class FormatVersionTests
     public async Task Migrate_does_nothing_for_a_database_workspace()
     {
         using var home = new IsolatedHome();
-        using var ws = TestWorkspace.Create("sqlite");
+        using var ws = TestWorkspace.Create("sqlite", asProcess: true);
         await Ok(ws.Run("project", "create", "Demo"));
 
         var result = await Ok(ws.Run("migrate"));
@@ -314,7 +319,7 @@ public class FormatVersionTests
     public async Task Migrate_on_an_empty_folder_has_nothing_to_do()
     {
         using var home = new IsolatedHome();
-        using var ws = TestWorkspace.Create("files");
+        using var ws = TestWorkspace.Create("files", asProcess: true);
 
         var result = await Ok(ws.Run("migrate"));
 
