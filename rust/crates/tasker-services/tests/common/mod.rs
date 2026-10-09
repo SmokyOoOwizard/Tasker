@@ -76,6 +76,12 @@ impl Env {
         }
     }
 
+    /// Сколько массовые правки ждут чужую блокировку.
+    pub fn with_cascade_timeout(mut self, timeout: std::time::Duration) -> Env {
+        self.ws = self.ws.clone().with_cascade_timeout(timeout);
+        self
+    }
+
     /// Та же область от имени другого держателя блокировок.
     pub fn as_editor(&self, key: &str, name: &str) -> Workspace {
         self.ws.clone().with_editor(tasker_core::locks::EditHolder::new(key, name))
