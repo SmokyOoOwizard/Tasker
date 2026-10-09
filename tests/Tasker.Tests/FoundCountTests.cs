@@ -4,6 +4,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>TSK-107: каждый текстовый список начинается строкой с количеством найденного (в stdout, до строк данных).</summary>
+[InProcess]
 public class FoundCountTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

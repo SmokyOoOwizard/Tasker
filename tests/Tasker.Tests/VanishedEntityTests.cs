@@ -11,6 +11,7 @@ namespace Tasker.Tests;
 /// TSK-99: тип задач или набор статусов исчезли посреди операции (проект удаляют параллельно с созданием задач): вместо голого
 /// <see cref="InvalidOperationException"/> — понятная ошибка «не найдено» (консоль: <c>Not found: …</c>).
 /// </summary>
+[InProcess]
 public class VanishedEntityTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

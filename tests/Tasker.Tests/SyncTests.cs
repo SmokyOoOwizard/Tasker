@@ -7,14 +7,14 @@ using Xunit;
 
 namespace Tasker.Tests;
 
-/// <summary>Команда <c>tasker sync</c> и <c>/daemon/sync</c>.</summary>
+/// <summary>Команда <c>tasker sync</c> и <c>/daemon/sync</c>. Консоль запускается отдельным процессом (годится для <c>TASKER_BIN</c>).</summary>
 public class SyncTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();
 
     public void Dispose() => _daemon.Dispose();
 
-    private static Task<CliResult> Cli(params string[] args) => TestWorkspace.Invoke(args);
+    private static Task<CliResult> Cli(params string[] args) => TaskerProcess.Run(args);
 
     private static async Task<string> BrokenFile(string workspace)
     {
@@ -87,7 +87,7 @@ public class SyncTests : IDisposable
     [Fact]
     public async Task Sqlite_workspace_has_nothing_to_sync()
     {
-        using var ws = TestWorkspace.Create("sqlite");
+        using var ws = TestWorkspace.Create("sqlite", asProcess: true);
         await ws.Run("project", "create", "P");
 
         var loud = await ws.Run("sync");

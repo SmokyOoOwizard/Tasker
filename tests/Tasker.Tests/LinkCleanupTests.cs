@@ -6,6 +6,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Чистка недействительных связей между задачами (<c>cleanup</c>) и их сводка в сверке: сервисы Core на хранилищах в памяти.</summary>
+[InProcess]
 public class LinkCleanupCoreTests
 {
     private static async Task<LinkType> Type(SeriesEnv env, string name) => (await env.LinkTypeSvc.Find(env.Project, name))!;

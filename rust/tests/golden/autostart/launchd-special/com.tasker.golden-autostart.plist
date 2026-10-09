@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.tasker.golden-autostart</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string><DOTNET></string>
+        <string><BIN>/tasker-mcpd.dll</string>
+        <string>--detached</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>TASKER_HOME</key><string><ROOT>/tasker home/a&amp;b &lt;c&gt;</string>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ProcessType</key><string>Background</string>
+    <key>StandardOutPath</key><string><ROOT>/tasker home/a&amp;b &lt;c&gt;/logs/mcp-launchd.log</string>
+    <key>StandardErrorPath</key><string><ROOT>/tasker home/a&amp;b &lt;c&gt;/logs/mcp-launchd.log</string>
+</dict>
+</plist>

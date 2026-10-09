@@ -12,6 +12,7 @@ namespace Tasker.Tests;
 /// разбор строки PowerShell, блок в <c>$PROFILE</c>) и скрипт автодополнения PowerShell (golden-проверка, а при наличии pwsh или образа
 /// Docker с pwsh — настоящий прогон). Что требует самой Windows, перечислено в разделе «ПРОВЕРИТЬ НА WINDOWS» задачи TSK-119.
 /// </summary>
+[InProcess]
 public class WindowsConsoleTests
 {
     // ---- пути и имя пользователя ----
