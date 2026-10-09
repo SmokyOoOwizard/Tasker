@@ -497,3 +497,6 @@ tasker.db
 tasker.db-shm
 tasker.db-wal
 *.sqlite
+
+# Rust
+rust/**/target/
