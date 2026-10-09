@@ -212,6 +212,7 @@ public class AutostartTests : IDisposable
         return new CliResult(code, output.ToString(), error.ToString());
     }
 
+    [InProcess]
     [Fact]
     public async Task Autostart_commands_enable_report_and_disable()
     {
@@ -236,6 +237,7 @@ public class AutostartTests : IDisposable
         Assert.Equal("off", (await Cli("mcp", "autostart", "status")).Out.Trim());
     }
 
+    [InProcess]
     [Fact]
     public async Task Autostart_on_an_unsupported_system_is_a_clear_error()
     {

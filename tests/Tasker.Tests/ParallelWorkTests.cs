@@ -13,6 +13,7 @@ namespace Tasker.Tests;
 /// и точечные проверки найденных стендом проблем. Большой прогон — вручную: <c>dotnet run --project tools/Tasker.Stress</c>
 /// или тот же тест с <c>TASKER_STRESS=1</c> (10 клиентов, все сценарии, оба хранилища).
 /// </summary>
+[InProcess]
 public class ParallelWorkTests
 {
     private static async Task Run(string client, string storage, int clients, int ops, params string[] scenarios)

@@ -10,6 +10,7 @@ namespace Tasker.Tests;
 /// поэтому проверяется не оно, а ОТНОШЕНИЯ внутри одного прогона с запасом в несколько раз: время вызова не должно расти ни с числом
 /// уже выполненных вызовов, ни (сильно) с числом задач. Настоящий стенд с процессами и цифрами — <c>scripts/perf/bench.py</c>.
 /// </summary>
+[InProcess]
 public class PerformanceGuardTests
 {
     private static async Task Ok(Task<CliResult> run)

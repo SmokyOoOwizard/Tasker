@@ -10,6 +10,7 @@ namespace Tasker.Tests;
 /// TSK-109: иерархия в <c>task list</c> — эпик и дочерние задачи с отступом, несколько родителей, фильтры, порядок, страницы верхнего уровня,
 /// <c>--flat</c> и плоский <c>--json</c> с <c>parentIds</c>/<c>childCount</c>. Консоль на обоих хранилищах (папка и SQLite), REST, стандартный тип без миграции.
 /// </summary>
+[InProcess]
 public class TaskHierarchyTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

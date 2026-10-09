@@ -203,6 +203,7 @@ public class TaskListPreviewTests : IDisposable
         await Ok(ws.Run("task", "link", "TSK-1", "blocks", "TSK-2"));
     }
 
+    [InProcess]
     [Theory, MemberData(nameof(Storages))]
     public async Task Console_json_lists_are_full_by_default_and_take_description_length(string storage)
     {
@@ -240,6 +241,7 @@ public class TaskListPreviewTests : IDisposable
             (await Ok(ws.Run("task", "list", "--description-length", "3"))).Data.TrimEnd('\n').Split('\n'));
     }
 
+    [InProcess]
     [Theory, MemberData(nameof(Storages))]
     public async Task Console_board_json_takes_description_length(string storage)
     {

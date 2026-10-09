@@ -307,10 +307,15 @@ public class GitHooksTests : IDisposable
 
         var workspace = await RepoWithTwoBranches();
         await Tasker("hooks", "install", "-w", workspace);
+        // Хук вызывает тот tasker, который его поставил (tasker.dll или сам бинарник): подменяем его путь на несуществующий.
+        var (file, arguments) = TaskerProcess.Command();
+        var program = arguments.Length > 0 ? arguments[0] : file;
         foreach (var name in new[] { "post-merge", "post-checkout", "post-rewrite" })
         {
             var path = _repo.Hook(name);
-            await File.WriteAllTextAsync(path, (await File.ReadAllTextAsync(path)).Replace("tasker.dll", "gone.dll"));
+            var text = await File.ReadAllTextAsync(path);
+            Assert.Contains(program, text);
+            await File.WriteAllTextAsync(path, text.Replace(program, program + "-gone"));
         }
 
         var output = _repo.Git("checkout", "main");
