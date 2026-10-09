@@ -13,9 +13,11 @@ path = "src/main.rs"
 [dependencies]
 tasker-core = { path = "../tasker-core" }
 tasker-files = { path = "../tasker-files" }
+tasker-services = { path = "../tasker-services" }
+uuid.workspace = true
 clap.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
-uuid.workspace = true
+tasker-services = { path = "../tasker-services" }
 serde_json.workspace = true

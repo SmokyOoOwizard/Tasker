@@ -1,8 +1,9 @@
-//! Консоль `tasker` на Rust (TSK-130, фаза 1 плана `docs/rust-migration-plan.md`): пока только команда `migrate` — первая, которую
-//! проверяют на реальной области. Разбор аргументов — clap (builder API), синхронно, без tokio. Тексты вывода, коды выхода и
-//! справка команды — как у .NET-консоли (`Tasker.Cli`, System.CommandLine): эталоны в `rust/tests/golden/expected`.
+//! Консоль `tasker` на Rust (TSK-130, фаза 1 плана `docs/rust-migration-plan.md`): команды `migrate`, `sync` и `cleanup` — средство
+//! проверки паритета сервисов (TSK-132) на реальной области. Разбор аргументов — clap (builder API), синхронно, без tokio. Тексты
+//! вывода, коды выхода и справка команд — как у .NET-консоли (`Tasker.Cli`, System.CommandLine): эталоны в `rust/tests/golden/expected`.
 //!
 //! Полное дерево команд, справка корня и разбор ошибок System.CommandLine — фаза 3.
+mod commands;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{Map, Value};
 use std::io::Write;
@@ -11,6 +12,8 @@ use tasker_core::settings::{WorkspaceLocation, expand_user_path};
 use tasker_files::layout::TaskerDirectory;
 use tasker_files::migration::{self, MigrationOptions, MigrationReport};
 use tasker_files::write::NoIndex;
+
+pub(crate) use commands::{cleanup, sync};
 
 /// Код выхода `migrate --check`: есть файлы старого или нового формата либо нечитаемые.
 const NEEDS_MIGRATION: i32 = 2;
@@ -61,7 +64,9 @@ Options:
   --width                      Line width for --truncate in characters (minimum 20); 0 or 'auto' - the terminal width, 'off' - never cut. Default: the TASKER_WIDTH variable (off or 0 - never cut), else the terminal
 
 Commands:
+  cleanup  Removes references to missing series and links to missing tasks or link types after a git merge (with --resolve-conflicts also renumbers duplicate numbers); link cycles are only reported, remove one link with 'task unlink'
   migrate  Brings the files of the workspace to the current file format version (formatVersion) and names the files of project entities after their names (titles of tasks)
+  sync     Brings the cache of a workspace up to date with its files (after git pull, checkout, merge)
 
 ";
 
@@ -92,14 +97,28 @@ fn command() -> Command {
                 .arg(Arg::new("dry-run").long("dry-run").action(ArgAction::SetTrue))
                 .arg(Arg::new("check").long("check").action(ArgAction::SetTrue)),
         )
+        .subcommand(Command::new("sync").about(sync::DESCRIPTION))
+        .subcommand(
+            Command::new("cleanup")
+                .about(cleanup::DESCRIPTION)
+                .arg(Arg::new("resolve-conflicts").long("resolve-conflicts").action(ArgAction::SetTrue))
+                .arg(Arg::new("dry-run").long("dry-run").action(ArgAction::SetTrue))
+                .arg(Arg::new("check").long("check").action(ArgAction::SetTrue)),
+        )
 }
 
 /// Ошибка пользователя команды (`CliException`): сообщение выводится как есть, без стека, код 1.
-struct CliError(String);
+pub(crate) struct CliError(pub(crate) String);
 
 impl From<std::io::Error> for CliError {
     fn from(e: std::io::Error) -> Self {
         CliError(e.to_string())
+    }
+}
+
+impl From<tasker_services::Error> for CliError {
+    fn from(e: tasker_services::Error) -> Self {
+        CliError(e.message())
     }
 }
 
@@ -136,6 +155,20 @@ fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
             }
             migrate(&matches, sub, out, err)
         }
+        Some(("sync", sub)) => {
+            if sub.get_flag("help") {
+                let _ = out.write_all(sync::HELP.as_bytes());
+                return 0;
+            }
+            sync::run(&matches, out)
+        }
+        Some(("cleanup", sub)) => {
+            if sub.get_flag("help") {
+                let _ = out.write_all(cleanup::HELP.as_bytes());
+                return 0;
+            }
+            cleanup::run(&matches, sub, out, err)
+        }
         _ => {
             let _ = out.write_all(ROOT_HELP.as_bytes());
             return if matches.get_flag("help") || args.is_empty() { 0 } else { 1 };
@@ -151,8 +184,8 @@ fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
     }
 }
 
-/// Рабочая область из параметров (`Session.Locate`): папка (по умолчанию текущая). Папка должна существовать.
-fn locate(matches: &ArgMatches) -> Result<TaskerDirectory, CliError> {
+/// Папка рабочей области из параметров (`Session.Locate`): по умолчанию текущая. Папка должна существовать.
+pub(crate) fn locate_folder(matches: &ArgMatches) -> Result<WorkspaceLocation, CliError> {
     if matches.get_one::<String>("sqlite").is_some() {
         if matches.get_one::<String>("workspace").is_some() {
             return Err(CliError("Use either --workspace or --sqlite, not both".into()));
@@ -168,7 +201,12 @@ fn locate(matches: &ArgMatches) -> Result<TaskerDirectory, CliError> {
     if !Path::new(location.path()).is_dir() {
         return Err(CliError(format!("Folder not found: {}", location.path())));
     }
-    Ok(TaskerDirectory::new(location.path()))
+    Ok(location)
+}
+
+/// Рабочая область из параметров: каталог `.tasker` существующей папки.
+fn locate(matches: &ArgMatches) -> Result<TaskerDirectory, CliError> {
+    Ok(TaskerDirectory::new(locate_folder(matches)?.path()))
 }
 
 /// `tasker migrate [--dry-run] [--check]` (`MigrateCommands` в .NET).
