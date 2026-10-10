@@ -482,7 +482,7 @@ mod tests {
             (code, err.as_str()),
             (
                 1,
-                "Argument 'fish' not recognized. Must be one of:\n\t'bash'\n\t'powershell'\n\t'pwsh'\n\t'zsh'\n\n"
+                "Argument 'fish' not recognized. Must be one of:\n\t'zsh'\n\t'bash'\n\t'pwsh'\n\t'powershell'\n\n"
             )
         );
 

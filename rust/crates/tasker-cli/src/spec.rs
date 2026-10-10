@@ -1144,7 +1144,8 @@ fn manual() -> CommandSpec {
 }
 
 /// Оболочки `completion` (`Shells.AcceptedNames`).
-pub const SHELLS: &[&str] = &["bash", "powershell", "pwsh", "zsh"];
+/// Порядок `Shells.AcceptedNames`: так их перечисляет ошибка «not recognized» (справка сортирует сама).
+pub const SHELLS: &[&str] = &["zsh", "bash", "pwsh", "powershell"];
 
 fn completion() -> CommandSpec {
     CommandSpec::new(

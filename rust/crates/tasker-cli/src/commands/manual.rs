@@ -145,7 +145,12 @@ pub struct ManualCatalog {
 
 impl ManualCatalog {
     pub fn embedded() -> ManualCatalog {
-        let mut files: Vec<&(&str, &str, &str)> = PAGES.iter().collect();
+        Self::from_pages(PAGES)
+    }
+
+    /// Каталог из страниц `(язык, имя файла, markdown)`; тесты подставляют свой.
+    pub fn from_pages(pages: &[(&'static str, &'static str, &'static str)]) -> ManualCatalog {
+        let mut files: Vec<&(&str, &str, &str)> = pages.iter().collect();
         files.sort_by(|a, b| a.0.cmp(b.0).then_with(|| a.1.cmp(b.1)));
         let mut pages: Vec<(String, Vec<ManualPage>)> = Vec::new();
         for (language, file_name, markdown) in files {
@@ -401,5 +406,23 @@ mod tests {
         assert_eq!(catalog.find(None, "tasks").len(), 1);
         assert!(!catalog.resolve(Some("en")).found);
         assert_eq!(catalog.resolve(Some("RU-ru")).language, "ru");
+    }
+
+    /// `ManualCompletionTests`: ru и en переведены частично, de — языка нет в сборке; тема only-en есть только на en.
+    #[test]
+    fn languages_and_topics_follow_the_catalog_and_the_typed_language() {
+        let catalog = ManualCatalog::from_pages(&[
+            ("ru", "01-first-project.md", "# Первый проект\n\nО.\n"),
+            ("ru", "02-tasks.md", "# Задачи\n\nО.\n"),
+            ("en", "01-first-project.md", "# First project\n\nAbout.\n"),
+            ("en", "03-only-en.md", "# Only English\n\nAbout.\n"),
+            ("de", "02-tasks.md", "# Aufgaben\n\nUeber.\n"),
+        ]);
+        assert_eq!(catalog.languages(), ["de", "en", "ru"]);
+        let ids = |lang: Option<&str>| catalog.topics(lang).into_iter().map(|p| p.id).collect::<Vec<_>>();
+        // Набор тем задаёт язык по умолчанию (ru), темы только на других языках идут следом — на любом выбранном языке.
+        assert_eq!(ids(None), ["first-project", "tasks", "only-en"]);
+        assert_eq!(ids(Some("de")), ["first-project", "tasks", "only-en"]);
+        assert_eq!(ids(Some("en")), ["first-project", "tasks", "only-en"]);
     }
 }

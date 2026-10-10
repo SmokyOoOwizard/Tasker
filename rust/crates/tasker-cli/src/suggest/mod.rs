@@ -601,6 +601,23 @@ fn names<T: IndexEntity>(lookup: &Lookup<'_, '_>, name: impl Fn(&T) -> String) -
 
 fn try_values(lookup: &mut Lookup<'_, '_>, source: Source) -> Option<Vec<String>> {
     let word = lookup.word.clone();
+    // Как `ValueSource` в .NET: источнику проекта сначала нужен проект (`InProject`), источнику области — открытая область
+    // (`NeedsWorkspace`); нет их — пусто, даже если ответ из набранного слова был бы известен.
+    match source {
+        Source::None
+        | Source::FieldTypes
+        | Source::SeveralChoices
+        | Source::ManualTopics
+        | Source::ManualLanguages
+        | Source::McpWorkspaces
+        | Source::EntityKinds => {}
+        Source::Projects | Source::Users | Source::Agents | Source::LockedEntity => {
+            lookup.session()?;
+        }
+        _ => {
+            lookup.project()?;
+        }
+    }
     Some(match source {
         Source::None => return None,
         Source::FieldTypes => vec![
