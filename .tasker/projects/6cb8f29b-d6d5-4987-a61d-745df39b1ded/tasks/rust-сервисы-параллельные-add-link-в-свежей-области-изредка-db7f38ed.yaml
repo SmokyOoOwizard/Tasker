@@ -1,11 +1,11 @@
 formatVersion: 9
 id: db7f38ed-6331-467f-bc5f-289fa2468085
 title: 'Rust-сервисы: параллельные add link в свежей области изредка дают «link type not found» для типа по умолчанию'
-description: 'Найдено в TSK-141 (cargo nextest на macos-latest в GitHub Actions): tasker-services/tests/links.rs concurrent_links_from_one_task_without_a_version_are_all_kept падает с Validation("TypeId: link type not found in the project: <id Duplicate>") — шесть потоков одновременно добавляют связь типа Duplicate (тип по умолчанию с детерминированным id) от одной задачи. Воспроизводится локально под нагрузкой: 120 запусков теста по 12 параллельно — 2–5 падений, и с кодом индекса из main (до TSK-141), т. е. не связано с правкой TSK-153. Похоже на гонку чтения типа связи из индекса/файла по умолчанию с одновременной записью задач (пересинхронизация индекса или ленивое создание типов по умолчанию). В CI nextest повторяет упавший тест (retries = 2, профиль ci) и помечает его FLAKY — после исправления повтор можно убрать.'
+description: 'Найдено в TSK-141 (cargo nextest на macos-latest в GitHub Actions): tasker-services/tests/links.rs concurrent_links_from_one_task_without_a_version_are_all_kept падал с Validation("TypeId: link type not found in the project: <id Duplicate>") — шесть потоков одновременно добавляют связь типа Duplicate от одной задачи в проекте без сохранённых типов. Причина: LinkTypeService::ensure_defaults не атомарен — первый запрос записывает шесть типов по умолчанию по одному, второй, увидев уже записанную часть (набор не пуст), добавляет только недостающие иерархические (missing) и не находит Duplicate. Локально под нагрузкой (120 запусков по 12 параллельно) — 2–5 падений, и с кодом индекса из main. Та же гонка есть в .NET (LinkTypeService.EnsureDefaults) — там не исправлялась. Исправлено в TSK-141: если записывать есть что, ensure_defaults перечитывает набор и записывает в секции записи проекта (Workspace::exclusive, write.lock); обычный путь (всё уже записано) не изменился. После правки: 240 запусков по 12 параллельно — 0 падений.'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-10T20:16:29.0976720+00:00
-updatedAt: 2026-10-10T20:16:29.0976720+00:00
+updatedAt: 2026-10-10T20:23:14.2592670+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 157

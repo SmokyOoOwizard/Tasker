@@ -415,18 +415,36 @@ mod tests {
 
     #[test]
     fn continuous_changes_are_flushed_at_max_delay() {
-        let events = run(options(), |tx| {
-            // Правки каждые 40 мс дольше потолка (500 мс): без потолка окно не закрылось бы.
+        // Окно тишины 300 мс, потолок 500 мс, правки каждые 40 мс: без потолка окно не закрылось бы. Паузы между правками на
+        // загруженной машине бывают и длиннее окна (поток просто не получил процессор) — тогда пачка законно закрывается раньше
+        // потолка; нижняя граница проверяется, только если таких пауз до первой пачки не было.
+        let options = WatchOptions {
+            quiet: Duration::from_millis(300),
+            ..options()
+        };
+        let started = Instant::now();
+        let sent = std::sync::Mutex::new(Vec::new());
+        let events = run(options, |tx| {
             for i in 0..30 {
                 tx.send(Message::Changed(vec![format!("users/{i}.yaml")])).unwrap();
+                sent.lock().unwrap().push(started.elapsed());
                 std::thread::sleep(Duration::from_millis(40));
             }
             std::thread::sleep(Duration::from_millis(400));
         });
         assert!(events.len() >= 2, "{events:?}");
-        // Первая пачка — не раньше потолка (окно продлевалось) и не намного позже него.
-        assert!(events[0].1 >= Duration::from_millis(500), "{events:?}");
-        assert!(events[0].1 < Duration::from_millis(1500), "{events:?}");
+        let first = events[0].1;
+        let sent = sent.into_inner().unwrap();
+        let stalled = sent
+            .windows(2)
+            .take_while(|w| w[1] < first)
+            .any(|w| w[1] - w[0] >= Duration::from_millis(300));
+        if !stalled {
+            // Первая пачка — не раньше потолка (окно продлевалось).
+            assert!(first >= Duration::from_millis(500), "{events:?} {sent:?}");
+        }
+        // И не намного позже него (запас на медленную машину).
+        assert!(first < Duration::from_millis(2500), "{events:?}");
         assert!(
             events
                 .iter()
