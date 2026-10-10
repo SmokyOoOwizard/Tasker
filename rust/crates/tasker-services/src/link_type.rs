@@ -4,6 +4,7 @@
 //! показывается и записывается так же, пока в проекте нет иерархического типа и типа с таким названием.
 use crate::Workspace;
 use crate::error::{Error, Result};
+use crate::storage::Storage;
 use crate::usages::Usages;
 use tasker_core::ids::{self, DEFAULT_LINK_TYPES, DefaultLinkType, guid_d, parse_guid};
 use tasker_core::locks::LockedEntity;
@@ -11,8 +12,6 @@ use tasker_core::model::LinkType;
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::validate::{self, eq_ignore_case};
 use tasker_core::versioning;
-use tasker_files::index::IndexQuery;
-use tasker_files::layout::EntityKind;
 use uuid::Uuid;
 
 /// Версия типа по умолчанию, которого ещё нет в хранилище.
@@ -337,10 +336,7 @@ impl<'a> LinkTypeService<'a> {
             link_type_ids: Some(vec![*id]),
             ..TaskFilter::default()
         };
-        let linked = self
-            .ws
-            .index()
-            .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(&filter)))?;
+        let linked = self.ws.count_tasks(project_id, &filter)?;
         if linked > 0 {
             usages.add(format!("links of {linked} task(s)"));
         }

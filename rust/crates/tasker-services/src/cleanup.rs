@@ -6,6 +6,7 @@ use crate::error::Result;
 use crate::health::{self, PrefixConflict};
 use crate::link_cycles::{self, LinkCycle};
 use crate::rewrites;
+use crate::storage::Storage;
 use std::collections::{HashMap, HashSet};
 use tasker_core::ids::guid_d;
 use tasker_core::model::{Series, TaskItem, TaskLink, TaskSeriesNumber};
@@ -90,7 +91,7 @@ impl<'a> CleanupService<'a> {
         if self.ws.count_unreadable::<Series>(project_id)? > 0 {
             return Ok(CleanupReport {
                 changes: vec![],
-                remaining_number_conflicts: self.ws.index().number_conflicts(project_id)?,
+                remaining_number_conflicts: self.ws.number_conflicts(project_id)?,
                 prefix_conflicts,
                 skipped: true,
                 skip_reason: Some(
@@ -108,7 +109,6 @@ impl<'a> CleanupService<'a> {
         // Дубликаты читаем после первого шага. В dry run ссылки ещё на месте, поэтому дубликаты в несуществующих сериях отбрасываем сами.
         let mut conflicts: Vec<NumberConflict> = self
             .ws
-            .index()
             .number_conflicts(project_id)?
             .into_iter()
             .filter(|x| known.contains(&x.series_id))
@@ -138,13 +138,12 @@ impl<'a> CleanupService<'a> {
     fn wait_for_locks(&self, project_id: &Uuid, known: &HashSet<Uuid>, resolve_conflicts: bool) -> Result<()> {
         let mut affected: HashMap<Uuid, TaskItem> = HashMap::new();
         let known_ids: Vec<Uuid> = known.iter().copied().collect();
-        for task in self.ws.index().tasks_with_series_not_in(project_id, &known_ids)? {
+        for task in self.ws.tasks_with_series_not_in(project_id, &known_ids)? {
             affected.insert(task.id, task);
         }
         if resolve_conflicts {
             for conflict in self
                 .ws
-                .index()
                 .number_conflicts(project_id)?
                 .iter()
                 .filter(|x| known.contains(&x.series_id))
@@ -158,7 +157,7 @@ impl<'a> CleanupService<'a> {
         }
         if self.ws.count_unreadable::<TaskItem>(project_id)? + self.ws.link_types().count_unreadable(project_id)? == 0 {
             let types: Vec<Uuid> = self.ws.link_types().get_all(project_id)?.into_iter().map(|x| x.id).collect();
-            for task in self.ws.index().tasks_with_invalid_links(project_id, &types)? {
+            for task in self.ws.tasks_with_invalid_links(project_id, &types)? {
                 affected.insert(task.id, task);
             }
         }
@@ -198,7 +197,7 @@ impl<'a> CleanupService<'a> {
             .map(|x| (x.id, x.name))
             .collect();
         let known: Vec<Uuid> = types.keys().copied().collect();
-        for task in self.ws.index().tasks_with_invalid_links(project_id, &known)? {
+        for task in self.ws.tasks_with_invalid_links(project_id, &known)? {
             let mut invalid: Vec<TaskLink> = Vec::new();
             for link in &task.links {
                 match types.get(&link.type_id) {
@@ -269,7 +268,7 @@ impl<'a> CleanupService<'a> {
         changes: &mut Vec<CleanupChange>,
     ) -> Result<()> {
         let known_ids: Vec<Uuid> = known.iter().copied().collect();
-        for task in self.ws.index().tasks_with_series_not_in(project_id, &known_ids)? {
+        for task in self.ws.tasks_with_series_not_in(project_id, &known_ids)? {
             let invalid: Vec<TaskSeriesNumber> = task
                 .series_numbers
                 .iter()
@@ -331,7 +330,7 @@ impl<'a> CleanupService<'a> {
             for task in members.into_iter().skip(1) {
                 let number = match next.get(&conflict.series_id) {
                     Some(n) => *n,
-                    None => self.ws.index().max_number(project_id, &conflict.series_id)? + 1,
+                    None => self.ws.max_number(project_id, &conflict.series_id)? + 1,
                 };
                 next.insert(conflict.series_id, number + 1);
                 if !dry_run {

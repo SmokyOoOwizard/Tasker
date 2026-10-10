@@ -77,7 +77,7 @@ pub fn run(ctx: &mut Context<'_>, command: &str, leaf: &ArgMatches) -> Result<()
             );
         }
         "show" => {
-            let held = ws.entity_locks().get(kind, &id);
+            let held = ws.entity_locks().get(kind, &id)?;
             let text = match &held {
                 None => format!("{} {} is not locked", kind.name(), guid_d(&id)),
                 Some(held) => format!(

@@ -47,7 +47,7 @@ pub fn unlock_entity(call: &Call) -> Result<Output> {
 
 pub fn get_lock(call: &Call) -> Result<Output> {
     let (_, kind, id, _) = target(call)?;
-    let info = call.ws()?.entity_locks().get(kind, &id);
+    let info = call.ws()?.entity_locks().get(kind, &id)?;
     Ok(Output::Json(json::object(vec![(
         "lock",
         info.as_ref().map(json::lock_info).unwrap_or(Value::Null),

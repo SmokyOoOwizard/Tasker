@@ -4,6 +4,7 @@ use crate::Workspace;
 use crate::column_filters;
 use crate::error::{Error, Result};
 use crate::preview::TaskListItem;
+use crate::storage::Storage;
 use crate::task::UpdateTask;
 use std::collections::{HashMap, HashSet};
 use tasker_core::ids::guid_d;

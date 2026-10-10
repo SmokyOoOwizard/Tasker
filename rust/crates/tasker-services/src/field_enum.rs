@@ -6,6 +6,7 @@ use crate::column_filters;
 use crate::error::{Error, Result};
 use crate::locks::LockTarget;
 use crate::rewrites;
+use crate::storage::Storage;
 use crate::usages::Usages;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -17,8 +18,6 @@ use tasker_core::model::{
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::validate::{self, eq_ignore_case};
 use tasker_core::versioning;
-use tasker_files::index::IndexQuery;
-use tasker_files::layout::EntityKind;
 use uuid::Uuid;
 
 const CASCADE_ATTEMPTS: usize = 3;
@@ -230,10 +229,7 @@ impl<'a> FieldEnumService<'a> {
                 enum_ids: Some(vec![*id]),
                 ..TaskFilter::default()
             };
-            let own = self
-                .ws
-                .index()
-                .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(&filter)))?;
+            let own = self.ws.count_tasks(project_id, &filter)?;
             if own > 0 {
                 usages.add(format!("own fields of {own} task(s)"));
             }
@@ -288,7 +284,7 @@ impl<'a> FieldEnumService<'a> {
             },
         ];
         for filter in &filters {
-            for task in self.ws.index().all::<TaskItem>(&IndexQuery::tasks(project_id, Some(filter)))? {
+            for task in self.ws.tasks_where(project_id, Some(filter))? {
                 if task.fields.iter().any(&uses) {
                     holders.insert(task.id, task);
                 }

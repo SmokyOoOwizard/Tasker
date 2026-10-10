@@ -4,6 +4,7 @@ use crate::Workspace;
 use crate::error::{Error, Result};
 use crate::field_conversion::{FieldChangeChoice, FieldConversion};
 use crate::rewrites;
+use crate::storage::Storage;
 use crate::usages::Usages;
 use std::collections::{HashMap, HashSet};
 use tasker_core::ids::{guid_d, parse_guid};
@@ -12,8 +13,6 @@ use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType, TaskField
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::validate::{self, eq_ignore_case};
 use tasker_core::versioning;
-use tasker_files::index::IndexQuery;
-use tasker_files::layout::EntityKind;
 use uuid::Uuid;
 
 const CASCADE_ATTEMPTS: usize = 3;
@@ -280,8 +279,7 @@ impl<'a> FieldService<'a> {
         };
         let mut holders: Vec<TaskItem> = self
             .ws
-            .index()
-            .all::<TaskItem>(&IndexQuery::tasks(project_id, Some(&filter)))?
+            .tasks_where(project_id, Some(&filter))?
             .into_iter()
             .filter(|x| x.fields.iter().any(|f| holds(&field_id, f)))
             .collect();
@@ -364,11 +362,7 @@ impl<'a> FieldService<'a> {
                 field_ids: Some(vec![*id]),
                 ..TaskFilter::default()
             };
-            usages.add_tasks(
-                self.ws
-                    .index()
-                    .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(&filter)))?,
-            );
+            usages.add_tasks(self.ws.count_tasks(project_id, &filter)?);
             self.add_board_columns(project_id, id, &mut usages)?;
             usages.throw_if_any("deleted")?;
 

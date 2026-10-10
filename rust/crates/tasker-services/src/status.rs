@@ -2,13 +2,12 @@
 use crate::Workspace;
 use crate::error::Result;
 use crate::preview::{self, StatusListItem};
+use crate::storage::Storage;
 use crate::usages::Usages;
 use tasker_core::locks::LockedEntity;
 use tasker_core::model::{Board, Status, StatusSet};
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::{validate, versioning};
-use tasker_files::index::IndexQuery;
-use tasker_files::layout::EntityKind;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,11 +110,7 @@ impl<'a> StatusService<'a> {
             status_ids: Some(vec![*id]),
             ..TaskFilter::default()
         };
-        usages.add_tasks(
-            self.ws
-                .index()
-                .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(&filter)))?,
-        );
+        usages.add_tasks(self.ws.count_tasks(project_id, &filter)?);
         for set in self.ws.get_all::<StatusSet>(project_id)? {
             if set.status_ids.contains(id) {
                 usages.add(format!("status set '{}'", set.name));

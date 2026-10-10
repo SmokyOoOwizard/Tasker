@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tasker_core::Timestamp;
 use tasker_core::model::{Series, Status, StatusSet, TaskItem, TaskSeriesNumber, TaskType};
+pub use tasker_services::Storage;
 use tasker_services::clock::{Clock, FakeClock};
 use tasker_services::project::CreateProject;
 use tasker_services::series::CreateSeries;

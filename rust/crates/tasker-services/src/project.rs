@@ -1,12 +1,11 @@
 //! Проекты (`ProjectService`): доступ открытый (десктоп, консоль — `OpenProjectAccess`), видны все проекты.
 use crate::Workspace;
 use crate::error::Result;
+use crate::storage::Storage;
 use tasker_core::locks::LockedEntity;
 use tasker_core::model::{Board, LinkType, Project, Series, Status, StatusSet, TaskType};
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::{validate, versioning};
-use tasker_files::index::IndexQuery;
-use tasker_files::layout::EntityKind;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,10 +71,7 @@ impl<'a> ProjectService<'a> {
         }
         let one = Page::new(0, 1);
         Ok(Some(ProjectStats {
-            tasks: self
-                .ws
-                .index()
-                .count(EntityKind::Task, &IndexQuery::tasks(id, Some(&TaskFilter::default())))?,
+            tasks: self.ws.count_tasks(id, &TaskFilter::default())?,
             boards: self.ws.get_range::<Board>(id, one)?.total_count,
             statuses: self.ws.get_range::<Status>(id, one)?.total_count,
             status_sets: self.ws.get_range::<StatusSet>(id, one)?.total_count,

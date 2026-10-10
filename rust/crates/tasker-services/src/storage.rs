@@ -1,22 +1,28 @@
-//! Хранилища сущностей проекта поверх файлов и индекса (`EntityFiles<T>` и `*Storage` в `Tasker.Storage.Files`): одна сущность — из
-//! файла (сначала там, где его знает индекс, потом по имени — старому Guid и новому суффиксу id; совпадение id проверяется по
-//! содержимому), списки и подсчёты — из индекса. Запись — [`tasker_files::write`] под блокировкой записи, после неё индекс
-//! догоняет файлы (`written`). Смена названия переименовывает файл; файл с новым именем уже есть — запись отклоняется.
-use crate::error::{Error, Result};
+//! Хранилище области (`I*Storage` и `IWriteScope` из `Tasker.Core` в .NET): то, через что сервисы одинаково работают с папкой
+//! `.tasker` ([`crate::files_store::FileStore`]: файлы и индекс) и с файлом SQLite ([`crate::db::DbStore`]: та же схема, что
+//! создаёт EF Core в `Tasker.Storage.Db`).
+//!
+//! [`Storage`] — операции хранилищ .NET, собранные в один трейт: сущности проекта по виду ([`Entity`]), проекты, запросы задач
+//! (`ITaskStorage`), пользователи (`IUserStorage`), блокировки правки (`IEditLockStorage`) и секция записи проекта
+//! (`IWriteScope.Exclusive`). [`Backend`] — выбранная реализация; [`crate::Workspace`] передаёт ей вызовы сервисов.
+use crate::error::Result;
+use crate::files_store::FileStore;
 use serde::Serialize;
-use std::path::{Path, PathBuf};
-use tasker_core::ids::guid_d;
-use tasker_core::locks::LockedEntity;
-use tasker_core::model::{Board, FieldDefinition, FieldEnum, LinkType, Project, Series, Status, StatusSet, TaskItem, TaskType};
-use tasker_core::tasks::{ListPage, Page};
-use tasker_files::files::{self, Versioned};
-use tasker_files::index::{IndexEntity, IndexQuery};
-use tasker_files::layout::{self, EntityFolder};
-use tasker_files::write;
+use std::collections::HashMap;
+use std::path::Path;
+use tasker_core::Timestamp;
+use tasker_core::locks::{EditHolder, EditLock, LockedEntity};
+use tasker_core::model::{
+    Board, FieldDefinition, FieldEnum, LinkType, Project, Series, Status, StatusSet, TaskItem, TaskType, User, UserKind,
+};
+use tasker_core::tasks::{ListPage, Page, TaskFilter};
+use tasker_files::files::Versioned;
+use tasker_files::index::{IndexEntity, LinkEdge, NumberConflict, OwnFieldKind};
+use tasker_files::layout::EntityFolder;
 use uuid::Uuid;
 
-/// Сущность проекта с папкой файлов, моделью файла и местом в индексе.
-pub trait Entity: IndexEntity + Serialize + Clone {
+/// Сущность проекта: папка файлов, модель файла и место в индексе (файловое хранилище) и таблицы БД (`crate::db::DbEntity`).
+pub trait Entity: IndexEntity + crate::db::DbEntity + Serialize + Clone {
     const FOLDER: &'static EntityFolder;
     const LOCK: LockedEntity;
 
@@ -28,6 +34,238 @@ pub trait Entity: IndexEntity + Serialize + Clone {
     fn set_version(&mut self, version: String);
     fn parse(project_id: Uuid, bytes: &[u8], path: &Path) -> tasker_files::Result<Versioned<Self>>;
     fn to_bytes(&self) -> Vec<u8>;
+}
+
+/// Операции хранилища области. Версия сущности — непрозрачная строка: у файлов — хэш содержимого, у БД — счётчик изменений.
+/// Методы записи «по версии» возвращают None/false, если сущности нет или её уже изменили.
+pub trait Storage {
+    // ---- сущности проекта (`IStatusStorage`, `ITaskTypeStorage`, … по виду T) ----
+
+    fn get_by_id<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Option<T>>;
+    /// Все сущности вида в проекте в порядке списка (по имени, у серий — по префиксу, затем по id; у задач — по созданию).
+    fn get_all<T: Entity>(&self, project_id: &Uuid) -> Result<Vec<T>>;
+    fn get_range<T: Entity>(&self, project_id: &Uuid, page: Page) -> Result<ListPage<T>>;
+    /// Сколько записей этого вида не удалось прочитать (`CountUnreadable`); у БД таких не бывает.
+    fn count_unreadable<T: Entity>(&self, project_id: &Uuid) -> Result<usize>;
+    fn add<T: Entity>(&self, entity: &T) -> Result<String>;
+    fn update<T: Entity>(&self, entity: &T, expected_version: &str) -> Result<Option<String>>;
+    fn delete<T: Entity>(&self, project_id: &Uuid, id: &Uuid, expected_version: &str) -> Result<bool>;
+
+    // ---- проекты (`IProjectStorage`) ----
+
+    fn get_project(&self, id: &Uuid) -> Result<Option<Project>>;
+    fn project_range(&self, ids: Option<&[Uuid]>, page: Page) -> Result<ListPage<Project>>;
+    fn all_projects(&self) -> Result<Vec<Project>>;
+    fn add_project(&self, project: &Project) -> Result<String>;
+    fn update_project(&self, project: &Project, expected_version: &str) -> Result<Option<String>>;
+    fn delete_project(&self, id: &Uuid, expected_version: &str) -> Result<bool>;
+
+    // ---- задачи (`ITaskStorage`) ----
+
+    fn tasks_where(&self, project_id: &Uuid, filter: Option<&TaskFilter>) -> Result<Vec<TaskItem>>;
+    fn task_range(&self, project_id: &Uuid, filter: Option<&TaskFilter>, page: Page) -> Result<ListPage<TaskItem>>;
+    fn task_ids(&self, project_id: &Uuid, filter: Option<&TaskFilter>) -> Result<Vec<Uuid>>;
+    fn count_tasks(&self, project_id: &Uuid, filter: &TaskFilter) -> Result<usize>;
+    /// Задачи, id которых начинается с ключа (Guid в форме D строчными): по созданию, затем по id.
+    fn tasks_by_id_prefix(&self, project_id: &Uuid, key: &str) -> Result<Vec<TaskItem>>;
+    fn own_field_kinds(&self, project_id: &Uuid, name_key: &str) -> Result<Vec<OwnFieldKind>>;
+    /// Наибольший номер в серии; 0 — номеров нет. Для выдачи номера — внутри [`Storage::exclusive`].
+    fn max_number(&self, project_id: &Uuid, series_id: &Uuid) -> Result<i32>;
+    fn tasks_by_number(&self, project_id: &Uuid, series_id: &Uuid, number: i32) -> Result<Vec<TaskItem>>;
+    fn number_conflicts(&self, project_id: &Uuid) -> Result<Vec<NumberConflict>>;
+    fn tasks_with_series_not_in(&self, project_id: &Uuid, known_series_ids: &[Uuid]) -> Result<Vec<TaskItem>>;
+    fn tasks_linked_to(&self, project_id: &Uuid, target_id: &Uuid) -> Result<Vec<TaskItem>>;
+    fn link_targets(&self, project_id: &Uuid, type_id: &Uuid, source_ids: &[Uuid]) -> Result<HashMap<Uuid, Vec<Uuid>>>;
+    fn link_edges(&self, project_id: &Uuid, type_id: &Uuid) -> Result<Vec<LinkEdge>>;
+    fn count_linked_to(&self, project_id: &Uuid, target_ids: &[Uuid]) -> Result<HashMap<Uuid, usize>>;
+    fn tasks_with_invalid_links(&self, project_id: &Uuid, known_type_ids: &[Uuid]) -> Result<Vec<TaskItem>>;
+
+    // ---- пользователи (`IUserStorage`) ----
+
+    fn get_user(&self, id: &Uuid) -> Result<Option<User>>;
+    /// Без учёта регистра.
+    fn user_by_username(&self, username: &str) -> Result<Option<User>>;
+    fn user_range(&self, kind: Option<UserKind>, page: Page) -> Result<ListPage<User>>;
+    fn all_users(&self, kind: Option<UserKind>) -> Result<Vec<User>>;
+    /// Новый пользователь; имя уже занято — конфликт (у файлов — проверка под блокировкой каталога, у БД — уникальный индекс).
+    fn add_user(&self, user: &User) -> Result<String>;
+    fn update_user(&self, user: &User, expected_version: &str) -> Result<Option<String>>;
+    fn delete_user(&self, id: &Uuid, expected_version: &str) -> Result<bool>;
+
+    // ---- блокировки правки (`IEditLockStorage`) ----
+
+    fn lock_get(&self, entity: LockedEntity, id: &Uuid, now: &Timestamp) -> Result<Option<EditLock>>;
+    fn locks_by_project(&self, project_id: &Uuid, now: &Timestamp) -> Result<Vec<EditLock>>;
+    /// Берёт или продлевает блокировку; держит другой — его блокировка.
+    fn lock_acquire(
+        &self,
+        entity: LockedEntity,
+        id: &Uuid,
+        holder: &EditHolder,
+        now: &Timestamp,
+        expires_at: &Timestamp,
+        project_id: Option<Uuid>,
+    ) -> Result<EditLock>;
+    fn lock_release(&self, entity: LockedEntity, id: &Uuid, holder_key: &str) -> Result<bool>;
+    fn lock_remove(&self, entity: LockedEntity, id: &Uuid) -> Result<()>;
+
+    // ---- секция записи проекта (`IWriteScope`) ----
+
+    /// Атомарная секция записи проекта: проверки и запись внутри не пересекаются с другими писателями (у файлов — `write.lock`, у
+    /// БД — транзакция `BEGIN IMMEDIATE`, которая при гонке за номер или занятой базе повторяется целиком). Вложенный вызов
+    /// выполняется внутри внешнего.
+    fn exclusive<T>(&self, project_id: &Uuid, action: &mut dyn FnMut() -> Result<T>) -> Result<T>;
+}
+
+/// Хранилище открытой области.
+#[derive(Clone)]
+pub enum Backend {
+    Files(FileStore),
+    Db(crate::db::DbStore),
+}
+
+/// Вызов метода [`Storage`] у выбранной реализации.
+macro_rules! dispatch {
+    ($self:expr, $s:ident => $call:expr) => {
+        match $self {
+            Backend::Files($s) => $call,
+            Backend::Db($s) => $call,
+        }
+    };
+}
+
+impl Storage for Backend {
+    fn get_by_id<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Option<T>> {
+        dispatch!(self, s => s.get_by_id(project_id, id))
+    }
+    fn get_all<T: Entity>(&self, project_id: &Uuid) -> Result<Vec<T>> {
+        dispatch!(self, s => s.get_all(project_id))
+    }
+    fn get_range<T: Entity>(&self, project_id: &Uuid, page: Page) -> Result<ListPage<T>> {
+        dispatch!(self, s => s.get_range(project_id, page))
+    }
+    fn count_unreadable<T: Entity>(&self, project_id: &Uuid) -> Result<usize> {
+        dispatch!(self, s => s.count_unreadable::<T>(project_id))
+    }
+    fn add<T: Entity>(&self, entity: &T) -> Result<String> {
+        dispatch!(self, s => s.add(entity))
+    }
+    fn update<T: Entity>(&self, entity: &T, expected_version: &str) -> Result<Option<String>> {
+        dispatch!(self, s => s.update(entity, expected_version))
+    }
+    fn delete<T: Entity>(&self, project_id: &Uuid, id: &Uuid, expected_version: &str) -> Result<bool> {
+        dispatch!(self, s => s.delete::<T>(project_id, id, expected_version))
+    }
+    fn get_project(&self, id: &Uuid) -> Result<Option<Project>> {
+        dispatch!(self, s => s.get_project(id))
+    }
+    fn project_range(&self, ids: Option<&[Uuid]>, page: Page) -> Result<ListPage<Project>> {
+        dispatch!(self, s => s.project_range(ids, page))
+    }
+    fn all_projects(&self) -> Result<Vec<Project>> {
+        dispatch!(self, s => s.all_projects())
+    }
+    fn add_project(&self, project: &Project) -> Result<String> {
+        dispatch!(self, s => s.add_project(project))
+    }
+    fn update_project(&self, project: &Project, expected_version: &str) -> Result<Option<String>> {
+        dispatch!(self, s => s.update_project(project, expected_version))
+    }
+    fn delete_project(&self, id: &Uuid, expected_version: &str) -> Result<bool> {
+        dispatch!(self, s => s.delete_project(id, expected_version))
+    }
+    fn tasks_where(&self, project_id: &Uuid, filter: Option<&TaskFilter>) -> Result<Vec<TaskItem>> {
+        dispatch!(self, s => s.tasks_where(project_id, filter))
+    }
+    fn task_range(&self, project_id: &Uuid, filter: Option<&TaskFilter>, page: Page) -> Result<ListPage<TaskItem>> {
+        dispatch!(self, s => s.task_range(project_id, filter, page))
+    }
+    fn task_ids(&self, project_id: &Uuid, filter: Option<&TaskFilter>) -> Result<Vec<Uuid>> {
+        dispatch!(self, s => s.task_ids(project_id, filter))
+    }
+    fn count_tasks(&self, project_id: &Uuid, filter: &TaskFilter) -> Result<usize> {
+        dispatch!(self, s => s.count_tasks(project_id, filter))
+    }
+    fn tasks_by_id_prefix(&self, project_id: &Uuid, key: &str) -> Result<Vec<TaskItem>> {
+        dispatch!(self, s => s.tasks_by_id_prefix(project_id, key))
+    }
+    fn own_field_kinds(&self, project_id: &Uuid, name_key: &str) -> Result<Vec<OwnFieldKind>> {
+        dispatch!(self, s => s.own_field_kinds(project_id, name_key))
+    }
+    fn max_number(&self, project_id: &Uuid, series_id: &Uuid) -> Result<i32> {
+        dispatch!(self, s => s.max_number(project_id, series_id))
+    }
+    fn tasks_by_number(&self, project_id: &Uuid, series_id: &Uuid, number: i32) -> Result<Vec<TaskItem>> {
+        dispatch!(self, s => s.tasks_by_number(project_id, series_id, number))
+    }
+    fn number_conflicts(&self, project_id: &Uuid) -> Result<Vec<NumberConflict>> {
+        dispatch!(self, s => s.number_conflicts(project_id))
+    }
+    fn tasks_with_series_not_in(&self, project_id: &Uuid, known_series_ids: &[Uuid]) -> Result<Vec<TaskItem>> {
+        dispatch!(self, s => s.tasks_with_series_not_in(project_id, known_series_ids))
+    }
+    fn tasks_linked_to(&self, project_id: &Uuid, target_id: &Uuid) -> Result<Vec<TaskItem>> {
+        dispatch!(self, s => s.tasks_linked_to(project_id, target_id))
+    }
+    fn link_targets(&self, project_id: &Uuid, type_id: &Uuid, source_ids: &[Uuid]) -> Result<HashMap<Uuid, Vec<Uuid>>> {
+        dispatch!(self, s => s.link_targets(project_id, type_id, source_ids))
+    }
+    fn link_edges(&self, project_id: &Uuid, type_id: &Uuid) -> Result<Vec<LinkEdge>> {
+        dispatch!(self, s => s.link_edges(project_id, type_id))
+    }
+    fn count_linked_to(&self, project_id: &Uuid, target_ids: &[Uuid]) -> Result<HashMap<Uuid, usize>> {
+        dispatch!(self, s => s.count_linked_to(project_id, target_ids))
+    }
+    fn tasks_with_invalid_links(&self, project_id: &Uuid, known_type_ids: &[Uuid]) -> Result<Vec<TaskItem>> {
+        dispatch!(self, s => s.tasks_with_invalid_links(project_id, known_type_ids))
+    }
+    fn get_user(&self, id: &Uuid) -> Result<Option<User>> {
+        dispatch!(self, s => s.get_user(id))
+    }
+    fn user_by_username(&self, username: &str) -> Result<Option<User>> {
+        dispatch!(self, s => s.user_by_username(username))
+    }
+    fn user_range(&self, kind: Option<UserKind>, page: Page) -> Result<ListPage<User>> {
+        dispatch!(self, s => s.user_range(kind, page))
+    }
+    fn all_users(&self, kind: Option<UserKind>) -> Result<Vec<User>> {
+        dispatch!(self, s => s.all_users(kind))
+    }
+    fn add_user(&self, user: &User) -> Result<String> {
+        dispatch!(self, s => s.add_user(user))
+    }
+    fn update_user(&self, user: &User, expected_version: &str) -> Result<Option<String>> {
+        dispatch!(self, s => s.update_user(user, expected_version))
+    }
+    fn delete_user(&self, id: &Uuid, expected_version: &str) -> Result<bool> {
+        dispatch!(self, s => s.delete_user(id, expected_version))
+    }
+    fn lock_get(&self, entity: LockedEntity, id: &Uuid, now: &Timestamp) -> Result<Option<EditLock>> {
+        dispatch!(self, s => s.lock_get(entity, id, now))
+    }
+    fn locks_by_project(&self, project_id: &Uuid, now: &Timestamp) -> Result<Vec<EditLock>> {
+        dispatch!(self, s => s.locks_by_project(project_id, now))
+    }
+    fn lock_acquire(
+        &self,
+        entity: LockedEntity,
+        id: &Uuid,
+        holder: &EditHolder,
+        now: &Timestamp,
+        expires_at: &Timestamp,
+        project_id: Option<Uuid>,
+    ) -> Result<EditLock> {
+        dispatch!(self, s => s.lock_acquire(entity, id, holder, now, expires_at, project_id))
+    }
+    fn lock_release(&self, entity: LockedEntity, id: &Uuid, holder_key: &str) -> Result<bool> {
+        dispatch!(self, s => s.lock_release(entity, id, holder_key))
+    }
+    fn lock_remove(&self, entity: LockedEntity, id: &Uuid) -> Result<()> {
+        dispatch!(self, s => s.lock_remove(entity, id))
+    }
+    fn exclusive<T>(&self, project_id: &Uuid, action: &mut dyn FnMut() -> Result<T>) -> Result<T> {
+        dispatch!(self, s => s.exclusive(project_id, action))
+    }
 }
 
 macro_rules! entity {
@@ -57,16 +295,17 @@ macro_rules! entity {
             }
 
             fn parse(project_id: Uuid, bytes: &[u8], path: &Path) -> tasker_files::Result<Versioned<Self>> {
-                files::$module::parse(project_id, bytes, path)
+                tasker_files::files::$module::parse(project_id, bytes, path)
             }
 
             fn to_bytes(&self) -> Vec<u8> {
-                files::$module::serialize(self)
+                tasker_files::files::$module::serialize(self)
             }
         }
     };
 }
 
+use tasker_files::layout;
 entity!(TaskItem, layout::TASKS, LockedEntity::Task, task, title);
 entity!(TaskType, layout::TASK_TYPES, LockedEntity::TaskType, task_type, name);
 entity!(Status, layout::STATUSES, LockedEntity::Status, status, name);
@@ -76,170 +315,3 @@ entity!(Series, layout::SERIES, LockedEntity::Series, series, name);
 entity!(LinkType, layout::LINK_TYPES, LockedEntity::LinkType, link_type, name);
 entity!(FieldDefinition, layout::FIELDS, LockedEntity::Field, field, name);
 entity!(FieldEnum, layout::ENUMS, LockedEntity::Enum, field_enum, name);
-
-impl crate::Workspace {
-    /// Файл сущности по пути; None — файла нет или он пуст (`YamlFile.Read`). Ошибки разбора — как в .NET: исключение.
-    fn read_entity<T: Entity>(&self, project_id: &Uuid, path: &Path) -> Result<Option<T>> {
-        let Some(bytes) = write::read_bytes(path)? else {
-            return Ok(None);
-        };
-        match T::parse(*project_id, &bytes, path) {
-            Ok(versioned) => Ok(Some(versioned.model)),
-            Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => Ok(None),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// Где может лежать файл: сначала то, что знает индекс, затем поиск по имени (`EntityFiles.Candidates`).
-    fn candidates<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Vec<PathBuf>> {
-        let mut result = Vec::new();
-        let indexed = self.index().entity_path(T::KIND, project_id, id)?;
-        if let Some(indexed) = &indexed
-            && indexed.exists()
-        {
-            result.push(indexed.clone());
-        }
-        for path in self.directory().project(project_id).find_files(T::FOLDER, id) {
-            let same = indexed
-                .as_ref()
-                .is_some_and(|i| tasker_core::io::same_path(&path.to_string_lossy(), &i.to_string_lossy()));
-            if !same {
-                result.push(path);
-            }
-        }
-        Ok(result)
-    }
-
-    fn resolve_path<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Option<(PathBuf, T)>> {
-        for path in self.candidates::<T>(project_id, id)? {
-            if let Some(entity) = self.read_entity::<T>(project_id, &path)?
-                && entity.id() == *id
-            {
-                return Ok(Some((path, entity)));
-            }
-        }
-        Ok(None)
-    }
-
-    /// Одна сущность по id — из файла; None — нет.
-    pub fn get_by_id<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Option<T>> {
-        Ok(self.resolve_path::<T>(project_id, id)?.map(|(_, entity)| entity))
-    }
-
-    /// Все сущности вида в проекте — из индекса, по имени (у серий — по префиксу), затем по id.
-    pub fn get_all<T: Entity>(&self, project_id: &Uuid) -> Result<Vec<T>> {
-        Ok(self.index().all::<T>(&IndexQuery::project(project_id))?)
-    }
-
-    /// Страница сущностей вида (`GetRange`).
-    pub fn get_range<T: Entity>(&self, project_id: &Uuid, page: Page) -> Result<ListPage<T>> {
-        Ok(self.index().range::<T>(&IndexQuery::project(project_id), page)?)
-    }
-
-    /// Сколько файлов этого вида в проекте не удалось прочитать (`CountUnreadable`).
-    pub fn count_unreadable<T: Entity>(&self, project_id: &Uuid) -> Result<usize> {
-        Ok(self
-            .index()
-            .count_problems(&self.directory().project(project_id).folder(T::FOLDER))?)
-    }
-
-    /// Новый файл под именем по названию. Возвращает версию.
-    ///
-    /// Проект удаляют под блокировкой записи, и запись файла сама создаёт недостающие папки: без проверки под той же блокировкой
-    /// «поздний» писатель воскресил бы папку удалённого проекта с одним своим файлом (`EntityFiles.Add`).
-    pub fn add<T: Entity>(&self, entity: &T) -> Result<String> {
-        let project_id = entity.project_id();
-        let project = self.directory().project(&project_id);
-        let path = project.entity_file(T::FOLDER, &entity.id(), Some(entity.file_name_source()));
-        let bytes = entity.to_bytes();
-        let result: std::io::Result<Result<String>> = self.index().written(std::slice::from_ref(&path), || {
-            write::locked(project.root(), || {
-                if self.directory().project_accepts_writes(&project_id) {
-                    Ok(write::write(&path, &bytes).map_err(Error::from))
-                } else {
-                    Ok(Err(Error::validation(format!(
-                        "ProjectId: project not found: {}",
-                        guid_d(&project_id)
-                    ))))
-                }
-            })
-        });
-        result?
-    }
-
-    /// Перезапись по версии с переименованием, если название изменилось. None — файла нет или он изменён.
-    pub fn update<T: Entity>(&self, entity: &T, expected_version: &str) -> Result<Option<String>> {
-        let project_id = entity.project_id();
-        let Some((current, _)) = self.resolve_path::<T>(&project_id, &entity.id())? else {
-            return Ok(None);
-        };
-        let renamed = self
-            .directory()
-            .project(&project_id)
-            .entity_file(T::FOLDER, &entity.id(), Some(entity.file_name_source()));
-        let bytes = entity.to_bytes();
-        Ok(self.index().written(&[current.clone(), renamed.clone()], || {
-            write::write_if_match_renaming(&current, &renamed, &bytes, expected_version)
-        })?)
-    }
-
-    /// Удаление по версии; false — файла нет или он изменён.
-    pub fn delete<T: Entity>(&self, project_id: &Uuid, id: &Uuid, expected_version: &str) -> Result<bool> {
-        let Some((path, _)) = self.resolve_path::<T>(project_id, id)? else {
-            return Ok(false);
-        };
-        Ok(self
-            .index()
-            .written(std::slice::from_ref(&path), || write::delete_if_match(&path, expected_version))?)
-    }
-
-    // ---- проекты: project.yaml в папке проекта ----
-
-    pub fn get_project(&self, id: &Uuid) -> Result<Option<Project>> {
-        let path = self.directory().project(id).project_file();
-        let Some(bytes) = write::read_bytes(&path)? else {
-            return Ok(None);
-        };
-        match files::project::parse(&bytes, &path) {
-            Ok(versioned) => Ok(Some(versioned.model)),
-            Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => Ok(None),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// Страница проектов по имени; `ids` — только эти (None — все).
-    pub fn project_range(&self, ids: Option<&[Uuid]>, page: Page) -> Result<ListPage<Project>> {
-        let query = IndexQuery {
-            ids: ids.map(|x| x.to_vec()),
-            ..IndexQuery::default()
-        };
-        Ok(self.index().range::<Project>(&query, page)?)
-    }
-
-    pub fn add_project(&self, project: &Project) -> Result<String> {
-        let path = self.directory().project(&project.id).project_file();
-        let bytes = files::project::serialize(project);
-        Ok(self.index().written(std::slice::from_ref(&path), || write::write(&path, &bytes))?)
-    }
-
-    pub fn update_project(&self, project: &Project, expected_version: &str) -> Result<Option<String>> {
-        let path = self.directory().project(&project.id).project_file();
-        let bytes = files::project::serialize(project);
-        Ok(self.index().written(std::slice::from_ref(&path), || {
-            write::write_if_match(&path, &bytes, expected_version)
-        })?)
-    }
-
-    /// Папка проекта удаляется целиком, если `project.yaml` не изменился с ожидаемой версии; ставится метка удаления.
-    pub fn delete_project(&self, id: &Uuid, expected_version: &str) -> Result<bool> {
-        let project = self.directory().project(id);
-        let root = project.root().to_path_buf();
-        let file = project.project_file();
-        Ok(self.index().written(std::slice::from_ref(&root), || {
-            write::delete_if_match_with(&file, expected_version, || {
-                std::fs::remove_dir_all(&root)?;
-                self.directory().mark_project_deleted(id)
-            })
-        })?)
-    }
-}

@@ -6,6 +6,7 @@
 use crate::Workspace;
 use crate::clock::{add, until};
 use crate::error::{Error, Result};
+use crate::storage::Storage;
 use std::time::Duration;
 use tasker_core::Timestamp;
 use tasker_core::locks::{EditLock, LockedEntity, locked_error};
@@ -56,10 +57,7 @@ impl<'a> EditLockService<'a> {
     pub fn acquire(&self, entity: LockedEntity, id: &Uuid, subject: &str, project_id: Option<Uuid>) -> Result<EditLock> {
         let holder = self.ws.editor();
         let now = self.ws.now();
-        let held = self
-            .ws
-            .edit_locks()
-            .acquire(entity, id, holder, &now, &add(now, DURATION), project_id)?;
+        let held = self.ws.lock_acquire(entity, id, holder, &now, &add(now, DURATION), project_id)?;
         if held.holder.key != holder.key {
             return Err(locked_error(subject, &held).into());
         }
@@ -68,22 +66,22 @@ impl<'a> EditLockService<'a> {
 
     /// Снимает свою блокировку; нет или чужая — false.
     pub fn release(&self, entity: LockedEntity, id: &Uuid) -> Result<bool> {
-        Ok(self.ws.edit_locks().release(entity, id, &self.ws.editor().key)?)
+        self.ws.lock_release(entity, id, &self.ws.editor().key)
     }
 
     /// Действующая блокировка; None — нет.
-    pub fn get(&self, entity: LockedEntity, id: &Uuid) -> Option<EditLock> {
-        self.ws.edit_locks().get(entity, id, &self.ws.now())
+    pub fn get(&self, entity: LockedEntity, id: &Uuid) -> Result<Option<EditLock>> {
+        self.ws.lock_get(entity, id, &self.ws.now())
     }
 
     /// Действующие блокировки проекта: старые первыми.
-    pub fn get_by_project(&self, project_id: &Uuid) -> Vec<EditLock> {
-        self.ws.edit_locks().get_by_project(project_id, &self.ws.now())
+    pub fn get_by_project(&self, project_id: &Uuid) -> Result<Vec<EditLock>> {
+        self.ws.locks_by_project(project_id, &self.ws.now())
     }
 
     /// Перед изменением и удалением: свободна или своя — можно писать; чужая — отказ.
     pub fn ensure_writable(&self, entity: LockedEntity, id: &Uuid, subject: &str) -> Result<()> {
-        match self.get(entity, id) {
+        match self.get(entity, id)? {
             Some(held) if held.holder.key != self.ws.editor().key => Err(locked_error(subject, &held).into()),
             _ => Ok(()),
         }
@@ -101,7 +99,7 @@ impl<'a> EditLockService<'a> {
             let mut first: Option<EditLock> = None;
             let mut busy: Vec<&str> = Vec::new();
             for item in items {
-                if let Some(held) = self.get(item.entity, &item.id)
+                if let Some(held) = self.get(item.entity, &item.id)?
                     && held.holder.key != *me
                 {
                     first.get_or_insert(held);
@@ -120,7 +118,7 @@ impl<'a> EditLockService<'a> {
 
     /// Сущность удалена — её блокировка больше не нужна.
     pub fn forget(&self, entity: LockedEntity, id: &Uuid) -> Result<()> {
-        Ok(self.ws.edit_locks().remove(entity, id)?)
+        self.ws.lock_remove(entity, id)
     }
 }
 
@@ -187,16 +185,22 @@ impl<'a> EntityLockService<'a> {
     }
 
     /// Действующие блокировки проекта, старые первыми.
-    pub fn get_by_project(&self, project_id: &Uuid) -> Vec<LockInfo> {
-        self.ws.locks().get_by_project(project_id).iter().map(|x| self.to_info(x)).collect()
+    pub fn get_by_project(&self, project_id: &Uuid) -> Result<Vec<LockInfo>> {
+        Ok(self
+            .ws
+            .locks()
+            .get_by_project(project_id)?
+            .iter()
+            .map(|x| self.to_info(x))
+            .collect())
     }
 
     pub fn release(&self, entity: LockedEntity, id: &Uuid) -> Result<bool> {
         self.ws.locks().release(entity, id)
     }
 
-    pub fn get(&self, entity: LockedEntity, id: &Uuid) -> Option<LockInfo> {
-        self.ws.locks().get(entity, id).map(|x| self.to_info(&x))
+    pub fn get(&self, entity: LockedEntity, id: &Uuid) -> Result<Option<LockInfo>> {
+        Ok(self.ws.locks().get(entity, id)?.map(|x| self.to_info(&x)))
     }
 
     fn to_info(&self, held: &EditLock) -> LockInfo {
@@ -224,16 +228,7 @@ impl<'a> EntityLockService<'a> {
             LockedEntity::StatusSet => ws.get_by_id::<StatusSet>(&project, id)?.map(|x| format!("Status set '{}'", x.name)),
             LockedEntity::Board => ws.get_by_id::<Board>(&project, id)?.map(|x| format!("Board '{}'", x.name)),
             LockedEntity::Series => ws.get_by_id::<Series>(&project, id)?.map(|x| format!("Series '{}'", x.name)),
-            LockedEntity::User => {
-                let path = ws.directory().user_file(id);
-                match tasker_files::write::read_bytes(&path)? {
-                    Some(bytes) => Some(format!(
-                        "User '{}'",
-                        tasker_files::files::user::parse(&bytes, &path)?.model.username
-                    )),
-                    None => None,
-                }
-            }
+            LockedEntity::User => ws.get_user(id)?.map(|x| format!("User '{}'", x.username)),
             LockedEntity::LinkType => ws.get_by_id::<LinkType>(&project, id)?.map(|x| format!("Link type '{}'", x.name)),
             LockedEntity::Field => ws
                 .get_by_id::<FieldDefinition>(&project, id)?

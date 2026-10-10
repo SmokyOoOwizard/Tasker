@@ -4,14 +4,13 @@ use crate::cascade::CascadeResult;
 use crate::error::{Error, Result};
 use crate::preview::{self, TaskTypeListItem};
 use crate::rewrites;
+use crate::storage::Storage;
 use crate::usages::Usages;
 use tasker_core::ids::guid_d;
 use tasker_core::locks::LockedEntity;
 use tasker_core::model::{FieldDefinition, StatusSet, TaskItem, TaskType, TaskTypeField};
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::{validate, versioning};
-use tasker_files::index::IndexQuery;
-use tasker_files::layout::EntityKind;
 use uuid::Uuid;
 
 const CASCADE_ATTEMPTS: usize = 3;
@@ -139,9 +138,7 @@ impl<'a> TaskTypeService<'a> {
                     status_ids: Some(lost),
                     ..TaskFilter::default()
                 };
-                self.ws
-                    .index()
-                    .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(&filter)))?
+                self.ws.count_tasks(project_id, &filter)?
             };
             if count > 0 {
                 return Err(Error::in_use(format!(
@@ -211,11 +208,7 @@ impl<'a> TaskTypeService<'a> {
             type_ids: Some(vec![*id]),
             ..TaskFilter::default()
         };
-        usages.add_tasks(
-            self.ws
-                .index()
-                .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(&filter)))?,
-        );
+        usages.add_tasks(self.ws.count_tasks(project_id, &filter)?);
         usages.throw_if_any("deleted")?;
 
         if !self.ws.delete::<TaskType>(project_id, id, &expected)? {
@@ -261,7 +254,7 @@ impl<'a> TaskTypeService<'a> {
             field_ids: Some(removed.to_vec()),
             ..TaskFilter::default()
         };
-        let found: Vec<TaskItem> = self.ws.index().all(&IndexQuery::tasks(project_id, Some(&filter)))?;
+        let found: Vec<TaskItem> = self.ws.tasks_where(project_id, Some(&filter))?;
         Ok(found.into_iter().filter(|t| holds_any(t, removed)).collect())
     }
 

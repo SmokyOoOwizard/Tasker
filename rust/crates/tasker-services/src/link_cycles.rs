@@ -2,6 +2,7 @@
 //! всему проекту после слияния git (компоненты сильной связности Тарьяна без рекурсии, по одному кратчайшему циклу на компоненту).
 use crate::Workspace;
 use crate::error::{Error, Result};
+use crate::storage::Storage;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use tasker_core::ShortId;
 use tasker_core::model::{LinkType, TaskItem, TaskSeriesNumber};
@@ -62,7 +63,7 @@ pub fn find_path(ws: &Workspace, project_id: &Uuid, type_ids: &[Uuid], from: Uui
         let mut next = Vec::new();
         let mut targets: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
         for type_id in type_ids {
-            for (source, list) in ws.index().link_targets(project_id, type_id, &level)? {
+            for (source, list) in ws.link_targets(project_id, type_id, &level)? {
                 targets.entry(source).or_default().extend(list);
             }
         }
@@ -108,7 +109,7 @@ pub fn find(ws: &Workspace, project_id: &Uuid, types: &[LinkType]) -> Result<Vec
     let mut ordered: Vec<&LinkType> = types.iter().filter(|x| !x.allow_cycles && !x.is_symmetric()).collect();
     ordered.sort_by(|a, b| tasker_core::tasks::ordinal(&a.name, &b.name).then_with(|| a.id.cmp(&b.id)));
     for link_type in ordered {
-        let edges = ws.index().link_edges(project_id, &link_type.id)?;
+        let edges = ws.link_edges(project_id, &link_type.id)?;
         for path in cycles_of(&edges) {
             if found.len() >= MAX_REPORTED {
                 return Ok(found);
