@@ -12,6 +12,7 @@ use common::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+#[cfg(unix)] // на Windows тесты, которые это используют, не собираются
 const HOOKS: [&str; 3] = ["post-merge", "post-checkout", "post-rewrite"];
 
 struct Repo {
@@ -87,6 +88,7 @@ impl Repo {
         self.git_in(&self.root, arguments)
     }
 
+    #[cfg(unix)] // на Windows тесты, которые это используют, не собираются
     fn commit(&self, message: &str) {
         self.git(&["add", "-A"]);
         self.git(&["commit", "-q", "-m", message]);
@@ -97,6 +99,7 @@ impl Repo {
     }
 
     /// Папка с проектом A на main и веткой b с проектом B (оба закоммичены).
+    #[cfg(unix)] // на Windows тесты, которые это используют, не собираются
     fn with_two_branches(&self, relative: &str) -> PathBuf {
         let workspace = self.folder(relative);
         let w = workspace.to_str().unwrap();
@@ -116,6 +119,7 @@ impl Drop for Repo {
 }
 
 /// Сколько проектов в кэше папки; -1 — кэша нет. Только чтение: ни один процесс Tasker не запускается.
+#[cfg(unix)] // на Windows тесты, которые это используют, не собираются
 fn projects_in_cache(workspace: &Path) -> i64 {
     let file = workspace.join(".tasker/.cache/index-rs.db");
     if !file.exists() {
