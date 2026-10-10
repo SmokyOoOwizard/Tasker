@@ -448,14 +448,14 @@ pub fn spawn_daemon() -> Result<std::process::Child> {
         use std::os::windows::process::CommandExt;
         const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
         const DETACHED_PROCESS: u32 = 0x0000_0008;
-        return std::process::Command::new(&program)
+        std::process::Command::new(&program)
             .arg("--detached")
             .creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
-            .map_err(|e| CliError::new(format!("Cannot start the MCP server process: {e}")));
+            .map_err(|e| CliError::new(format!("Cannot start the MCP server process: {e}")))
     }
     #[cfg(not(windows))]
     {

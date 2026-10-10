@@ -309,18 +309,21 @@ PY
   esac
 }
 
-# Сборка в контейнере: образ с целями Linux, zig и cargo-zigbuild (один раз), тома с кэшем cargo и каталогом target.
-DOCKER_IMAGE="${TASKER_RELEASE_IMAGE:-tasker-release-builder}"
-docker_image() {
-  docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1 && return 0
-  echo "== building the Docker image $DOCKER_IMAGE (once)..."
-  docker build -t "$DOCKER_IMAGE" - <<'DOCKERFILE'
-FROM rust:1-bookworm
+# Сборка в контейнере: образ с целями Linux, zig и cargo-zigbuild (собирается один раз; тег — хэш Dockerfile, правка даёт новый образ),
+# тома с кэшем cargo и каталогом target.
+DOCKERFILE='FROM rust:1-bookworm
 RUN rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-unknown-linux-musl aarch64-unknown-linux-musl \
  && apt-get update && apt-get install -y --no-install-recommends python3-pip && rm -rf /var/lib/apt/lists/* \
  && pip3 install --break-system-packages --no-cache-dir ziglang==0.13.0.post1 \
- && cargo install --locked cargo-zigbuild@0.20.1 && rm -rf /usr/local/cargo/registry
-DOCKERFILE
+ && cargo install --locked cargo-zigbuild@0.23.4 && rm -rf /usr/local/cargo/registry'
+DOCKER_IMAGE="${TASKER_RELEASE_IMAGE:-}"
+docker_image() {
+  if [ -z "$DOCKER_IMAGE" ]; then
+    DOCKER_IMAGE="tasker-release-builder:$(printf '%s' "$DOCKERFILE" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -c1-12)"
+  fi
+  docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1 && return 0
+  echo "== building the Docker image $DOCKER_IMAGE (once)..."
+  printf '%s\n' "$DOCKERFILE" | docker build -t "$DOCKER_IMAGE" -
 }
 
 # Собирает цель $1 сборщиком $2 и копирует tasker и tasker-mcpd (с расширением $3) в каталог $4.
@@ -339,7 +342,7 @@ build_target() {
       cp "$WORKSPACE/target/$target/release/tasker$exe" "$WORKSPACE/target/$target/release/tasker-mcpd$exe" "$dest/"
       ;;
     docker)
-      docker_image || fail "cannot build the Docker image $DOCKER_IMAGE"
+      docker_image || fail "cannot build the Docker image for the Linux builds"
       docker run --rm -v "$REPO":/src:ro -v "$dest":/out -v tasker-release-cargo:/usr/local/cargo/registry -v tasker-release-target:/target \
         -e CARGO_TARGET_DIR=/target -e TASKER_VERSION="$VERSION" -w /src/rust "$DOCKER_IMAGE" bash -c "
           cargo zigbuild --release --locked --target '$zig_target' -p tasker-cli -p tasker-mcpd &&

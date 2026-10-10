@@ -182,8 +182,14 @@ fn sqlite_is_refused_by_this_build_and_version_prints_the_repository_version() {
         )
     );
     let run = tasker(&root, &home, &["--version".into()], &[]);
+    // Номер из VERSION; у сборки из исходников за ним через «+» коммит (build.rs крейта tasker-version), у релиза — ничего.
     let version = std::fs::read_to_string(repository_root().join("VERSION")).unwrap();
-    assert_eq!((run.stdout.as_str(), run.code), (format!("{}\n", version.trim()).as_str(), 0));
+    assert_eq!(run.code, 0);
+    let shown = run.stdout.strip_suffix('\n').unwrap();
+    assert!(
+        shown == version.trim() || shown.starts_with(&format!("{}+", version.trim())),
+        "{shown}"
+    );
     std::fs::remove_dir_all(&home).unwrap();
     std::fs::remove_dir_all(&root).unwrap();
 }

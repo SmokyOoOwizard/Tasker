@@ -3,7 +3,10 @@
 //! `tasker-cli`) — тест ничего не проверяет и сообщает об этом.
 use std::net::TcpListener;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+#[cfg(unix)]
+use std::process::Stdio;
+use std::process::{Command, Output};
+#[cfg(unix)]
 use std::time::{Duration, Instant};
 
 const BIN: &str = env!("CARGO_BIN_EXE_tasker");

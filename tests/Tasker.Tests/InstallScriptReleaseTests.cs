@@ -62,7 +62,7 @@ public partial class InstallScriptTests
 
         var help = await RunScript(script, "--help");
         Assert.Equal(0, help.Code);
-        foreach (var option in new[] { "--rid", "--version", "--out", "--no-r2r", "win-x64", "osx-arm64", "linux-arm64" })
+        foreach (var option in new[] { "--rid", "--version", "--out", "--builder", "win-x64", "osx-arm64", "linux-arm64", "linux-musl-x64" })
             Assert.Contains(option, help.Out);
 
         var rid = await RunScript(script, "--rid", "freebsd-x64", "--out", Path.Combine(_root, "out"));
@@ -76,15 +76,15 @@ public partial class InstallScriptTests
     }
 
     /// <summary>
-    /// Весь путь: release.sh собирает настоящие самодостаточные tasker и tasker-mcpd для этой машины, кладёт в архив с контрольной суммой,
-    /// install.sh ставит из архива (без .NET SDK в работе установщика) и установленная программа работает; удаление всё убирает.
+    /// Весь путь: release.sh собирает настоящие tasker и tasker-mcpd (Rust, cargo) для этой машины, кладёт в архив с контрольной суммой,
+    /// install.sh ставит из архива и установленная программа работает; удаление всё убирает.
     /// </summary>
     [UnixFact]
     public async Task A_release_archive_for_this_machine_installs_runs_and_uninstalls()
     {
         var script = RepoFile("scripts", "release.sh");
         var output = Path.Combine(_root, "release");
-        var release = await RunScript(script, "--rid", HostRid, "--version", "0.0.1-test", "--no-r2r", "--out", output);
+        var release = await RunScript(script, "--rid", HostRid, "--version", "0.0.1-test", "--out", output);
         Assert.True(release.Code == 0, release.Out + release.Err);
 
         var name = $"tasker-0.0.1-test-{HostRid}";
@@ -102,6 +102,8 @@ public partial class InstallScriptTests
         var list = (await Shell("tar", ["-tzf", archive], _root)).Out.Split('\n');
         foreach (var entry in new[] { "app/tasker", "app/tasker-mcpd", "install.sh", "release.txt" })
             Assert.Contains($"{name}/{entry}", list);
+        // В app/ только две программы.
+        Assert.Equal([$"{name}/app/tasker", $"{name}/app/tasker-mcpd"], list.Where(x => x.StartsWith($"{name}/app/") && !x.EndsWith('/')).Order().ToArray());
 
         // Установка из архива и работа установленного.
         var fakeHome = Home("release-home");
