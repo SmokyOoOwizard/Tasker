@@ -133,7 +133,9 @@ fn projects_in_cache(workspace: &Path) -> i64 {
         .unwrap()
 }
 
+/// Путь в форме для sh, как в хуке: на Windows с прямыми слэшами (`GitHooks.ToShellPath` в .NET), в одинарных кавычках.
 fn shell_quote(text: &str) -> String {
+    let text = if cfg!(windows) { text.replace('\\', "/") } else { text.to_string() };
     format!("'{}'", text.replace('\'', "'\\''"))
 }
 

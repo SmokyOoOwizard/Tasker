@@ -482,7 +482,9 @@ mod tests {
             std::thread::sleep(Duration::from_millis(250));
             tx.send(Message::Changed(vec!["users/a.yaml".into()])).unwrap();
             tx.send(Message::FullSync).unwrap();
-            std::thread::sleep(Duration::from_millis(300));
+            // С запасом больше потолка окна: на медленном раннере сборщик может проснуться позже, а закрытый канал
+            // (как Stop) отбрасывает незакрытое окно.
+            std::thread::sleep(Duration::from_millis(1500));
         });
         assert_eq!(
             events.iter().map(|(e, _)| e.clone()).collect::<Vec<_>>(),
