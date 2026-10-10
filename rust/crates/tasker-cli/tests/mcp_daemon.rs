@@ -38,6 +38,10 @@ impl Home {
             .env("TASKER_SERVICE_DIR", self.root.join("service"))
             .env("TASKER_SERVICE_LABEL", format!("com.tasker.cli-test-{}", std::process::id()))
             .env("TASKER_MCP_DRAIN_QUIET_MS", "300");
+        // На Windows супервизор включается явно (DaemonPlatform.UseSupervisor): тест проверяет именно замену под ним.
+        if cfg!(windows) {
+            command.env("TASKER_MCP_SUPERVISOR", "1");
+        }
         command
     }
 

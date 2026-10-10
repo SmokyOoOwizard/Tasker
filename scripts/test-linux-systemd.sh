@@ -158,8 +158,11 @@ if [ -n "$archive" ]; then
   check "[.NET] супервизор ($supervisor) и рабочий процесс ($before) — .NET" bash -c "$(declare -f is_dotnet); name=$name; is_dotnet '$supervisor' && is_dotnet '$before'"
   load_start; sleep 2
   as_tester bash -c 'rm -rf /tmp/rel && mkdir /tmp/rel && tar -xzf /release.tar.gz -C /tmp/rel'
+  install_out="$(as_tester bash -c '/tmp/rel/*/install.sh --no-completion' 2>&1)"
+  printf '%s\n' "$install_out" | sed 's/^/      | /'
   check "install.sh из распакованного архива поверх (демон переводится через tasker mcp upgrade)" \
-    bash -c "docker exec -u tester -e HOME=/home/tester -e XDG_RUNTIME_DIR=/run/user/1500 -e DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1500/bus $name bash -c '/tmp/rel/*/install.sh --no-completion' | tee /dev/stderr | grep -q 'switching it to the new one without downtime'"
+    grep -q 'switching it to the new one without downtime' <<< "$install_out"
+  check "tasker mcp upgrade: замена без простоя" grep -q 'replaced without downtime' <<< "$install_out"
   sleep 3
   load_stop
   rust_worker="$(worker_pid)"

@@ -445,17 +445,41 @@ pub fn spawn_daemon() -> Result<std::process::Child> {
     let program = daemon_program()?;
     #[cfg(windows)]
     {
+        // Как WindowsDetachedProcess (.NET): без окна, в своей группе процессов, по возможности вне задания родителя и без
+        // унаследованных дескрипторов — иначе канал вывода вызвавшей программы (`$x = tasker mcp start`, тест с перехваченным
+        // выводом) не закрылся бы, пока жив демон. std наследует все наследуемые дескрипторы, поэтому свои stdin/stdout/stderr
+        // перед запуском делаются ненаследуемыми (самой консоли они после этого не нужны для детей).
         use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, SetHandleInformation};
+        use windows_sys::Win32::System::Console::{GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE};
         const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-        const DETACHED_PROCESS: u32 = 0x0000_0008;
-        std::process::Command::new(&program)
-            .arg("--detached")
-            .creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .map_err(|e| CliError::new(format!("Cannot start the MCP server process: {e}")))
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+        const ERROR_ACCESS_DENIED: i32 = 5;
+        for which in [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+            // SAFETY: дескриптор из GetStdHandle принадлежит процессу; меняется только флаг наследования.
+            unsafe {
+                let handle = GetStdHandle(which);
+                if !handle.is_null() && handle as isize != -1 {
+                    SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0);
+                }
+            }
+        }
+        let spawn = |flags: u32| {
+            std::process::Command::new(&program)
+                .arg("--detached")
+                .creation_flags(flags)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+        };
+        let flags = CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP;
+        match spawn(flags | CREATE_BREAKAWAY_FROM_JOB) {
+            Err(e) if e.raw_os_error() == Some(ERROR_ACCESS_DENIED) => spawn(flags),
+            result => result,
+        }
+        .map_err(|e| CliError::new(format!("Cannot start the MCP server process: {e}")))
     }
     #[cfg(not(windows))]
     {
