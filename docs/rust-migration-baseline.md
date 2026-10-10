@@ -213,5 +213,11 @@ scripts/perf/bench.py degrade --bin /tmp/tasker-bin --mode daemon   --steps 100 
 scripts/perf/bench.py degrade --bin /tmp/tasker-bin --mode nodaemon --steps 100 500 1000 2000 --n 15 --json degrade-nodaemon.json
 ```
 
-Для Rust-сборки `--bin` указывает на каталог с `tasker` и `tasker-mcpd`; фазы (`TASKER_PROFILE`) появятся, когда в Rust
-будет свой `PerfTrace` с теми же метками (TSK-136).
+Для Rust-сборки `--bin` указывает на каталог с `tasker` и `tasker-mcpd`; фазы (`TASKER_PROFILE`) у Rust свои (`tasker_core::perf`).
+
+## Rust
+
+Результаты Rust-сборки против этой базовой линии (TSK-136) — `docs/rust-migration-results.md`: 8–15 мс на вызов вместо 152–241 мс,
+4,3 + 5,0 МиБ вместо 152 МБ. Там же повтор .NET 2026-10-10: в обычной папке числа этого документа воспроизводятся (на 5–8 % ниже), а в
+системном temp, который к тому дню вырос до ~50 000 записей, .NET теряет 130–150 мс на перечислении каталогов в `CanonicalPath`
+(TSK-150) — часть фазы `container-register` здесь (21,7 мс) тоже она.
