@@ -163,11 +163,13 @@ if [ -n "$archive" ]; then
   check "install.sh из распакованного архива поверх (демон переводится через tasker mcp upgrade)" \
     grep -q 'switching it to the new one without downtime' <<< "$install_out"
   check "tasker mcp upgrade: замена без простоя" grep -q 'replaced without downtime' <<< "$install_out"
+  check "install.sh объясняет, что супервизор пока .NET и это штатно (TSK-142)" grep -q 'is still the previous .NET build' <<< "$install_out"
   sleep 3
   load_stop
   rust_worker="$(worker_pid)"
   requests="$(as_tester bash -c 'wc -l < /tmp/load.codes' | tr -d ' ')"
-  check "ни одного отказа соединения и не-200 за время обновления ($requests запросов)" load_clean
+  refused="$(as_tester bash -c 'grep -cv "^200$" /tmp/load.codes' | tr -d ' ')"
+  check "ни одного отказа соединения и не-200 за время обновления ($requests запросов, отказов: $refused)" load_clean
   check "рабочий процесс сменился ($before -> $rust_worker) и он Rust" bash -c "$(declare -f is_dotnet); name=$name; [ -n '$rust_worker' ] && [ '$before' != '$rust_worker' ] && ! is_dotnet '$rust_worker'"
   check "супервизор тот же (.NET, pid $supervisor), служба active" bash -c "$(declare -f is_dotnet); name=$name; [ '$(daemon_pid)' = '$supervisor' ] && is_dotnet '$supervisor' && docker exec -u tester -e XDG_RUNTIME_DIR=/run/user/1500 $name systemctl --user is-active --quiet tasker-mcp.service"
   check "в app/ только tasker и tasker-mcpd (от .NET ничего не осталось)" as_tester bash -c "[ \"\$(ls -A $app | tr '\\n' ' ')\" = 'tasker tasker-mcpd ' ] && [ ! -e $app.old ]"

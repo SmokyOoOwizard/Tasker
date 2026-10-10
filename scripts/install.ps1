@@ -430,6 +430,10 @@ function Invoke-Main {
             # Windows locks a running program: stop the MCP server (it is started again below), then swap the folders.
             if ($daemonRunning) {
                 Write-Host 'The MCP server is running: stopping it to replace the files (it is started again afterwards)...'
+                if (Test-Path -LiteralPath (Join-Path $app 'tasker.dll')) {
+                    # an update over the .NET build: after the restart the whole server (its supervisor too) is the new build
+                    Write-Host '  (the previous build is the .NET one: after the restart the whole MCP server runs the new build)'
+                }
                 [void](Invoke-Native $tasker @('mcp', 'stop'))
             }
             # Folders left by earlier runs (a file in them was still in use then): try again, quietly.
