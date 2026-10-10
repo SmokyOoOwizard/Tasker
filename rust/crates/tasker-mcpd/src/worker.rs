@@ -164,6 +164,9 @@ async fn serve(listen_fd: Option<i32>) -> i32 {
         drain: Some(drain.clone()),
     };
     let Server { sync, shutdown, app } = Server::new(state.clone(), token, control);
+    // Своя сборка в статусе — с самого начала: `mcp start` возвращается, как только области открыты, и может опередить список
+    // рабочих процессов от супервизора (см. `DaemonState::identify`).
+    state.identify(std::process::id(), crate::version::version(), crate::version::build_id());
     sync.prepare(settings.mcp.workspaces.clone());
 
     // Команды супервизора слушаем сразу: activate может прийти раньше, чем сервер стартует. Канал закрыт — супервизора нет.

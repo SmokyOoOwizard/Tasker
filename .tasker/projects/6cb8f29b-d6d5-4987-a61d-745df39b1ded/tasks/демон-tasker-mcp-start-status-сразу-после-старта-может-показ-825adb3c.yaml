@@ -1,0 +1,16 @@
+formatVersion: 9
+id: 825adb3c-99e7-4c58-b5f0-65eaec040fba
+title: 'Демон: tasker mcp start/status сразу после старта может показать рабочий процесс без сборки (build пуст)'
+description: |-
+  Гонка в .NET-супервизоре (Supervisor.cs, McpWorker.cs). Рабочий процесс сначала открывает области (WorkspaceSync.Apply обновляет DaemonState), потом шлёт супервизору ready с версией и сборкой; супервизор рассылает workers уже со сборкой. Между этими шагами /daemon/status отвечает: области open, а у рабочего процесса build и version пустые (список workers пришёл из первой рассылки StartWorker, до ready). DaemonController.WaitReady ждёт только областей, поэтому tasker mcp start возвращается в этом окне.
+
+  Как воспроизвести: DaemonUpgradeTests.Status_json_lists_the_worker_with_its_build с быстрой консолью (Rust, TASKER_BIN) и .NET-демоном/Rust-демоном без поправки — Assert.NotEmpty(build) падает; с .NET-консолью окно прячет медленный старт dotnet.
+
+  Поправка в Rust-демоне (TSK-139): рабочий процесс сам подставляет свою версию и сборку в свою запись workers (DaemonState.identify), протокол не меняется. Для .NET — то же в McpWorker (state.SetWorkers с подстановкой своей сборки) или WaitReady ждать непустой сборки у активного рабочего процесса.
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-10T00:48:12.6980180+00:00
+updatedAt: 2026-10-10T00:48:12.6980180+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 149

@@ -278,6 +278,8 @@ pub struct DaemonState {
     workspaces: Mutex<Vec<WorkspaceStatus>>,
     /// Рабочие процессы под супервизором (их присылает он сам); у демона в одном процессе пусто.
     workers: Mutex<Vec<WorkerStatus>>,
+    /// Этот рабочий процесс и его сборка (pid, версия, сборка), см. [`DaemonState::identify`].
+    own: Mutex<Option<(i64, String, String)>>,
 }
 
 impl DaemonState {
@@ -294,11 +296,27 @@ impl DaemonState {
             started_at,
             workspaces: Mutex::new(Vec::new()),
             workers: Mutex::new(Vec::new()),
+            own: Mutex::new(None),
         }
     }
 
-    pub fn set_workers(&self, workers: Vec<WorkerStatus>) {
+    pub fn set_workers(&self, mut workers: Vec<WorkerStatus>) {
+        if let Some((pid, version, build)) = self.own.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
+            for worker in workers.iter_mut().filter(|w| w.pid == *pid && w.build.is_empty()) {
+                worker.version = version.clone();
+                worker.build = build.clone();
+            }
+        }
         *self.workers.lock().unwrap_or_else(|e| e.into_inner()) = workers;
+    }
+
+    /// Этот рабочий процесс и его сборка. Отличие от .NET: до того, как супервизор узнает сборку из `ready` и разошлёт новый список
+    /// рабочих процессов, статус уже показывает сборку этого процесса — иначе `tasker mcp start`, вернувшийся сразу после открытия
+    /// областей, мог увидеть рабочий процесс с пустой сборкой (гонка есть и в .NET, там её прячет медленный запуск консоли).
+    pub fn identify(&self, pid: u32, version: &str, build: &str) {
+        *self.own.lock().unwrap_or_else(|e| e.into_inner()) = Some((i64::from(pid), version.to_string(), build.to_string()));
+        let workers = self.workers();
+        self.set_workers(workers);
     }
 
     pub fn workers(&self) -> Vec<WorkerStatus> {
@@ -405,6 +423,28 @@ mod tests {
         let mut settings = GlobalSettings::default();
         settings.mcp.port = 6000;
         assert_eq!(state.snapshot(Some(&settings))["settingsPort"], 6000);
+    }
+
+    #[test]
+    fn the_own_worker_shows_its_build_before_the_supervisor_knows_it() {
+        let state = DaemonState::with_process(1, 1, 10, Timestamp::now_utc());
+        let worker = |pid: i64, build: &str| WorkerStatus {
+            pid,
+            version: String::new(),
+            build: build.into(),
+            role: WorkerRole::Active,
+            started_at: Timestamp::now_utc(),
+        };
+        state.set_workers(vec![worker(11, ""), worker(12, "")]);
+        state.identify(11, "0.1.0", "abcd1234");
+        let status = state.snapshot(None);
+        assert_eq!(status["supervised"], true);
+        assert_eq!(status["workers"][0]["build"], "abcd1234");
+        assert_eq!(status["workers"][0]["version"], "0.1.0");
+        assert_eq!(status["workers"][1]["build"], "");
+        // Список от супервизора со сборкой — как есть.
+        state.set_workers(vec![worker(11, "ffff0000")]);
+        assert_eq!(state.snapshot(None)["workers"][0]["build"], "ffff0000");
     }
 
     #[test]
