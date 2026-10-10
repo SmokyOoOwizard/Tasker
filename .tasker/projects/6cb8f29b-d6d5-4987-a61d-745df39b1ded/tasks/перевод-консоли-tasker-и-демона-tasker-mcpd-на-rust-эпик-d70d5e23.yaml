@@ -12,7 +12,7 @@ description: |-
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-09T11:34:26.0624330+00:00
-updatedAt: 2026-10-10T20:55:48.2096710+00:00
+updatedAt: 2026-10-10T22:03:56.2581050+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 123
@@ -59,3 +59,5 @@ links:
   taskId: 603a9c63-f604-429e-84c7-7610e4abee2a
 - typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
   taskId: a50818f8-83af-4be8-b63a-1c7b23e10e10
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: d910f6d7-a8fc-497a-8892-fe9e457ffedd

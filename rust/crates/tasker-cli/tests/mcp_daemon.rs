@@ -137,3 +137,78 @@ fn foreground_run_stops_on_interrupt_and_cleans_up() {
     assert!(!home.root.join("home/mcp/daemon.json").exists());
     assert_eq!(home.run(&["mcp", "status"]).0, 3);
 }
+
+/// `tasker sync` спрашивает демон, если он обслуживает папку (`SyncTests` .NET): `via daemon`, проблемы файлов — от демона; папка,
+/// которую демон не обслуживает, и остановленный демон — прямая сверка.
+#[test]
+fn sync_goes_through_the_daemon_that_serves_the_folder() {
+    if !daemon_is_built() {
+        return;
+    }
+    let home = Home::new();
+    let canonical = |p: PathBuf| {
+        let p = std::fs::canonicalize(p).unwrap();
+        match p.to_str().and_then(|t| t.strip_prefix(r"\\?\")) {
+            Some(plain) => PathBuf::from(plain),
+            None => p,
+        }
+    };
+    let workspace = |name: &str| {
+        let folder = home.root.join(name);
+        std::fs::create_dir_all(&folder).unwrap();
+        let folder = canonical(folder).to_string_lossy().into_owned();
+        assert_eq!(home.run(&["project", "create", name, "-w", &folder]).0, 0);
+        folder
+    };
+    let served = workspace("served");
+    let other = workspace("other");
+    assert_eq!(home.run(&["mcp", "workspace", "add", &served]).0, 0);
+    let via = |folder: &str| {
+        let (code, out, err) = home.run(&["sync", "-w", folder, "--json"]);
+        assert_eq!(code, 0, "{err}");
+        let value: serde_json::Value = serde_json::from_str(&out).unwrap();
+        (value["via"].as_str().unwrap().to_string(), value)
+    };
+    assert_eq!(via(&served).0, "direct");
+
+    assert_eq!(home.run(&["mcp", "start"]).0, 0);
+    let (how, value) = via(&served);
+    assert_eq!(how, "daemon");
+    assert_eq!(
+        value.as_object().unwrap().keys().collect::<Vec<_>>(),
+        ["path", "via", "problemCount", "problems", "series"]
+    );
+    assert_eq!(value["path"], served.as_str());
+    let (code, out, _) = home.run(&["sync", "-w", &served]);
+    assert_eq!((code, out), (0, format!("Synced {served} (via daemon)\n")));
+    assert_eq!(home.run(&["sync", "-q", "-w", &served]).1, "");
+    assert_eq!(via(&other).0, "direct");
+
+    // Файл с маркерами слияния: о нём сообщает демон, и в тихом режиме тоже.
+    let project = std::fs::read_dir(PathBuf::from(&served).join(".tasker/projects"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    std::fs::create_dir_all(project.join("tasks")).unwrap();
+    std::fs::write(
+        project.join("tasks").join(format!("{}.yaml", uuid::Uuid::new_v4())),
+        "<<<<<<< HEAD\ntitle: a\n=======\ntitle: b\n>>>>>>> branch\n",
+    )
+    .unwrap();
+    let (how, value) = via(&served);
+    assert_eq!((how.as_str(), value["problemCount"].as_u64()), ("daemon", Some(1)));
+    assert!(value["problems"][0]["path"].as_str().unwrap().ends_with(".yaml"));
+    let (code, out, _) = home.run(&["sync", "-q", "-w", &served]);
+    assert_eq!(code, 0);
+    assert!(
+        out.starts_with("1 file(s) cannot be read and are missing from the lists until fixed:\n  projects/"),
+        "{out}"
+    );
+    assert!(out.contains(": Unresolved git merge conflict (line 1)\n"), "{out}");
+
+    assert_eq!(home.run(&["mcp", "stop"]).0, 0);
+    let (how, value) = via(&served);
+    assert_eq!((how.as_str(), value["problemCount"].as_u64()), ("direct", Some(1)));
+}

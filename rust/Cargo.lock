@@ -1164,6 +1164,7 @@ name = "tasker-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "rusqlite",
  "rustix",
  "serde_json",
  "signal-hook",

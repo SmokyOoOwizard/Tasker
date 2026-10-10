@@ -129,7 +129,7 @@ public class ConcurrencyTests : IDisposable
         await ws.Run("project", "list");
 
         var cache = Path.Combine(ws.Root, ".tasker", ".cache");
-        (await FileLock.Acquire(Path.Combine(cache, "index.lock"), timeout: TimeSpan.FromMilliseconds(300))).Dispose();
+        (await FileLock.Acquire(IndexCache.Lock(ws.Root), timeout: TimeSpan.FromMilliseconds(300))).Dispose();
         (await FileLock.Acquire(Path.Combine(cache, "write.lock"), timeout: TimeSpan.FromMilliseconds(300))).Dispose();
     }
 
@@ -138,7 +138,7 @@ public class ConcurrencyTests : IDisposable
     {
         using var ws = TestWorkspace.Create("files", asProcess: true);
         await ws.Run("project", "create", "Demo");
-        var indexLock = Path.Combine(ws.Root, ".tasker", ".cache", "index.lock");
+        var indexLock = IndexCache.Lock(ws.Root);
 
         var held = await FileLock.Acquire(indexLock);
         using var child = TaskerProcess.Start(["project", "list", .. ws.Location]);

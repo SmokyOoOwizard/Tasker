@@ -423,3 +423,124 @@ pub fn prefix_conflicts_to_json(conflicts: &[PrefixConflict]) -> serde_json::Val
             .collect(),
     )
 }
+
+/// `ProjectSeriesHealth` из JSON другой стороны (`/daemon/sync` демона .NET или Rust): имена свойств без учёта регистра, как читает
+/// `System.Text.Json` с веб-настройками; пропущенные поля — пустые. None — форма не та (тогда консоль сверяет сама).
+pub fn from_json(value: &serde_json::Value) -> Option<ProjectSeriesHealth> {
+    use serde_json::Value;
+    fn get<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {
+        value
+            .as_object()?
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v)
+            .filter(|v| !v.is_null())
+    }
+    fn uuid(value: &Value, name: &str) -> Option<Uuid> {
+        match get(value, name) {
+            None => Some(Uuid::nil()),
+            Some(v) => Uuid::parse_str(v.as_str()?).ok(),
+        }
+    }
+    fn text(value: &Value, name: &str) -> Option<String> {
+        match get(value, name) {
+            None => Some(String::new()),
+            Some(v) => Some(v.as_str()?.to_string()),
+        }
+    }
+    fn count(value: &Value, name: &str) -> Option<usize> {
+        match get(value, name) {
+            None => Some(0),
+            Some(v) => usize::try_from(v.as_u64()?).ok(),
+        }
+    }
+    fn list<T>(value: &Value, name: &str, item: impl Fn(&Value) -> Option<T>) -> Option<Vec<T>> {
+        match get(value, name) {
+            None => Some(Vec::new()),
+            Some(v) => v.as_array()?.iter().map(item).collect(),
+        }
+    }
+    let ids = |value: &Value, name: &str| list(value, name, |v| Uuid::parse_str(v.as_str()?).ok());
+    Some(ProjectSeriesHealth {
+        project_id: uuid(value, "projectId")?,
+        project_name: text(value, "projectName")?,
+        number_conflicts: list(value, "numberConflicts", |x| {
+            Some(SeriesNumberProblem {
+                reference: text(x, "reference")?,
+                series_id: uuid(x, "seriesId")?,
+                number: match get(x, "number") {
+                    None => 0,
+                    Some(n) => i32::try_from(n.as_i64()?).ok()?,
+                },
+                task_ids: ids(x, "taskIds")?,
+            })
+        })?,
+        prefix_conflicts: list(value, "prefixConflicts", |x| {
+            Some(PrefixConflict {
+                prefix: text(x, "prefix")?,
+                series_ids: ids(x, "seriesIds")?,
+            })
+        })?,
+        tasks_with_invalid_series: count(value, "tasksWithInvalidSeries")?,
+        unreadable_series_files: count(value, "unreadableSeriesFiles")?,
+        error: match get(value, "error") {
+            None => None,
+            Some(v) => Some(v.as_str()?.to_string()),
+        },
+        tasks_with_invalid_links: count(value, "tasksWithInvalidLinks")?,
+        unreadable_link_files: count(value, "unreadableLinkFiles")?,
+        link_cycles: list(value, "linkCycles", |x| {
+            Some(LinkCycleProblem {
+                type_id: uuid(x, "typeId")?,
+                type_name: text(x, "typeName")?,
+                path: text(x, "path")?,
+                task_ids: ids(x, "taskIds")?,
+            })
+        })?,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json_round_trip_and_pascal_case_of_dotnet() {
+        let a = Uuid::from_u128(1);
+        let b = Uuid::from_u128(2);
+        let health = ProjectSeriesHealth {
+            project_id: a,
+            project_name: "P".into(),
+            number_conflicts: vec![SeriesNumberProblem {
+                reference: "TSK-5".into(),
+                series_id: b,
+                number: 5,
+                task_ids: vec![a, b],
+            }],
+            prefix_conflicts: vec![PrefixConflict {
+                prefix: "TSK".into(),
+                series_ids: vec![b],
+            }],
+            tasks_with_invalid_series: 1,
+            unreadable_series_files: 2,
+            error: None,
+            tasks_with_invalid_links: 3,
+            unreadable_link_files: 4,
+            link_cycles: vec![LinkCycleProblem {
+                type_id: b,
+                type_name: "blocks".into(),
+                path: "TSK-1 → TSK-1".into(),
+                task_ids: vec![a],
+            }],
+        };
+        assert_eq!(from_json(&to_json(&health)), Some(health.clone()));
+
+        let pascal = serde_json::json!({"ProjectId": guid_d(&a), "ProjectName": "P", "Error": "boom", "TasksWithInvalidLinks": 1});
+        let parsed = from_json(&pascal).unwrap();
+        assert_eq!(parsed.error.as_deref(), Some("boom"));
+        assert_eq!(parsed.tasks_with_invalid_links, 1);
+        assert!(parsed.number_conflicts.is_empty());
+
+        assert_eq!(from_json(&serde_json::json!({"projectId": 5})), None);
+    }
+}
