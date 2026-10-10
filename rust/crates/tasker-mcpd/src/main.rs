@@ -1,6 +1,7 @@
-//! Точка входа `tasker-mcpd`. Аргументы и коды выхода — как у .NET `Program.cs`: `--help`, `--detached`, `--single`; неизвестный
-//! аргумент — 2; `--worker` и `--supervised` в этой сборке отвергаются (TSK-139).
-use tasker_mcpd::daemon;
+//! Точка входа `tasker-mcpd`. Аргументы и коды выхода — как у .NET `Program.cs`: `--help`; рабочий процесс супервизора
+//! `--worker --listen-fd N | --listen-handoff [--console]` (служебный запуск, остальные аргументы не проверяются); иначе
+//! `--detached`, `--single`, `--supervised` (неизвестный аргумент — код 2) и выбор режима ([`tasker_mcpd::use_supervisor`]).
+use tasker_mcpd::{daemon, handoff, supervisor, worker};
 
 const HELP: &str = "tasker-mcpd — the Tasker MCP server (daemon).
 
@@ -26,11 +27,27 @@ fn run(args: &[String]) -> i32 {
         println!("{HELP}");
         return 0;
     }
-    // Рабочий процесс супервизора и сам супервизор — следующая задача (TSK-139): честный отказ вместо тихого одиночного режима.
+
+    // Рабочий процесс супервизора (служебный запуск): слушающий сокет получен готовым — наследуемый дескриптор (--listen-fd)
+    // или придёт в hello (--listen-handoff).
     if has("--worker") {
-        eprintln!("--worker is not supported by this build of tasker-mcpd: the supervisor and its worker processes come with TSK-139");
-        return 2;
+        let fd = match args.iter().position(|a| a == handoff::FD_ARGUMENT) {
+            Some(at) => match args.get(at + 1).and_then(|n| n.parse::<i32>().ok()) {
+                Some(fd) => Some(fd),
+                None => {
+                    eprintln!("--listen-fd needs a descriptor number");
+                    return 2;
+                }
+            },
+            None if has(handoff::HANDOFF_ARGUMENT) => None,
+            None => {
+                eprintln!("--worker needs --listen-fd <descriptor> or --listen-handoff");
+                return 2;
+            }
+        };
+        return worker::run(fd, has("--console"));
     }
+
     if let Some(unknown) = args
         .iter()
         .find(|a| !matches!(a.as_str(), "--detached" | "--single" | "--supervised"))
@@ -38,11 +55,12 @@ fn run(args: &[String]) -> i32 {
         eprintln!("Unknown argument '{unknown}': see 'tasker-mcpd --help'");
         return 2;
     }
-    if has("--supervised") {
-        eprintln!(
-            "--supervised is not supported by this build of tasker-mcpd: the supervisor comes with TSK-139; run without it (one process)"
-        );
-        return 2;
+
+    let detached = has("--detached");
+    let variable = std::env::var(tasker_mcpd::SUPERVISOR_VARIABLE).ok();
+    if tasker_mcpd::use_supervisor(cfg!(windows), has("--single"), has("--supervised"), variable.as_deref()) {
+        supervisor::run(detached)
+    } else {
+        daemon::run(detached)
     }
-    daemon::run(has("--detached"))
 }

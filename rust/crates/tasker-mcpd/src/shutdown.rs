@@ -57,7 +57,7 @@ impl Default for Shutdown {
 }
 
 #[cfg(unix)]
-async fn os_signal(_daemon_directory: &Path) -> &'static str {
+pub async fn os_signal(_daemon_directory: &Path) -> &'static str {
     use tokio::signal::unix::{SignalKind, signal};
     let mut term = match signal(SignalKind::terminate()) {
         Ok(s) => s,
@@ -70,7 +70,7 @@ async fn os_signal(_daemon_directory: &Path) -> &'static str {
 }
 
 #[cfg(windows)]
-async fn os_signal(daemon_directory: &Path) -> &'static str {
+pub async fn os_signal(daemon_directory: &Path) -> &'static str {
     let event = windows_event::listen(&event_name(daemon_directory));
     tokio::select! {
         _ = tokio::signal::ctrl_c() => "Ctrl+C",

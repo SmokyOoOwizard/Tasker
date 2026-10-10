@@ -1,10 +1,13 @@
-//! Клиент демона MCP (`DaemonFiles`, `DaemonClient`, `DaemonController`, `Launcher` в .NET): те же `daemon.lock` и
-//! `daemon.json` в каталоге данных, те же запросы `/daemon/status`, `/daemon/stop` с секретом управления в заголовке
-//! `X-Tasker-Control`; демон запускается отсоединённым процессом `tasker-mcpd --detached` из каталога этой программы. Клиент
-//! блокирующий (ureq), без tokio. Управляет и .NET-демоном: файлы и API у них общие.
+//! Клиент демона MCP (`DaemonFiles`, `DaemonClient`, `DaemonController`, `DaemonHost`, `Launcher` в .NET): те же `daemon.lock` и
+//! `daemon.json` в каталоге данных, те же запросы `/daemon/status`, `/daemon/stop`, `/daemon/upgrade` с секретом управления в
+//! заголовке `X-Tasker-Control`; демон запускается отсоединённым процессом `tasker-mcpd --detached` из каталога этой программы
+//! (`mcp run` — в этом терминале, [`run_foreground`]). Клиент блокирующий (ureq), без tokio. Управляет и .NET-демоном: файлы и API
+//! у них общие; демон под супервизором (`workers` в статусе) заменяется на лету ([`Controller::upgrade`]).
 use crate::errors::{CliError, Result};
 use serde_json::Value;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tasker_core::Timestamp;
 use tasker_core::settings::{daemon_dir, logs_dir};
@@ -17,6 +20,11 @@ pub const RETRY_PAUSE: Duration = Duration::from_millis(300);
 
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const STOP_TIMEOUT: Duration = Duration::from_secs(15);
+/// Сколько `mcp run` ждёт штатной остановки демона после Ctrl+C (`DaemonHost.StopTimeout`).
+const RUN_STOP_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Сколько ждать, пока новый рабочий процесс откроет области и станет готов, по умолчанию (`DefaultUpgradeTimeoutSeconds`).
+pub const DEFAULT_UPGRADE_TIMEOUT_SECONDS: i64 = 60;
 
 /// Как подключиться к запущенному демону: процесс, порт и секрет управления (`daemon.json`).
 #[derive(Debug, Clone)]
@@ -107,6 +115,11 @@ impl DaemonStatus {
             .unwrap_or_default()
     }
 
+    /// Демон под супервизором: его можно заменить на лету (`DaemonStatus.Supervised` — есть рабочие процессы).
+    pub fn supervised(&self) -> bool {
+        !self.workers().is_empty()
+    }
+
     /// Все области из настроек уже открыты (или не открылись).
     pub fn is_settled(&self) -> bool {
         self.workspaces()
@@ -173,6 +186,87 @@ pub fn request_stop() -> bool {
         .send_empty()
         .map(|r| r.status().is_success())
         .unwrap_or(false)
+}
+
+/// Итог замены от демона (`UpgradeResult`); остальные свойства консоли не нужны.
+pub struct UpgradeResult {
+    pub ok: bool,
+    pub message: String,
+}
+
+/// Просит демон заменить рабочий процесс на лету и ждёт итога (`DaemonClient.Upgrade`). Ошибка связи — тоже итог (`ok = false`):
+/// старый процесс жив. None — демон не работает.
+pub fn request_upgrade(file: &str, arguments: &[String], timeout_seconds: i64) -> Option<UpgradeResult> {
+    if !is_running() {
+        return None;
+    }
+    let info = read_info()?;
+    // Замена — это запуск нового процесса и открытие областей: дольше обычных запросов.
+    let agent = agent(Duration::from_secs(u64::try_from(timeout_seconds + 30).unwrap_or(90)));
+    let body = tasker_core::json::to_string(&serde_json::json!({
+        "file": file,
+        "arguments": arguments,
+        "timeoutSeconds": timeout_seconds,
+    }));
+    let answer = (|| -> std::result::Result<UpgradeResult, String> {
+        let mut response = agent
+            .post(url(&info, "/daemon/upgrade"))
+            .header(CONTROL_HEADER, &info.token)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .send(body.as_str())
+            .map_err(|e| e.to_string())?;
+        let status = response.status();
+        let text = response.body_mut().read_to_string().map_err(|e| e.to_string())?;
+        if !status.is_success() {
+            return Ok(UpgradeResult {
+                ok: false,
+                message: format!("The daemon refused the upgrade: HTTP {} {text}", status.as_u16())
+                    .trim()
+                    .to_string(),
+            });
+        }
+        let value: Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        let get = |name: &str| {
+            value
+                .as_object()
+                .and_then(|o| o.iter().find(|(k, _)| k.eq_ignore_ascii_case(name)).map(|(_, v)| v))
+        };
+        Ok(UpgradeResult {
+            ok: get("ok").and_then(Value::as_bool).unwrap_or(false),
+            message: get("message").and_then(Value::as_str).unwrap_or_default().to_string(),
+        })
+    })();
+    Some(answer.unwrap_or_else(|e| UpgradeResult {
+        ok: false,
+        message: format!("The daemon did not answer the upgrade request: {e}"),
+    }))
+}
+
+/// Что сделала `tasker mcp upgrade` (`UpgradeKind`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpgradeKind {
+    /// Демон не работает: заменять нечего.
+    NotRunning,
+    /// Рабочий процесс заменён на лету, вызовы не прерывались.
+    Replaced,
+    /// Демон перезапущен (запрошено `--restart` или он запущен по-старому, одним процессом).
+    Restarted,
+}
+
+impl UpgradeKind {
+    pub fn json_name(self) -> &'static str {
+        match self {
+            UpgradeKind::NotRunning => "notRunning",
+            UpgradeKind::Replaced => "replaced",
+            UpgradeKind::Restarted => "restarted",
+        }
+    }
+}
+
+pub struct UpgradeOutcome {
+    pub kind: UpgradeKind,
+    pub message: String,
+    pub status: Option<DaemonStatus>,
 }
 
 /// Автозапуск: служба системы и её состояние.
@@ -252,6 +346,77 @@ impl Controller {
         Ok(self.start()?.0)
     }
 
+    /// Заменяет работающий демон на новую сборку без простоя (`DaemonController.Upgrade`): рядом поднимается новый рабочий процесс,
+    /// он принимает вызовы, когда открыл все области, а старый заканчивает начатые. Демон, запущенный по-старому (одним процессом),
+    /// заменить так нельзя — он перезапускается. `Ok(Err(сообщение))` — замена не удалась, старый процесс продолжает работать.
+    /// `daemon` — своя программа демона вместо соседней с `tasker`: файл и начальные аргументы.
+    pub fn upgrade(
+        &self,
+        restart: bool,
+        timeout_seconds: i64,
+        daemon: Option<(String, Vec<String>)>,
+    ) -> Result<std::result::Result<UpgradeOutcome, String>> {
+        if !is_running() {
+            return Ok(Ok(UpgradeOutcome {
+                kind: UpgradeKind::NotRunning,
+                message: "The MCP server is not running: nothing to upgrade (start it with 'tasker mcp start')".into(),
+                status: None,
+            }));
+        }
+        if restart {
+            return Ok(Ok(UpgradeOutcome {
+                kind: UpgradeKind::Restarted,
+                message: "Restarted as requested".into(),
+                status: Some(self.restart()?),
+            }));
+        }
+        let Some(status) = get_status() else {
+            return Ok(Err(
+                "The MCP server does not answer: wait for it to start, or restart it with 'tasker mcp upgrade --restart'".into(),
+            ));
+        };
+        if !status.supervised() {
+            return Ok(Ok(UpgradeOutcome {
+                kind: UpgradeKind::Restarted,
+                message: "The running MCP server was started by an earlier build as one process and cannot be replaced on the fly: restarted it (the next upgrade will be seamless)".into(),
+                status: Some(self.restart()?),
+            }));
+        }
+
+        let (file, arguments) = match daemon {
+            Some(daemon) => daemon,
+            None => (daemon_program()?.to_string_lossy().into_owned(), Vec::new()),
+        };
+        let Some(result) = request_upgrade(&file, &arguments, timeout_seconds) else {
+            return Ok(Err("The MCP server stopped while it was being upgraded".into()));
+        };
+        if !result.ok {
+            return Ok(Err(result.message));
+        }
+
+        // Старый процесс заканчивает начатые вызовы: ждём, пока он уйдёт (но не дольше срока), чтобы статус показал одну сборку.
+        let deadline = Instant::now() + Duration::from_secs(u64::try_from(timeout_seconds).unwrap_or(1));
+        let mut latest = get_status();
+        while let Some(current) = &latest
+            && current
+                .workers()
+                .iter()
+                .any(|w| w.get("role").and_then(Value::as_str) != Some("active"))
+            && Instant::now() < deadline
+        {
+            std::thread::sleep(Duration::from_millis(100));
+            match get_status() {
+                Some(next) => latest = Some(next),
+                None => break,
+            }
+        }
+        Ok(Ok(UpgradeOutcome {
+            kind: UpgradeKind::Replaced,
+            message: result.message,
+            status: latest,
+        }))
+    }
+
     /// Включает автозапуск: служба запускает демон сейчас и при каждом входе в систему.
     pub fn enable_autostart(&self) -> Result<DaemonStatus> {
         // Демон, запущенный не службой, держит порт и блокировку — освобождаем их для службы.
@@ -305,6 +470,92 @@ pub fn spawn_daemon() -> Result<std::process::Child> {
             .spawn()
             .map_err(|e| CliError::new(format!("Cannot start the MCP server process: {e}")))
     }
+}
+
+/// `tasker mcp run` (`DaemonHost.Run`): запускает программу демона в этом терминале и ждёт её. Ввод и вывод — общие, код выхода —
+/// её. Остановка (Ctrl+C, SIGTERM) передаётся демону, чтобы он закрыл области штатно; не вышел за [`RUN_STOP_TIMEOUT`] — снимается.
+pub fn run_foreground(detached: bool) -> Result<i32> {
+    let program = daemon_program()?;
+    let interrupted = Arc::new(AtomicBool::new(false));
+    // Ctrl+C и SIGTERM не завершают консоль: она дожидается демона (как отмена команды в System.CommandLine).
+    for signal in [signal_hook::consts::SIGINT, signal_hook::consts::SIGTERM] {
+        let _ = signal_hook::flag::register(signal, interrupted.clone());
+    }
+    let mut command = std::process::Command::new(&program);
+    if detached {
+        command.arg("--detached");
+    }
+    let mut child = command
+        .spawn()
+        .map_err(|e| CliError::new(format!("Cannot start the MCP server program: {e}")))?;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(process_exit_code(status));
+        }
+        if interrupted.load(Ordering::SeqCst) {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    // Штатно: SIGTERM (Windows — запрос /daemon/stop); демон закрывает области и убирает свои файлы. Не успел — снимаем.
+    #[cfg(unix)]
+    {
+        if let Some(pid) = rustix::process::Pid::from_raw(child.id() as i32) {
+            let _ = rustix::process::kill_process(pid, rustix::process::Signal::TERM);
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        request_stop();
+    }
+    let deadline = Instant::now() + RUN_STOP_TIMEOUT;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(process_exit_code(status));
+        }
+        if Instant::now() >= deadline {
+            #[cfg(windows)]
+            kill(i64::from(child.id()));
+            let _ = child.kill();
+            return Ok(process_exit_code(child.wait()?));
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+/// `Process.ExitCode`: код выхода или 128 + сигнал.
+fn process_exit_code(status: std::process::ExitStatus) -> i32 {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt as _;
+        if let Some(signal) = status.signal() {
+            return 128 + signal;
+        }
+    }
+    status.code().unwrap_or(1)
+}
+
+/// `--daemon <path>` команды `upgrade`: путь к `.dll` — запуск через `dotnet` (у .NET-консоли — её же `dotnet`, здесь — найденный в
+/// `PATH`), иначе — сама программа.
+pub fn daemon_override(path: &str) -> (String, Vec<String>) {
+    if path.to_ascii_lowercase().ends_with(".dll") {
+        (find_in_path("dotnet").unwrap_or_else(|| "dotnet".into()), vec![path.to_string()])
+    } else {
+        (path.to_string(), Vec::new())
+    }
+}
+
+fn find_in_path(name: &str) -> Option<String> {
+    let paths = std::env::var_os("PATH")?;
+    std::env::split_paths(&paths)
+        .flat_map(|dir| {
+            let plain = dir.join(name);
+            let exe = dir.join(format!("{name}.exe"));
+            [plain, exe]
+        })
+        .find(|candidate| candidate.is_file())
+        .map(|p| p.to_string_lossy().into_owned())
 }
 
 /// Готов, когда отвечает и все области из настроек уже открыты (или не открылись).

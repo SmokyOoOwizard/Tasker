@@ -8,9 +8,9 @@ description: |-
 
   Критерий: DaemonTests, DaemonUpgradeTests, ParallelWorkTests проходят с Rust-бинарниками; тест в Docker: .NET-демон под systemd → upgrade на Rust-воркер без закрытия порта; tools/Tasker.Stress на смешанных клиентах (Rust-консоль + Rust-демон + .NET-десктоп REST) не находит нарушений.
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-09T11:34:30.3194430+00:00
-updatedAt: 2026-10-09T11:34:36.5522730+00:00
+updatedAt: 2026-10-10T01:07:08.1276570+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 139

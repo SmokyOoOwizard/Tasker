@@ -1,6 +1,7 @@
-//! Демон как процесс: `tasker-mcpd` на свободном порту с изолированным `TASKER_HOME` — файлы состояния, HTTP управления,
-//! области из `settings.json` (открытая, несуществующая, добавленная на лету), остановка запросом и сигналом, второй экземпляр,
-//! занятый порт. Повторяет сценарии `DaemonTests` (.NET), которым не нужен `/mcp`.
+//! Демон в одном процессе (`--single`) как процесс: `tasker-mcpd` на свободном порту с изолированным `TASKER_HOME` — файлы состояния,
+//! HTTP управления, области из `settings.json` (открытая, несуществующая, добавленная на лету), остановка запросом и сигналом,
+//! второй экземпляр, занятый порт. Повторяет сценарии `DaemonTests` (.NET), которым не нужен `/mcp`. Супервизор и рабочие
+//! процессы — `tests/supervisor.rs`.
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -51,6 +52,7 @@ impl Home {
     fn command(&self) -> Command {
         let mut command = Command::new(BIN);
         command
+            .arg("--single")
             .env("TASKER_HOME", self.home())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -518,11 +520,20 @@ fn unknown_and_unsupported_arguments_are_refused() {
         String::from_utf8_lossy(&output.stderr),
         "Unknown argument '--what': see 'tasker-mcpd --help'\n"
     );
-    for flag in ["--supervised", "--worker"] {
-        let output = home.command().arg(flag).output().unwrap();
-        assert_eq!(output.status.code(), Some(2), "{flag}");
-        assert!(String::from_utf8_lossy(&output.stderr).contains("TSK-139"), "{flag}");
-    }
+    // Рабочий процесс без сокета и с неверным номером дескриптора.
+    let output = Command::new(BIN).arg("--worker").env("TASKER_HOME", home.home()).output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "--worker needs --listen-fd <descriptor> or --listen-handoff\n"
+    );
+    let output = Command::new(BIN)
+        .args(["--worker", "--listen-fd", "x"])
+        .env("TASKER_HOME", home.home())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "--listen-fd needs a descriptor number\n");
     let output = home.command().arg("--help").output().unwrap();
     assert_eq!(output.status.code(), Some(0));
     assert!(String::from_utf8_lossy(&output.stdout).starts_with("tasker-mcpd — the Tasker MCP server (daemon)."));

@@ -1,6 +1,6 @@
 [package]
 name = "tasker-mcpd"
-description = "Tasker MCP daemon (tasker-mcpd): single-process mode — daemon.lock/daemon.json, /health, /ready, /daemon/*, /mcp (tasker-mcp), workspace registry, settings watch, log"
+description = "Tasker MCP daemon (tasker-mcpd): supervisor and worker processes (--listen-fd, NDJSON protocol, accept gate, drain, upgrade) and single-process mode — daemon.lock/daemon.json, /health, /ready, /daemon/*, /mcp (tasker-mcp), workspace registry, settings watch, log"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -16,9 +16,10 @@ tasker-files = { path = "../tasker-files" }
 tasker-services = { path = "../tasker-services" }
 tasker-mcp = { path = "../tasker-mcp" }
 rmcp.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["process", "io-util", "io-std"] }
 axum.workspace = true
 http.workspace = true
+http-body.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
@@ -28,7 +29,10 @@ sha2.workspace = true
 uuid.workspace = true
 
 [target.'cfg(unix)'.dependencies]
-rustix = { workspace = true, features = ["process"] }
+rustix = { workspace = true, features = ["process", "net"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Networking_WinSock", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [dev-dependencies]
 ureq.workspace = true
