@@ -54,7 +54,7 @@ impl Fixture {
             .join("../../target/tmp")
             .join(uuid::Uuid::new_v4().simple().to_string());
         std::fs::create_dir_all(root.join("home")).unwrap();
-        let root = std::fs::canonicalize(&root).unwrap();
+        let root = canonical(&root);
         copy_dir(&golden(), &root.join("ws"));
         let port = free_port();
         let settings = format!(
@@ -782,4 +782,13 @@ fn the_socket_can_be_handed_over_in_hello_like_on_windows() {
         .unwrap();
     let command = String::from_utf8_lossy(&ps.stdout);
     assert!(command.contains("--worker --listen-handoff"), "{command}");
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
 }

@@ -499,12 +499,12 @@ mod tests {
         let (out, err, code) = run_text(&["task", "create", "-h"]);
         assert_eq!((code, err.as_str()), (0, ""));
         assert!(out.starts_with("Description:\n  Creates a task\n"));
+        // Путь в тексте — полный (Path.GetFullPath): на Windows к нему добавляется диск текущего каталога.
+        let missing = std::path::absolute("/nonexistent").unwrap();
+        let expected = format!("Error: Folder not found: {}\n", missing.display());
         let (out, err, code) = run_text(&["sync", "-w", "/nonexistent"]);
-        assert_eq!(
-            (code, out.as_str(), err.as_str()),
-            (1, "", "Error: Folder not found: /nonexistent\n")
-        );
+        assert_eq!((code, out.as_str(), err.as_str()), (1, "", expected.as_str()));
         let (_, err, code) = run_text(&["task", "list", "-w", "/nonexistent"]);
-        assert_eq!((code, err.as_str()), (1, "Error: Folder not found: /nonexistent\n"));
+        assert_eq!((code, err.as_str()), (1, expected.as_str()));
     }
 }

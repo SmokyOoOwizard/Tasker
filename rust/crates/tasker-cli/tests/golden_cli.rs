@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn repository_root() -> PathBuf {
-    std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")).unwrap()
+    canonical(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.."))
 }
 
 fn names(dir: &str) -> Vec<String> {
@@ -194,4 +194,13 @@ fn every_cli_and_migrate_snapshot_of_the_corpus_matches_dotnet() {
         failures.len(),
         report.join("\n\n")
     );
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
 }

@@ -29,7 +29,7 @@ fn fresh_copy() -> PathBuf {
         .join("../../target/tmp")
         .join(uuid::Uuid::new_v4().simple().to_string());
     std::fs::create_dir_all(&root).unwrap();
-    let root = std::fs::canonicalize(&root).unwrap();
+    let root = canonical(&root);
     let workspace = root.join("golden");
     copy_dir(&golden().join("workspace"), &workspace);
     workspace
@@ -848,4 +848,13 @@ fn sorting_by_fields_and_ranks_in_memory_agrees_with_sql() {
         assert_eq!(actual, expected, "{expression}");
     }
     std::fs::remove_dir_all(&corpus.workspace).unwrap();
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
 }

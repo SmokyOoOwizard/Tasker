@@ -33,7 +33,7 @@ impl Home {
     fn workspace(&self, name: &str) -> String {
         let dir = self.root.join(name);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::canonicalize(&dir).unwrap().to_string_lossy().into_owned()
+        canonical(&dir).to_string_lossy().into_owned()
     }
 
     /// `settings.json` руками, атомарно — как `SettingsStore.Update` (`.tmp` + rename).
@@ -538,4 +538,13 @@ fn unknown_and_unsupported_arguments_are_refused() {
     assert_eq!(output.status.code(), Some(0));
     assert!(String::from_utf8_lossy(&output.stdout).starts_with("tasker-mcpd — the Tasker MCP server (daemon)."));
     assert!(!home.info_file().exists());
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
 }
