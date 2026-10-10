@@ -181,6 +181,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "systemd is Linux only: the unit is checked with Unix paths")]
     fn unit_restarts_the_daemon_and_starts_at_login() {
         let dir = temp_dir();
         let home = dir.join("home");
@@ -198,6 +199,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "systemd is Linux only: the unit is checked with Unix paths")]
     fn unit_quotes_arguments_with_spaces() {
         let dir = temp_dir();
         let special = dir.join("with space");

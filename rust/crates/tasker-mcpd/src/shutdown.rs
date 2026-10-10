@@ -136,7 +136,8 @@ mod tests {
                 .chars()
                 .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
         );
-        // printf '/x/mcp' | shasum -a 256 | cut -c1-16
+        // printf '/x/mcp' | shasum -a 256 | cut -c1-16 (на Windows путь становится полным, с диском, — как Path.GetFullPath)
+        #[cfg(unix)]
         assert_eq!(
             event_name(Path::new("/x/mcp")),
             format!("Local\\tasker-mcp-stop-{}", &sha_hex("/x/mcp")[..16])
@@ -144,6 +145,7 @@ mod tests {
         assert_ne!(a, event_name(Path::new("/x/mcp")));
     }
 
+    #[cfg(unix)]
     fn sha_hex(text: &str) -> String {
         Sha256::digest(text.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
     }

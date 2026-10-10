@@ -157,8 +157,8 @@ if [ -n "$archive" ]; then
   supervisor="$(daemon_pid)"; before="$(worker_pid)"
   check "[.NET] супервизор ($supervisor) и рабочий процесс ($before) — .NET" bash -c "$(declare -f is_dotnet); name=$name; is_dotnet '$supervisor' && is_dotnet '$before'"
   load_start; sleep 2
-  as_tester bash -c 'rm -rf /tmp/rel && mkdir /tmp/rel && tar -xzf /release.tar.gz -C /tmp/rel'
-  install_out="$(as_tester bash -c '/tmp/rel/*/install.sh --no-completion' 2>&1)"
+  as_tester bash -c 'rm -rf /home/tester/rel && mkdir /home/tester/rel && tar -xzf /release.tar.gz -C /home/tester/rel'
+  install_out="$(as_tester bash -c '/home/tester/rel/*/install.sh --no-completion' 2>&1)"
   printf '%s\n' "$install_out" | sed 's/^/      | /'
   check "install.sh из распакованного архива поверх (демон переводится через tasker mcp upgrade)" \
     grep -q 'switching it to the new one without downtime' <<< "$install_out"
@@ -171,7 +171,7 @@ if [ -n "$archive" ]; then
   check "рабочий процесс сменился ($before -> $rust_worker) и он Rust" bash -c "$(declare -f is_dotnet); name=$name; [ -n '$rust_worker' ] && [ '$before' != '$rust_worker' ] && ! is_dotnet '$rust_worker'"
   check "супервизор тот же (.NET, pid $supervisor), служба active" bash -c "$(declare -f is_dotnet); name=$name; [ '$(daemon_pid)' = '$supervisor' ] && is_dotnet '$supervisor' && docker exec -u tester -e XDG_RUNTIME_DIR=/run/user/1500 $name systemctl --user is-active --quiet tasker-mcp.service"
   check "в app/ только tasker и tasker-mcpd (от .NET ничего не осталось)" as_tester bash -c "[ \"\$(ls -A $app | tr '\\n' ' ')\" = 'tasker tasker-mcpd ' ] && [ ! -e $app.old ]"
-  check "tasker --version — версия архива" bash -c "[ \"\$(docker exec $name tasker --version)\" = \"\$(docker exec $name sed -n 's/^version=//p' /tmp/rel/$(tar -tzf "$archive" | head -n 1 | cut -d/ -f1)/release.txt)\" ]"
+  check "tasker --version — версия архива" bash -c "[ \"\$(docker exec $name tasker --version)\" = \"\$(docker exec $name sed -n 's/^version=//p' /home/tester/rel/$(tar -tzf "$archive" | head -n 1 | cut -d/ -f1)/release.txt)\" ]"
   check "systemctl --user restart: супервизор тоже Rust" bash -c "docker exec -u tester -e XDG_RUNTIME_DIR=/run/user/1500 $name systemctl --user restart tasker-mcp.service"
   check "демон снова отвечает" eventually has_worker 20
   check "новый супервизор — Rust" bash -c "$(declare -f is_dotnet); name=$name; pid=\$(docker exec -u tester -e HOME=/home/tester $name tasker mcp status | sed -n 's/^pid \\([0-9]*\\),.*/\\1/p' | head -n 1); [ -n \"\$pid\" ] && ! is_dotnet \$pid"

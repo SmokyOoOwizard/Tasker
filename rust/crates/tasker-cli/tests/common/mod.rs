@@ -16,7 +16,7 @@ pub fn fresh_copy() -> (PathBuf, PathBuf) {
         .join(uuid::Uuid::new_v4().simple().to_string());
     std::fs::create_dir_all(&root).unwrap();
     // Канонический путь (без `..`): так же его покажет консоль в сообщениях об ошибках.
-    let root = std::fs::canonicalize(&root).unwrap();
+    let root = canonical(&root);
     let workspace = root.join("golden");
     copy_dir(&golden().join("workspace"), &workspace);
     (root, workspace)
@@ -129,4 +129,13 @@ fn with_root(text: &str, root: &str) -> String {
         out.push_str(rest);
     }
     out
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+pub fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
 }

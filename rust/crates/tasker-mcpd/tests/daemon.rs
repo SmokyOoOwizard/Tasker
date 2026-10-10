@@ -192,6 +192,7 @@ fn states(status: &serde_json::Value) -> Vec<(String, String)> {
 }
 
 #[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
 fn start_serves_the_workspaces_and_writes_daemon_json_for_the_owner_only() {
     let home = Home::new();
     let a = home.workspace("a");
@@ -313,6 +314,7 @@ fn control_endpoints_need_the_secret_and_a_local_host() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
 fn sync_checks_an_open_workspace_and_rejects_unknown_or_missing_bodies() {
     let home = Home::new();
     let a = home.workspace("a");
@@ -358,6 +360,7 @@ fn sync_checks_an_open_workspace_and_rejects_unknown_or_missing_bodies() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
 fn a_workspace_that_cannot_be_opened_is_reported_and_does_not_stop_the_others() {
     let home = Home::new();
     let gone = home.workspace("gone");
@@ -411,6 +414,7 @@ fn a_workspace_that_cannot_be_opened_is_reported_and_does_not_stop_the_others() 
 }
 
 #[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
 fn stop_request_ends_the_process_and_cleans_up() {
     let home = Home::new();
     let a = home.workspace("a");

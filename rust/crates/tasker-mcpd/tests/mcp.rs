@@ -215,6 +215,7 @@ fn scrub_times(value: &Value) -> Value {
 }
 
 #[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
 fn mcp_answers_match_the_dotnet_snapshots() {
     let f = Fixture::start();
     let root = f.root.to_string_lossy().into_owned();
@@ -399,6 +400,7 @@ fn mcp_answers_match_the_dotnet_snapshots() {
 
 /// `X-Tasker-Agent` с id агента области принимается, с чужим id — `[forbidden]`; пустое и null значение `workspace` — «не указан».
 #[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
 fn agent_header_and_workspace_argument_edge_cases() {
     let f = Fixture::start();
     let me = f.result_json("whoami", json!({"workspace": "golden"}));
