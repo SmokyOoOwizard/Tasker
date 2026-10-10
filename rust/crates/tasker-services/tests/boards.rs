@@ -788,6 +788,9 @@ fn a_task_that_does_not_match_the_conditions_of_the_column_is_not_moved_into_it(
 
 #[test]
 fn a_board_file_keeps_conditions_by_id_and_is_read_back_by_a_fresh_workspace() {
+    if sqlite() {
+        return; // файл доски на диске
+    }
     let p = P::new();
     let env = &p.env;
     let board = p

@@ -24,6 +24,23 @@ pub fn temp_dir() -> PathBuf {
     dir
 }
 
+/// Тестовый двоичный файл сценариев на SQLite (`sqlite_*` в `Cargo.toml`): область — файл БД вместо папки.
+pub fn sqlite() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.file_name().map(|n| n.to_string_lossy().starts_with("sqlite_")))
+        .unwrap_or(false)
+}
+
+/// Область во временном каталоге: папка или файл `tasker.db` в нём (сценарии на SQLite).
+pub fn open_workspace(dir: &std::path::Path) -> Workspace {
+    if sqlite() {
+        Workspace::open_sqlite(dir.join("tasker.db")).unwrap()
+    } else {
+        Workspace::open(dir).unwrap()
+    }
+}
+
 pub struct Env {
     pub dir: PathBuf,
     pub ws: Workspace,
@@ -39,7 +56,7 @@ impl Env {
     pub fn new() -> Env {
         let dir = temp_dir();
         let clock = Arc::new(FakeClock::at("2026-01-01T00:00:00+00:00"));
-        let ws = Workspace::open(&dir).unwrap().with_clock(clock.clone());
+        let ws = open_workspace(&dir).with_clock(clock.clone());
         let project = ws.projects().create(&CreateProject { name: "Test".into() }).unwrap().id;
         let backlog = ws.statuses().create(&project, &status("Backlog")).unwrap();
         let done = ws.statuses().create(&project, &status("Done")).unwrap();

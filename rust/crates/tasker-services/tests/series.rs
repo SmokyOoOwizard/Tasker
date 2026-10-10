@@ -467,7 +467,7 @@ fn parallel_creates_and_add_to_series_get_unique_consecutive_numbers() {
         .collect();
     numbers_a.sort();
     assert_eq!(numbers_a, (1..=20).collect::<Vec<_>>());
-    assert!(env.ws.index().number_conflicts(&env.project).unwrap().is_empty());
+    assert!(env.ws.number_conflicts(&env.project).unwrap().is_empty());
 
     let s = env.series("TSK");
     let tasks: Vec<TaskItem> = (0..15).map(|i| env.seed(&format!("x{i}"), &[])).collect();
@@ -488,6 +488,9 @@ fn parallel_creates_and_add_to_series_get_unique_consecutive_numbers() {
 
 #[test]
 fn add_to_series_appends_next_number_and_keeps_existing_order() {
+    if sqlite() {
+        return; // порядок номеров как в файле — в БД номера идут по id серии (TaskStorage.Map)
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let b = env.series("BBB");
@@ -570,6 +573,9 @@ fn add_to_series_reports_modified_when_task_changed_on_disk() {
 
 #[test]
 fn remove_from_series_removes_only_that_series_and_frees_the_number() {
+    if sqlite() {
+        return; // порядок номеров как в файле — в БД номера идут по id серии
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let b = env.series("BBB");
@@ -628,6 +634,9 @@ fn remove_from_series_also_removes_a_dangling_reference() {
 
 #[test]
 fn remove_from_series_by_number() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let b = env.series("BBB");
@@ -659,6 +668,9 @@ fn remove_from_series_by_number() {
 
 #[test]
 fn renumber_to_free_number_keeps_position_of_other_series() {
+    if sqlite() {
+        return; // порядок номеров как в файле — в БД номера идут по id серии
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let b = env.series("BBB");
@@ -677,6 +689,9 @@ fn renumber_to_free_number_keeps_position_of_other_series() {
 
 #[test]
 fn renumber_to_taken_number_conflicts_including_a_duplicate_of_own_number() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let t1 = env.seed("one", &[(a.id, 1)]);
@@ -734,6 +749,9 @@ fn renumber_returns_none_for_missing_task_series_or_membership_and_checks_versio
 
 #[test]
 fn resolve_by_guid_prefix_number_and_duplicates() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let task = env.seed("t", &[]);
     assert_eq!(
@@ -808,6 +826,9 @@ fn clean_project_needs_no_attention() {
 
 #[test]
 fn all_four_counters_are_reported() {
+    if sqlite() {
+        return; // две серии с одним префиксом и дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let s = env.series("TSK");
     let d1 = env.ws.series().create(&env.project, &CreateSeries::new("D1", "DUP")).unwrap();
@@ -898,6 +919,9 @@ fn cleanup_removes_invalid_references_keeps_valid_ones_and_describes_them() {
 
 #[test]
 fn cleanup_several_invalid_references_on_one_task_give_one_change_each() {
+    if sqlite() {
+        return; // порядок номеров как в файле — в БД номера идут по id серии
+    }
     let env = Env::new();
     let (g1, g2) = (Uuid::new_v4(), Uuid::new_v4());
     let task = env.seed("t", &[(g1, 1), (g2, 2)]);
@@ -909,6 +933,9 @@ fn cleanup_several_invalid_references_on_one_task_give_one_change_each() {
 
 #[test]
 fn cleanup_unreadable_series_skip_everything_but_still_report_conflicts() {
+    if sqlite() {
+        return; // нечитаемые файлы и дубликаты номеров бывают только у папки
+    }
     let env = Env::new();
     let s = env.series("TSK");
     let t1 = env.seed_at(
@@ -945,6 +972,9 @@ fn cleanup_unreadable_series_skip_everything_but_still_report_conflicts() {
 
 #[test]
 fn cleanup_prefix_conflicts_are_always_reported_and_conflicts_left_alone_without_resolve() {
+    if sqlite() {
+        return; // две серии с одним префиксом — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let a = env.series("DUP");
     let b = tasker_core::model::Series {
@@ -987,6 +1017,9 @@ fn cleanup_prefix_conflicts_are_always_reported_and_conflicts_left_alone_without
 
 #[test]
 fn cleanup_two_conflicting_tasks_the_earliest_keeps_the_number() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let s = env.series("TSK");
     let later = env.seed_at("later", &[(s.id, 3)], Env::at("2026-01-03T00:00:00+00:00"), Uuid::new_v4());
@@ -1013,11 +1046,14 @@ fn cleanup_two_conflicting_tasks_the_earliest_keeps_the_number() {
     assert_eq!(sn(&env.get(&earlier.id)), vec![(s.id, 3)]);
     assert_eq!(sn(&env.get(&later.id)), vec![(s.id, 8)]);
     assert!(report.remaining_number_conflicts.is_empty());
-    assert!(env.ws.index().number_conflicts(&env.project).unwrap().is_empty());
+    assert!(env.ws.number_conflicts(&env.project).unwrap().is_empty());
 }
 
 #[test]
 fn cleanup_three_tasks_with_equal_created_at_are_ordered_by_guid() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let s = env.series("TSK");
     let when = Env::at("2026-01-02T00:00:00+00:00");
@@ -1049,6 +1085,9 @@ fn cleanup_three_tasks_with_equal_created_at_are_ordered_by_guid() {
 
 #[test]
 fn cleanup_several_series_conflicts_invalid_references_and_a_task_in_two_groups_at_once() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let b = env.series("BBB");
@@ -1084,12 +1123,15 @@ fn cleanup_several_series_conflicts_invalid_references_and_a_task_in_two_groups_
     assert_eq!(sn(&env.get(&a2.id)), vec![(a.id, 2), (b.id, 6)]);
     assert_eq!(sn(&env.get(&a3.id)), vec![(a.id, 3)]);
     assert_eq!(sn(&env.get(&b2.id)), vec![(b.id, 5)]);
-    assert!(env.ws.index().number_conflicts(&env.project).unwrap().is_empty());
+    assert!(env.ws.number_conflicts(&env.project).unwrap().is_empty());
     assert_eq!(env.ws.series_health().check(&env.project).unwrap().tasks_with_invalid_series, 0);
 }
 
 #[test]
 fn cleanup_duplicates_inside_a_nonexistent_series_are_not_renumbered() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let gone = Uuid::new_v4();
     env.seed("a", &[(gone, 1)]);
@@ -1114,6 +1156,9 @@ fn cleanup_duplicates_inside_a_nonexistent_series_are_not_renumbered() {
 
 #[test]
 fn cleanup_dry_run_writes_nothing_and_matches_the_real_run_and_second_run_changes_nothing() {
+    if sqlite() {
+        return; // дубликаты номеров после слияния git — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let b = env.series("BBB");
@@ -1171,6 +1216,9 @@ fn cleanup_dry_run_writes_nothing_and_matches_the_real_run_and_second_run_change
 
 #[test]
 fn cleanup_dry_run_without_resolve_reports_conflicts_of_valid_series_only() {
+    if sqlite() {
+        return; // дубликаты номеров — в БД их не даёт уникальный индекс
+    }
     let env = Env::new();
     let s = env.series("TSK");
     let gone = Uuid::new_v4();

@@ -2234,6 +2234,9 @@ fn a_field_change_that_hits_a_locked_task_changes_nothing_and_a_stale_version_le
 
 #[test]
 fn fields_of_tasks_and_types_survive_a_fresh_workspace_and_the_index_finds_them_by_field_and_enum() {
+    if sqlite() {
+        return; // собственное поле со ссылкой на несуществующее перечисление в БД не записать (внешний ключ)
+    }
     let env = Env::new();
     let (field_id, own_id, enum_id) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
     let mut task = env.seed("Fields", &[]);
@@ -2272,7 +2275,7 @@ fn fields_of_tasks_and_types_survive_a_fresh_workspace_and_the_index_finds_them_
     task.version = env.ws.update(&task, &task.version).unwrap().unwrap();
 
     // Новый экземпляр области знает файлы только с диска.
-    let fresh = Workspace::open(&env.dir).unwrap();
+    let fresh = open_workspace(&env.dir);
     let read = fresh.tasks().get_by_id(&env.project, &task.id).unwrap().unwrap();
     assert_eq!(read.fields, task.fields);
     let by_field = |ids: Vec<Uuid>| {

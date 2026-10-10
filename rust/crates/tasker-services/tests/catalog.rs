@@ -508,6 +508,9 @@ fn concurrent_creation_of_the_same_name_leaves_exactly_one() {
 
 #[test]
 fn fields_and_enums_are_files_in_their_own_folders_and_unreadable_files_are_counted() {
+    if sqlite() {
+        return; // файлы и нечитаемые файлы — только у папки
+    }
     let env = Env::new();
     let p = &env.project;
     let priority = new_enum(&env, p, "Приоритет", &["Низкий", "Высокий"]).unwrap();
@@ -539,7 +542,7 @@ fn fields_and_enums_are_files_in_their_own_folders_and_unreadable_files_are_coun
     let plain_text = read(project.fields(), &plain.id);
     assert!(!plain_text.contains("multiple:") && !plain_text.contains("enum:"));
 
-    let fresh = Workspace::open(&env.dir).unwrap();
+    let fresh = open_workspace(&env.dir);
     let fields = fresh.fields().get_all(p).unwrap();
     assert_eq!(fields.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["Level", "Note"]);
     assert_eq!(fields[0].enum_id, Some(priority.id));
