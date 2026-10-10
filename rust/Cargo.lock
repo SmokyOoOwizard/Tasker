@@ -1171,6 +1171,7 @@ dependencies = [
  "tasker-daemon",
  "tasker-files",
  "tasker-services",
+ "tasker-version",
  "unicode-general-category",
  "unicode-segmentation",
  "ureq",
@@ -1250,6 +1251,7 @@ dependencies = [
  "tasker-files",
  "tasker-mcp",
  "tasker-services",
+ "tasker-version",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -1269,6 +1271,10 @@ dependencies = [
  "unicode-segmentation",
  "uuid",
 ]
+
+[[package]]
+name = "tasker-version"
+version = "0.1.0"
 
 [[package]]
 name = "thiserror"

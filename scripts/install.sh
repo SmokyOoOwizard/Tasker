@@ -1,18 +1,18 @@
 #!/bin/bash
 # Устанавливает консольную утилиту tasker и демон MCP (tasker-mcpd) в каталог пользователя на macOS и Linux, чтобы команда `tasker`
-# была доступна из любого места. Права администратора не нужны, .NET ставить не нужно (сборка самодостаточная).
+# была доступна из любого места. Права администратора не нужны, ставить ничего не нужно: это два исполняемых файла (Rust).
 # (Windows: scripts/install.ps1.)
 #
 #   install.sh                                  из распакованного релиза (рядом со скриптом лежит каталог app/)
 #   install.sh --from ФАЙЛ.tar.gz | КАТАЛОГ     из архива релиза или каталога с готовой сборкой
 #   install.sh --url АДРЕС.tar.gz               скачать архив релиза (рядом должен лежать АДРЕС.tar.gz.sha256)
-#   install.sh --from-source                    собрать из исходников репозитория (нужен .NET SDK 10), для разработчиков
+#   install.sh --from-source                    собрать из исходников репозитория (нужен Rust: cargo), для разработчиков
 #   install.sh --uninstall                      удалить
 #   прочее: [--prefix DIR] [--no-completion] [--no-autostart] [--add-to-path] [--restart] [--no-verify]
-#           [--framework-dependent] [--no-daemon]   (последние два — только с --from-source)
+#           [--no-daemon]   (только с --from-source)
 #
 # Раскладка (по умолчанию --prefix ~/.local):
-#   <prefix>/share/tasker/app/   tasker и tasker-mcpd (self-contained: .NET внутри, ничего ставить не нужно)
+#   <prefix>/share/tasker/app/   tasker и tasker-mcpd (каталог заменяется целиком: от прежней .NET-установки в нём ничего не остаётся)
 #   <prefix>/bin/tasker          ссылка на <prefix>/share/tasker/app/tasker (демон tasker запускает из своего каталога)
 #   <prefix>/share/tasker/completions/   скрипты автодополнения по Tab (zsh: _tasker, bash: tasker.bash), см. ниже
 # Автозапуск: `tasker mcp autostart enable` (launchd на macOS, служба systemd пользователя на Linux); --no-autostart его не включает.
@@ -37,7 +37,7 @@ Installs the tasker command line tool and the MCP server (tasker-mcpd) for the c
 Where the files come from (one of; default: the release this script came with, i.e. the app/ folder next to it):
   --from PATH             a release archive (.tar.gz) or a folder with the ready build (tasker, tasker-mcpd inside it or in its app/)
   --url URL               download a release archive; URL.sha256 next to it is checked
-  --from-source           build from the repository sources (needs the .NET SDK 10): for developers
+  --from-source           build from the repository sources (needs Rust 1.85+: cargo): for developers
 
 Options:
   --prefix DIR            install under DIR (default: ~/.local): DIR/share/tasker/app and DIR/bin/tasker
@@ -50,7 +50,6 @@ Options:
   --restart               restart a running MCP server after the installation (calls in progress are cut off);
                           by default it is switched to the new build without downtime ('tasker mcp upgrade')
   --no-verify             with --url: install even if the .sha256 file cannot be downloaded
-  --framework-dependent   with --from-source: small build (~50 MB) that needs the .NET 10 runtime installed
   --no-daemon             with --from-source: only the command line tool (no MCP server: 'tasker mcp start' will not work)
   --uninstall             remove the tool (stops the MCP server and disables its autostart first)
                           and the Tab completion block it added to your shell startup file
@@ -76,14 +75,12 @@ PREFIX="$HOME/.local"
 FROM=""
 URL=""
 FROM_SOURCE=false
-SELF_CONTAINED=true
 ADD_TO_PATH=false
 WITH_COMPLETION=true
 WITH_AUTOSTART=true
 UNINSTALL=false
 WITH_DAEMON=true
 DAEMON_FLAG_GIVEN=false
-FRAMEWORK_FLAG_GIVEN=false
 RESTART_DAEMON=false
 VERIFY=true
 
@@ -105,7 +102,7 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --from-source) FROM_SOURCE=true; shift ;;
-    --framework-dependent) SELF_CONTAINED=false; FRAMEWORK_FLAG_GIVEN=true; shift ;;
+    --framework-dependent) bad_usage "--framework-dependent is gone: tasker is a Rust program now and needs no .NET (use --from-source alone)" ;;
     --no-daemon) WITH_DAEMON=false; DAEMON_FLAG_GIVEN=true; shift ;;
     --restart) RESTART_DAEMON=true; shift ;;
     --add-to-path) ADD_TO_PATH=true; shift ;;
@@ -124,7 +121,6 @@ SOURCES=0
 [ "$FROM_SOURCE" = true ] && SOURCES=$((SOURCES + 1))
 [ "$SOURCES" -le 1 ] || bad_usage "choose one of --from, --url, --from-source"
 if [ "$FROM_SOURCE" = false ]; then
-  [ "$FRAMEWORK_FLAG_GIVEN" = false ] || bad_usage "--framework-dependent works with --from-source only (release builds are self-contained)"
   [ "$DAEMON_FLAG_GIVEN" = false ] || bad_usage "--no-daemon works with --from-source only (a release always includes the MCP server)"
 fi
 
@@ -143,7 +139,7 @@ else
   DATA_TEXT="~/.local/share/Tasker"
 fi
 
-# Платформа сборки (RID .NET): osx-arm64, osx-x64, linux-arm64, linux-x64.
+# Платформа сборки (RID, как в именах архивов): osx-arm64, osx-x64, linux-arm64, linux-x64, linux-musl-arm64, linux-musl-x64.
 detect_rid() {
   local arch
   case "$(uname -m)" in
@@ -155,8 +151,10 @@ detect_rid() {
   if [ "$OS" = osx ] && [ "$arch" = x64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ]; then
     arch=arm64
   fi
+  # Linux на musl (Alpine): нужна статическая сборка linux-musl-* (она работает и на glibc).
   if [ "$OS" = linux ] && command -v ldd >/dev/null 2>&1 && ldd --version 2>&1 | grep -qi musl; then
-    fail "this Linux uses musl (Alpine): the release builds need glibc"
+    echo "linux-musl-$arch"
+    return
   fi
   echo "$OS-$arch"
 }
@@ -469,7 +467,8 @@ check_release_platform() {
     if [ -f "$info" ]; then
       local built
       built="$(grep '^rid=' "$info" | head -1 | cut -d= -f2)"
-      if [ -n "$built" ] && [ "$built" != "$RID" ]; then
+      # Статическая сборка linux-musl-<arch> идёт и на glibc той же архитектуры.
+      if [ -n "$built" ] && [ "$built" != "$RID" ] && [ "$built" != "linux-musl-${RID#linux-}" ]; then
         fail "this build is for $built, but this machine is $RID: download the $RID archive"
       fi
       return 0
@@ -482,7 +481,7 @@ BUILD_SOURCE=""   # каталог готовой сборки; пуст — с�
 if [ "$FROM_SOURCE" = true ]; then
   REPO=""
   if [ -n "$SCRIPT_DIR" ]; then REPO="$(cd "$SCRIPT_DIR/.." && pwd)"; fi
-  [ -n "$REPO" ] && [ -f "$REPO/src/Tasker.Cli/Tasker.Cli.csproj" ] || fail "--from-source needs this script inside the repository (cannot find src/Tasker.Cli)"
+  [ -n "$REPO" ] && [ -f "$REPO/rust/Cargo.toml" ] || fail "--from-source needs this script inside the repository (cannot find rust/Cargo.toml)"
 elif [ -n "$URL" ]; then
   command -v curl >/dev/null 2>&1 || fail "curl is required for --url"
   ARCHIVE="$TEMP_DIR/$(basename "${URL%%\?*}")"
@@ -516,7 +515,7 @@ else
   # Без параметров: релиз, с которым пришёл скрипт (в каталоге релиза лежат install.sh и app/).
   if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/app/tasker" ]; then
     BUILD_SOURCE="$SCRIPT_DIR/app"
-  elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../src/Tasker.Cli/Tasker.Cli.csproj" ]; then
+  elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../rust/Cargo.toml" ]; then
     fail "this is a repository, not a release: use --from-source to build and install from it (or --from / --url for a release)"
   else
     fail "nothing to install: run this script from an unpacked release, or pass --from FILE|DIR, --url ADDRESS (or --from-source in the repository)"
@@ -527,71 +526,37 @@ if [ -n "$BUILD_SOURCE" ]; then
   check_release_platform "$BUILD_SOURCE"
   [ -f "$BUILD_SOURCE/tasker-mcpd" ] || fail "$BUILD_SOURCE has no tasker-mcpd: the MCP server is a part of every release"
   echo "Installing tasker from ${URL:-${FROM:-$BUILD_SOURCE}} ($RID)..."
-  cp -pR "$BUILD_SOURCE/." "$STAGING/"
+  if [ -f "$BUILD_SOURCE/tasker.dll" ]; then
+    # Сборка .NET (старый релиз): программа — весь каталог с библиотеками.
+    cp -pR "$BUILD_SOURCE/." "$STAGING/"
+  else
+    # Сборка Rust: только две программы — из каталога вроде rust/target/release не тянутся промежуточные файлы cargo.
+    cp -p "$BUILD_SOURCE/tasker" "$BUILD_SOURCE/tasker-mcpd" "$STAGING/"
+  fi
   chmod +x "$STAGING/tasker" "$STAGING/tasker-mcpd" 2>/dev/null || true
   # Архив, скачанный браузером, помечен «карантином» macOS: Gatekeeper не даст запустить программу без подписи разработчика.
   if [ "$OS" = osx ]; then
     xattr -dr com.apple.quarantine "$STAGING" 2>/dev/null || true
   fi
 else
-  command -v dotnet >/dev/null 2>&1 || fail ".NET SDK 10 is required to build: https://dotnet.microsoft.com/download"
-  DOTNET_MAJOR="$(dotnet --version | cut -d. -f1)"
-  [ "$DOTNET_MAJOR" -ge 10 ] 2>/dev/null || fail ".NET SDK 10 or newer is required (found $(dotnet --version))"
+  command -v cargo >/dev/null 2>&1 || fail "Rust is required to build: https://rustup.rs (or your package manager: brew install rust, apt install cargo)"
 
-  # К номеру из файла VERSION добавляется коммит (build metadata): сборка из исходников отличима от релиза.
-  BASE_VERSION="$(tr -d '[:space:]' < "$REPO/VERSION" 2>/dev/null || true)"
-  COMMIT="$(git -C "$REPO" describe --always --dirty --abbrev=7 2>/dev/null || true)"
-  VERSION="${BASE_VERSION:-0.0.0}${COMMIT:++$COMMIT}"
-
-  if [ "$SELF_CONTAINED" = true ]; then
-    MODE_ARGS=(--self-contained true -p:PublishReadyToRun=true)
-    MODE_TEXT="self-contained"
-  else
-    MODE_ARGS=(--self-contained false)
-    MODE_TEXT="framework-dependent"
-  fi
-
-  echo "Building tasker $VERSION for $RID ($MODE_TEXT, Release)..."
-  # Собираем во временную папку — рабочая установка не пострадает, если сборка упадёт.
-  # --disable-build-servers: после установки не остаются фоновые серверы MSBuild и компилятора.
-  dotnet publish "$REPO/src/Tasker.Cli" -c Release -r "$RID" "${MODE_ARGS[@]}" \
-    -p:InformationalVersion="$VERSION" \
-    -o "$STAGING" --nologo -v quiet --disable-build-servers \
-    || fail "the build failed (see the output above)"
-
-  [ -x "$STAGING/tasker" ] || fail "the build did not produce the tasker executable"
-
+  # Номер — файл VERSION, к нему build.rs добавляет коммит (build metadata): сборка из исходников отличима от релиза.
+  PACKAGES=(-p tasker-cli)
+  [ "$WITH_DAEMON" = false ] || PACKAGES+=(-p tasker-mcpd)
+  echo "Building tasker for $RID (cargo, release)..."
+  # Собирается в rust/target (кэш для следующих сборок), в установку копируются только готовые программы — рабочая установка
+  # не пострадает, если сборка упадёт.
+  (cd "$REPO/rust" && cargo build --release --locked "${PACKAGES[@]}") || fail "the build failed (see the output above)"
+  BUILT_DIR="${CARGO_TARGET_DIR:-target}"
+  case "$BUILT_DIR" in /*) ;; *) BUILT_DIR="$REPO/rust/$BUILT_DIR" ;; esac
+  BUILT_DIR="$BUILT_DIR/release"
+  [ -x "$BUILT_DIR/tasker" ] || fail "the build did not produce the tasker executable"
+  cp -p "$BUILT_DIR/tasker" "$STAGING/"
   if [ "$WITH_DAEMON" = true ]; then
-    echo "Building the MCP server (tasker-mcpd)..."
-    # Демон — отдельная программа с ASP.NET Core; общие библиотеки в одном каталоге совпадают и не дублируются.
-    # EmbedFrontend=false: ему фронтенд не нужен.
-    dotnet publish "$REPO/src/Tasker.Daemon.Host" -c Release -r "$RID" "${MODE_ARGS[@]}" \
-      -p:EmbedFrontend=false -p:InformationalVersion="$VERSION" \
-      -o "$STAGING" --nologo -v quiet --disable-build-servers \
-      || fail "the MCP server build failed (see the output above)"
-
-    [ -x "$STAGING/tasker-mcpd" ] || fail "the build did not produce the tasker-mcpd executable"
+    [ -x "$BUILT_DIR/tasker-mcpd" ] || fail "the build did not produce the tasker-mcpd executable"
+    cp -p "$BUILT_DIR/tasker-mcpd" "$STAGING/"
   fi
-fi
-
-# Нужные Linux библиотеки: .NET без ICU не запускается (Windows и macOS это не касается).
-icu_missing() {
-  [ "$OS" = linux ] || return 1
-  case "${DOTNET_SYSTEM_GLOBALIZATION_INVARIANT:-}" in 1|true|TRUE|True) return 1 ;; esac
-  if command -v ldconfig >/dev/null 2>&1 && ldconfig -p 2>/dev/null | grep -q 'libicuuc'; then
-    return 1
-  fi
-  local file
-  for file in /usr/lib/libicuuc.so* /usr/lib64/libicuuc.so* /usr/lib/*/libicuuc.so* /lib/*/libicuuc.so* /usr/local/lib/libicuuc.so*; do
-    [ -e "$file" ] && return 1
-  done
-  return 0
-}
-
-ICU_HINT="Linux needs the ICU library for .NET: install libicu (Debian/Ubuntu: apt install libicu-dev; Fedora: dnf install libicu; Arch: pacman -S icu), or set DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1"
-
-if icu_missing; then
-  echo "Warning: the ICU library (libicu) was not found. $ICU_HINT" >&2
 fi
 
 # Проверка до подмены: рабочая установка не заменяется сломанной. Свой каталог данных и папка — ничего не оставляем.
@@ -600,9 +565,6 @@ trap 'rm -rf "$STAGING" "$TEMP_DIR" "$SMOKE"' EXIT
 mkdir "$SMOKE/workspace"
 if ! SMOKE_OUT="$(TASKER_HOME="$SMOKE/home" "$STAGING/tasker" project create Smoke --workspace "$SMOKE/workspace" 2>&1)"; then
   echo "$SMOKE_OUT" >&2
-  if icu_missing || echo "$SMOKE_OUT" | grep -qi 'icu'; then
-    echo "$ICU_HINT" >&2
-  fi
   fail "the built tasker does not work: the smoke test failed (nothing was installed)"
 fi
 if [ -f "$STAGING/tasker-mcpd" ]; then

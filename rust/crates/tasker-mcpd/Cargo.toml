@@ -15,6 +15,7 @@ tasker-core = { path = "../tasker-core" }
 tasker-files = { path = "../tasker-files" }
 tasker-services = { path = "../tasker-services" }
 tasker-mcp = { path = "../tasker-mcp" }
+tasker-version = { path = "../tasker-version" }
 rmcp.workspace = true
 tokio = { workspace = true, features = ["process", "io-util", "io-std"] }
 axum.workspace = true

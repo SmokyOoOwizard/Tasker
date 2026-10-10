@@ -15,6 +15,7 @@ tasker-core = { path = "../tasker-core" }
 tasker-files = { path = "../tasker-files" }
 tasker-services = { path = "../tasker-services" }
 tasker-daemon = { path = "../tasker-daemon" }
+tasker-version = { path = "../tasker-version" }
 uuid.workspace = true
 clap.workspace = true
 serde_json.workspace = true

@@ -1,15 +1,12 @@
-//! Какая это сборка демона (.NET `DaemonBuild`): версия (`VERSION` в корне репозитория, как `InformationalVersion` без `+…`) и
+//! Какая это сборка демона (.NET `DaemonBuild`): версия (`tasker-version`: файл `VERSION`, как `InformationalVersion` без `+…`) и
 //! короткий идентификатор сборки — он меняется с каждой сборкой, в отличие от версии: по нему в статусе видно, что рабочий процесс
 //! заменён на новую сборку. У .NET это первые 8 hex MVID модуля; здесь — первые 8 hex SHA-256 исполняемого файла (считается один раз).
 use sha2::{Digest as _, Sha256};
 use std::sync::OnceLock;
 
-const VERSION_FILE: &str = include_str!("../../../../VERSION");
-
 /// Версия сборки (`0.1.0`).
 pub fn version() -> &'static str {
-    let version = VERSION_FILE.trim();
-    version.split('+').next().unwrap_or(version)
+    tasker_version::release()
 }
 
 /// Короткий идентификатор сборки: 8 hex.

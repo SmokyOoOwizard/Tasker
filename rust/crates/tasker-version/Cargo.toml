@@ -1,0 +1,10 @@
+[package]
+name = "tasker-version"
+description = "Tasker build version: the VERSION file (or TASKER_VERSION at build time) and the git commit, embedded by build.rs"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[dependencies]
