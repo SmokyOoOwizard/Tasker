@@ -204,7 +204,33 @@ impl IndexRefresh for WorkspaceIndex {
 }
 
 pub(crate) fn db_error(e: rusqlite::Error) -> io::Error {
-    io::Error::other(format!("Index database: {e}"))
+    let busy = e.sqlite_error_code() == Some(rusqlite::ErrorCode::DatabaseBusy);
+    io::Error::other(DbError {
+        message: format!("Index database: {e}"),
+        busy,
+    })
+}
+
+/// Ошибка SQLite с текстом `Index database: …`; `busy` — база занята другим соединением (`SQLITE_BUSY`).
+#[derive(Debug)]
+struct DbError {
+    message: String,
+    busy: bool,
+}
+
+impl std::fmt::Display for DbError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for DbError {}
+
+/// Ошибка от [`db_error`] — «база занята» (`SQLITE_BUSY`).
+pub(crate) fn is_busy(e: &io::Error) -> bool {
+    e.get_ref()
+        .and_then(|inner| inner.downcast_ref::<DbError>())
+        .is_some_and(|db| db.busy)
 }
 
 /// Имя вида в колонке `kind` (`IndexKind.ToString()`).

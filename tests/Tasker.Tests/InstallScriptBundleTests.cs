@@ -249,7 +249,8 @@ public partial class InstallScriptTests
     [InlineData("--from x --url y", "choose one of --from, --url, --from-source")]
     [InlineData("--from-source --from x", "choose one of --from, --url, --from-source")]
     [InlineData("--no-daemon", "--no-daemon works with --from-source only")]
-    [InlineData("--framework-dependent", "--framework-dependent works with --from-source only")]
+    [InlineData("--framework-dependent", "--framework-dependent is gone: tasker is a Rust program now")]
+    [InlineData("--from-source --framework-dependent", "--framework-dependent is gone")]
     public async Task Conflicting_options_are_rejected_with_the_usage(string arguments, string message)
     {
         var result = await Run(arguments.Split(' '));
@@ -292,6 +293,31 @@ public partial class InstallScriptTests
         Assert.Contains("smoke test failed (nothing was installed)", result.Err);
         Assert.Contains("STUB_LOG", await File.ReadAllTextAsync(Path.Combine(app, "tasker")));
         Assert.Empty(Directory.GetFileSystemEntries(Path.Combine(Prefix, "share", "tasker"), ".staging*"));
+    }
+
+    [UnixFact]
+    public async Task An_upgrade_over_a_dotnet_installation_leaves_only_the_two_programs()
+    {
+        var home = Home();
+        var app = Path.Combine(Prefix, "share", "tasker", "app");
+
+        // Прежняя .NET-установка: программа — каталог с библиотеками (они копируются целиком).
+        var dotnet = Bundle("dotnet");
+        foreach (var file in new[] { "tasker.dll", "tasker-mcpd.dll", "tasker.runtimeconfig.json", "libSystem.Native.dylib", "Tasker.Core.dll" })
+            File.WriteAllText(Path.Combine(dotnet, "app", file), "x");
+        Directory.CreateDirectory(Path.Combine(dotnet, "app", "ru"));
+        var old = await Run(["--prefix", Prefix, "--from", dotnet, "--no-autostart"], home, environment: StubEnvironment());
+        Assert.True(old.Code == 0, old.Out + old.Err);
+        Assert.True(File.Exists(Path.Combine(app, "tasker.dll")));
+
+        // Rust-сборка поверх: каталог заменён целиком, от .NET ничего не осталось; из каталога сборки берутся только две программы.
+        var rust = Bundle("rust");
+        File.WriteAllText(Path.Combine(rust, "app", "tasker.d"), "cargo leftovers");
+        Directory.CreateDirectory(Path.Combine(rust, "app", "deps"));
+        var upgraded = await Run(["--prefix", Prefix, "--from", Path.Combine(rust, "app"), "--no-autostart"], home, environment: StubEnvironment());
+        Assert.True(upgraded.Code == 0, upgraded.Out + upgraded.Err);
+        Assert.Equal(["tasker", "tasker-mcpd"], Directory.GetFileSystemEntries(app).Select(Path.GetFileName).Order().ToArray());
+        Assert.Equal(["app", "completions"], Directory.GetFileSystemEntries(Path.Combine(Prefix, "share", "tasker")).Select(Path.GetFileName).Order().ToArray());
     }
 
     [UnixFact]

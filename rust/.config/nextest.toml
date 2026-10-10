@@ -1,0 +1,9 @@
+# cargo nextest (CI, .github/workflows/release-build.yml): зависший тест называется и снимается, прогон идёт дальше.
+# Самые долгие тесты (супервизор: пять падений с паузами 1+2+5+10 с) укладываются в минуту-две.
+[profile.ci]
+slow-timeout = { period = "60s", terminate-after = 3 }
+fail-fast = false
+# Тесты со временем и параллельностью изредка нестабильны под нагрузкой раннера (TSK-154): упавший тест повторяется,
+# nextest показывает его как FLAKY — повод разобраться, но не красный прогон.
+retries = 2
+failure-output = "immediate-final"

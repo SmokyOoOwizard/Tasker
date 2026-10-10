@@ -43,14 +43,16 @@ public partial class InstallScriptTests : IDisposable
         foreach (var argument in args)
             info.ArgumentList.Add(argument);
 
-        // Свой HOME, чтобы не трогать настоящие ~/.zprofile, ~/.zshrc и ~/.bash_profile; NuGet и dotnet должны по-прежнему видеть настоящие пакеты.
+        // Свой HOME, чтобы не трогать настоящие ~/.zprofile, ~/.zshrc и ~/.bash_profile; cargo (--from-source) должен по-прежнему видеть
+        // настоящий кэш пакетов и toolchain (rustup), а не скачивать их заново в подставной HOME.
         var realHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         info.Environment["HOME"] = home;
         info.Environment["SHELL"] = shell;
-        info.Environment["NUGET_PACKAGES"] = Path.Combine(realHome, ".nuget", "packages");
-        info.Environment["DOTNET_CLI_HOME"] = home;
-        info.Environment["DOTNET_NOLOGO"] = "1";
-        info.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
+        info.Environment["CARGO_HOME"] = Environment.GetEnvironmentVariable("CARGO_HOME") ?? Path.Combine(realHome, ".cargo");
+        if (Environment.GetEnvironmentVariable("RUSTUP_HOME") is { } rustup)
+            info.Environment["RUSTUP_HOME"] = rustup;
+        else if (Directory.Exists(Path.Combine(realHome, ".rustup")))
+            info.Environment["RUSTUP_HOME"] = Path.Combine(realHome, ".rustup");
 
         // Настоящая служба автозапуска тестам не нужна: uninstall выключает её у своего (тестового) имени.
         info.Environment["TASKER_SERVICE_DIR"] = Path.Combine(_root, "service");
@@ -72,7 +74,7 @@ public partial class InstallScriptTests : IDisposable
         var result = await Run(["--help"]);
 
         Assert.Equal(0, result.Code);
-        foreach (var option in new[] { "--prefix", "--from", "--url", "--from-source", "--no-autostart", "--no-completion", "--framework-dependent", "--add-to-path", "--restart", "--uninstall" })
+        foreach (var option in new[] { "--prefix", "--from", "--url", "--from-source", "--no-autostart", "--no-completion", "--no-daemon", "--add-to-path", "--restart", "--uninstall" })
             Assert.Contains(option, result.Out);
     }
 
@@ -107,22 +109,23 @@ public partial class InstallScriptTests : IDisposable
         var link = Path.Combine(prefix, "bin", "tasker");
         var app = Path.Combine(prefix, "share", "tasker", "app");
 
-        // Установка (небольшая сборка — быстрее; самодостаточная собирается тем же скриптом, отличается ключами publish).
-        var installed = await Run(["--prefix", prefix, "--from-source", "--framework-dependent", "--no-autostart", "--add-to-path"], fakeHome);
+        // Установка из исходников: cargo build --release в rust/ (повторные сборки берутся из кэша rust/target).
+        var installed = await Run(["--prefix", prefix, "--from-source", "--no-autostart", "--add-to-path"], fakeHome);
         Assert.True(installed.Code == 0, installed.Out + installed.Err);
         Assert.Contains("Installed tasker", installed.Out);
         Assert.True(File.Exists(Path.Combine(app, "tasker")));
         Assert.True(File.Exists(Path.Combine(app, "tasker-mcpd")), "the MCP server must be installed next to tasker");
         Assert.Equal(Path.Combine(app, "tasker"), new FileInfo(link).LinkTarget);
+        Assert.Equal(["tasker", "tasker-mcpd"], Directory.GetFileSystemEntries(app).Select(Path.GetFileName).Order().ToArray());
 
         // PATH: bin не в PATH процесса — строка дописана в ~/.zprofile, один раз.
         var profile = Path.Combine(fakeHome, ".zprofile");
         Assert.Contains($"export PATH=\"{Path.Combine(prefix, "bin")}:$PATH\"", await File.ReadAllTextAsync(profile));
 
-        // Установленная утилита работает: версия, запись данных, чтение.
+        // Установленная утилита работает: версия (из исходников — с коммитом: 0.1.0+abc1234), запись данных, чтение.
         var version = await TaskerCommand(link, "--version");
         Assert.Equal(0, version.Code);
-        Assert.NotEmpty(version.Out.Trim());
+        Assert.StartsWith(File.ReadAllText(RepoFile("VERSION")).Trim(), version.Out.Trim());
         var workspace = Directory.CreateDirectory(Path.Combine(_root, "workspace")).FullName;
         Assert.Equal(0, (await TaskerCommand(link, "project", "create", "Installed", "-w", workspace)).Code);
         Assert.Contains("Installed", (await TaskerCommand(link, "project", "list", "-w", workspace)).Out);
@@ -138,7 +141,7 @@ public partial class InstallScriptTests : IDisposable
         Assert.Equal(3, (await TaskerCommand(link, "mcp", "status")).Code);
 
         // Обновление поверх: снова успех, в каталоге нет ни старой версии, ни остатков сборки, строка PATH не задвоилась.
-        var upgraded = await Run(["--prefix", prefix, "--from-source", "--framework-dependent", "--no-autostart", "--add-to-path"], fakeHome);
+        var upgraded = await Run(["--prefix", prefix, "--from-source", "--no-autostart", "--add-to-path"], fakeHome);
         Assert.True(upgraded.Code == 0, upgraded.Out + upgraded.Err);
         Assert.Equal(["app", "completions"], Directory.GetFileSystemEntries(Path.Combine(prefix, "share", "tasker")).Select(Path.GetFileName).Order().ToArray());
         Assert.Equal(1, (await File.ReadAllTextAsync(profile)).Split("# tasker").Length - 1);
@@ -161,16 +164,13 @@ public partial class InstallScriptTests : IDisposable
         var fakeHome = Directory.CreateDirectory(Path.Combine(_root, "home")).FullName;
         var link = Path.Combine(prefix, "bin", "tasker");
 
-        var installed = await Run(["--prefix", prefix, "--from-source", "--framework-dependent", "--no-daemon", "--no-autostart"], fakeHome);
+        var installed = await Run(["--prefix", prefix, "--from-source", "--no-daemon", "--no-autostart"], fakeHome);
 
         Assert.True(installed.Code == 0, installed.Out + installed.Err);
         Assert.Contains("command line only", installed.Out);
         var app = Path.Combine(prefix, "share", "tasker", "app");
-        Assert.True(File.Exists(Path.Combine(app, "tasker")));
-        Assert.Empty(Directory.GetFiles(app, "tasker-mcpd*"));
-        // Консольная утилита без веб-слоя: в каталоге нет сборок ASP.NET Core, кроме нужных криптографии паролей.
-        Assert.DoesNotContain(Directory.GetFiles(app, "Microsoft.AspNetCore.*.dll").Select(Path.GetFileName),
-            x => x!.Contains("Server.Kestrel") || x.Contains("Mvc") || x.Contains("Routing"));
+        // В каталоге программы — одна консольная утилита.
+        Assert.Equal(["tasker"], Directory.GetFileSystemEntries(app).Select(Path.GetFileName).ToArray());
 
         // Остальное работает, а запуск демона объясняет, чего не хватает.
         _home.IsolateDaemon();
@@ -211,7 +211,7 @@ public partial class InstallScriptTests : IDisposable
     /// <summary>Установка только консольной утилиты (быстрее) в <see cref="Prefix"/>.</summary>
     private async Task<CliResult> Install(string home, string shell = "/bin/zsh", params string[] more)
     {
-        var result = await Run(["--prefix", Prefix, "--from-source", "--framework-dependent", "--no-daemon", "--no-autostart", .. more], home, shell);
+        var result = await Run(["--prefix", Prefix, "--from-source", "--no-daemon", "--no-autostart", .. more], home, shell);
         Assert.True(result.Code == 0, result.Out + result.Err);
         return result;
     }

@@ -17,7 +17,7 @@ impl Ws {
             .join("../../target/tmp")
             .join(format!("completion-{}", uuid::Uuid::new_v4().simple()));
         std::fs::create_dir_all(root.join("home")).unwrap();
-        let root = std::fs::canonicalize(&root).unwrap();
+        let root = canonical(&root);
         Ws {
             home: root.join("home"),
             root,
@@ -723,4 +723,13 @@ _tasker
     assert_eq!(code, 0, "{err}");
     let call = fake.calls();
     assert!(call.starts_with("[suggest:") && call.ends_with("]|status get В\\ р\n"), "{call}");
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
 }

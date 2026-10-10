@@ -71,7 +71,8 @@ pub async fn os_signal(_daemon_directory: &Path) -> &'static str {
 
 #[cfg(windows)]
 pub async fn os_signal(daemon_directory: &Path) -> &'static str {
-    let event = windows_event::listen(&event_name(daemon_directory));
+    let name = event_name(daemon_directory);
+    let event = windows_event::listen(&name);
     tokio::select! {
         _ = tokio::signal::ctrl_c() => "Ctrl+C",
         _ = event => "the stop event of 'tasker mcp stop'",
@@ -95,7 +96,7 @@ mod windows_event {
     }
 
     /// Ждёт события в отдельном потоке (он живёт до конца процесса — как зарегистрированное ожидание в .NET).
-    pub async fn listen(name: &str) -> () {
+    pub async fn listen(name: &str) {
         let wide: Vec<u16> = std::ffi::OsStr::new(name).encode_wide().chain(std::iter::once(0)).collect();
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         std::thread::Builder::new()
@@ -135,7 +136,8 @@ mod tests {
                 .chars()
                 .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
         );
-        // printf '/x/mcp' | shasum -a 256 | cut -c1-16
+        // printf '/x/mcp' | shasum -a 256 | cut -c1-16 (на Windows путь становится полным, с диском, — как Path.GetFullPath)
+        #[cfg(unix)]
         assert_eq!(
             event_name(Path::new("/x/mcp")),
             format!("Local\\tasker-mcp-stop-{}", &sha_hex("/x/mcp")[..16])
@@ -143,6 +145,7 @@ mod tests {
         assert_ne!(a, event_name(Path::new("/x/mcp")));
     }
 
+    #[cfg(unix)]
     fn sha_hex(text: &str) -> String {
         Sha256::digest(text.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
     }

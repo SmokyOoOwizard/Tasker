@@ -1,26 +1,36 @@
 #!/bin/bash
-# Собирает релиз Tasker: самодостаточные сборки (без установленного .NET) консольной утилиты tasker и демона MCP (tasker-mcpd)
-# под выбранные платформы, упаковывает их в архивы и считает контрольные суммы SHA256. Ничего не устанавливает.
+# Собирает релиз Tasker: консольную утилиту tasker и демон MCP (tasker-mcpd) — Rust-бинарники из rust/ (cargo, профиль release
+# из rust/Cargo.toml) — под выбранные платформы, упаковывает их в архивы и считает контрольные суммы SHA256. Ничего не устанавливает.
 #
-#   scripts/release.sh [--rid RID[,RID...]|all] [--version X.Y.Z] [--out DIR] [--no-r2r] [--no-archive] [--keep-work]
+#   scripts/release.sh [--rid RID[,RID...]|local|all] [--version X.Y.Z] [--out DIR] [--builder auto|cargo|zigbuild|docker]
+#                      [--glibc X.Y] [--no-archive] [--keep-work]
 #
-# Платформы (RID): win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64, osx-x64. По умолчанию — все; кросс-сборка идёт с любой из
-# них (нужна сеть: .NET скачивает пакеты среды выполнения нужной платформы, затем они лежат в кэше NuGet).
+# Платформы (RID, имена архивов те же, что у прежних .NET-релизов — на них опираются установщики) и цели Rust:
+#   osx-arm64 aarch64-apple-darwin          osx-x64 x86_64-apple-darwin
+#   linux-x64 x86_64-unknown-linux-gnu      linux-arm64 aarch64-unknown-linux-gnu        (glibc не новее --glibc, по умолчанию 2.28)
+#   linux-musl-x64 x86_64-unknown-linux-musl  linux-musl-arm64 aarch64-unknown-linux-musl  (статические: Alpine и любой Linux)
+#   win-x64 x86_64-pc-windows-msvc          win-arm64 aarch64-pc-windows-msvc
+# По умолчанию (local) — все платформы, которые можно собрать на этой машине (остальные перечисляются с причиной); all — все
+# восемь, и если какую-то здесь не собрать, скрипт останавливается до сборки.
 #
-# Версия — файл VERSION в корне репозитория (0.1.0, 0.2.0-rc.1): её показывает `tasker --version`. Если текущий коммит помечен тегом
-# v*, тег должен совпасть с файлом (иначе ошибка). --version задаёт номер вручную (для пробной сборки).
+# Чем собирается платформа (--builder auto, по умолчанию; можно задать и переменной TASKER_RELEASE_BUILDER):
+#   cargo      — `cargo build --release --target T`: цель этой машины, а также другие цели той же ОС (macOS arm64 <-> x64, Windows
+#                x64 <-> arm64), если для них установлена стандартная библиотека (`rustup target add T`);
+#   zigbuild   — `cargo zigbuild` (нужны cargo-zigbuild, zig и `rustup target add T`): Linux с любой машины, glibc закрепляется --glibc;
+#   docker     — Linux в контейнере (образ tasker-release-builder: rust:1-bookworm + цели Linux + zig + cargo-zigbuild, собирается
+#                один раз; кэш cargo и target — в томах Docker). Нужен, когда на машине нет rustup (например, Rust из Homebrew).
+#   macOS и Windows собираются только на своей ОС; все платформы сразу — workflow .github/workflows/release-build.yml.
+#
+# Версия — файл VERSION в корне репозитория (0.1.0, 0.2.0-rc.1): её показывает `tasker --version` (rust/crates/tasker-version,
+# build.rs; скрипт передаёт её сборке через TASKER_VERSION). Если текущий коммит помечен тегом v*, тег должен совпасть с файлом
+# (иначе ошибка). --version задаёт номер вручную (для пробной сборки).
 #
 # Результат (по умолчанию artifacts/release/<версия>/):
-#   tasker-<версия>-<rid>.tar.gz | .zip (Windows)   архив: каталог tasker-<версия>-<rid>/ с app/ (tasker, tasker-mcpd, библиотеки),
+#   tasker-<версия>-<rid>.tar.gz | .zip (Windows)   архив: каталог tasker-<версия>-<rid>/ с app/ (tasker и tasker-mcpd, .exe на Windows),
 #                                                   install.sh (install.ps1 для Windows) и release.txt (версия, платформа, коммит)
 #   tasker-<версия>-<rid>.<расширение>.sha256       контрольная сумма архива
 #   SHA256SUMS                                      все контрольные суммы одним файлом (проверка: shasum -a 256 -c SHA256SUMS)
 #   install.sh, install.ps1                         скрипты установки отдельно (чтобы запускать их, не распаковывая архив)
-#
-# Размер и скорость: самодостаточная папка (одна копия среды выполнения на tasker и tasker-mcpd) с ReadyToRun; единый файл и
-# обрезка (trimming) НЕ используются: Autofac, EF Core, System.CommandLine и ASP.NET Core опираются на рефлексию (проверено: с PublishTrimmed
-# tasker падает на project create), а единый файл дублировал бы среду
-# выполнения в каждом из двух исполняемых файлов. Десктоп (Tasker.Desktop) в релиз не входит.
 
 set -euo pipefail
 
@@ -28,16 +38,18 @@ usage() {
   cat <<'USAGE'
 Usage: scripts/release.sh [options]
 
-Builds self-contained tasker + tasker-mcpd for the chosen platforms and packs them into archives with SHA256 checksums.
+Builds tasker + tasker-mcpd (Rust, cargo) for the chosen platforms and packs them into archives with SHA256 checksums.
 
 Options:
-  --rid LIST     comma-separated RIDs or 'all' (default): win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64 osx-x64
-  --version V    release version (default: the VERSION file; a git tag v* on HEAD must match it)
-  --out DIR      output directory (default: artifacts/release/<version> in the repository)
-  --no-r2r       publish without ReadyToRun (smaller, slower to start; no crossgen package needed)
-  --no-archive   publish only (DIR/<rid>/tasker-<version>-<rid>/), no archives
-  --keep-work    keep the intermediate publish folders next to the archives
-  -h, --help     show this help
+  --rid LIST       comma-separated RIDs, 'local' (default: every platform this machine can build) or 'all' (all of them):
+                   osx-arm64 osx-x64 linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64
+  --version V      release version (default: the VERSION file; a git tag v* on HEAD must match it)
+  --out DIR        output directory (default: artifacts/release/<version> in the repository)
+  --builder B      auto (default), cargo, zigbuild or docker: how the platforms are built (see the comment at the top)
+  --glibc X.Y      oldest glibc the Linux builds run with (zigbuild and docker; default 2.28)
+  --no-archive     build only (DIR/work/<rid>/tasker-<version>-<rid>/), no archives
+  --keep-work      keep the intermediate folders next to the archives
+  -h, --help       show this help
 USAGE
 }
 
@@ -46,11 +58,13 @@ fail() {
   exit 1
 }
 
-ALL_RIDS=(win-x64 win-arm64 linux-x64 linux-arm64 osx-arm64 osx-x64)
-RIDS=("${ALL_RIDS[@]}")
+ALL_RIDS=(osx-arm64 osx-x64 linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64)
+RID_MODE=local
+RIDS=()
 VERSION_OVERRIDE=""
 OUT=""
-R2R=true
+BUILDER="${TASKER_RELEASE_BUILDER:-auto}"
+GLIBC=2.28
 ARCHIVE=true
 KEEP_WORK=false
 
@@ -58,7 +72,10 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --rid)
       [ $# -ge 2 ] || { echo "Error: --rid needs a list" >&2; usage >&2; exit 2; }
-      if [ "$2" = "all" ]; then RIDS=("${ALL_RIDS[@]}"); else IFS=',' read -r -a RIDS <<< "$2"; fi
+      case "$2" in
+        all|local) RID_MODE="$2"; RIDS=() ;;
+        *) RID_MODE=list; IFS=',' read -r -a RIDS <<< "$2" ;;
+      esac
       shift 2
       ;;
     --version)
@@ -71,7 +88,17 @@ while [ $# -gt 0 ]; do
       OUT="$2"
       shift 2
       ;;
-    --no-r2r) R2R=false; shift ;;
+    --builder)
+      [ $# -ge 2 ] || { echo "Error: --builder needs a name" >&2; usage >&2; exit 2; }
+      BUILDER="$2"
+      shift 2
+      ;;
+    --glibc)
+      [ $# -ge 2 ] || { echo "Error: --glibc needs a version" >&2; usage >&2; exit 2; }
+      GLIBC="$2"
+      shift 2
+      ;;
+    --no-r2r) echo "Warning: --no-r2r is ignored: ReadyToRun was a .NET option, the release is built with cargo now" >&2; shift ;;
     --no-archive) ARCHIVE=false; shift ;;
     --keep-work) KEEP_WORK=true; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -79,15 +106,18 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-for rid in "${RIDS[@]}"; do
+case "$BUILDER" in auto|cargo|zigbuild|docker) ;; *) echo "Error: unknown builder '$BUILDER' (auto, cargo, zigbuild, docker)" >&2; exit 2 ;; esac
+[[ "$GLIBC" =~ ^2\.[0-9]+$ ]] || { echo "Error: bad glibc version '$GLIBC' (for example 2.28)" >&2; exit 2; }
+
+for rid in "${RIDS[@]+"${RIDS[@]}"}"; do
   known=false
   for candidate in "${ALL_RIDS[@]}"; do [ "$rid" = "$candidate" ] && known=true; done
   [ "$known" = true ] || { echo "Error: unknown platform '$rid' (known: ${ALL_RIDS[*]})" >&2; exit 2; }
 done
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-[ -f "$REPO/src/Tasker.Cli/Tasker.Cli.csproj" ] || fail "cannot find src/Tasker.Cli in $REPO"
-command -v dotnet >/dev/null 2>&1 || fail ".NET SDK 10 is required to build: https://dotnet.microsoft.com/download"
+WORKSPACE="$REPO/rust"
+[ -f "$WORKSPACE/Cargo.toml" ] || fail "cannot find the Rust workspace rust/Cargo.toml in $REPO"
 
 # ---- версия ----
 
@@ -112,7 +142,114 @@ if TAGS="$(git -C "$REPO" tag --points-at HEAD 2>/dev/null | grep -E '^v[0-9]' |
 fi
 
 [ -n "$OUT" ] || OUT="$REPO/artifacts/release/$VERSION"
-case "$OUT" in /*) ;; *) OUT="$PWD/$OUT" ;; esac
+case "$OUT" in /*|[A-Za-z]:[\\/]*) ;; *) OUT="$PWD/$OUT" ;; esac
+
+# ---- платформы и чем их собирать ----
+
+target_of() {
+  case "$1" in
+    osx-arm64) echo aarch64-apple-darwin ;;
+    osx-x64) echo x86_64-apple-darwin ;;
+    linux-x64) echo x86_64-unknown-linux-gnu ;;
+    linux-arm64) echo aarch64-unknown-linux-gnu ;;
+    linux-musl-x64) echo x86_64-unknown-linux-musl ;;
+    linux-musl-arm64) echo aarch64-unknown-linux-musl ;;
+    win-x64) echo x86_64-pc-windows-msvc ;;
+    win-arm64) echo aarch64-pc-windows-msvc ;;
+  esac
+}
+
+HAVE_CARGO=false
+HOST_TARGET=""
+if command -v cargo >/dev/null 2>&1 && command -v rustc >/dev/null 2>&1; then
+  HAVE_CARGO=true
+  HOST_TARGET="$(rustc -vV | sed -n 's/^host: //p')"
+fi
+
+case "$(uname -s)" in
+  Darwin) HOST_OS=macos ;;
+  Linux) HOST_OS=linux ;;
+  MINGW*|MSYS*|CYGWIN*|Windows_NT) HOST_OS=windows ;;
+  *) HOST_OS=other ;;
+esac
+
+os_of() {
+  case "$1" in osx-*) echo macos ;; linux-*) echo linux ;; win-*) echo windows ;; esac
+}
+
+# Стандартная библиотека Rust для цели $1 установлена (rustup target add или цель этой машины).
+has_std() {
+  [ "$HAVE_CARGO" = true ] || return 1
+  [ "$1" = "$HOST_TARGET" ] && return 0
+  local dir
+  dir="$(rustc --print target-libdir --target "$1" 2>/dev/null)" || return 1
+  ls "$dir"/libstd-*.rlib >/dev/null 2>&1
+}
+
+have_zigbuild() {
+  [ "$HAVE_CARGO" = true ] && cargo zigbuild --help >/dev/null 2>&1 && { command -v zig >/dev/null 2>&1 || python3 -m ziglang version >/dev/null 2>&1; }
+}
+
+have_docker() {
+  command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1
+}
+
+# Чем собрать платформу $1: печатает cargo, zigbuild или docker; не выйдет — печатает причину, код 1.
+builder_for() {
+  local rid=$1 target os
+  target="$(target_of "$rid")"
+  os="$(os_of "$rid")"
+  case "$BUILDER" in
+    cargo)
+      if [ "$HAVE_CARGO" != true ]; then echo "cargo is not installed"; return 1; fi
+      if [ "$os" != "$HOST_OS" ]; then echo "cargo builds $os targets on $os only (try --builder zigbuild or docker for Linux)"; return 1; fi
+      if ! has_std "$target"; then echo "no Rust standard library for $target: rustup target add $target"; return 1; fi
+      echo cargo; return 0 ;;
+    zigbuild)
+      if [ "$os" != linux ]; then echo "zigbuild is used for Linux targets only"; return 1; fi
+      if ! have_zigbuild; then echo "cargo-zigbuild or zig is not installed (cargo install cargo-zigbuild; zig: https://ziglang.org)"; return 1; fi
+      if ! has_std "$target"; then echo "no Rust standard library for $target: rustup target add $target"; return 1; fi
+      echo zigbuild; return 0 ;;
+    docker)
+      if [ "$os" != linux ]; then echo "docker builds Linux targets only"; return 1; fi
+      if ! have_docker; then echo "docker is not available"; return 1; fi
+      echo docker; return 0 ;;
+  esac
+  # auto
+  if [ "$os" = "$HOST_OS" ] && [ "$os" != linux ] && has_std "$target"; then
+    echo cargo; return 0
+  fi
+  if [ "$os" = linux ]; then
+    # Linux: zigbuild закрепляет glibc (--glibc); без него — своя цель этой машины обычным cargo (glibc этой машины) или Docker.
+    if have_zigbuild && has_std "$target"; then echo zigbuild; return 0; fi
+    if [ "$HOST_OS" = linux ] && [ "$target" = "$HOST_TARGET" ]; then echo cargo; return 0; fi
+    if have_docker; then echo docker; return 0; fi
+    echo "needs cargo-zigbuild with zig and 'rustup target add $target', or docker"
+    return 1
+  fi
+  case "$os" in
+    macos) echo "macOS builds are made on macOS$([ "$HOST_OS" = macos ] && echo " (rustup target add $target)") or in CI (.github/workflows/release-build.yml)" ;;
+    windows) echo "Windows builds are made on Windows with the MSVC toolchain$([ "$HOST_OS" = windows ] && echo " (rustup target add $target)") or in CI (.github/workflows/release-build.yml)" ;;
+  esac
+  return 1
+}
+
+PLAN_RIDS=()
+PLAN_BUILDERS=()
+SKIPPED=()
+CANDIDATES=("${ALL_RIDS[@]}")
+[ "$RID_MODE" = list ] && CANDIDATES=("${RIDS[@]}")
+for rid in "${CANDIDATES[@]}"; do
+  if how="$(builder_for "$rid")"; then
+    PLAN_RIDS+=("$rid")
+    PLAN_BUILDERS+=("$how")
+  elif [ "$RID_MODE" = local ]; then
+    SKIPPED+=("$rid: $how")
+  else
+    fail "$rid cannot be built on this machine: $how"
+  fi
+done
+[ "${#PLAN_RIDS[@]}" -gt 0 ] || fail "none of the platforms can be built on this machine (install Rust: https://rustup.rs)"
 
 # ---- вспомогательное ----
 
@@ -128,28 +265,36 @@ sha256_of() {
 # Платформа, на которой запускается эта машина (чтобы проверить запуском собранное для неё).
 host_rid() {
   local os arch
-  case "$(uname -s)" in Darwin) os=osx ;; Linux) os=linux ;; *) return 0 ;; esac
+  case "$HOST_OS" in macos) os=osx ;; linux) os=linux ;; windows) os=win ;; *) return 0 ;; esac
   case "$(uname -m)" in arm64|aarch64) arch=arm64 ;; x86_64|amd64) arch=x64 ;; *) return 0 ;; esac
   echo "$os-$arch"
 }
 
-# Архив $2 из каталога $1 (внутри него — одна папка bundle): tar.gz без атрибутов macOS и владельца сборочной машины, zip для Windows.
+PYTHON=""
+for candidate in python3 python; do
+  if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c 'import zipfile' >/dev/null 2>&1; then PYTHON="$candidate"; break; fi
+done
+
+# Архив $3 из каталога $1/$2: tar.gz без атрибутов macOS и владельца сборочной машины, zip для Windows.
 pack() {
   local parent=$1 name=$2 archive=$3
   case "$archive" in
     *.zip)
       if command -v zip >/dev/null 2>&1; then
         (cd "$parent" && zip -qr -X "$archive" "$name")
-      else
-        python3 - "$parent" "$name" "$archive" <<'PY'
+      elif [ -n "$PYTHON" ]; then
+        "$PYTHON" - "$parent" "$name" "$archive" <<'PY'
 import os, sys, zipfile
 parent, name, archive = sys.argv[1:4]
 with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
-    for root, _, files in os.walk(os.path.join(parent, name)):
+    for root, dirs, files in os.walk(os.path.join(parent, name)):
+        dirs.sort()
         for f in sorted(files):
             full = os.path.join(root, f)
-            z.write(full, os.path.relpath(full, parent))
+            z.write(full, os.path.relpath(full, parent).replace(os.sep, "/"))
 PY
+      else
+        fail "cannot make $archive: neither zip nor python is available"
       fi
       ;;
     *)
@@ -164,10 +309,52 @@ PY
   esac
 }
 
+# Сборка в контейнере: образ с целями Linux, zig и cargo-zigbuild (собирается один раз; тег — хэш Dockerfile, правка даёт новый образ),
+# тома с кэшем cargo и каталогом target.
+DOCKERFILE='FROM rust:1-bookworm
+RUN rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-unknown-linux-musl aarch64-unknown-linux-musl \
+ && apt-get update && apt-get install -y --no-install-recommends python3-pip && rm -rf /var/lib/apt/lists/* \
+ && pip3 install --break-system-packages --no-cache-dir ziglang==0.13.0.post1 \
+ && cargo install --locked cargo-zigbuild@0.23.4 && rm -rf /usr/local/cargo/registry'
+DOCKER_IMAGE="${TASKER_RELEASE_IMAGE:-}"
+docker_image() {
+  if [ -z "$DOCKER_IMAGE" ]; then
+    DOCKER_IMAGE="tasker-release-builder:$(printf '%s' "$DOCKERFILE" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -c1-12)"
+  fi
+  docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1 && return 0
+  echo "== building the Docker image $DOCKER_IMAGE (once)..."
+  printf '%s\n' "$DOCKERFILE" | docker build -t "$DOCKER_IMAGE" -
+}
+
+# Собирает цель $1 сборщиком $2 и копирует tasker и tasker-mcpd (с расширением $3) в каталог $4.
+build_target() {
+  local target=$1 how=$2 exe=$3 dest=$4 zig_target=$1
+  case "$target" in *-linux-gnu) zig_target="$target.$GLIBC" ;; esac
+  case "$how" in
+    cargo)
+      (cd "$WORKSPACE" && TASKER_VERSION="$VERSION" cargo build --release --locked --target "$target" -p tasker-cli -p tasker-mcpd) \
+        || fail "$target: the build failed (see the output above)"
+      cp "$WORKSPACE/target/$target/release/tasker$exe" "$WORKSPACE/target/$target/release/tasker-mcpd$exe" "$dest/"
+      ;;
+    zigbuild)
+      (cd "$WORKSPACE" && TASKER_VERSION="$VERSION" cargo zigbuild --release --locked --target "$zig_target" -p tasker-cli -p tasker-mcpd) \
+        || fail "$target: the build failed (see the output above)"
+      cp "$WORKSPACE/target/$target/release/tasker$exe" "$WORKSPACE/target/$target/release/tasker-mcpd$exe" "$dest/"
+      ;;
+    docker)
+      docker_image || fail "cannot build the Docker image for the Linux builds"
+      docker run --rm -v "$REPO":/src:ro -v "$dest":/out -v tasker-release-cargo:/usr/local/cargo/registry -v tasker-release-target:/target \
+        -e CARGO_TARGET_DIR=/target -e TASKER_VERSION="$VERSION" -w /src/rust "$DOCKER_IMAGE" bash -c "
+          cargo zigbuild --release --locked --target '$zig_target' -p tasker-cli -p tasker-mcpd &&
+          cp /target/$target/release/tasker /target/$target/release/tasker-mcpd /out/ &&
+          chown $(id -u):$(id -g) /out/tasker /out/tasker-mcpd" \
+        || fail "$target: the build in Docker failed (see the output above)"
+      ;;
+  esac
+}
+
 # ---- сборка ----
 
-R2R_ARGS=(-p:PublishReadyToRun=false)
-[ "$R2R" = true ] && R2R_ARGS=(-p:PublishReadyToRun=true)
 HOST="$(host_rid)"
 
 mkdir -p "$OUT"
@@ -175,13 +362,18 @@ WORK="$OUT/work"
 rm -rf "$WORK"
 mkdir -p "$WORK"
 SUMS="$OUT/SHA256SUMS"
-: > "$SUMS"
+[ "$ARCHIVE" = true ] && : > "$SUMS"
 
-echo "Tasker release $VERSION ($COMMIT), platforms: ${RIDS[*]}"
+echo "Tasker release $VERSION ($COMMIT), platforms: ${PLAN_RIDS[*]}"
+for line in "${SKIPPED[@]+"${SKIPPED[@]}"}"; do echo "  skipped $line"; done
 echo "Output: $OUT"
 
 BUILT=()
-for rid in "${RIDS[@]}"; do
+SIZES=()
+for i in "${!PLAN_RIDS[@]}"; do
+  rid="${PLAN_RIDS[$i]}"
+  how="${PLAN_BUILDERS[$i]}"
+  target="$(target_of "$rid")"
   case "$rid" in win-*) EXE=".exe"; EXT="zip"; INSTALLER="install.ps1" ;; *) EXE=""; EXT="tar.gz"; INSTALLER="install.sh" ;; esac
   NAME="tasker-$VERSION-$rid"
   BUNDLE="$WORK/$rid/$NAME"
@@ -189,15 +381,8 @@ for rid in "${RIDS[@]}"; do
   mkdir -p "$APP"
 
   echo
-  echo "== $rid: publishing tasker..."
-  # Общие параметры: Release, самодостаточно, без отладочных символов и без языковых ресурсов сторонних библиотек.
-  COMMON=(-c Release -r "$rid" --self-contained true "${R2R_ARGS[@]}" -p:DebugType=none -p:DebugSymbols=false
-          -p:SatelliteResourceLanguages=en -p:TaskerVersion="$VERSION" -o "$APP" --nologo -v quiet --disable-build-servers)
-  dotnet publish "$REPO/src/Tasker.Cli" "${COMMON[@]}" || fail "$rid: the tasker build failed (see the output above)"
-  echo "== $rid: publishing tasker-mcpd..."
-  # Демон — отдельная программа с ASP.NET Core; общие библиотеки в одном каталоге совпадают и не дублируются. Фронтенд ему не нужен.
-  dotnet publish "$REPO/src/Tasker.Daemon.Host" "${COMMON[@]}" -p:EmbedFrontend=false \
-    || fail "$rid: the tasker-mcpd build failed (see the output above)"
+  echo "== $rid: building $target ($how)..."
+  build_target "$target" "$how" "$EXE" "$APP"
 
   [ -f "$APP/tasker$EXE" ] || fail "$rid: the build did not produce tasker$EXE"
   [ -f "$APP/tasker-mcpd$EXE" ] || fail "$rid: the build did not produce tasker-mcpd$EXE"
@@ -205,8 +390,9 @@ for rid in "${RIDS[@]}"; do
 
   # Платформа этой машины: собранное запускаем и проверяем номер версии (остальные платформы проверить запуском нечем).
   if [ "$rid" = "$HOST" ]; then
-    SHOWN="$("$APP/tasker" --version 2>&1 || true)"
+    SHOWN="$("$APP/tasker$EXE" --version 2>&1 | tr -d '\r' || true)"
     [ "$SHOWN" = "$VERSION" ] || fail "$rid: 'tasker --version' prints '$SHOWN', expected '$VERSION'"
+    "$APP/tasker-mcpd$EXE" --help >/dev/null 2>&1 || fail "$rid: 'tasker-mcpd --help' fails"
     echo "== $rid: smoke test passed (tasker --version = $SHOWN)"
   else
     echo "== $rid: built for another platform: not run here"
@@ -217,9 +403,10 @@ for rid in "${RIDS[@]}"; do
   {
     echo "version=$VERSION"
     echo "rid=$rid"
+    echo "target=$target"
     echo "commit=$COMMIT"
     echo "built=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    echo "readytorun=$R2R"
+    [ "$how" = cargo ] || [ "${target%-gnu}" = "$target" ] || echo "glibc=$GLIBC"
   } > "$BUNDLE/release.txt"
 
   SIZE="$(du -sh "$APP" | cut -f1)"
@@ -230,9 +417,12 @@ for rid in "${RIDS[@]}"; do
     HASH="$(sha256_of "$ARCHIVE_FILE")"
     echo "$HASH  $NAME.$EXT" > "$ARCHIVE_FILE.sha256"
     echo "$HASH  $NAME.$EXT" >> "$SUMS"
-    echo "== $rid: $NAME.$EXT ($SIZE unpacked, $(du -h "$ARCHIVE_FILE" | cut -f1) packed)"
+    PACKED="$(du -h "$ARCHIVE_FILE" | cut -f1)"
+    echo "== $rid: $NAME.$EXT ($SIZE unpacked, $PACKED packed)"
+    SIZES+=("$rid: $SIZE unpacked, $PACKED packed")
   else
     echo "== $rid: $BUNDLE ($SIZE)"
+    SIZES+=("$rid: $SIZE")
   fi
   BUILT+=("$rid")
 done
@@ -244,6 +434,8 @@ fi
 
 echo
 echo "Built: ${BUILT[*]}"
+for line in "${SIZES[@]}"; do echo "  $line"; done
+for line in "${SKIPPED[@]+"${SKIPPED[@]}"}"; do echo "Not built here: $line"; done
 if [ "$ARCHIVE" = true ]; then
   echo "Checksums: $SUMS"
   cat "$SUMS"

@@ -3,7 +3,8 @@
 Стенд замера скорости консоли tasker (TSK-92). Ничего не трогает в настоящей установке: рабочая область, TASKER_HOME и демон
 (на свободном порту) создаются во временном каталоге и удаляются в конце.
 
-  scripts/perf/publish.sh <каталог>                 собрать tasker и tasker-mcpd так же, как установщик (R2R, self-contained)
+  scripts/perf/publish.sh <каталог>                 собрать tasker и tasker-mcpd так же, как релиз (Rust, cargo, профиль release);
+                                                    .NET-сборка для сравнения — scripts/release.sh из коммита до TSK-141
   scripts/perf/bench.py calls   --bin <каталог>     медианы типичных вызовов и разбивка по фазам (TASKER_PROFILE=1)
   scripts/perf/bench.py degrade --bin <каталог>     время вызова от числа задач и от числа выполненных вызовов
 

@@ -150,12 +150,24 @@ impl<'a> LinkTypeService<'a> {
     /// Записывает типы по умолчанию, если в проекте нет ни одного сохранённого; в проекте с типами — только «позже добавленные».
     /// Id детерминированные: проигравший гонку просто видит уже созданное.
     pub fn ensure_defaults(&self, project_id: &Uuid) -> Result<()> {
-        let stored = self.ws.get_all::<LinkType>(project_id)?;
-        let to_add = if stored.is_empty() {
-            defaults(project_id)
-        } else {
-            missing(project_id, &stored)
+        let to_add = |stored: &[LinkType]| {
+            if stored.is_empty() {
+                defaults(project_id)
+            } else {
+                missing(project_id, stored)
+            }
         };
+        if to_add(&self.ws.get_all::<LinkType>(project_id)?).is_empty() {
+            return Ok(());
+        }
+        // Записать есть что — в секции записи проекта и с повторным чтением: иначе параллельный запрос, увидев уже записанную часть
+        // типов по умолчанию (набор не пуст), счёл бы остальные удалёнными и не нашёл бы свой тип (TSK-157).
+        self.ws.exclusive(project_id, || {
+            self.add_defaults(project_id, to_add(&self.ws.get_all::<LinkType>(project_id)?))
+        })
+    }
+
+    fn add_defaults(&self, project_id: &Uuid, to_add: Vec<LinkType>) -> Result<()> {
         for definition in to_add {
             let link_type = LinkType {
                 version: versioning::NEW.to_string(),

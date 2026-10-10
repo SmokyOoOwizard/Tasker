@@ -3,15 +3,16 @@
 Installs the tasker command line tool and the MCP server (tasker-mcpd) for the current Windows user.
 
 .DESCRIPTION
-Windows 10 version 1809 or newer, Windows PowerShell 5.1 or PowerShell 7. No administrator rights and no .NET are needed
-(the build is self-contained). macOS and Linux: scripts/install.sh.
+Windows 10 version 1809 or newer, Windows PowerShell 5.1 or PowerShell 7. No administrator rights are needed and nothing else
+has to be installed: the build is two programs (tasker.exe and tasker-mcpd.exe). macOS and Linux: scripts/install.sh.
 
 Where the files come from (one of; default: the release this script came with, that is the app folder next to it):
   -From PATH    a release archive (.zip) or a folder with the ready build (tasker.exe, tasker-mcpd.exe inside it or in its app folder)
   -Url URL      download a release archive; URL.sha256 next to it is checked
 
 Layout (default -Prefix %LOCALAPPDATA%\Programs\Tasker):
-  <Prefix>\app\   tasker.exe, tasker-mcpd.exe and libraries; this folder is added to the user PATH
+  <Prefix>\app\   tasker.exe and tasker-mcpd.exe; this folder is added to the user PATH. It is replaced as a whole, so nothing
+                  of an earlier installation (the .NET build with its libraries) stays in it
 What it does: copies the build (the old one stays until the new one works), adds <Prefix>\app to the user PATH (no administrator
 rights; running windows are told about the change), enables the autostart of the MCP server (Task Scheduler task of the current user,
 'tasker mcp autostart enable'), connects PowerShell Tab completion ('tasker completion pwsh --install'). A running MCP server is
@@ -405,7 +406,14 @@ function Invoke-Main {
         try {
             Write-Host ('Installing tasker from ' + $sourceText + ' (' + $rid + ')...')
             New-Item -ItemType Directory -Path $staging -Force | Out-Null
-            Copy-Item -Path (Join-Path $buildSource '*') -Destination $staging -Recurse -Force
+            if (Test-Path -LiteralPath (Join-Path $buildSource 'tasker.dll')) {
+                # a .NET build (an old release): the program is the whole folder with its libraries
+                Copy-Item -Path (Join-Path $buildSource '*') -Destination $staging -Recurse -Force
+            }
+            else {
+                # a Rust build: only the two programs (a folder like rust\target\release has intermediate cargo files too)
+                foreach ($name in @('tasker.exe', 'tasker-mcpd.exe')) { Copy-Item -LiteralPath (Join-Path $buildSource $name) -Destination $staging -Force }
+            }
             # a download is marked as coming from the internet: remove the mark so that SmartScreen/PowerShell do not ask again
             Get-ChildItem -LiteralPath $staging -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
 
@@ -424,8 +432,12 @@ function Invoke-Main {
                 Write-Host 'The MCP server is running: stopping it to replace the files (it is started again afterwards)...'
                 [void](Invoke-Native $tasker @('mcp', 'stop'))
             }
+            # Folders left by earlier runs (a file in them was still in use then): try again, quietly.
+            foreach ($stale in @(Get-ChildItem -LiteralPath $Prefix -Directory -Filter 'app.old*' -ErrorAction SilentlyContinue)) {
+                Remove-Item -LiteralPath $stale.FullName -Recurse -Force -ErrorAction SilentlyContinue
+            }
             $old = $app + '.old'
-            if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Recurse -Force }
+            if (Test-Path -LiteralPath $old) { $old = $app + '.old-' + [Guid]::NewGuid().ToString('N').Substring(0, 8) }
             $moved = $false
             if (Test-Path -LiteralPath $app) {
                 try { Move-Item -LiteralPath $app -Destination $old; $moved = $true }
@@ -543,7 +555,9 @@ function Invoke-Uninstall {
     }
     try { Remove-Item -LiteralPath $App -Recurse -Force }
     catch { Stop-Install ('cannot delete ' + $App + ': a program from it is still running (close terminals using tasker and run this script again). ' + $_.Exception.Message) }
-    Remove-Item -LiteralPath ($App + '.old') -Recurse -Force -ErrorAction SilentlyContinue
+    foreach ($stale in @(Get-ChildItem -LiteralPath $Prefix -Directory -Filter 'app.old*' -ErrorAction SilentlyContinue)) {
+        Remove-Item -LiteralPath $stale.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
     if ((Test-Path -LiteralPath $Prefix) -and -not (Get-ChildItem -LiteralPath $Prefix -Force)) { Remove-Item -LiteralPath $Prefix -Force }
 
     Write-Host ('tasker is uninstalled from ' + $Prefix)

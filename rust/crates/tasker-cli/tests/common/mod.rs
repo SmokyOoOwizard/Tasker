@@ -16,7 +16,7 @@ pub fn fresh_copy() -> (PathBuf, PathBuf) {
         .join(uuid::Uuid::new_v4().simple().to_string());
     std::fs::create_dir_all(&root).unwrap();
     // Канонический путь (без `..`): так же его покажет консоль в сообщениях об ошибках.
-    let root = std::fs::canonicalize(&root).unwrap();
+    let root = canonical(&root);
     let workspace = root.join("golden");
     copy_dir(&golden().join("workspace"), &workspace);
     (root, workspace)
@@ -65,8 +65,8 @@ pub fn snapshot(dir: &str, name: &str, root: &Path) -> (Vec<String>, String, Str
         .filter(|l| !l.is_empty())
         .map(|l| l.replace("<ROOT>", &root_text))
         .collect();
-    let out = read("out").replace("<ROOT>", &root_text);
-    let err = read("err").replace("<ROOT>", &root_text);
+    let out = with_root(&read("out"), &root_text);
+    let err = with_root(&read("err"), &root_text);
     let code = read("code").trim().parse().unwrap();
     (args, out, err, code)
 }
@@ -99,4 +99,43 @@ pub fn files(dir: &Path) -> BTreeMap<String, Vec<u8>> {
     let mut out = BTreeMap::new();
     walk(dir, dir, &mut out);
     out
+}
+
+/// Подстановка `<ROOT>` в снапшот. Эталоны сняты на Unix (`<ROOT>/golden`); на Windows программа печатает путь с `\`, а в JSON —
+/// с экранированным `\\`: разделители в пути сразу после `<ROOT>` приводятся к виду Windows.
+fn with_root(text: &str, root: &str) -> String {
+    if !cfg!(windows) {
+        return text.replace("<ROOT>", root);
+    }
+    let mut out = String::new();
+    for line in text.split_inclusive('\n') {
+        let json = line.starts_with('{') || line.starts_with('[');
+        let (root, separator) = if json {
+            (root.replace('\\', "\\\\"), "\\\\")
+        } else {
+            (root.to_string(), "\\")
+        };
+        let mut rest = line;
+        while let Some(at) = rest.find("<ROOT>") {
+            out.push_str(&rest[..at]);
+            out.push_str(&root);
+            rest = &rest[at + "<ROOT>".len()..];
+            let end = rest
+                .find(|c: char| c.is_whitespace() || matches!(c, '"' | ',' | ')' | '\''))
+                .unwrap_or(rest.len());
+            out.push_str(&rest[..end].replace('/', separator));
+            rest = &rest[end..];
+        }
+        out.push_str(rest);
+    }
+    out
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+pub fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
 }

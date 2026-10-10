@@ -210,8 +210,8 @@ mod tests {
 
         let text = std::fs::read_to_string(store.file_path()).unwrap();
         let expected = format!(
-            "{{\n  \"userName\": \"Иван\",\n  \"mcp\": {{\n    \"port\": 6000,\n    \"workspaces\": [\n      {{\n        \"kind\": \"files\",\n        \"path\": \"{}\"\n      }}\n    ]\n  }}\n}}\n",
-            location.path()
+            "{{\n  \"userName\": \"Иван\",\n  \"mcp\": {{\n    \"port\": 6000,\n    \"workspaces\": [\n      {{\n        \"kind\": \"files\",\n        \"path\": {}\n      }}\n    ]\n  }}\n}}\n",
+            serde_json::to_string(location.path()).unwrap()
         );
         assert_eq!(text, expected);
         let loaded = store.load().unwrap();

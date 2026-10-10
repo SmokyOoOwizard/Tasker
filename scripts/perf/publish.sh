@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Собирает tasker и tasker-mcpd в указанный каталог так же, как scripts/release.sh (Release, self-contained, ReadyToRun) —
-# но никуда не устанавливает. Нужен стенду scripts/perf/bench.py.
+# Собирает tasker и tasker-mcpd (Rust, `cargo build --release` — профиль release из rust/Cargo.toml, как у scripts/release.sh) и
+# кладёт обе программы в указанный каталог — но никуда не устанавливает. Нужен стенду scripts/perf/bench.py.
 #   scripts/perf/publish.sh <каталог>
 set -euo pipefail
 OUT="${1:?usage: publish.sh <output dir>}"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-case "$(uname -m)" in arm64) RID=osx-arm64 ;; x86_64) RID=osx-x64 ;; *) RID=linux-x64 ;; esac
+command -v cargo >/dev/null 2>&1 || { echo "Rust (cargo) is required: https://rustup.rs" >&2; exit 1; }
+(cd "$REPO/rust" && cargo build --release --locked -p tasker-cli -p tasker-mcpd)
+TARGET="${CARGO_TARGET_DIR:-target}"
+case "$TARGET" in /*) ;; *) TARGET="$REPO/rust/$TARGET" ;; esac
 mkdir -p "$OUT"
-dotnet publish "$REPO/src/Tasker.Cli" -c Release -r "$RID" --self-contained true -p:PublishReadyToRun=true \
-  -o "$OUT" --nologo -v quiet --disable-build-servers
-dotnet publish "$REPO/src/Tasker.Daemon.Host" -c Release -r "$RID" --self-contained true -p:PublishReadyToRun=true \
-  -p:EmbedFrontend=false -o "$OUT" --nologo -v quiet --disable-build-servers
+cp "$TARGET/release/tasker" "$TARGET/release/tasker-mcpd" "$OUT/"
 echo "published to $OUT"

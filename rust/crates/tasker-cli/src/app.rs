@@ -12,8 +12,9 @@ use clap::ArgMatches;
 use clap::error::{ContextKind, ContextValue, ErrorKind};
 use std::io::Write;
 
-/// Версия сборки, как `--version` у .NET (`InformationalVersion` из файла `VERSION` в корне репозитория).
-const VERSION: &str = include_str!("../../../../VERSION");
+/// Версия сборки, как `--version` у .NET (`InformationalVersion`): `0.1.0` у релиза, `0.1.0+<коммит>` у сборки из исходников
+/// (`tasker-version`, `build.rs`).
+const VERSION: &str = tasker_version::VERSION;
 
 /// Общие параметры (`GlobalOptions`) из разобранной строки.
 struct Globals {
@@ -141,7 +142,7 @@ fn invoke(
             let _ = writeln!(err, "--version option cannot be combined with other arguments.\n");
             return ERROR_EXIT_CODE;
         }
-        let _ = writeln!(out, "{}", VERSION.trim());
+        let _ = writeln!(out, "{VERSION}");
         return 0;
     }
 
@@ -493,16 +494,17 @@ mod tests {
     #[test]
     fn version_help_and_not_implemented() {
         let (out, _, code) = run_text(&["--version"]);
-        assert_eq!((code, out.as_str()), (0, "0.1.0\n"));
+        assert_eq!((code, out.as_str()), (0, format!("{}\n", tasker_version::VERSION).as_str()));
+        assert!(out.starts_with(include_str!("../../../../VERSION").trim()));
         let (out, err, code) = run_text(&["task", "create", "-h"]);
         assert_eq!((code, err.as_str()), (0, ""));
         assert!(out.starts_with("Description:\n  Creates a task\n"));
+        // Путь в тексте — полный (Path.GetFullPath): на Windows к нему добавляется диск текущего каталога.
+        let missing = std::path::absolute("/nonexistent").unwrap();
+        let expected = format!("Error: Folder not found: {}\n", missing.display());
         let (out, err, code) = run_text(&["sync", "-w", "/nonexistent"]);
-        assert_eq!(
-            (code, out.as_str(), err.as_str()),
-            (1, "", "Error: Folder not found: /nonexistent\n")
-        );
+        assert_eq!((code, out.as_str(), err.as_str()), (1, "", expected.as_str()));
         let (_, err, code) = run_text(&["task", "list", "-w", "/nonexistent"]);
-        assert_eq!((code, err.as_str()), (1, "Error: Folder not found: /nonexistent\n"));
+        assert_eq!((code, err.as_str()), (1, expected.as_str()));
     }
 }

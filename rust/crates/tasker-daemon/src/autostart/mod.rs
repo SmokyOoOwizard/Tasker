@@ -512,8 +512,9 @@ mod tests {
             bin.display()
         )));
 
-        std::fs::write(bin.join(DAEMON_NAME), "").unwrap();
-        assert_eq!(daemon_program(&bin.join("tasker")).unwrap(), bin.join(DAEMON_NAME));
+        let daemon = format!("{DAEMON_NAME}{}", std::env::consts::EXE_SUFFIX);
+        std::fs::write(bin.join(&daemon), "").unwrap();
+        assert_eq!(daemon_program(&bin.join("tasker")).unwrap(), bin.join(&daemon));
 
         #[cfg(unix)]
         {

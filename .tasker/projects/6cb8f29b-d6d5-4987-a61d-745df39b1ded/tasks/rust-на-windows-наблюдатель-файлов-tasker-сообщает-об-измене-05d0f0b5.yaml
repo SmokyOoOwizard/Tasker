@@ -1,0 +1,11 @@
+formatVersion: 9
+id: 05d0f0b5-31ad-49fc-bb48-ba5b5fa3c103
+title: 'Rust на Windows: наблюдатель файлов .tasker сообщает об изменении каталогов (tasks, boards) как об изменённых путях'
+description: 'Найдено в TSK-141 при первом прогоне cargo nextest на windows-latest (GitHub Actions). tasker-files/tests/watch.rs: burst_of_edits_is_one_changed_event_with_relative_paths, cache_and_tmp_files_are_ignored, rename_reports_old_and_new_paths падают: в событии Changed кроме файлов есть пути каталогов (projects/<id>/tasks, projects/<id>/boards, projects/<id>/statuses) — ReadDirectoryChangesW через notify сообщает о модификации каталога при изменении файла в нём; на macOS/Linux таких событий нет. Ожидаемо (как .NET FileSystemWatcher с фильтрами) — только пути файлов; изменение каталога без файла не должно давать события (cache_and_tmp_files_are_ignored получает лишнее Changed([.../tasks])). Нужно: отфильтровать события-модификации каталогов на Windows (или все события, где путь — существующий каталог, кроме удаления папки проекта), снять ignore с этих тестов.'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-10T20:07:49.4196520+00:00
+updatedAt: 2026-10-10T20:07:49.4196520+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 155

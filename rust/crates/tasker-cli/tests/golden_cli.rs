@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn repository_root() -> PathBuf {
-    std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")).unwrap()
+    canonical(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.."))
 }
 
 fn names(dir: &str) -> Vec<String> {

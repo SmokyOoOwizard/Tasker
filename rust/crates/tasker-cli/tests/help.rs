@@ -10,7 +10,7 @@ fn golden() -> PathBuf {
 }
 
 fn repository_root() -> PathBuf {
-    std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")).unwrap()
+    canonical(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.."))
 }
 
 fn temp_dir() -> PathBuf {
@@ -18,7 +18,7 @@ fn temp_dir() -> PathBuf {
         .join("../../target/tmp")
         .join(uuid::Uuid::new_v4().simple().to_string());
     std::fs::create_dir_all(&dir).unwrap();
-    std::fs::canonicalize(dir).unwrap()
+    canonical(dir)
 }
 
 struct Run {
@@ -60,8 +60,8 @@ fn snapshot(name: &str, root: &Path) -> (Vec<String>, String, String, i32) {
         .collect();
     (
         args,
-        read("out").replace("<ROOT>", &root_text),
-        read("err").replace("<ROOT>", &root_text),
+        with_root(&read("out"), &root_text),
+        with_root(&read("err"), &root_text),
         read("code").trim().parse().unwrap(),
     )
 }
@@ -182,8 +182,53 @@ fn sqlite_is_refused_by_this_build_and_version_prints_the_repository_version() {
         )
     );
     let run = tasker(&root, &home, &["--version".into()], &[]);
+    // Номер из VERSION; у сборки из исходников за ним через «+» коммит (build.rs крейта tasker-version), у релиза — ничего.
     let version = std::fs::read_to_string(repository_root().join("VERSION")).unwrap();
-    assert_eq!((run.stdout.as_str(), run.code), (format!("{}\n", version.trim()).as_str(), 0));
+    assert_eq!(run.code, 0);
+    let shown = run.stdout.strip_suffix('\n').unwrap();
+    assert!(
+        shown == version.trim() || shown.starts_with(&format!("{}+", version.trim())),
+        "{shown}"
+    );
     std::fs::remove_dir_all(&home).unwrap();
     std::fs::remove_dir_all(&root).unwrap();
+}
+
+/// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
+fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let path = std::fs::canonicalize(path).unwrap();
+    match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+        Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
+        _ => path,
+    }
+}
+
+/// Подстановка `<ROOT>` в снапшот. Эталоны сняты на Unix (`<ROOT>/golden`); на Windows программа печатает путь с `\`, а в JSON —
+/// с экранированным `\\`: разделители в пути сразу после `<ROOT>` приводятся к виду Windows.
+fn with_root(text: &str, root: &str) -> String {
+    if !cfg!(windows) {
+        return text.replace("<ROOT>", root);
+    }
+    let mut out = String::new();
+    for line in text.split_inclusive('\n') {
+        let json = line.starts_with('{') || line.starts_with('[');
+        let (root, separator) = if json {
+            (root.replace('\\', "\\\\"), "\\\\")
+        } else {
+            (root.to_string(), "\\")
+        };
+        let mut rest = line;
+        while let Some(at) = rest.find("<ROOT>") {
+            out.push_str(&rest[..at]);
+            out.push_str(&root);
+            rest = &rest[at + "<ROOT>".len()..];
+            let end = rest
+                .find(|c: char| c.is_whitespace() || matches!(c, '"' | ',' | ')' | '\''))
+                .unwrap_or(rest.len());
+            out.push_str(&rest[..end].replace('/', separator));
+            rest = &rest[end..];
+        }
+        out.push_str(rest);
+    }
+    out
 }

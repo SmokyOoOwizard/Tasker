@@ -65,6 +65,7 @@ const SYSTEMD_UNIT: &str = "tasker-golden.service";
 const WINDOWS_TASK: &str = "Tasker MCP Golden";
 
 #[test]
+#[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
 fn launchd_plist_matches_dotnet_byte_for_byte() {
     let home = format!("{ROOT}/home/data");
     let special = format!("{ROOT}/tasker home/a&b <c>");
@@ -159,14 +160,29 @@ fn expected_calls(case: &str, file: &str, dir: &Path, uid: u32) -> Vec<String> {
     std::fs::read_to_string(golden_dir().join(case).join(file))
         .unwrap()
         .lines()
-        .map(|l| {
-            l.replace("<ROOT>", &root.to_string_lossy())
-                .replace("gui/<UID>", &format!("gui/{uid}"))
-        })
+        .map(|l| with_root(&l.replace("gui/<UID>", &format!("gui/{uid}")), &root.to_string_lossy()))
         .collect()
 }
 
+/// `<ROOT>` в строке вызова; эталоны сняты на Unix — на Windows разделители пути после `<ROOT>` (до табуляции) — `\\`.
+fn with_root(line: &str, root: &str) -> String {
+    let mut out = String::new();
+    let mut rest = line;
+    while let Some(at) = rest.find("<ROOT>") {
+        out.push_str(&rest[..at]);
+        out.push_str(root);
+        rest = &rest[at + "<ROOT>".len()..];
+        let end = rest.find('\t').unwrap_or(rest.len());
+        let tail = &rest[..end];
+        out.push_str(&if cfg!(windows) { tail.replace('/', "\\") } else { tail.to_string() });
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 #[test]
+#[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
 fn launchd_commands_match_dotnet() {
     for case in ["launchd", "launchd-nohome", "launchd-special"] {
         let (calls, dir) = calls_of(case, |runner, dir| {
@@ -181,6 +197,7 @@ fn launchd_commands_match_dotnet() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
 fn launchd_cli_enable_and_status_match_the_real_dotnet_console() {
     // Эталон снят настоящим `tasker mcp autostart enable` + `tasker mcp autostart status` с TASKER_SERVICE_DIR=<ROOT>/service.
     let _lock = ENV.lock().unwrap_or_else(|e| e.into_inner());

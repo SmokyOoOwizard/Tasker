@@ -204,6 +204,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
     fn plist_runs_the_daemon_at_login_and_keeps_it_alive() {
         let dir = temp_dir();
         let home = dir.join("home");
@@ -226,6 +227,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
     fn plist_escapes_special_characters() {
         let dir = temp_dir();
         let special = dir.join("a&b <c>");

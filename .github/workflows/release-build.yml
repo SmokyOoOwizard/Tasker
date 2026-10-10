@@ -1,0 +1,167 @@
+# Сборка релиза Tasker (Rust: консоль tasker и демон tasker-mcpd) на всех платформах и тесты Rust на Linux, macOS и Windows.
+# Архивы — scripts/release.sh --rid <RID> на машине своей ОС (Windows — в Git Bash) — остаются артефактами прогона; релизы и
+# теги этот workflow не создаёт и никуда ничего не публикует.
+name: Release build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+    paths:
+      - 'rust/**'
+      - 'VERSION'
+      - 'scripts/release.sh'
+      - 'scripts/install.sh'
+      - 'scripts/install.ps1'
+      - '.github/workflows/release-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+
+jobs:
+  test:
+    name: cargo test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+        working-directory: rust
+    steps:
+      # Эталоны golden-корпуса сравниваются байт в байт: на Windows без перевода строк в CRLF.
+      - run: git config --global core.autocrlf false
+        working-directory: .
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: cargo fmt --check
+        if: runner.os == 'Linux'
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      # nextest с профилем ci (rust/.config/nextest.toml): тест дольше 3 минут снимается и называется, остальные идут дальше.
+      - name: cargo nextest
+        run: cargo nextest run --locked --profile ci --no-fail-fast
+      - name: doc tests
+        run: cargo test --locked --doc
+
+  build:
+    name: ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: osx-arm64, os: macos-latest, target: aarch64-apple-darwin }
+          - { rid: osx-x64, os: macos-latest, target: x86_64-apple-darwin }
+          - { rid: linux-x64, os: ubuntu-latest, target: x86_64-unknown-linux-gnu, zig: true }
+          - { rid: linux-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, zig: true }
+          - { rid: linux-musl-x64, os: ubuntu-latest, target: x86_64-unknown-linux-musl, zig: true }
+          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, zig: true }
+          - { rid: win-x64, os: windows-latest, target: x86_64-pc-windows-msvc }
+          - { rid: win-arm64, os: windows-11-arm, target: aarch64-pc-windows-msvc }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: ${{ matrix.rid }}
+      - uses: mlugg/setup-zig@v2
+        if: matrix.zig
+        with:
+          version: 0.13.0
+      - uses: taiki-e/install-action@v2
+        if: matrix.zig
+        with:
+          tool: cargo-zigbuild
+      - name: scripts/release.sh --rid ${{ matrix.rid }}
+        run: scripts/release.sh --rid '${{ matrix.rid }}' --out dist
+      # release.sh запускает только сборку под платформу самой машины; здесь — ещё и то, что раннер умеет запустить
+      # (статическая musl-сборка на glibc, x64 на Apple Silicon через Rosetta).
+      - name: run the built programs
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          name="tasker-$version-${{ matrix.rid }}"
+          mkdir -p check
+          case "${{ matrix.rid }}" in
+            win-*) (cd check && python -c "import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall('.')" "../dist/$name.zip"); exe=.exe ;;
+            *) tar -xzf "dist/$name.tar.gz" -C check; exe= ;;
+          esac
+          ls -la "check/$name" "check/$name/app"
+          cat "check/$name/release.txt"
+          run=()
+          case "${{ matrix.rid }}" in osx-x64) run=(arch -x86_64) ;; esac
+          if [ "${{ matrix.rid }}" = osx-x64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then echo "no Rosetta: not run"; exit 0; fi
+          shown="$("${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" --version | tr -d '\r')"
+          echo "tasker --version: $shown"
+          [ "$shown" = "$version" ]
+          "${run[@]+"${run[@]}"}" "check/$name/app/tasker-mcpd$exe" --help > /dev/null
+          mkdir -p check/ws
+          TASKER_HOME="$PWD/check/home" "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project create Smoke -w check/ws
+          TASKER_HOME="$PWD/check/home" "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project list -w check/ws
+          case "${{ matrix.rid }}" in
+            linux-*) file "check/$name/app/tasker"; (ldd "check/$name/app/tasker" || true) ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tasker-${{ matrix.rid }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  # Все архивы вместе: общий SHA256SUMS и установщики отдельно, как в каталоге, который делает release.sh.
+  collect:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          pattern: tasker-*
+          merge-multiple: true
+      - run: |
+          set -euo pipefail
+          mkdir dist
+          cp parts/* dist/
+          cp scripts/install.sh scripts/install.ps1 dist/
+          (cd dist && cat *.sha256 | sort -k2 > SHA256SUMS && sha256sum -c SHA256SUMS)
+          ls -la dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tasker-release
+          path: dist/
+          retention-days: 14

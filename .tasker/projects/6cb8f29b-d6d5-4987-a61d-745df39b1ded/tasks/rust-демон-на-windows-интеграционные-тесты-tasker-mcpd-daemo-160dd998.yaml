@@ -1,0 +1,11 @@
+formatVersion: 9
+id: 160dd998-74bf-4563-8d76-b110928ef613
+title: 'Rust-демон на Windows: интеграционные тесты tasker-mcpd (daemon, mcp, supervisor) не доходят до готовности'
+description: 'Найдено в TSK-141 при первом прогоне cargo nextest на windows-latest (GitHub Actions, ветка TSK-141-cargo-release). tasker-mcpd/tests/daemon.rs (4 теста: /health не отвечает 200 за 30 с), mcp.rs (2 теста: «the daemon did not get ready in 60 s»), supervisor.rs (8 тестов: условие из Fixture не выполняется за 30 с) — на Linux и macOS проходят. Это первая реальная проверка Windows-веток демона (передача сокета wsa:<base64> через WSADuplicateSocketW, Job Object, CREATE_NO_WINDOW, именованное событие остановки Local\\tasker-mcp-stop-…). Возможные причины, начиная с дешёвых: (1) сами тесты — settings.json пишется форматированием без экранирования пути (обратные косые в JSON), stdout/stderr демона в канале, который никто не читает (буфер канала Windows 4 КБ — демон блокируется на записи журнала в консоль), sh-обёртки и kill в supervisor.rs; (2) демон — привязка и передача сокета, ожидание hello/ready. При этом tasker-cli/tests/mcp_daemon.rs (tasker mcp start/upgrade/stop под супервизором с TASKER_MCP_SUPERVISOR=1) на Windows проходит после исправления запуска без унаследованных дескрипторов в TSK-141. Тесты помечены #[cfg_attr(windows, ignore = …)] со ссылкой на эту задачу: нужно разобраться на Windows-машине или в цикле CI, починить и снять ignore.'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-10T20:07:49.6398870+00:00
+updatedAt: 2026-10-10T20:07:49.6398870+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 156
