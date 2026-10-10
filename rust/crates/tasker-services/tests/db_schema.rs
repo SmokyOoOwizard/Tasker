@@ -106,5 +106,8 @@ fn an_old_file_gets_the_missing_link_type_columns_like_db_initializer() {
             ("Relates".to_string(), true, false, "1".to_string())
         ]
     );
+    // Соединение закрывается до удаления папки: Windows не удаляет открытый файл базы.
+    drop(types);
+    drop(ws);
     std::fs::remove_dir_all(&dir).unwrap();
 }
