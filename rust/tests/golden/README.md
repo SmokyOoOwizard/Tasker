@@ -17,6 +17,7 @@
 | `expected/mcp/` | Снапшоты демона MCP: `initialize`, `tools-list.json` (имена, описания, inputSchema всех инструментов; `tool-names.txt` — список), ответы инструментов на чтение, `errors/` — по ответу на каждый код ошибки; `cli/` — `tasker sync` (текст, `--json`, `-q`) при работающем демоне, который обслуживает область: сверяет демон, вывод `via daemon` (TSK-160). |
 | `autostart/` | Файлы автозапуска .NET-генераторов — launchd plist, systemd unit, XML Планировщика (UTF-16 LE с BOM) — и вызываемые команды; см. `autostart/README.md` (TSK-140). |
 | `sqlite/` | Раздел SQLite (TSK-159, `generate.py --only sqlite`): та же последовательность создания сущностей .NET-консолью с `--sqlite` (проекты Golden и Legacy без файловых особенностей). `workspace.sql` — база SQL-дампом (схема в порядке `sqlite_master`, строки по `rowid`; при сверке восстанавливается в WAL); id (в столбцах-Guid — заглавными, в значениях полей — строчными) и время (`yyyy-MM-dd HH:mm:ss.FFFFFFF`) канонизированы SQL-запросами по тем же правилам, что у папки; `schema.sql` — `.schema` базы, созданной `EnsureCreated` (с ним сверяется и новая база, созданная проверяемой сборкой, и тест `db_schema` Rust); `expected/cli` — вывод тех же команд консоли с `--sqlite <ROOT>/golden.db` (без справки и автодополнения); `expected/mcp` — демон с областью `kind: sqlite` (`golden.db`): чтение, ошибки, правка через MCP. |
+| `index/` | Раздел index (TSK-161, `generate.py --only index`): кэш индекса `.tasker/.cache/index.db`, общий у .NET и Rust. Снят .NET-консолью: `tasker sync -w <копия workspace/>` (без `.cache`), затем `schema.sql` — `.schema` базы (у таблиц `CREATE TABLE IF NOT EXISTS`, как печатает оболочка `sqlite3`), `index.txt` — канонический дамп: `user_version`, режим журнала, строки таблиц `files` (по `path`), `task_series`, `task_links`, `task_fields`, `task_field_values` (по `path` и `rowid`) через `quote()`, `mtime` — `<MTIME>`, если он равен времени изменения файла в тиках .NET (иначе число и расхождение), и содержимое `.cache` после выхода процесса. `--verify` строит индекс проверяемой сборкой и сравнивает оба файла байт в байт; тест `tasker-files/tests/index.rs` делает то же в `cargo test`. Пути в дампе относительные — `<ROOT>` не нужен. |
 | `notes.json` | Чем сгенерировано, канонические id проектов, id особых файлов (конфликт, «из будущего»), отвергнутые консолью строки. |
 
 ## Канонизация
@@ -40,6 +41,7 @@
 scripts/golden/generate.py                    # собрать консоль и демон из репозитория и перезаписать корпус
 scripts/golden/generate.py --bin <каталог>    # с готовыми tasker и tasker-mcpd (или tasker.dll и tasker-mcpd.dll)
 scripts/golden/generate.py --verify --diff    # снять эталоны с бинарника заново и сравнить с корпусом, ничего не меняя
+scripts/golden/generate.py --only index --bin <каталог .NET>   # переснять только раздел index (кэш index.db) с готовой .NET-сборки
 ```
 
 `--verify` — главный инструмент паритета: он берёт `workspace/` из корпуса, прогоняет те же команды консоли, `migrate` и
