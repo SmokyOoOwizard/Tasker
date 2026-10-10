@@ -6,7 +6,7 @@
 //!
 //! Порядок шагов и тексты журнала — как в .NET: консоль читает хвост журнала при неудачном старте.
 use crate::files::{DaemonFiles, DaemonInfo, new_token};
-use crate::http::{self, App};
+use crate::http::{self, App, Control};
 use crate::mcp::DaemonWorkspaces;
 use crate::registry::WorkspaceRegistry;
 use crate::shutdown::Shutdown;
@@ -17,13 +17,13 @@ use std::io::Write as _;
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tasker_core::settings::{SettingsStore, logs_dir};
+use tasker_core::settings::{SettingsStore, SettingsWatch, WorkspaceEntry, logs_dir};
 use tracing::{error, info};
 
 const PORT_WAIT: Duration = Duration::from_secs(5);
 const PORT_POLL: Duration = Duration::from_millis(200);
 /// `HostOptions.ShutdownTimeout`: сколько ждать начатые запросы при остановке.
-const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
+pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Код выхода: 0 — остановлен штатно, 1 — не запустился. `detached` — запущен в фоне: отвязаться от терминала и писать только в файл.
 pub fn run(detached: bool) -> i32 {
@@ -43,7 +43,7 @@ pub fn run(detached: bool) -> i32 {
     if detached {
         detach();
     }
-    crate::logging::configure(&logs_dir(), detached);
+    crate::logging::configure(&logs_dir(), detached, false);
 
     let runtime = match tokio::runtime::Builder::new_multi_thread().enable_all().build() {
         Ok(runtime) => runtime,
@@ -82,18 +82,7 @@ async fn serve(files: DaemonFiles) -> i32 {
 
     let state = Arc::new(DaemonState::new(port, port));
     let token = new_token();
-    let registry = Arc::new(WorkspaceRegistry::new());
-    let sync = Arc::new(WorkspaceSync::new(registry.clone(), state.clone(), port));
-    let shutdown = Arc::new(Shutdown::new());
-    let mcp = tasker_mcp::http_service(tasker_mcp::TaskerMcp::new(Arc::new(DaemonWorkspaces::new(registry, state.clone()))));
-    let app = Arc::new(App {
-        state: state.clone(),
-        sync: sync.clone(),
-        store: SettingsStore::new(None),
-        token: token.clone(),
-        shutdown: shutdown.clone(),
-        mcp,
-    });
+    let Server { sync, shutdown, app } = Server::new(state.clone(), token.clone(), Control::default());
 
     sync.prepare(settings.mcp.workspaces.clone());
     let serving = shutdown.clone();
@@ -120,29 +109,8 @@ async fn serve(files: DaemonFiles) -> i32 {
         state.pid()
     );
 
-    // Слежение за настройками: обработчик зовётся в потоке наблюдателя, применение — задачей рантайма.
-    let handle = tokio::runtime::Handle::current();
-    let applying = sync.clone();
-    let watch = store.watch(move |changed| {
-        info!("Settings changed: {} workspaces", changed.mcp.workspaces.len());
-        let sync = applying.clone();
-        handle.spawn(async move { sync.apply(changed.mcp.workspaces).await });
-    });
-    let watch = match watch {
-        Ok(watch) => Some(watch),
-        Err(e) => {
-            error!("Cannot watch the settings file: {e}");
-            None
-        }
-    };
-    let retrying = sync.clone();
-    let retry = tokio::spawn(async move {
-        let mut timer = tokio::time::interval_at(tokio::time::Instant::now() + RETRY_EVERY, RETRY_EVERY);
-        loop {
-            timer.tick().await;
-            retrying.retry().await;
-        }
-    });
+    let watch = watch_settings(&store, &sync);
+    let retry = retry_failed(&sync);
     sync.apply(settings.mcp.workspaces).await;
 
     let reason = shutdown.wait(files.directory()).await;
@@ -163,6 +131,63 @@ async fn serve(files: DaemonFiles) -> i32 {
     0
 }
 
+/// Сервер области: реестр, сверка областей, остановка и HTTP-приложение — общие у демона в одном процессе и у рабочего процесса.
+pub struct Server {
+    pub sync: Arc<WorkspaceSync>,
+    pub shutdown: Arc<Shutdown>,
+    pub app: Arc<App>,
+}
+
+impl Server {
+    pub fn new(state: Arc<DaemonState>, token: String, control: Control) -> Server {
+        let registry = Arc::new(WorkspaceRegistry::new());
+        let sync = Arc::new(WorkspaceSync::new(registry.clone(), state.clone(), state.port()));
+        let shutdown = Arc::new(Shutdown::new());
+        let mcp = tasker_mcp::http_service(tasker_mcp::TaskerMcp::new(Arc::new(DaemonWorkspaces::new(registry, state.clone()))));
+        let app = Arc::new(App {
+            state,
+            sync: sync.clone(),
+            store: SettingsStore::new(None),
+            token,
+            shutdown: shutdown.clone(),
+            mcp,
+            control,
+        });
+        Server { sync, shutdown, app }
+    }
+}
+
+/// Слежение за настройками: обработчик зовётся в потоке наблюдателя, применение — задачей рантайма.
+pub fn watch_settings(store: &SettingsStore, sync: &Arc<WorkspaceSync>) -> Option<SettingsWatch> {
+    let handle = tokio::runtime::Handle::current();
+    let applying = sync.clone();
+    let watch = store.watch(move |changed| {
+        info!("Settings changed: {} workspaces", changed.mcp.workspaces.len());
+        let sync = applying.clone();
+        let workspaces: Vec<WorkspaceEntry> = changed.mcp.workspaces;
+        handle.spawn(async move { sync.apply(workspaces).await });
+    });
+    match watch {
+        Ok(watch) => Some(watch),
+        Err(e) => {
+            error!("Cannot watch the settings file: {e}");
+            None
+        }
+    }
+}
+
+/// Области, которые не открылись, пробуются снова каждые [`RETRY_EVERY`].
+pub fn retry_failed(sync: &Arc<WorkspaceSync>) -> tokio::task::JoinHandle<()> {
+    let retrying = sync.clone();
+    tokio::spawn(async move {
+        let mut timer = tokio::time::interval_at(tokio::time::Instant::now() + RETRY_EVERY, RETRY_EVERY);
+        loop {
+            timer.tick().await;
+            retrying.retry().await;
+        }
+    })
+}
+
 /// `Log.Fatal` + сообщение в stderr; код выхода 1.
 fn crashed(message: &str) -> i32 {
     error!(fatal = true, "The MCP server crashed: {message}");
@@ -170,7 +195,7 @@ fn crashed(message: &str) -> i32 {
     1
 }
 
-fn address(port: i32) -> SocketAddr {
+pub fn address(port: i32) -> SocketAddr {
     SocketAddr::from((Ipv4Addr::LOCALHOST, u16::try_from(port).unwrap_or(0)))
 }
 
@@ -201,9 +226,9 @@ fn is_port_free(port: i32) -> bool {
 /// Новый сеанс: закрытие терминала (SIGHUP) не убьёт фоновый демон. Делает сам демон (консоль лишь перенаправляет его stdio в
 /// `/dev/null`), как `McpDaemon.Detach` → `setsid()`.
 #[cfg(unix)]
-fn detach() {
+pub fn detach() {
     let _ = rustix::process::setsid();
 }
 
 #[cfg(not(unix))]
-fn detach() {}
+pub fn detach() {}

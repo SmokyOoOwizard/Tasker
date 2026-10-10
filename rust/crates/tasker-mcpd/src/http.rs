@@ -4,9 +4,13 @@
 //! десктопа `/w/{key}/…` (`UseWorkspaces`).
 //!
 //! Коды и тела повторяют .NET: 401 без тела у управления без секрета, 403 `{"error":"Only local requests are allowed"}` у чужого
-//! Host/Origin, 409 на `/daemon/upgrade` (демон в одном процессе заменить на лету нельзя), 503 с `Retry-After` у неготового `/ready`.
+//! Host/Origin, 409 на `/daemon/upgrade` у демона в одном процессе (заменить на лету нельзя), 503 у неготового `/ready`.
+//!
+//! Рабочий процесс под супервизором (`worker`) отличается крючками [`Control`] (`McpDaemon.ControlHooks`): `/daemon/upgrade` и
+//! `/daemon/stop` уходят супервизору, `/ready` учитывает завершение, а самый внешний слой — [`crate::gate::layer`].
+use crate::gate::DrainState;
 use crate::shutdown::Shutdown;
-use crate::state::{DaemonState, WorkspaceState};
+use crate::state::{DaemonState, UpgradeRequest, UpgradeResult, WorkspaceState};
 use crate::sync::WorkspaceSync;
 use axum::Router;
 use axum::body::Bytes;
@@ -18,6 +22,8 @@ use axum::routing::{get, post};
 use rmcp::transport::streamable_http_server::StreamableHttpService;
 use rmcp::transport::streamable_http_server::session::never::NeverSessionManager;
 use serde_json::{Value, json};
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use tasker_core::settings::{SettingsStore, WorkspaceKind, WorkspaceLocation};
 use tasker_mcp::TaskerMcp;
@@ -37,10 +43,25 @@ pub struct App {
     pub shutdown: Arc<Shutdown>,
     /// Служба MCP (`tasker-mcp` на rmcp): один адрес на все области, область — аргумент `workspace` инструмента.
     pub mcp: StreamableHttpService<TaskerMcp, NeverSessionManager>,
+    pub control: Control,
 }
 
+/// Замена рабочего процесса на лету: просьба супервизору и его ответ.
+pub type UpgradeHook = Arc<dyn Fn(UpgradeRequest) -> Pin<Box<dyn Future<Output = UpgradeResult> + Send>> + Send + Sync>;
+
+/// Что управление демоном делает иначе у рабочего процесса под супервизором (`McpDaemon.ControlHooks`); по умолчанию — демон в
+/// одном процессе.
+#[derive(Default, Clone)]
+pub struct Control {
+    /// None — демон в одном процессе: заменить на лету его нельзя.
+    pub upgrade: Option<UpgradeHook>,
+    /// None — остановить свой процесс.
+    pub stop: Option<Arc<dyn Fn() + Send + Sync>>,
+    pub drain: Option<Arc<DrainState>>,
+}
 pub fn router(app: Arc<App>) -> Router {
-    Router::new()
+    let drain = app.control.drain.clone();
+    let router = Router::new()
         .route_service(MCP_PATH, app.mcp.clone())
         .route("/daemon/status", get(status))
         .route("/daemon/sync", post(sync))
@@ -51,7 +72,11 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/api/health", get(api_health))
         .fallback(fallback)
         .layer(middleware::from_fn(loopback_only))
-        .with_state(app)
+        .with_state(app);
+    match drain {
+        Some(drain) => router.layer(middleware::from_fn_with_state(drain, crate::gate::layer)),
+        None => router,
+    }
 }
 
 /// JSON-ответ как `Results.Ok(obj)`/`Results.Json`: `application/json; charset=utf-8`, экранирование `TaskerJson`.
@@ -186,40 +211,65 @@ async fn stop(State(app): State<Arc<App>>, headers: HeaderMap) -> Response {
         return StatusCode::UNAUTHORIZED.into_response();
     }
     info!("Stop requested");
-    app.shutdown.trigger();
+    match &app.control.stop {
+        Some(stop) => stop(),
+        None => app.shutdown.trigger(),
+    }
     json(StatusCode::OK, &json!({"stopping": true}))
 }
 
-/// Заменить рабочий процесс на лету может только супервизор (TSK-139); демон в одном процессе отвечает, как .NET без него.
-async fn upgrade(State(app): State<Arc<App>>, headers: HeaderMap) -> Response {
+/// Заменить рабочий процесс на лету: новый поднимается рядом, старый заканчивает начатое. Решает супервизор; демон в одном
+/// процессе отвечает 409.
+async fn upgrade(State(app): State<Arc<App>>, headers: HeaderMap, body: Bytes) -> Response {
     if !authorized(&headers, &app.token) {
         return StatusCode::UNAUTHORIZED.into_response();
     }
-    json(
-        StatusCode::CONFLICT,
-        &json!({"error": "The MCP server runs as a single process and cannot be replaced on the fly: restart it"}),
-    )
+    let Some(hook) = app.control.upgrade.clone() else {
+        return json(
+            StatusCode::CONFLICT,
+            &json!({"error": "The MCP server runs as a single process and cannot be replaced on the fly: restart it"}),
+        );
+    };
+    let request = serde_json::from_slice::<Value>(&body)
+        .ok()
+        .and_then(|v| UpgradeRequest::from_json(&v))
+        .filter(|r| !r.file.is_empty());
+    let Some(request) = request else {
+        return json(
+            StatusCode::BAD_REQUEST,
+            &json!({"error": "Body {\"file\", \"arguments\", \"timeoutSeconds\"} is required"}),
+        );
+    };
+    if !std::path::Path::new(&request.file).is_file() {
+        let result = UpgradeResult::failed(format!("The program of the new server process is not found: {}", request.file));
+        return json(StatusCode::OK, &result.to_json());
+    }
+    info!("Upgrade requested: {} {}", request.file, request.arguments.join(" "));
+    let result = hook(request).await;
+    json(StatusCode::OK, &result.to_json())
 }
 
-/// Готов принимать вызовы: все области открыты (или не открылись) и процесс не закрывается. Иначе 503.
+/// Готов принимать вызовы: все области открыты (или не открылись) и процесс не закрывается. Иначе 503. `pid` — этот процесс
+/// (у рабочего — он сам, а не супервизор).
 async fn ready(State(app): State<Arc<App>>) -> Response {
     let workspaces = app.state.workspaces();
     let opening = workspaces.iter().filter(|w| w.state == WorkspaceState::Opening).count();
-    if opening == 0 {
-        json(StatusCode::OK, &json!({"ready": true, "pid": app.state.pid()}))
+    let draining = app.control.drain.as_ref().is_some_and(|d| d.draining());
+    if opening == 0 && !draining {
+        json(StatusCode::OK, &json!({"ready": true, "pid": std::process::id()}))
     } else {
         json(
             StatusCode::SERVICE_UNAVAILABLE,
-            &json!({"ready": false, "opening": opening, "draining": false}),
+            &json!({"ready": false, "opening": opening, "draining": draining}),
         )
     }
 }
 
-/// Процесс жив и отвечает (в отличие от `/ready` не говорит, открыты ли области).
-async fn health(State(app): State<Arc<App>>) -> Response {
+/// Процесс жив и отвечает (в отличие от `/ready` не говорит, открыты ли области). `pid` — этот процесс.
+async fn health() -> Response {
     json(
         StatusCode::OK,
-        &json!({"status": "ok", "mode": "McpDaemon", "pid": app.state.pid()}),
+        &json!({"status": "ok", "mode": "McpDaemon", "pid": std::process::id()}),
     )
 }
 

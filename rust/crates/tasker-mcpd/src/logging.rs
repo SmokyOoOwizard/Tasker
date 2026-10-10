@@ -16,6 +16,7 @@ use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::filter::{LevelFilter, Targets};
 use tracing_subscriber::fmt::format::Writer;
+use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields, MakeWriter};
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::registry::LookupSpan;
@@ -28,8 +29,9 @@ pub const RETAINED_FILES: usize = 7;
 const PREFIX: &str = "mcp-";
 const SUFFIX: &str = ".log";
 
-/// Настраивает журнал: файл всегда, консоль — если не в фоне (`detached`). Повторный вызов (тесты) — ошибка игнорируется.
-pub fn configure(logs_dir: &Path, detached: bool) {
+/// Настраивает журнал: файл всегда, консоль — если не в фоне (`detached`): stdout или stderr (`to_stderr`: у рабочего процесса в
+/// stdout идёт обмен с супервизором). Повторный вызов (тесты) — ошибка игнорируется.
+pub fn configure(logs_dir: &Path, detached: bool, to_stderr: bool) {
     let file = DailyFile::new(logs_dir.to_path_buf());
     let filter = || {
         Targets::new()
@@ -46,7 +48,11 @@ pub fn configure(logs_dir: &Path, detached: bool) {
     let console_layer: Option<Filtered<_, Targets, _>> = (!detached).then(|| {
         tracing_fmt::layer()
             .event_format(SerilogFormat { console: true })
-            .with_writer(io::stdout)
+            .with_writer(if to_stderr {
+                BoxMakeWriter::new(io::stderr)
+            } else {
+                BoxMakeWriter::new(io::stdout)
+            })
             .with_filter(filter())
     });
     let _ = tracing_subscriber::registry().with(file_layer).with(console_layer).try_init();
