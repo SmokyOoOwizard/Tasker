@@ -1,12 +1,12 @@
 //! Сверка индекса с диском (`WorkspaceIndex.Sync` в .NET): внутри указанных путей удаляются записи о пропавших файлах и
 //! перечитываются новые и изменившиеся (по размеру и времени изменения). Одна транзакция.
-use super::{db_error, kind_name};
+use super::{db_error, is_busy, kind_name};
 use crate::error::Error;
 use crate::files;
 use crate::layout::{self, EntityKind, LayoutEntry, TaskerDirectory};
 use crate::names;
 use crate::write::read_bytes;
-use rusqlite::{Connection, Transaction, params};
+use rusqlite::{Connection, Transaction, TransactionBehavior, params};
 use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -53,7 +53,22 @@ struct Known {
 }
 
 pub(super) fn run(connection: &mut Connection, directory: &TaskerDirectory, scopes: &[String]) -> io::Result<SyncReport> {
-    let transaction = connection.transaction().map_err(db_error)?;
+    // Обычно сверка только читает, поэтому транзакция отложенная (не мешает другим процессам). Но если между чтением и первой
+    // записью индекс изменил другой процесс (два рабочих процесса демона при замене, консоль рядом с демоном), SQLite в режиме WAL
+    // отвечает SQLITE_BUSY сразу, не дожидаясь busy_timeout: тогда сверка повторяется целиком с блокировкой записи с самого начала.
+    match run_in(connection, directory, scopes, TransactionBehavior::Deferred) {
+        Err(e) if is_busy(&e) => run_in(connection, directory, scopes, TransactionBehavior::Immediate),
+        result => result,
+    }
+}
+
+fn run_in(
+    connection: &mut Connection,
+    directory: &TaskerDirectory,
+    scopes: &[String],
+    behavior: TransactionBehavior,
+) -> io::Result<SyncReport> {
+    let transaction = connection.transaction_with_behavior(behavior).map_err(db_error)?;
     let indexed = indexed_stamps(&transaction, scopes)?;
     let started = tasker_core::perf::start();
     let on_disk = scan_disk(directory, scopes);

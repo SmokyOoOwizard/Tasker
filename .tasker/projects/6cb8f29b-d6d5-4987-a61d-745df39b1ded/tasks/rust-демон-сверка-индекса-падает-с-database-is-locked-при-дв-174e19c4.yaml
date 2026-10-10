@@ -1,0 +1,11 @@
+formatVersion: 9
+id: 174e19c4-a54f-4b97-b34e-0f87ec4f3464
+title: 'Rust-демон: сверка индекса падает с «database is locked» при двух рабочих процессах (замена под нагрузкой на Linux)'
+description: "Найдено в TSK-141 на первом прогоне cargo test в GitHub Actions (ubuntu-latest) и воспроизведено в Docker (Linux arm64): тест tasker-mcpd/tests/supervisor.rs upgrade_under_continuous_load_refuses_no_connection_and_loses_no_write изредка получает «An error occurred invoking 'create_task'.». Причина — ошибка ввода-вывода «Index database: database is locked»: сверка индекса (tasker-files/src/index/sync.rs) шла в отложенной транзакции (сначала чтение, потом запись); если между чтением и первой записью индекс изменил другой процесс (старый и новый рабочий процесс при замене, консоль рядом с демоном), SQLite в режиме WAL сразу отвечает SQLITE_BUSY, не ожидая busy_timeout. Исправлено в TSK-141: при SQLITE_BUSY сверка повторяется целиком в транзакции IMMEDIATE (обычный путь не изменился). 8 прогонов теста в Docker с --cpus 2 — ошибки индекса больше нет."
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-10T19:41:26.4538140+00:00
+updatedAt: 2026-10-10T19:41:26.4538140+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 153
