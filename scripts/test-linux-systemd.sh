@@ -6,6 +6,9 @@
 # командами tasker. Печатает «ok»/«FAIL» по каждому пункту; код выхода 1, если что-то не прошло. Настоящая служба хоста не задета.
 #
 #   scripts/test-linux-systemd.sh [--platform linux/amd64] [--keep]    # --keep: не удалять контейнер (имя tasker-systemd-check)
+#   scripts/test-linux-systemd.sh --rust <каталог>   # Rust-сборки tasker и tasker-mcpd под Linux (TSK-139): сначала .NET-демон под
+#                                                    # службой заменяется на лету Rust-рабочим процессом и обратно под непрерывной
+#                                                    # нагрузкой (порт не закрывается ни на миг), затем чек-лист — с Rust-консолью и Rust-демоном
 set -uo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,16 +16,23 @@ image="${TASKER_SYSTEMD_IMAGE:-tasker-linux-systemd}"
 name="tasker-systemd-check"
 nuget_volume="${TASKER_LINUX_NUGET_VOLUME:-tasker-nuget-user}"
 keep=0
+rust=""
 pf=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --platform) pf=(--platform "$2"); image="$image-${2//\//-}"; shift 2 ;;
     --keep) keep=1; shift ;;
-    -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+    --rust) rust="$(cd "$2" && pwd)"; shift 2 ;;
+    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     *) echo "Неизвестный аргумент: $1" >&2; exit 2 ;;
   esac
 done
 command -v docker >/dev/null || { echo "Нужен docker." >&2; exit 1; }
+if [ -n "$rust" ] && { [ ! -x "$rust/tasker" ] || [ ! -x "$rust/tasker-mcpd" ]; }; then
+  echo "В $rust нет исполняемых tasker и tasker-mcpd (сборка под Linux)." >&2; exit 2
+fi
+rust_mount=()
+[ -n "$rust" ] && rust_mount=(-v "$rust":/rust:ro)
 
 if ! docker image inspect "$image" >/dev/null 2>&1; then
   echo ">> сборка образа $image"
@@ -40,7 +50,7 @@ cleanup() { [ "$keep" = 1 ] || docker rm -f "$name" >/dev/null 2>&1; }
 trap cleanup EXIT
 docker rm -f "$name" >/dev/null 2>&1
 docker run -d --name "$name" "${pf[@]+"${pf[@]}"}" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-  --tmpfs /run --tmpfs /run/lock --tmpfs /tmp -v "$repo":/src:ro -v "$nuget_volume":/root/.nuget "$image" >/dev/null || exit 1
+  --tmpfs /run --tmpfs /run/lock --tmpfs /tmp -v "$repo":/src:ro -v "$nuget_volume":/root/.nuget "${rust_mount[@]+"${rust_mount[@]}"}" "$image" >/dev/null || exit 1
 
 for _ in $(seq 1 30); do
   state="$(docker exec "$name" systemctl is-system-running 2>/dev/null)"
@@ -75,6 +85,41 @@ inactive() { ! active; }
 eventually() { for _ in $(seq 1 "${2:-20}"); do "$1" && return 0; sleep 1; done; return 1; }
 has_worker() { as_tester tasker mcp status 2>&1 | grep -q 'worker pid'; }
 worker_pid() { as_tester tasker mcp status 2>/dev/null | sed -n 's/^worker pid \([0-9]*\).*/\1/p' | head -n 1; }
+
+if [ -n "$rust" ]; then
+  echo ">> смешанная пара: .NET-демон под systemd --user -> Rust-рабочий процесс -> .NET, под нагрузкой"
+  # Нагрузка изнутри контейнера: новые соединения к /health и /mcp (list_projects) подряд; каждая строка — код ответа (000 — отказ).
+  load_start() {
+    as_tester bash -c 'rm -f /tmp/load.codes /tmp/load.stop; cd /home/tester/ws && (while [ ! -e /tmp/load.stop ]; do
+      curl -s -o /dev/null -w "%{http_code}\n" --max-time 30 http://127.0.0.1:5719/health
+      curl -s -o /dev/null -w "%{http_code}\n" --max-time 30 -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+        -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"list_projects\",\"arguments\":{}}}" http://127.0.0.1:5719/mcp
+    done >> /tmp/load.codes) >/dev/null 2>&1 &'
+  }
+  load_stop() { as_tester touch /tmp/load.stop; sleep 2; }
+  load_clean() { as_tester bash -c '[ "$(wc -l < /tmp/load.codes)" -gt 100 ] && ! grep -qv "^200$" /tmp/load.codes'; }
+  daemon_pid() { as_tester tasker mcp status 2>/dev/null | sed -n 's/^pid \([0-9]*\),.*/\1/p' | head -n 1; }
+  as_tester bash -c 'mkdir -p /home/tester/ws && cd /home/tester/ws && tasker project create Demo >/dev/null && tasker mcp workspace add . >/dev/null'
+  check "[.NET] autostart enable" as_tester tasker mcp autostart enable
+  check "[.NET] служба active, есть рабочий процесс" eventually has_worker
+  supervisor="$(daemon_pid)"; before="$(worker_pid)"
+  load_start; sleep 2
+  check "[.NET -> Rust] tasker mcp upgrade --daemon /rust/tasker-mcpd" bash -c "docker exec -u tester -e HOME=/home/tester $name tasker mcp upgrade --daemon /rust/tasker-mcpd | grep -q 'replaced without downtime'"
+  rust_worker="$(worker_pid)"
+  check "рабочий процесс сменился ($before -> $rust_worker) и это Rust (/rust/tasker-mcpd)" bash -c "[ -n '$rust_worker' ] && [ '$before' != '$rust_worker' ] && docker exec $name cat /proc/$rust_worker/cmdline | tr '\\0' ' ' | grep -q '^/rust/tasker-mcpd --worker --listen-fd'"
+  sleep 2
+  check "[Rust -> .NET] tasker mcp upgrade обратно на .NET-сборку" bash -c "docker exec -u tester -e HOME=/home/tester $name tasker mcp upgrade | grep -q 'replaced without downtime'"
+  sleep 2
+  load_stop
+  requests="$(as_tester bash -c 'wc -l < /tmp/load.codes' | tr -d ' ')"
+  check "ни одного отказа соединения и не-200 за время замен ($requests запросов)" load_clean
+  check "супервизор (.NET) и служба те же (pid $supervisor)" bash -c "[ '$(daemon_pid)' = '$supervisor' ] && docker exec -u tester -e XDG_RUNTIME_DIR=/run/user/1500 $name systemctl --user is-active --quiet tasker-mcp.service"
+  check "[.NET] autostart disable" as_tester tasker mcp autostart disable
+  as_tester tasker mcp stop >/dev/null 2>&1
+  as_tester bash -c 'cd /home/tester/ws && tasker mcp workspace remove . >/dev/null'
+  echo ">> Rust-сборки tasker и tasker-mcpd вместо .NET в /opt/tasker"
+  docker exec "$name" bash -c 'cp /rust/tasker /rust/tasker-mcpd /opt/tasker/' || { echo "FAIL: копирование Rust-сборок"; exit 1; }
+fi
 
 echo ">> чек-лист systemd --user"
 check "автозапуск выключен до включения" bash -c "[ \"\$(docker exec -u tester -e HOME=/home/tester $name tasker mcp autostart status)\" = off ]"
