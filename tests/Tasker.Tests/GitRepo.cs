@@ -61,7 +61,8 @@ public sealed class GitRepo : IDisposable
     /// <summary>Сколько проектов в кэше папки; -1 — кэша нет. Кэш читаем напрямую: ни один процесс Tasker при этом не запускается.</summary>
     public static int ProjectsInCache(string workspaceFolder)
     {
-        var file = Path.Combine(workspaceFolder, ".tasker", ".cache", "index.db");
+        // Схема таблицы files у кэшей .NET и Rust в этом общая: kind и error.
+        var file = IndexCache.Database(workspaceFolder);
         if (!File.Exists(file))
             return -1;
 

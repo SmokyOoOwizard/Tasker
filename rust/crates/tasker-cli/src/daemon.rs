@@ -171,6 +171,91 @@ pub fn get_status() -> Option<DaemonStatus> {
     Some(DaemonStatus { value })
 }
 
+/// Итог сверки области демоном (`SyncResult` .NET, ответ `/daemon/sync`).
+pub struct SyncReply {
+    pub path: String,
+    pub problem_count: usize,
+    /// Первые [`crate::sync::PROBLEMS_SHOWN`] из `problem_count`: путь и ошибка.
+    pub problems: Vec<(String, String)>,
+    pub series: Vec<tasker_services::health::ProjectSeriesHealth>,
+}
+
+/// Сколько ждать ответа демона на сверку (`DaemonClient.Sync`: 5 минут — большая область после `git pull`).
+const SYNC_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// Просит демон сверить кэш области с файлами и ждёт результата (`DaemonClient.Sync`). None — демон не работает, эту область не
+/// обслуживает или ответил не так (сверять нужно самому).
+pub fn sync(location: &tasker_core::settings::WorkspaceLocation) -> Option<SyncReply> {
+    if !is_running() {
+        return None;
+    }
+    let info = read_info()?;
+    let agent = agent(SYNC_TIMEOUT);
+    let kind = match location.kind() {
+        tasker_core::settings::WorkspaceKind::Files => "files",
+        tasker_core::settings::WorkspaceKind::Sqlite => "sqlite",
+    };
+    let body = tasker_core::json::to_string(&serde_json::json!({"kind": kind, "path": location.path()}));
+    let value: Value = retrying(|| {
+        let mut response = agent
+            .post(url(&info, "/daemon/sync"))
+            .header(CONTROL_HEADER, &info.token)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .send(body.as_str())?;
+        let text = response.body_mut().read_to_string()?;
+        if !response.status().is_success() {
+            return Ok(Value::Null);
+        }
+        serde_json::from_str::<Value>(&text).map_err(|_| ureq::Error::Other("json".into()))
+    })
+    .ok()?;
+    parse_sync_reply(&value)
+}
+
+/// Ответ `/daemon/sync` — имена свойств без учёта регистра (`ReadFromJsonAsync` с веб-настройками). None — не та форма.
+fn parse_sync_reply(value: &Value) -> Option<SyncReply> {
+    fn get<'a>(value: &'a Value, name: &str) -> Option<&'a Value> {
+        value
+            .as_object()?
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v)
+            .filter(|v| !v.is_null())
+    }
+    let path = get(value, "path")?.as_str()?.to_string();
+    let problem_count = match get(value, "problemCount") {
+        None => 0,
+        Some(v) => usize::try_from(v.as_u64()?).ok()?,
+    };
+    let problems = match get(value, "problems") {
+        None => Vec::new(),
+        Some(v) => v
+            .as_array()?
+            .iter()
+            .map(|p| {
+                Some((
+                    get(p, "path").and_then(Value::as_str).unwrap_or_default().to_string(),
+                    get(p, "error").and_then(Value::as_str).unwrap_or_default().to_string(),
+                ))
+            })
+            .collect::<Option<Vec<_>>>()?,
+    };
+    let series = match get(value, "series") {
+        None => Vec::new(),
+        Some(v) => v
+            .as_array()?
+            .iter()
+            .map(tasker_services::health::from_json)
+            .collect::<Option<Vec<_>>>()?,
+    };
+    Some(SyncReply {
+        path,
+        problem_count,
+        problems,
+        series,
+    })
+}
+
 /// Просит демон остановиться. false — демон не работает или не принял запрос.
 pub fn request_stop() -> bool {
     if !is_running() {
