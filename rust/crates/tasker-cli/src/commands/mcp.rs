@@ -1,6 +1,6 @@
 //! `tasker mcp …` (`McpCommands` в .NET): демон MCP и его глобальные настройки (`settings.json` общий с десктопом и демоном).
-//! Сам сервер в этой сборке не запускается (`mcp run` — TSK-137, `mcp upgrade` — TSK-139): команды управляют установленным
-//! `tasker-mcpd` рядом с программой — в том числе .NET-демоном.
+//! Команды управляют установленным `tasker-mcpd` рядом с программой — в том числе .NET-демоном: `run` запускает его в этом
+//! терминале, `start` — в фоне, `upgrade` заменяет рабочий процесс демона под супервизором на лету (одиночный — перезапускает).
 use crate::context::Context;
 use crate::daemon::{self, Controller};
 use crate::errors::{CliError, Result};
@@ -14,12 +14,38 @@ use tasker_core::settings::{SettingsStore, WorkspaceLocation, expand_user_path};
 pub fn run(ctx: &mut Context<'_>, path: &[&str], leaf: &ArgMatches) -> Result<()> {
     let settings = SettingsStore::new(None);
     match path {
-        ["run"] => Err(CliError::new(
-            "'tasker mcp run' is not available in this build: the MCP server (tasker-mcpd) is a separate program, start it with 'tasker mcp start'",
-        )),
-        ["upgrade"] => Err(CliError::new(
-            "'tasker mcp upgrade' is not available in this build: stop and start the MCP server with 'tasker mcp restart'",
-        )),
+        ["run"] => {
+            ctx.exit_code = daemon::run_foreground(kit::flag(leaf, "detached"))?;
+            Ok(())
+        }
+        ["upgrade"] => {
+            let restart = kit::flag(leaf, "restart");
+            let timeout = kit::int(leaf, "timeout", daemon::DEFAULT_UPGRADE_TIMEOUT_SECONDS).max(1);
+            let program = kit::text(leaf, "daemon")
+                .filter(|p| !p.is_empty())
+                .map(|p| daemon::daemon_override(&p));
+            let outcome = Controller::system().upgrade(restart, timeout, program)?.map_err(|message| {
+                CliError::new(format!(
+                    "{message}\nThe running MCP server is not changed. Look at the log or restart it with 'tasker mcp upgrade --restart'."
+                ))
+            })?;
+            let text = match &outcome.status {
+                None => outcome.message.clone(),
+                Some(status) => format!("{}\n{}", outcome.message, daemon::describe(status)),
+            };
+            ctx.print(
+                &object(vec![
+                    ("upgraded", Value::String(outcome.kind.json_name().into())),
+                    ("message", Value::String(outcome.message.clone())),
+                    ("status", outcome.status.as_ref().map(|s| s.value.clone()).unwrap_or(Value::Null)),
+                ]),
+                &text,
+            );
+            if outcome.kind == daemon::UpgradeKind::NotRunning {
+                ctx.exit_code = 3;
+            }
+            Ok(())
+        }
         ["start"] => {
             let (status, already) = Controller::system().start()?;
             ctx.print(

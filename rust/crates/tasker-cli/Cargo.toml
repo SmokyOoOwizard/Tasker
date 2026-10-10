@@ -21,9 +21,10 @@ serde_json.workspace = true
 unicode-general-category.workspace = true
 unicode-segmentation = "1"
 ureq = { version = "3", default-features = false }
+signal-hook.workspace = true
 
 [target.'cfg(not(windows))'.dependencies]
-rustix = { workspace = true, features = ["termios", "stdio"] }
+rustix = { workspace = true, features = ["termios", "stdio", "process"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_Console", "Win32_Foundation"] }
