@@ -87,6 +87,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
             parse_error(&error, &path, &rest, args, out, err, help_width)
         }
     };
+    crate::perf::mark("end");
     crate::perf::dump(err);
     code
 }

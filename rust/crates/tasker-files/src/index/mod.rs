@@ -50,7 +50,9 @@ impl WorkspaceIndex {
     /// Открывает индекс (создаёт схему, пересобирает повреждённый) и сверяет его со всеми файлами области.
     pub fn open(directory: &TaskerDirectory) -> io::Result<WorkspaceIndex> {
         let index = Self::attach(directory)?;
+        tasker_core::perf::mark("index-schema");
         index.sync()?;
+        tasker_core::perf::mark("index-sync");
         Ok(index)
     }
 
@@ -106,11 +108,15 @@ impl WorkspaceIndex {
     }
 
     fn sync_paths(&self, paths: &[PathBuf]) -> io::Result<SyncReport> {
-        FileLock::run(&self.lock_file(), None, || {
+        let started = tasker_core::perf::start();
+        let result = FileLock::run(&self.lock_file(), None, || {
+            tasker_core::perf::count("index-lock", started);
             let scopes = self.scopes(paths);
             let mut connection = self.connect()?;
             sync::run(&mut connection, &self.directory, &scopes)
-        })?
+        })?;
+        tasker_core::perf::count("index-sync", started);
+        result
     }
 
     // Пути относительно .tasker; путь снаружи (например, через symlink) — не угадываем, сверяем всё.
