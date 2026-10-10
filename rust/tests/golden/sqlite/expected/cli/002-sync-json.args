@@ -1,0 +1,4 @@
+sync
+--json
+--sqlite
+<ROOT>/golden.db

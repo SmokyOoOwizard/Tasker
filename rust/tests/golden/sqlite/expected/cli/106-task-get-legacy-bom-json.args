@@ -1,0 +1,8 @@
+task
+get
+Legacy four
+--json
+--sqlite
+<ROOT>/golden.db
+-p
+Legacy

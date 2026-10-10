@@ -1,0 +1,10 @@
+task
+list
+--all
+--field
+Platforms=Linux
+Urgent=false
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

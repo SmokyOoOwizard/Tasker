@@ -1,0 +1,8 @@
+status
+get
+In Progress
+--json
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

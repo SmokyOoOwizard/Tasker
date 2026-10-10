@@ -5,7 +5,8 @@ use crate::session::{Session, refs};
 use crate::spec::Hint;
 use std::cell::OnceCell;
 use tasker_core::model::{FieldDefinition, FieldEnum, LinkType, Series, Status, StatusSet, TaskType};
-use tasker_files::index::{IndexEntity, IndexQuery};
+use tasker_services::Storage;
+use tasker_services::storage::Entity;
 use uuid::Uuid;
 
 /// Ключи сортировки задач, известные без полей (`TaskSortNames.BuiltinNames`).
@@ -86,8 +87,8 @@ impl Hints {
             .as_ref()
     }
 
-    fn all<T: IndexEntity>(&self, session: &Session, project: &Uuid) -> Option<Vec<T>> {
-        session.index().all::<T>(&IndexQuery::project(project)).ok()
+    fn all<T: Entity>(&self, session: &Session, project: &Uuid) -> Option<Vec<T>> {
+        session.workspace().get_all::<T>(project).ok()
     }
 
     fn try_resolve(&mut self, hint: Hint) -> Option<Vec<String>> {

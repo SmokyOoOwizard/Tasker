@@ -13,6 +13,7 @@ use tasker_core::ids::guid_d;
 use tasker_core::model::{LinkType, TaskItem, TaskSeriesNumber};
 use tasker_core::tasks::TaskFilter;
 use tasker_core::{ShortId, TaskReference};
+use tasker_services::Storage;
 use tasker_services::links::{LinkDirection, MAX_VIEWED, TaskLinkView};
 use tasker_services::task::{CreateTask, TaskDetails, UpdateTask};
 use tasker_services::task_fields::{TaskFieldSource, TaskFieldView};
@@ -131,7 +132,6 @@ fn describe(ctx: &Context<'_>, project_id: &Uuid, task: &TaskItem, line: &LineFo
 
     for number in task.series_numbers.iter().filter(|x| line.prefixes.contains_key(&x.series_id)) {
         let others: Vec<String> = ws
-            .index()
             .tasks_by_number(project_id, &number.series_id, number.number)?
             .into_iter()
             .filter(|x| x.id != task.id)

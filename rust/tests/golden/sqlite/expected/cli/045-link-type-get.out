@@ -1,0 +1,7 @@
+id:           0000000f-0000-4000-8000-00000000000f
+name:         Depends
+outward:      depends on
+inward:       is a dependency of
+allowCycles:  False
+hierarchical: False
+version:      1

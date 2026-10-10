@@ -10,6 +10,12 @@ Golden-корпус для переноса консоли и демона на 
   scripts/golden/generate.py [--bin <каталог с tasker и tasker-mcpd>] [--out rust/tests/golden] [--keep]
   scripts/golden/generate.py --verify [--bin <каталог>]      снять эталоны заново с указанного бинарника и сравнить с rust/tests/golden
   scripts/golden/generate.py --verify --bin <каталог> --only cli,migrate   только консоль и migrate (без демона: для Rust-сборки без tasker-mcpd)
+  scripts/golden/generate.py --only sqlite [--bin <каталог .NET>]          только раздел SQLite (TSK-159): та же область в файле .db
+
+Раздел sqlite (rust/tests/golden/sqlite): та же последовательность создания сущностей .NET-консолью с --sqlite, id и даты в
+таблицах переписаны SQL-запросами в детерминированные, база хранится SQL-дампом (workspace.sql: схема в порядке sqlite_master,
+строки в порядке rowid); эталон схемы .schema (schema.sql); снимки консоли (expected/cli) и MCP (expected/mcp, область
+kind: sqlite в демоне) на этой базе. --verify восстанавливает базу из дампа и сравнивает вывод проверяемой сборки.
 
 Без --bin консоль и демон собираются из этого репозитория (dotnet build) во временный каталог. Ничего не трогает в настоящей
 установке: TASKER_HOME, рабочая область и демон (на свободном порту) живут во временном каталоге и удаляются в конце
@@ -23,6 +29,7 @@ import os
 import re
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -119,7 +126,8 @@ class Tasker:
     def run(self, *args, ws=None, project=None, check=True, env=None, cwd=None, input=None):
         cmd = [*self.cmd, *args]
         if ws:
-            cmd += ["-w", ws]
+            # Область в файле SQLite — путь к .db (раздел sqlite), иначе папка.
+            cmd += ["--sqlite", ws] if ws.endswith(".db") else ["-w", ws]
         if project:
             cmd += ["-p", project]
         e = dict(self.env)
@@ -206,7 +214,8 @@ DESCRIPTIONS = {
 def make_workspace(t: Tasker, ws):
     """Создаёт область «golden» со всеми сущностями. Возвращает заметки для README (что не удалось создать)."""
     notes = []
-    os.makedirs(ws, exist_ok=True)
+    if not ws.endswith(".db"):
+        os.makedirs(ws, exist_ok=True)
     t.run("whoami", "golden-user", ws=ws)
     t.run("project", "create", "Golden", ws=ws)
     P = dict(ws=ws, project="Golden")
@@ -549,7 +558,8 @@ class Snapshots:
     def take(self, name, *args, ws=None, project=None, env=None, cwd=None, scrub_times=False):
         self.index += 1
         r = self.t.run(*args, ws=ws, project=project, check=False, env=env, cwd=cwd)
-        shown = [*args] + (["-w", "<ROOT>/golden"] if ws else []) + (["-p", project] if project else [])
+        where = (["--sqlite", "<ROOT>/golden.db"] if ws.endswith(".db") else ["-w", "<ROOT>/golden"]) if ws else []
+        shown = [*args] + where + (["-p", project] if project else [])
         base = os.path.join(self.dir, f"{self.index:03d}-{name}")
         write(base + ".args", self.clean("\n".join(shown)) + "\n")
         write(base + ".out", self.clean(r.out, scrub_times))
@@ -558,7 +568,8 @@ class Snapshots:
         return r
 
 
-def snapshot_cli(t: Tasker, run_ws, out_dir, legacy_ids):
+def snapshot_cli(t: Tasker, run_ws, out_dir, legacy_ids, sqlite=False):
+    """sqlite — область в файле .db (раздел sqlite): без справки, автодополнения и manual (они не зависят от области)."""
     root = os.path.dirname(run_ws)
     s = Snapshots(t, os.path.join(out_dir, "cli"), root_replacements(root))
     G = dict(ws=run_ws, project="Golden")
@@ -668,6 +679,9 @@ def snapshot_cli(t: Tasker, run_ws, out_dir, legacy_ids):
     s.take("error-no-workspace", "task", "list", "-w", os.path.join(root, "nowhere"))
     s.take("error-unknown-command", "nope")
     s.take("error-env-typo", "task", "list", "--all", ws=run_ws, project="Golden", env={"TASKER_PROJCET": "Golden"})
+    if sqlite:
+        s.take("error-both-locations", "task", "list", "-w", root, ws=run_ws, project="Golden")
+        return by_title
 
     # Справка всех команд, автодополнение, manual.
     for path in help_tree(t):
@@ -853,9 +867,279 @@ def snapshot_migrate(t: Tasker, canonical_tasker, root, out_dir):
     write(os.path.join(out_dir, "migrate", "versions.json"), json.dumps(versions(tasker_root), indent=2, ensure_ascii=False) + "\n")
 
 
+# ----------------------------------------------------------------------------- 8. раздел sqlite (TSK-159)
+
+SQLITE_OUT = "sqlite"
+SQLITE_GUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+# Время EF Core SQLite: UTC, «yyyy-MM-dd HH:mm:ss.FFFFFFF» (хвостовые нули дроби отброшены, при нулевой — без точки).
+SQLITE_TIME = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(\.\d{1,7})?$")
+# Id несуществующей задачи для «task-get-future» (у файла «из будущего» в БД нет аналога).
+SQLITE_MISSING_TASK = "99999999-9999-4999-8999-999999999999"
+
+
+def ef_time(when):
+    text = when.strftime("%Y-%m-%d %H:%M:%S")
+    fraction = f"{when.microsecond:06d}0".rstrip("0")
+    return text + ("." + fraction if fraction else "")
+
+
+def sqlite_tables(conn):
+    return [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY rowid")]
+
+
+def sqlite_columns(conn, table):
+    return [r[1] for r in conn.execute(f'PRAGMA table_info("{table}")')]
+
+
+def canonicalize_sqlite(db):
+    """Переписывает Guid (заглавные в столбцах-Guid, строчные в тексте значений) и время в детерминированные; порядок — таблицы в
+    порядке sqlite_master, строки по rowid, столбцы по порядку. Проекты — PROJECT_IDS, типы связей по умолчанию — от них."""
+    conn = sqlite3.connect(db)
+    mapping = {}
+    for old, name in conn.execute('SELECT "Id", "Name" FROM projects'):
+        mapping[old.lower()] = PROJECT_IDS[name]
+    for old, project in conn.execute('SELECT "Id", "ProjectId" FROM link_types'):
+        for name, key in DEFAULT_LINK_TYPES.items():
+            if old.lower() == default_link_type_id(project.lower(), key):
+                mapping[old.lower()] = default_link_type_id(mapping[project.lower()], key)
+    counter = 0
+    stamps = set()
+    tables = sqlite_tables(conn)
+    for table in tables:
+        for row in conn.execute(f'SELECT * FROM "{table}" ORDER BY rowid'):
+            for value in row:
+                if isinstance(value, str) and SQLITE_GUID.match(value) and value.lower() not in mapping:
+                    counter += 1
+                    mapping[value.lower()] = f"{counter:08x}-0000-4000-8000-{counter:012x}"
+                elif isinstance(value, str) and SQLITE_TIME.match(value):
+                    stamps.add(value)
+    stamp_map = {}
+    for i, stamp in enumerate(sorted(stamps)):
+        stamp_map[stamp] = ef_time(BASE_TIME + timedelta(seconds=61 * i, microseconds=123450 + i))
+
+    def fix(value):
+        if isinstance(value, str) and SQLITE_GUID.match(value):
+            new = mapping[value.lower()]
+            return new.upper() if value == value.upper() else new
+        if isinstance(value, str) and value in stamp_map:
+            return stamp_map[value]
+        return value
+
+    for table in tables:
+        columns = sqlite_columns(conn, table)
+        rows = conn.execute(f'SELECT rowid, * FROM "{table}" ORDER BY rowid').fetchall()
+        for row in rows:
+            new = [fix(v) for v in row[1:]]
+            if new != list(row[1:]):
+                sets = ", ".join(f'"{c}" = ?' for c in columns)
+                conn.execute(f'UPDATE "{table}" SET {sets} WHERE rowid = ?', [*new, row[0]])
+    conn.commit()
+    problems = conn.execute("PRAGMA foreign_key_check").fetchall()
+    if problems:
+        raise RuntimeError(f"foreign keys broken by canonicalization: {problems[:5]}")
+    conn.close()
+    return mapping
+
+
+def dump_sqlite(db):
+    """SQL-дамп: схема в порядке sqlite_master (тот же текст, что у EnsureCreated), затем строки каждой таблицы по rowid."""
+    conn = sqlite3.connect(db)
+    lines = ["BEGIN TRANSACTION;"]
+    for (sql,) in conn.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid"):
+        lines.append(sql + ";")
+    for table in sqlite_tables(conn):
+        columns = sqlite_columns(conn, table)
+        quoted = " || ',' || ".join(f'quote("{c}")' for c in columns)
+        for (values,) in conn.execute(f'SELECT {quoted} FROM "{table}" ORDER BY rowid'):
+            lines.append(f'INSERT INTO "{table}" VALUES({values});')
+    lines.append("COMMIT;")
+    conn.close()
+    return "\n".join(lines) + "\n"
+
+
+def restore_sqlite(dump, db):
+    """База из дампа — в журнале WAL, как файл, созданный EF Core."""
+    if os.path.exists(db):
+        os.remove(db)
+    conn = sqlite3.connect(db)
+    conn.execute("PRAGMA journal_mode = wal")
+    conn.executescript(dump)
+    conn.close()
+
+
+def dot_schema(db):
+    """Текст `.schema` оболочки sqlite3: у таблиц — CREATE TABLE IF NOT EXISTS."""
+    conn = sqlite3.connect(db)
+    out = []
+    for kind, sql in conn.execute("SELECT type, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid"):
+        if kind == "table" and sql.startswith("CREATE TABLE "):
+            sql = "CREATE TABLE IF NOT EXISTS " + sql[len("CREATE TABLE "):]
+        out.append(sql + ";")
+    conn.close()
+    return "\n".join(out) + "\n"
+
+
+def sqlite_workspace_id(path):
+    """Id области SQLite в демоне: 12 hex SHA-256 от «Sqlite:<канонический путь>»."""
+    return hashlib.sha256(f"Sqlite:{os.path.realpath(path)}".encode()).hexdigest()[:12]
+
+
+def snapshot_sqlite_mcp(t: Tasker, db, out_dir, by_title):
+    """MCP на области kind: sqlite: демон открывает файл .db, инструменты читают и пишут ту же БД."""
+    root = os.path.dirname(db)
+    port = free_port()
+    t.run("mcp", "port", str(port))
+    t.run("mcp", "workspace", "add", db)
+    log("starting the daemon on port", port, "(sqlite)")
+    t.run("mcp", "start")
+    for _ in range(100):
+        r = t.run("mcp", "status", "--json", check=False)
+        if r.returncode == 0 and all(w.get("state") != "opening" for w in json.loads(r.out).get("daemon", {}).get("workspaces", [])):
+            break
+        time.sleep(0.2)
+    try:
+        m = Mcp(port, [*root_replacements(root), (sqlite_workspace_id(db), "<WSID:golden.db>")])
+        mcp_dir = os.path.join(out_dir, "mcp")
+        W = {"workspace": "golden.db"}
+        G = {**W, "projectId": PROJECT_IDS["Golden"]}
+
+        def save(name, result, scrub_times=False):
+            text = m.clean(result)
+            write(os.path.join(mcp_dir, name + ".json"), scrub(text) if scrub_times else text)
+            return result
+
+        me = json.loads(m.call("whoami", W)["result"]["content"][0]["text"])
+        m.replacements += [(me["id"], "<LOCAL-AGENT-ID>"), (me["createdAt"], "<LOCAL-AGENT-CREATED>")]
+        save("list_workspaces", m.call("list_workspaces", {}))
+        save("whoami", m.call("whoami", W))
+        save("list_projects", m.call("list_projects", W))
+        save("list_tasks", m.call("list_tasks", {**G}))
+        save("list_tasks-filtered", m.call("list_tasks", {**G, "statusIds": [], "descriptionLength": 0, "limit": 5, "offset": 2}))
+        bug = by_title["Bug with all fields (renamed)"]
+        save("get_task", m.call("get_task", {**G, "taskId": bug["id"]}))
+        save("get_task-by-reference", m.call("get_task", {**G, "taskId": "GLD-1"}))
+        save("get_task_links", m.call("get_task_links", {**G, "taskId": bug["id"]}))
+        save("find_tasks_by_reference", m.call("find_tasks_by_reference", {**G, "reference": "BUG-1"}))
+        save("list_fields", m.call("list_fields", {**G}))
+        save("list_enums", m.call("list_enums", {**G}))
+        save("list_boards", m.call("list_boards", {**G}))
+        board = next(b["id"] for b in t.json("board", "list", ws=db, project="Golden")["data"] if b["name"] == "Main board")
+        save("get_board", m.call("get_board", {**G, "boardId": board}))
+        save("list_link_types", m.call("list_link_types", {**G}))
+        save("list_series", m.call("list_series", {**G}))
+        save("series_health", m.call("series_health", {**G}))
+        save("list_statuses", m.call("list_statuses", {**G}))
+        save("list_status_sets", m.call("list_status_sets", {**G}))
+        save("list_task_types", m.call("list_task_types", {**G}))
+        save("list_users", m.call("list_users", W))
+        save("list_workspace_problems", m.call("list_workspace_problems", W))
+        save("get_lock", m.call("get_lock", {**G, "entity": "task", "entityId": bug["id"]}))
+        errors = "errors"
+        save(f"{errors}/not_found-task", m.call("get_task", {**G, "taskId": "GLD-999"}))
+        save(f"{errors}/modified", m.call("update_task", {**G, "taskId": bug["id"], "title": "x", "version": "0000000000000000"}))
+        save(f"{errors}/modified-stale-counter", m.call("update_task", {**G, "taskId": bug["id"], "title": "x", "version": "1"}))
+        done = next(x for x in t.json("status", "list", ws=db, project="Golden")["data"] if x["name"] == "Done")
+        save(f"{errors}/in_use", m.call("delete_status", {**G, "statusId": done["id"], "version": done["version"]}))
+        t.run("lock", "acquire", "task", bug["id"], ws=db, project="Golden")
+        save(f"{errors}/locked", m.call("update_task", {**G, "taskId": bug["id"], "title": "x", "version": bug["version"]}), scrub_times=True)
+        t.run("lock", "release", "task", bug["id"], ws=db, project="Golden")
+        # Запись через MCP видна консоли той же БД: версия — следующий счётчик.
+        save("update_task", m.call("update_task", {**G, "taskId": bug["id"], "description": "Changed over MCP", "version": bug["version"]}),
+             scrub_times=True)
+    finally:
+        t.run("mcp", "stop", check=False)
+
+
+def snapshot_sqlite(t: Tasker, dump, root, out_dir):
+    """Снимки раздела sqlite с базы из дампа: консоль, затем MCP."""
+    db = os.path.join(root, "sqlite-run", "golden.db")
+    os.makedirs(os.path.dirname(db), exist_ok=True)
+    restore_sqlite(dump, db)
+    t.run("whoami", "golden-user")
+    log("sqlite console snapshots")
+    by_title = snapshot_cli(t, db, out_dir, {"future": SQLITE_MISSING_TASK}, sqlite=True)
+    log("sqlite MCP snapshots")
+    snapshot_sqlite_mcp(t, db, out_dir, by_title)
+
+
+def generate_sqlite(args, bin_dir, root):
+    home = os.path.join(root, "home-sqlite")
+    os.makedirs(home)
+    t = Tasker(bin_dir, home)
+    gen = os.path.join(root, "gen-sqlite")
+    os.makedirs(gen)
+    db = os.path.join(gen, "golden.db")
+    log("creating the SQLite workspace")
+    notes = make_workspace(t, db)
+    for note in notes:
+        log("note:", note)
+    log("canonicalizing ids and timestamps in the database")
+    canonicalize_sqlite(db)
+    out = os.path.join(os.path.abspath(args.out), SQLITE_OUT)
+    rmtree(out)
+    os.makedirs(out)
+    dump = dump_sqlite(db)
+    write(os.path.join(out, "workspace.sql"), dump)
+    write(os.path.join(out, "schema.sql"), dot_schema(db))
+    snapshot_sqlite(t, dump, root, os.path.join(out, "expected"))
+    write(os.path.join(out, "notes.json"), json.dumps({
+        "generatedWith": t.run("--version").out.strip(),
+        "rejected": notes,
+        "projects": PROJECT_IDS,
+    }, ensure_ascii=False, indent=2) + "\n")
+    log("done:", out)
+
+
+def compare_trees(a, b, label, diff, semantic_mcp):
+    """Файлы двух каталогов; ответы MCP — по смыслу (`mcp_same`). Возвращает число различий."""
+    failures = 0
+    files_a = {os.path.relpath(os.path.join(d, f), a) for d, _, fs in os.walk(a) for f in fs} if os.path.isdir(a) else set()
+    files_b = {os.path.relpath(os.path.join(d, f), b) for d, _, fs in os.walk(b) for f in fs} if os.path.isdir(b) else set()
+    for rel in sorted(files_a | files_b):
+        pa, pb = os.path.join(a, rel), os.path.join(b, rel)
+        if not os.path.exists(pa) or not os.path.exists(pb):
+            failures += 1
+            print(f"only in {'expected' if os.path.exists(pa) else 'actual'}: {label}/{rel}")
+            continue
+        da, db = read_bytes(pa), read_bytes(pb)
+        if da != db and semantic_mcp and rel.endswith(".json") and mcp_same(da, db):
+            continue
+        if da != db:
+            failures += 1
+            print(f"differs: {label}/{rel}")
+            if diff:
+                for line in difflib.unified_diff(da.decode("utf-8", "replace").splitlines(), db.decode("utf-8", "replace").splitlines(),
+                                                 "expected", "actual", lineterm="", n=2):
+                    print("   ", line)
+    return failures
+
+
+def verify_sqlite(args, bin_dir, root):
+    """Восстанавливает базу из дампа и снимает раздел sqlite проверяемой сборкой; схема новой базы — тоже сверяется."""
+    out = os.path.join(os.path.abspath(args.out), SQLITE_OUT)
+    home = os.path.join(root, "home-sqlite")
+    os.makedirs(home)
+    t = Tasker(bin_dir, home)
+    dump = read_bytes(os.path.join(out, "workspace.sql")).decode("utf-8")
+    fresh = os.path.join(root, "sqlite-expected")
+    snapshot_sqlite(t, dump, root, fresh)
+    failures = compare_trees(os.path.join(out, "expected", "cli"), os.path.join(fresh, "cli"), "sqlite/expected/cli", args.diff, False)
+    failures += compare_trees(os.path.join(out, "expected", "mcp"), os.path.join(fresh, "mcp"), "sqlite/expected/mcp", args.diff, True)
+    # Новая база, созданная проверяемой сборкой, — та же схема.
+    new_db = os.path.join(root, "sqlite-new", "new.db")
+    os.makedirs(os.path.dirname(new_db))
+    t.run("project", "list", ws=new_db)
+    if dot_schema(new_db) != read_bytes(os.path.join(out, "schema.sql")).decode("utf-8"):
+        failures += 1
+        print("differs: sqlite/schema.sql (a new database)")
+    return failures
+
+
 # ----------------------------------------------------------------------------- main
 
-SECTIONS = ("cli", "migrate", "mcp", "yaml-style")
+SECTIONS = ("cli", "migrate", "mcp", "yaml-style", "sqlite")
+# Разделы корпуса папки (общая область .tasker); sqlite — отдельная база.
+FOLDER_SECTIONS = ("cli", "migrate", "mcp", "yaml-style")
 
 
 def snapshot_all(t: Tasker, canonical_tasker, root, out_dir, legacy_ids, only=None):
@@ -886,6 +1170,10 @@ def snapshot_all(t: Tasker, canonical_tasker, root, out_dir, legacy_ids, only=No
 
 
 def generate(args, bin_dir, root):
+    if "sqlite" in args.only:
+        generate_sqlite(args, bin_dir, root)
+    if not any(x in FOLDER_SECTIONS for x in args.only):
+        return
     home = os.path.join(root, "home")
     os.makedirs(home)
     t = Tasker(bin_dir, home)
@@ -905,7 +1193,7 @@ def generate(args, bin_dir, root):
         rmtree(os.path.join(out, name)) if os.path.isdir(os.path.join(out, name)) else (os.remove(os.path.join(out, name)) if os.path.exists(os.path.join(out, name)) else None)
     shutil.copytree(tasker_root, os.path.join(out, "workspace", ".tasker"))
     expected = os.path.join(out, "expected")
-    snapshot_all(t, tasker_root, root, expected, legacy_ids, args.only)
+    snapshot_all(t, tasker_root, root, expected, legacy_ids, [x for x in args.only if x in FOLDER_SECTIONS])
     if "yaml-style" in args.only:
         shutil.move(os.path.join(expected, "yaml-style"), os.path.join(out, "yaml-style"))
     shutil.move(os.path.join(expected, "versions.json"), os.path.join(out, "versions.json"))
@@ -953,6 +1241,10 @@ def mcp_same(a: bytes, b: bytes) -> bool:
 
 
 def verify(args, bin_dir, root):
+    failures = verify_sqlite(args, bin_dir, root) if "sqlite" in args.only else 0
+    if not any(x in FOLDER_SECTIONS for x in args.only):
+        print("verify:", "OK" if failures == 0 else f"{failures} differences")
+        return 0 if failures == 0 else 1
     out = os.path.abspath(args.out)
     home = os.path.join(root, "home")
     os.makedirs(home)
@@ -960,12 +1252,11 @@ def verify(args, bin_dir, root):
     notes = json.load(open(os.path.join(out, "notes.json"), encoding="utf-8"))
     canonical = os.path.join(out, "workspace", ".tasker")
     fresh = os.path.join(root, "expected")
-    only = args.only
+    only = [x for x in args.only if x in FOLDER_SECTIONS]
     snapshot_all(t, canonical, root, fresh, notes["legacy"], only)
     if "yaml-style" in only:
         shutil.move(os.path.join(fresh, "yaml-style"), os.path.join(root, "yaml-style"))
     shutil.move(os.path.join(fresh, "versions.json"), os.path.join(root, "versions.json"))
-    failures = 0
     # Сравниваются только снятые разделы: expected/<раздел>, yaml-style и versions.json; ответы MCP — по смыслу (`mcp_same`).
     subs = [os.path.join("expected", s) for s in ("cli", "migrate", "mcp") if s in only] + (["yaml-style"] if "yaml-style" in only else []) + ["versions.json"]
     for sub in subs:
@@ -1000,8 +1291,8 @@ def main():
     parser.add_argument("--diff", action="store_true", help="с --verify: печатать построчные различия")
     parser.add_argument("--keep", action="store_true", help="не удалять временный каталог")
     parser.add_argument("--only", default=",".join(SECTIONS),
-                        help="какие разделы снимать и сравнивать, через запятую: cli, migrate, mcp, yaml-style (по умолчанию все); "
-                             "например --only cli,migrate — без демона")
+                        help="какие разделы снимать и сравнивать, через запятую: cli, migrate, mcp, yaml-style, sqlite (по умолчанию "
+                             "все); например --only cli,migrate — без демона, --only sqlite — только база SQLite")
     args = parser.parse_args()
     args.only = [s.strip() for s in args.only.split(",") if s.strip()]
     unknown = [s for s in args.only if s not in SECTIONS]

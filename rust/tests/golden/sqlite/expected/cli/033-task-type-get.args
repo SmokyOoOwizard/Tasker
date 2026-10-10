@@ -1,0 +1,7 @@
+task-type
+get
+Bug
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

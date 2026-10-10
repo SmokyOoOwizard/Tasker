@@ -1,0 +1,4 @@
+task
+list
+--sqlite
+<ROOT>/golden.db

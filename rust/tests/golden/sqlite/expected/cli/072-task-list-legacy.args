@@ -1,0 +1,7 @@
+task
+list
+--all
+--sqlite
+<ROOT>/golden.db
+-p
+Legacy

@@ -1,0 +1,4 @@
+agent
+list
+--sqlite
+<ROOT>/golden.db

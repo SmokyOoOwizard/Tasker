@@ -1,0 +1,7 @@
+board
+get
+Main board
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

@@ -1,0 +1,7 @@
+task
+get
+99999999-9999-4999-8999-999999999999
+--sqlite
+<ROOT>/golden.db
+-p
+Legacy

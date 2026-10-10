@@ -109,13 +109,20 @@ impl WorkspaceSync {
         };
         let result = tokio::task::spawn_blocking(move || -> std::io::Result<SyncResult> {
             let ws = opened.workspace();
-            ws.index().sync()?;
-            let problems = ws.index().problems(Page::first(PROBLEMS_SHOWN))?;
+            // У области SQLite индекса нет: сверять нечего, проблем файлов не бывает (`WorkspaceLease.Sync` → null).
+            let (problem_count, problems) = match ws.files() {
+                Some(files) => {
+                    files.index().sync()?;
+                    let page = files.index().problems(Page::first(PROBLEMS_SHOWN))?;
+                    (page.total_count, page.data)
+                }
+                None => (0, Vec::new()),
+            };
             let series = health::compute(ws);
             Ok(SyncResult {
                 path: opened.location().path().to_string(),
-                problem_count: problems.total_count,
-                problems: problems.data,
+                problem_count,
+                problems,
                 series,
             })
         })

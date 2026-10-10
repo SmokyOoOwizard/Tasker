@@ -1,0 +1,6 @@
+link-type
+list
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

@@ -61,6 +61,12 @@ pub fn list_project_members(call: &Call) -> Result<Output> {
 }
 
 pub fn list_workspace_problems(call: &Call) -> Result<Output> {
-    let page = call.ws()?.index().problems(page_of(call)?)?;
+    // Проблемы — нечитаемые файлы папки; у области в файле SQLite их нет (`IWorkspaceIndex` не зарегистрирован).
+    let Some(files) = call.ws()?.files() else {
+        return Err(ToolError::invalid(
+            "Workspace problems exist only in the desktop app with file storage",
+        ));
+    };
+    let page = files.index().problems(page_of(call)?)?;
     Ok(Output::Json(json::page(&page, json::workspace_problem)))
 }

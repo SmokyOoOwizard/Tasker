@@ -1,0 +1,8 @@
+board
+get
+Main board
+--json
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

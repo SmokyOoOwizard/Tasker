@@ -14,7 +14,8 @@ use scl::{Abort, Parsed, Sym, Tree};
 use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType, LinkType, Series, Status, StatusSet, TaskType, UserKind};
 use tasker_core::tasks::{Page, TaskFilter};
 use tasker_core::validate::{eq_ignore_case, to_lower_invariant};
-use tasker_files::index::{IndexEntity, IndexQuery};
+use tasker_services::Storage;
+use tasker_services::storage::Entity;
 use uuid::Uuid;
 
 pub const LIMIT: usize = 50;
@@ -558,9 +559,9 @@ impl<'w, 'a> Lookup<'w, 'a> {
             .get_or_init(|| self.session()?.project_id(self.project.as_deref()).ok())
     }
 
-    fn all<T: IndexEntity>(&self) -> Option<Vec<T>> {
+    fn all<T: Entity>(&self) -> Option<Vec<T>> {
         let project = self.project()?;
-        self.session()?.index().all::<T>(&IndexQuery::project(&project)).ok()
+        self.session()?.workspace().get_all::<T>(&project).ok()
     }
 
     /// Типы связей проекта вместе с встроенными (`LinkTypeService.GetAll`).
@@ -595,7 +596,7 @@ fn values_of(lookup: &mut Lookup<'_, '_>, source: Source) -> Vec<String> {
     try_values(lookup, source).unwrap_or_default()
 }
 
-fn names<T: IndexEntity>(lookup: &Lookup<'_, '_>, name: impl Fn(&T) -> String) -> Option<Vec<String>> {
+fn names<T: Entity>(lookup: &Lookup<'_, '_>, name: impl Fn(&T) -> String) -> Option<Vec<String>> {
     Some(lookup.all::<T>()?.iter().map(name).collect())
 }
 

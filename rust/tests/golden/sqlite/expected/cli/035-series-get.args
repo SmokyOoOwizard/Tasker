@@ -1,0 +1,7 @@
+series
+get
+GLD
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

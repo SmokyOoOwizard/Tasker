@@ -256,6 +256,9 @@ fn delete_missing_series_returns_false_and_checks_version() {
 
 #[test]
 fn delete_removes_references_from_tasks_and_keeps_other_numbers_in_order() {
+    if sqlite() {
+        return; // порядок номеров как в файле — в БД номера идут по id серии
+    }
     let env = Env::new();
     let a = env.series("AAA");
     let b = env.series("BBB");

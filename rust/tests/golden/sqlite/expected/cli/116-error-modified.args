@@ -1,0 +1,11 @@
+task
+update
+GLD-1
+--title
+x
+--expected-version
+0000000000000000
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

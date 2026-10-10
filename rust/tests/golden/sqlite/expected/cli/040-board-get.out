@@ -1,0 +1,9 @@
+id:           00000009-0000-4000-8000-000000000009
+name:         Main board
+version:      1
+status sets:
+  Main (00000015-0000-4000-8000-000000000015)
+columns:
+  Todo: Backlog (00000018-0000-4000-8000-000000000018); where Priority=High and Tags:set
+  Doing: In Progress (00000019-0000-4000-8000-000000000019); where Estimate>=3
+  Done: Done (0000001a-0000-4000-8000-00000000001a)

@@ -169,18 +169,20 @@ fn parse_and_workspace_errors_match_the_dotnet_snapshots() {
 }
 
 #[test]
-fn sqlite_is_refused_by_this_build_and_version_prints_the_repository_version() {
+fn sqlite_creates_the_database_and_version_prints_the_repository_version() {
     let home = temp_dir();
     let root = golden_copy();
+    // Файла нет — он создаётся со схемой EF Core (TSK-159), как у .NET; проектов в новой БД нет.
     let run = tasker(&root, &home, &["task".into(), "list".into(), "--sqlite".into(), "x.db".into()], &[]);
     assert_eq!(
         (run.stdout.as_str(), run.stderr.as_str(), run.code),
         (
             "",
-            "Error: --sqlite is not supported by this build: use the .NET build of Tasker\n",
+            "Error: There are no projects in this workspace: create one with 'tasker project create <name>'\n",
             1
         )
     );
+    assert!(root.join("x.db").is_file());
     let run = tasker(&root, &home, &["--version".into()], &[]);
     // Номер из VERSION; у сборки из исходников за ним через «+» коммит (build.rs крейта tasker-version), у релиза — ничего.
     let version = std::fs::read_to_string(repository_root().join("VERSION")).unwrap();

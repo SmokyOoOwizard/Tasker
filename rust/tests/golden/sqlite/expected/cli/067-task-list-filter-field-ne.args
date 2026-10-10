@@ -1,0 +1,10 @@
+task
+list
+--all
+--field
+Priority!=High
+--json
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

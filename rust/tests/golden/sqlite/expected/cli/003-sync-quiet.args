@@ -1,0 +1,4 @@
+sync
+-q
+--sqlite
+<ROOT>/golden.db
