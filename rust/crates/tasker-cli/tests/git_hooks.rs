@@ -1,6 +1,6 @@
 //! `tasker hooks install | status | uninstall` и хуки в деле на настоящем git (сценарии `GitHooksTests` .NET): тексты и коды как у
 //! .NET, содержимое хука (блок с маркерами в начале, чужие команды сохраняются и возвращаются при удалении, `core.hooksPath`), и
-//! главное — после `checkout`, `merge`, `rebase`, `worktree add` хук сам обновляет кэш (`.cache/index-rs.db`): кэш читается
+//! главное — после `checkout`, `merge`, `rebase`, `worktree add` хук сам обновляет кэш (`.cache/index.db`): кэш читается
 //! напрямую, ни одного процесса Tasker при этом не запускается. Репозитории — во временных каталогах; настройки git пользователя
 //! (`core.hooksPath`, шаблоны) не участвуют.
 //!
@@ -121,7 +121,7 @@ impl Drop for Repo {
 /// Сколько проектов в кэше папки; -1 — кэша нет. Только чтение: ни один процесс Tasker не запускается.
 #[cfg(unix)] // на Windows тесты, которые это используют, не собираются
 fn projects_in_cache(workspace: &Path) -> i64 {
-    let file = workspace.join(".tasker/.cache/index-rs.db");
+    let file = workspace.join(".tasker/.cache/index.db");
     if !file.exists() {
         return -1;
     }

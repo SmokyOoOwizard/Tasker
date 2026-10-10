@@ -1,5 +1,6 @@
 //! Сверка индекса с диском (`WorkspaceIndex.Sync` в .NET): внутри указанных путей удаляются записи о пропавших файлах и
 //! перечитываются новые и изменившиеся (по размеру и времени изменения). Одна транзакция.
+use super::data::IndexEntity;
 use super::{db_error, is_busy, kind_name};
 use crate::error::Error;
 use crate::files;
@@ -33,7 +34,8 @@ pub struct SyncReport {
     pub changed: Vec<FileChange>,
 }
 
-/// Отпечаток файла: размер и время изменения (наносекунды от эпохи Unix).
+/// Отпечаток файла: размер и время изменения в тиках .NET (`FileInfo.LastWriteTimeUtc.Ticks`) — как у .NET, иначе каждая сборка
+/// считала бы файлы, записанные другой, изменившимися.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Stamp {
     size: i64,
@@ -149,15 +151,24 @@ fn indexed_stamps(transaction: &Transaction<'_>, scopes: &[String]) -> io::Resul
     Ok(result)
 }
 
+/// Тики .NET (100 нс от 0001-01-01T00:00:00Z) в момент эпохи Unix.
+pub(super) const NET_TICKS_AT_UNIX_EPOCH: i64 = 621_355_968_000_000_000;
+
+/// Время изменения в тиках .NET: секунды и наносекунды stat (FILETIME на Windows), наносекунды — вниз до 100 нс, как
+/// `File.GetLastWriteTimeUtc` (.NET на Unix берёт `st_mtim` и делит наносекунды на 100).
+pub(super) fn net_ticks(time: std::time::SystemTime) -> Option<i64> {
+    let ticks = match time.duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => i64::try_from(d.as_secs()).ok()? * 10_000_000 + (d.subsec_nanos() / 100) as i64,
+        Err(e) => {
+            let d = e.duration();
+            -(i64::try_from(d.as_secs()).ok()? * 10_000_000 + d.subsec_nanos().div_ceil(100) as i64)
+        }
+    };
+    Some(ticks + NET_TICKS_AT_UNIX_EPOCH)
+}
+
 fn stamp_of(metadata: &std::fs::Metadata) -> Stamp {
-    let mtime = metadata
-        .modified()
-        .ok()
-        .and_then(|t| match t.duration_since(std::time::UNIX_EPOCH) {
-            Ok(d) => i64::try_from(d.as_nanos()).ok(),
-            Err(e) => i64::try_from(e.duration().as_nanos()).ok().map(|n| -n),
-        })
-        .unwrap_or(0);
+    let mtime = metadata.modified().ok().and_then(net_ticks).unwrap_or(0);
     Stamp {
         size: metadata.len() as i64,
         mtime,
@@ -348,10 +359,6 @@ fn read<'a>(path: &'a str, file: &'a DiskFile) -> Option<Row<'a>> {
     })
 }
 
-fn json<T: serde::Serialize>(model: &T) -> String {
-    serde_json::to_string(model).expect("entity models serialize")
-}
-
 fn named(name: &str) -> Columns {
     Columns {
         sort_text: Some(name.to_string()),
@@ -366,7 +373,7 @@ fn parse(layout: &LayoutEntry, bytes: &[u8], path: &Path) -> crate::error::Resul
     Ok(match layout.kind {
         EntityKind::Project => {
             let x = files::project::parse(bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
         EntityKind::User => {
             let x = files::user::parse(bytes, path)?.model;
@@ -375,35 +382,35 @@ fn parse(layout: &LayoutEntry, bytes: &[u8], path: &Path) -> crate::error::Resul
                 user_kind: Some(x.kind),
                 ..Columns::default()
             };
-            (x.id, columns, json(&x))
+            (x.id, columns, x.to_data())
         }
         EntityKind::Status => {
             let x = files::status::parse(project, bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
         EntityKind::StatusSet => {
             let x = files::status_set::parse(project, bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
         EntityKind::TaskType => {
             let x = files::task_type::parse(project, bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
         EntityKind::Board => {
             let x = files::board::parse(project, bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
         // Префикс — ключ сортировки; сравнение в SQLite двоичное, поэтому TSK и tsk — разные, а порядок один во всех клонах.
         EntityKind::Series => {
             let x = files::series::parse(project, bytes, path)?.model;
-            (x.id, named(&x.prefix), json(&x))
+            (x.id, named(&x.prefix), x.to_data())
         }
         EntityKind::Task => {
             let x = files::task::parse(project, bytes, path)?.model;
             let columns = Columns {
                 sort_text: Some(to_lower_invariant(&x.title)),
-                sort_num: Some(x.created_at.unix_ticks()),
-                sort_updated: Some(x.updated_at.unix_ticks()),
+                sort_num: Some(x.created_at.unix_ticks() + NET_TICKS_AT_UNIX_EPOCH),
+                sort_updated: Some(x.updated_at.unix_ticks() + NET_TICKS_AT_UNIX_EPOCH),
                 type_id: Some(x.type_id),
                 status_id: Some(x.status_id),
                 user_kind: None,
@@ -411,19 +418,19 @@ fn parse(layout: &LayoutEntry, bytes: &[u8], path: &Path) -> crate::error::Resul
                 links: x.links.clone(),
                 fields: x.fields.clone(),
             };
-            (x.id, columns, json(&x))
+            (x.id, columns, x.to_data())
         }
         EntityKind::LinkType => {
             let x = files::link_type::parse(project, bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
         EntityKind::Field => {
             let x = files::field::parse(project, bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
         EntityKind::FieldEnum => {
             let x = files::field_enum::parse(project, bytes, path)?.model;
-            (x.id, named(&x.name), json(&x))
+            (x.id, named(&x.name), x.to_data())
         }
     })
 }

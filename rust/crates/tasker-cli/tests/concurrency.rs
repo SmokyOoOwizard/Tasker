@@ -1,5 +1,5 @@
 //! Несколько процессов консоли с одной папкой (сценарии `ConcurrencyTests` .NET): чтение ждёт короткую блокировку индекса
-//! (`.cache/index-rs.lock`), запись — `write.lock`, общий с .NET; параллельные записи не теряются и не делят номера серии, из двух
+//! (`.cache/index.lock`, общий с .NET), запись — `write.lock`, общий с .NET; параллельные записи не теряются и не делят номера серии, из двух
 //! изменений одной версии проходит одно; простаивающая папка блокировок не держит.
 mod common;
 
@@ -112,7 +112,7 @@ fn reading_waits_for_the_index_lock_and_goes_on_after_release() {
     let folder = Folder::new();
     folder.ok(&["project", "create", "Demo"]);
 
-    let held = lock(&folder.cache().join("index-rs.lock"));
+    let held = lock(&folder.cache().join("index.lock"));
     let mut child = folder.start(&["project", "list"]);
     assert!(
         still_running_after(&mut child, Duration::from_millis(1500)),
@@ -146,7 +146,7 @@ fn an_idle_workspace_holds_no_locks() {
     let folder = Folder::new();
     folder.ok(&["project", "create", "Demo"]);
     folder.ok(&["project", "list"]);
-    for name in ["index-rs.lock", "write.lock"] {
+    for name in ["index.lock", "write.lock"] {
         drop(FileLock::acquire(&folder.cache().join(name), Some(Duration::from_millis(300))).unwrap());
     }
 }

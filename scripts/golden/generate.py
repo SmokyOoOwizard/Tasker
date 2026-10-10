@@ -12,11 +12,17 @@ YamlDotNet.
   scripts/golden/generate.py --verify [--bin <каталог>]      снять эталоны заново с указанного бинарника и сравнить с rust/tests/golden
   scripts/golden/generate.py --verify --bin <каталог> --only cli,migrate   только консоль и migrate (без демона: для Rust-сборки без tasker-mcpd)
   scripts/golden/generate.py --only sqlite [--bin <каталог .NET>]          только раздел SQLite (TSK-159): та же область в файле .db
+  scripts/golden/generate.py --only index [--bin <каталог .NET>]           только раздел index (TSK-161): кэш .cache/index.db области
 
 Раздел sqlite (rust/tests/golden/sqlite): та же последовательность создания сущностей .NET-консолью с --sqlite, id и даты в
 таблицах переписаны SQL-запросами в детерминированные, база хранится SQL-дампом (workspace.sql: схема в порядке sqlite_master,
 строки в порядке rowid); эталон схемы .schema (schema.sql); снимки консоли (expected/cli) и MCP (expected/mcp, область
 kind: sqlite в демоне) на этой базе. --verify восстанавливает базу из дампа и сравнивает вывод проверяемой сборки.
+
+Раздел index (rust/tests/golden/index, TSK-161): `tasker sync` на копии workspace/ строит кэш индекса .tasker/.cache/index.db —
+общий для .NET и Rust; schema.sql — его .schema, index.txt — канонический дамп (user_version, журнал, строки таблиц по пути,
+mtime файлов — <MTIME>, если он в тиках .NET совпал со временем изменения файла, содержимое .cache после выхода). --verify строит
+индекс проверяемой сборкой и сравнивает оба файла байт в байт.
 
 Без --bin консоль и демон собираются из этого репозитория (dotnet build) во временный каталог. Ничего не трогает в настоящей
 установке: TASKER_HOME, рабочая область и демон (на свободном порту) живут во временном каталоге и удаляются в конце
@@ -1143,9 +1149,95 @@ def verify_sqlite(args, bin_dir, root):
     return failures
 
 
+# ----------------------------------------------------------------------------- index (общий кэш .cache/index.db)
+
+INDEX_OUT = "index"
+# Тики .NET (100 нс от 0001-01-01) в момент 1970-01-01T00:00:00Z: mtime файлов и время задач в индексе — в тиках .NET.
+NET_TICKS_AT_UNIX_EPOCH = 621355968000000000
+INDEX_TABLES = ("files", "task_series", "task_links", "task_fields", "task_field_values")
+
+
+def net_ticks_of_mtime(path):
+    """FileInfo.LastWriteTimeUtc.Ticks: секунды и наносекунды stat, наносекунды — с округлением вниз до 100 нс."""
+    return os.stat(path).st_mtime_ns // 100 + NET_TICKS_AT_UNIX_EPOCH
+
+
+def dump_index(ws):
+    """Канонический дамп индекса области `<ws>/.tasker/.cache/index.db`: user_version, режим журнала, файлы в .cache, затем строки
+    таблиц через quote() — files по path, таблицы задач по path и rowid (порядок строк одного файла — порядок записи, по нему идёт
+    сортировка по полю). mtime, равный времени изменения файла в тиках .NET, заменён на <MTIME> — иначе остаётся числом и даст
+    расхождение (единицы mtime у процессов должны совпадать, иначе они перечитывают файлы друг друга)."""
+    tasker_root = os.path.join(ws, ".tasker")
+    cache = os.path.join(tasker_root, ".cache")
+    conn = sqlite3.connect(os.path.join(cache, "index.db"))
+    lines = [f"user_version {conn.execute('PRAGMA user_version').fetchone()[0]}",
+             f"journal_mode {conn.execute('PRAGMA journal_mode').fetchone()[0]}"]
+    for table in INDEX_TABLES:
+        columns = sqlite_columns(conn, table)
+        lines.append(f"table {table} ({', '.join(columns)})")
+        quoted = ", ".join(f'quote("{c}")' for c in columns)
+        order = "path" if table == "files" else "path, rowid"
+        for row in conn.execute(f'SELECT path, {quoted} FROM "{table}" ORDER BY {order}'):
+            values = list(row[1:])
+            if table == "files":
+                path = os.path.join(tasker_root, *row[0].split("/"))
+                at = columns.index("mtime")
+                if os.path.exists(path) and values[at] == str(net_ticks_of_mtime(path)):
+                    values[at] = "<MTIME>"
+            lines.append(",".join(values))
+    conn.close()
+    # Что осталось в .cache после выхода процесса: соединения закрыты, журнал WAL слит в базу.
+    lines.append("cache " + " ".join(sorted(os.listdir(cache))))
+    return "\n".join(lines) + "\n"
+
+
+def snapshot_index(t: Tasker, canonical_tasker, root, out_dir):
+    """`tasker sync` на копии области строит .cache/index.db: эталон схемы (.schema) и канонический дамп строк."""
+    ws = os.path.join(root, "index", "golden")
+    copy_workspace(canonical_tasker, ws)
+    t.run("sync", ws=ws, check=False)
+    db = os.path.join(ws, ".tasker", ".cache", "index.db")
+    write(os.path.join(out_dir, "schema.sql"), dot_schema(db))
+    write(os.path.join(out_dir, "index.txt"), dump_index(ws))
+
+
+def generate_index(args, bin_dir, root):
+    home = os.path.join(root, "home-index")
+    os.makedirs(home)
+    t = Tasker(bin_dir, home)
+    out = os.path.join(os.path.abspath(args.out), INDEX_OUT)
+    rmtree(out)
+    os.makedirs(out)
+    log("index snapshots")
+    snapshot_index(t, os.path.join(os.path.abspath(args.out), "workspace", ".tasker"), root, out)
+    write(os.path.join(out, "notes.json"), json.dumps({"generatedWith": t.run("--version").out.strip()}, indent=2) + "\n")
+    log("done:", out)
+
+
+def verify_index(args, bin_dir, root):
+    """Индекс, построенный проверяемой сборкой на той же области, — те же схема и строки, что у эталона .NET."""
+    home = os.path.join(root, "home-index")
+    os.makedirs(home)
+    t = Tasker(bin_dir, home)
+    out = os.path.join(os.path.abspath(args.out), INDEX_OUT)
+    fresh = os.path.join(root, "index-expected")
+    snapshot_index(t, os.path.join(os.path.abspath(args.out), "workspace", ".tasker"), root, fresh)
+    failures = 0
+    for name in ("schema.sql", "index.txt"):
+        da, db = read_bytes(os.path.join(out, name)), read_bytes(os.path.join(fresh, name))
+        if da != db:
+            failures += 1
+            print(f"differs: index/{name}")
+            if args.diff:
+                for line in difflib.unified_diff(da.decode("utf-8", "replace").splitlines(), db.decode("utf-8", "replace").splitlines(),
+                                                 "expected", "actual", lineterm="", n=1):
+                    print("   ", line)
+    return failures
+
+
 # ----------------------------------------------------------------------------- main
 
-SECTIONS = ("cli", "migrate", "mcp", "yaml-style", "sqlite")
+SECTIONS = ("cli", "migrate", "mcp", "yaml-style", "sqlite", "index")
 # Разделы корпуса папки (общая область .tasker); sqlite — отдельная база.
 FOLDER_SECTIONS = ("cli", "migrate", "mcp", "yaml-style")
 
@@ -1180,6 +1272,8 @@ def snapshot_all(t: Tasker, canonical_tasker, root, out_dir, legacy_ids, only=No
 def generate(args, bin_dir, root):
     if "sqlite" in args.only:
         generate_sqlite(args, bin_dir, root)
+    if "index" in args.only and not any(x in FOLDER_SECTIONS for x in args.only):
+        generate_index(args, bin_dir, root)
     if not any(x in FOLDER_SECTIONS for x in args.only):
         return
     home = os.path.join(root, "home")
@@ -1211,6 +1305,8 @@ def generate(args, bin_dir, root):
         "legacy": legacy_ids,
         "projects": PROJECT_IDS,
     }, ensure_ascii=False, indent=2) + "\n")
+    if "index" in args.only:
+        generate_index(args, bin_dir, root)
     log("done:", out)
 
 
@@ -1250,6 +1346,7 @@ def mcp_same(a: bytes, b: bytes) -> bool:
 
 def verify(args, bin_dir, root):
     failures = verify_sqlite(args, bin_dir, root) if "sqlite" in args.only else 0
+    failures += verify_index(args, bin_dir, root) if "index" in args.only else 0
     if not any(x in FOLDER_SECTIONS for x in args.only):
         print("verify:", "OK" if failures == 0 else f"{failures} differences")
         return 0 if failures == 0 else 1
@@ -1299,8 +1396,9 @@ def main():
     parser.add_argument("--diff", action="store_true", help="с --verify: печатать построчные различия")
     parser.add_argument("--keep", action="store_true", help="не удалять временный каталог")
     parser.add_argument("--only", default=",".join(SECTIONS),
-                        help="какие разделы снимать и сравнивать, через запятую: cli, migrate, mcp, yaml-style, sqlite (по умолчанию "
-                             "все); например --only cli,migrate — без демона, --only sqlite — только база SQLite")
+                        help="какие разделы снимать и сравнивать, через запятую: cli, migrate, mcp, yaml-style, sqlite, index (по "
+                             "умолчанию все); например --only cli,migrate — без демона, --only sqlite — только база SQLite, "
+                             "--only index — только кэш индекса")
     args = parser.parse_args()
     args.only = [s.strip() for s in args.only.split(",") if s.strip()]
     unknown = [s for s in args.only if s not in SECTIONS]

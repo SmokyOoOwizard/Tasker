@@ -1,49 +1,19 @@
 //! Запросы к индексу: условия выборки ([`IndexQuery`]), списки с пагинацией, подсчёты, поиск по id и префиксу, таблицы серий,
 //! связей и полей задач — те же SQL, что у `WorkspaceIndex` в .NET.
+use super::data::IndexEntity;
 use super::sort::{DEFAULT_ORDER, order_by};
 use super::sync::{field_type_code, field_type_of_code};
 use super::{WorkspaceIndex, db_error, kind_name};
 use crate::layout::EntityKind;
 use rusqlite::types::{ToSql, Value};
 use rusqlite::{Connection, params};
-use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 use tasker_core::ids::guid_d;
-use tasker_core::model::{
-    Board, FieldDefinition, FieldEnum, FieldOperator, FieldType, LinkType, Project, Series, Status, StatusSet, TaskItem, TaskType, User,
-    UserKind,
-};
+use tasker_core::model::{FieldOperator, FieldType, TaskItem, UserKind};
 use tasker_core::tasks::{FieldCondition, ListPage, Page, TaskFilter, TaskSortKey};
 use uuid::Uuid;
-
-/// Сущность, которую индекс хранит в `data`: вид файла и формат JSON (serde-модель `tasker-core`).
-pub trait IndexEntity: DeserializeOwned {
-    const KIND: EntityKind;
-}
-
-macro_rules! index_entity {
-    ($($t:ty => $k:expr),* $(,)?) => {$(
-        impl IndexEntity for $t {
-            const KIND: EntityKind = $k;
-        }
-    )*};
-}
-
-index_entity! {
-    Project => EntityKind::Project,
-    User => EntityKind::User,
-    Status => EntityKind::Status,
-    StatusSet => EntityKind::StatusSet,
-    TaskType => EntityKind::TaskType,
-    Board => EntityKind::Board,
-    Series => EntityKind::Series,
-    TaskItem => EntityKind::Task,
-    LinkType => EntityKind::LinkType,
-    FieldDefinition => EntityKind::Field,
-    FieldEnum => EntityKind::FieldEnum,
-}
 
 /// Условия выборки (`IndexQuery` в .NET); None — без ограничения, пустой список — ничего не подходит.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -300,7 +270,7 @@ fn order(kind: EntityKind, query: &IndexQuery) -> String {
     }
 }
 
-fn read_data<T: DeserializeOwned>(connection: &Connection, select: &Select) -> io::Result<Vec<T>> {
+fn read_data<T: IndexEntity>(connection: &Connection, select: &Select) -> io::Result<Vec<T>> {
     let mut statement = connection.prepare(&select.sql).map_err(db_error)?;
     let rows = statement
         .query_map(select.bindings().as_slice(), |row| row.get::<_, String>(0))
@@ -308,7 +278,7 @@ fn read_data<T: DeserializeOwned>(connection: &Connection, select: &Select) -> i
     let mut result = Vec::new();
     for json in rows {
         let json = json.map_err(db_error)?;
-        result.push(serde_json::from_str(&json).map_err(|e| io::Error::other(format!("Index data: {e}")))?);
+        result.push(T::from_data(&json).map_err(|e| io::Error::other(format!("Index data: {e}")))?);
     }
     Ok(result)
 }
@@ -345,7 +315,7 @@ fn tasks_where(connection: &Connection, path_subquery: &str, bindings: &[(&str, 
     let mut result = Vec::new();
     for json in rows {
         let json = json.map_err(db_error)?;
-        result.push(serde_json::from_str(&json).map_err(|e| io::Error::other(format!("Index data: {e}")))?);
+        result.push(TaskItem::from_data(&json).map_err(|e| io::Error::other(format!("Index data: {e}")))?);
     }
     Ok(result)
 }

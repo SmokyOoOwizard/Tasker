@@ -132,7 +132,7 @@ fn cache_and_tmp_files_are_ignored() {
     let project = root.join("projects").join(PROJECT);
     let (handle, rx) = start(&root);
 
-    std::fs::write(root.join(".cache").join("index-rs.db"), b"sqlite").unwrap();
+    std::fs::write(root.join(".cache").join("index.db"), b"sqlite").unwrap();
     std::fs::create_dir_all(root.join(".cache").join("edit-locks")).unwrap();
     std::fs::write(root.join(".cache").join("edit-locks").join("x.json"), b"{}").unwrap();
     std::fs::write(project.join("tasks").join("task-aaaaaaaa.yaml.tmp"), b"partial").unwrap();

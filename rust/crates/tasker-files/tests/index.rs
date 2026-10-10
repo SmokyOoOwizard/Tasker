@@ -1,4 +1,5 @@
-//! Индекс `index-rs.db` на golden-корпусе (`rust/tests/golden`): порядок списков всех сущностей равен снапшотам `*-list-json`,
+//! Индекс `.cache/index.db` (общий с .NET, TSK-161) на golden-корпусе (`rust/tests/golden`): схема и строки байт в байт равны
+//! эталону .NET (`index/schema.sql`, `index/index.txt`), `data` читается и пишется обратно без изменений; порядок списков всех сущностей равен снапшотам `*-list-json`,
 //! порядок, фильтры, сортировки и страницы `task list` — снапшотам `*task-list*` (параметры берутся из `.args`), проблемы
 //! области — блоку `tasker sync`; Sync без изменений ничего не перечитывает, изменение файла подхватывается, удаление убирает
 //! запись, повреждённая база пересобирается.
@@ -628,8 +629,8 @@ fn a_corrupt_or_foreign_database_is_rebuilt() {
         .sum::<usize>()
         + corpus.index.problems(Page::first(10)).unwrap().total_count;
     let file = corpus.index.file();
-    assert!(file.ends_with(".cache/index-rs.db"));
-    assert!(corpus.index.lock_file().ends_with(".cache/index-rs.lock"));
+    assert!(file.ends_with(".cache/index.db"));
+    assert!(corpus.index.lock_file().ends_with(".cache/index.lock"));
 
     // Мусор вместо базы.
     std::fs::write(&file, b"not a database at all, just bytes").unwrap();
@@ -857,4 +858,170 @@ fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
         Some(plain) if cfg!(windows) => std::path::PathBuf::from(plain),
         _ => path,
     }
+}
+
+/// `.schema` оболочки sqlite3 (как `dot_schema` в `scripts/golden/generate.py`): CREATE в порядке `sqlite_master`, у таблиц —
+/// `IF NOT EXISTS`.
+fn dot_schema(connection: &rusqlite::Connection) -> String {
+    let mut statement = connection
+        .prepare("SELECT type, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid")
+        .unwrap();
+    let rows = statement
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+        .unwrap();
+    let mut out = String::new();
+    for row in rows {
+        let (kind, sql) = row.unwrap();
+        let sql = match sql.strip_prefix("CREATE TABLE ") {
+            Some(rest) if kind == "table" => format!("CREATE TABLE IF NOT EXISTS {rest}"),
+            _ => sql,
+        };
+        out.push_str(&sql);
+        out.push_str(";\n");
+    }
+    out
+}
+
+/// Время изменения файла в тиках .NET (`FileInfo.LastWriteTimeUtc.Ticks`).
+fn net_mtime(path: &Path) -> i64 {
+    let since = std::fs::metadata(path)
+        .unwrap()
+        .modified()
+        .unwrap()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    since.as_secs() as i64 * 10_000_000 + (since.subsec_nanos() / 100) as i64 + 621_355_968_000_000_000
+}
+
+/// Канонический дамп индекса — как `dump_index` в `scripts/golden/generate.py`.
+fn dump_index(workspace: &Path) -> String {
+    let root = workspace.join(".tasker");
+    let cache = root.join(".cache");
+    let connection = rusqlite::Connection::open(cache.join("index.db")).unwrap();
+    let pragma = |name: &str| -> String {
+        connection
+            .query_row(&format!("PRAGMA {name}"), [], |r| r.get::<_, rusqlite::types::Value>(0))
+            .map(|v| match v {
+                rusqlite::types::Value::Integer(i) => i.to_string(),
+                rusqlite::types::Value::Text(t) => t,
+                other => format!("{other:?}"),
+            })
+            .unwrap()
+    };
+    let mut lines = vec![
+        format!("user_version {}", pragma("user_version")),
+        format!("journal_mode {}", pragma("journal_mode")),
+    ];
+    for table in ["files", "task_series", "task_links", "task_fields", "task_field_values"] {
+        let columns: Vec<String> = connection
+            .prepare(&format!("PRAGMA table_info(\"{table}\")"))
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(1))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        lines.push(format!("table {table} ({})", columns.join(", ")));
+        let quoted: Vec<String> = columns.iter().map(|c| format!("quote(\"{c}\")")).collect();
+        let order = if table == "files" { "path" } else { "path, rowid" };
+        let sql = format!("SELECT path, {} FROM \"{table}\" ORDER BY {order}", quoted.join(", "));
+        let mut statement = connection.prepare(&sql).unwrap();
+        let rows = statement
+            .query_map([], |r| {
+                let path: String = r.get(0)?;
+                let values: Vec<String> = (1..=columns.len()).map(|i| r.get::<_, String>(i)).collect::<Result<_, _>>()?;
+                Ok((path, values))
+            })
+            .unwrap();
+        for row in rows {
+            let (path, mut values) = row.unwrap();
+            if table == "files" {
+                let file = path.split('/').fold(root.clone(), |p, part| p.join(part));
+                let at = columns.iter().position(|c| c == "mtime").unwrap();
+                if file.exists() && values[at] == net_mtime(&file).to_string() {
+                    values[at] = "<MTIME>".into();
+                }
+            }
+            lines.push(values.join(","));
+        }
+    }
+    drop(connection);
+    let mut names: Vec<String> = std::fs::read_dir(&cache)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    lines.push(format!("cache {}", names.join(" ")));
+    lines.join("\n") + "\n"
+}
+
+#[test]
+fn the_cache_is_the_dotnet_index_byte_for_byte() {
+    let corpus = Corpus::open();
+    let expected = |name: &str| std::fs::read_to_string(golden().join("index").join(name)).unwrap();
+    {
+        let connection = rusqlite::Connection::open(corpus.index.file()).unwrap();
+        assert_eq!(dot_schema(&connection), expected("schema.sql"));
+    }
+    assert_eq!(dump_index(&corpus.workspace), expected("index.txt"));
+    std::fs::remove_dir_all(&corpus.workspace).unwrap();
+}
+
+#[test]
+fn data_written_by_dotnet_reads_back_to_the_same_bytes() {
+    use tasker_core::model::{Board, LinkType};
+    use tasker_files::index::IndexEntity;
+
+    fn same<T: IndexEntity>(json: &str) {
+        let entity = T::from_data(json).unwrap_or_else(|e| panic!("{e}: {json}"));
+        assert_eq!(entity.to_data(), json);
+    }
+
+    // Строки эталона .NET (index.txt — тот же индекс, что строит .NET: тест выше) — перечитать и записать обратно.
+    let corpus = Corpus::open();
+    let connection = rusqlite::Connection::open(corpus.index.file()).unwrap();
+    let mut statement = connection
+        .prepare("SELECT kind, data FROM files WHERE data IS NOT NULL ORDER BY path")
+        .unwrap();
+    let rows: Vec<(String, String)> = statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(rows.len() > 100);
+    for (kind, json) in &rows {
+        match kind.as_str() {
+            "Project" => same::<Project>(json),
+            "User" => same::<User>(json),
+            "Status" => same::<Status>(json),
+            "StatusSet" => same::<StatusSet>(json),
+            "TaskType" => same::<TaskType>(json),
+            "Board" => same::<Board>(json),
+            "Series" => same::<Series>(json),
+            "Task" => same::<TaskItem>(json),
+            "LinkType" => same::<LinkType>(json),
+            "Field" => same::<FieldDefinition>(json),
+            "FieldEnum" => same::<FieldEnum>(json),
+            other => panic!("kind {other}"),
+        }
+    }
+    drop(statement);
+    drop(connection);
+    std::fs::remove_dir_all(&corpus.workspace).unwrap();
+}
+
+#[test]
+fn the_old_rust_only_index_is_removed_on_open() {
+    let workspace = fresh_copy();
+    let cache = workspace.join(".tasker").join(".cache");
+    std::fs::create_dir_all(&cache).unwrap();
+    let old = ["index-rs.db", "index-rs.db-wal", "index-rs.db-shm", "index-rs.lock"];
+    for name in old {
+        std::fs::write(cache.join(name), b"old").unwrap();
+    }
+    WorkspaceIndex::attach(&TaskerDirectory::new(&workspace)).unwrap();
+    for name in old {
+        assert!(!cache.join(name).exists(), "{name}");
+    }
+    assert!(cache.join("index.db").exists());
+    std::fs::remove_dir_all(&workspace).unwrap();
 }
