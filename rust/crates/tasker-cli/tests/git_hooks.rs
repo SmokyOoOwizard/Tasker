@@ -54,7 +54,7 @@ impl Repo {
     }
 
     fn hook(&self, name: &str) -> PathBuf {
-        self.root.join(".git/hooks").join(name)
+        self.root.join(".git").join("hooks").join(name)
     }
 
     /// git с окружением консоли (хуки наследуют `TASKER_HOME`); ошибка — паника. stdout и stderr вместе.
@@ -143,7 +143,7 @@ fn install_status_and_uninstall_print_what_dotnet_prints_and_write_the_same_bloc
     let workspace = repo.folder("tools/my ws");
     let w = workspace.to_str().unwrap();
     assert_eq!(repo.tasker(&["project", "create", "A", "-w", w]).code, 0);
-    let hooks = repo.root.join(".git/hooks");
+    let hooks = repo.root.join(".git").join("hooks");
 
     let status = repo.tasker(&["hooks", "status", "-w", w]);
     assert_eq!(
@@ -232,7 +232,7 @@ fn a_hook_without_a_shebang_gets_one_and_core_hooks_path_is_respected() {
     let workspace = repo.folder("");
     let w = workspace.to_str().unwrap();
     assert_eq!(repo.tasker(&["project", "create", "A", "-w", w]).code, 0);
-    std::fs::create_dir_all(repo.root.join(".git/hooks")).unwrap();
+    std::fs::create_dir_all(repo.root.join(".git").join("hooks")).unwrap();
     std::fs::write(repo.hook("post-checkout"), "echo mine\n").unwrap();
     assert_eq!(repo.tasker(&["hooks", "install", "-w", w]).code, 0);
     let text = std::fs::read_to_string(repo.hook("post-checkout")).unwrap();
