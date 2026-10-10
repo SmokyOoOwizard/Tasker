@@ -2,13 +2,13 @@
 use crate::Workspace;
 use crate::error::{Error, Result};
 use crate::rewrites;
+use crate::storage::Storage;
 use std::collections::HashMap;
 use tasker_core::ids::parse_guid;
 use tasker_core::locks::LockedEntity;
 use tasker_core::model::{Series, SeriesPrefix, TaskItem};
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::{validate, versioning};
-use tasker_files::index::IndexQuery;
 use uuid::Uuid;
 
 const CASCADE_ATTEMPTS: usize = 4;
@@ -178,10 +178,7 @@ impl<'a> SeriesService<'a> {
         let mut found: Vec<TaskItem> = Vec::new();
         let mut offset = 0;
         loop {
-            let page = self
-                .ws
-                .index()
-                .range::<TaskItem>(&IndexQuery::tasks(project_id, Some(&filter)), Page::new(offset, 200))?;
+            let page = self.ws.task_range(project_id, Some(&filter), Page::new(offset, 200))?;
             if page.data.is_empty() {
                 break;
             }

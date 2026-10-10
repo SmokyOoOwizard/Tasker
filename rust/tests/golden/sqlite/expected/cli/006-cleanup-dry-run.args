@@ -1,0 +1,4 @@
+cleanup
+--dry-run
+--sqlite
+<ROOT>/golden.db

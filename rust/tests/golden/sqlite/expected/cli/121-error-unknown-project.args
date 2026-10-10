@@ -1,0 +1,6 @@
+task
+list
+--sqlite
+<ROOT>/golden.db
+-p
+Nope

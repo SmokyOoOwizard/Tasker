@@ -1,0 +1,10 @@
+task
+list
+--all
+--truncate
+--width
+60
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

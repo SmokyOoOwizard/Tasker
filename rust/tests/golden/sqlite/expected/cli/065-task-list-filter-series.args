@@ -1,0 +1,9 @@
+task
+list
+--all
+--series
+BUG
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

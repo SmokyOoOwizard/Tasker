@@ -12,8 +12,14 @@ pub const NEEDS_MIGRATION: i32 = 2;
 const SHOWN_FILES: usize = 10;
 
 pub fn run(ctx: &mut Context<'_>, dry_run: bool, check: bool) -> Result<()> {
-    let session = ctx.session();
-    let report = migration::run(session.directory(), session.index(), MigrationOptions { dry_run: dry_run || check })?;
+    let Some(files) = ctx.session().workspace().files() else {
+        ctx.print(
+            &crate::json::object(vec![("applicable", Value::Bool(false))]),
+            "This workspace is a database: there are no files to migrate (the database schema is not versioned yet)",
+        );
+        return Ok(());
+    };
+    let report = migration::run(files.directory(), files.index(), MigrationOptions { dry_run: dry_run || check })?;
     let json = ctx.json;
     let text = show(&report, dry_run, check, json);
     let _ = std::io::Write::write_all(ctx.out(), text.as_bytes());

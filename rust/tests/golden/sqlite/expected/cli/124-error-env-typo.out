@@ -1,0 +1,65 @@
+Found 61
+GLD-1           Done         Задача   Plain task
+GLD-2           Backlog      Задача   007
+GLD-3           Backlog      Задача   true
+GLD-4           Backlog      Задача   null
+GLD-5           Backlog      Задача   ~
+GLD-6           Backlog      Задача   yes
+GLD-7           Backlog      Задача   no
+GLD-8           Backlog      Задача   off
+GLD-9           Backlog      Задача   1.5
+GLD-10          Backlog      Задача   1e3
+GLD-11          Backlog      Задача   0x1F
+GLD-12          Backlog      Задача   -
+GLD-13          Backlog      Задача   ---
+GLD-14          Backlog      Задача   ...
+GLD-15          Backlog      Задача   Colon: in the middle
+GLD-16          Backlog      Задача   Ends with colon:
+GLD-17          Backlog      Задача   # starts with hash
+GLD-18          Backlog      Задача   Hash # in the middle
+GLD-19          Backlog      Задача   Quote 'single' and "double"
+GLD-20          Backlog      Задача   'quoted'
+GLD-21          Backlog      Задача   "quoted"
+GLD-22          Backlog      Задача   [brackets] {braces} & ampersand * star | pipe > gt ! bang % percent @ at `backtick`
+GLD-23          Backlog      Задача   Кириллица и эмодзи 🚀 ✨, ещё — тире и «ёлочки»
+GLD-24          Backlog      Задача   Ümläute, İstanbul, ß, Ærø, naïve café
+GLD-25          Backlog      Задача   日本語のタイトル и 中文
+GLD-26          Backlog      Задача   Combining: é (e + U+0301), precomposed: é
+GLD-27          Backlog      Задача   Tab	inside and  double  spaces
+GLD-28          Backlog      Задача   A very long title that goes on and on past sixty characters so that the slug of the file name is cut while the title itself stays whole in the file
+GLD-29          Backlog      Задача   Trailing spaces
+GLD-30          Backlog      Задача   Leading spaces
+GLD-31          Backlog      Задача   Multi
+line title
+GLD-32          Backlog      Задача   Backslash \ and forward / slashes
+GLD-33          Backlog      Задача   Percent %s and {0} braces and $var and ${env}
+GLD-34          Backlog      Задача   Description: multiline
+GLD-35          Backlog      Задача   Description: trailing-newline
+GLD-36          Backlog      Задача   Description: two-trailing-newlines
+GLD-37          Backlog      Задача   Description: spaces-only-line
+GLD-38          Backlog      Задача   Description: crlf
+GLD-39          Backlog      Задача   Description: numeric
+GLD-40          Backlog      Задача   Description: bool
+GLD-41          Backlog      Задача   Description: colon
+GLD-42          Backlog      Задача   Description: hash
+GLD-43          Backlog      Задача   Description: quotes
+GLD-44          Backlog      Задача   Description: unicode
+GLD-45          Backlog      Задача   Description: tab
+GLD-46          Backlog      Задача   Description: long-line
+GLD-47          Backlog      Задача   Description: single-space
+GLD-48          Backlog      Задача   Description: yaml-doc-markers
+GLD-49          Backlog      Задача   Description: leading-blank
+GLD-50          Backlog      Задача   Description: percent
+BUG-1           In Progress  Bug      Bug with all fields (renamed)
+BUG-2,GLD-51    Backlog      Bug      Bug with own fields
+GLD-52          Отложено     Feature  Feature with values
+BUG-4           007          Feature  Feature without values
+GLD-53          Done         Feature  Feature done
+BUG-3           Done         Bug      Bug done
+GLD-54          Backlog      Задача   Epic: hierarchy
+    GLD-55      Backlog      Задача   Child one
+        GLD-57  Backlog      Задача   Grandchild
+    GLD-56      Backlog      Задача   Child two
+GLD-58          Backlog      Задача   Epic two
+    GLD-56 (+)  Backlog      Задача   Child two
+    GLD-57 (+)  Backlog      Задача   Grandchild

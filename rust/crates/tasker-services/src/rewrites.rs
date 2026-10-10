@@ -4,6 +4,7 @@
 use crate::Workspace;
 use crate::error::Result;
 use crate::locks::LockTarget;
+use crate::storage::Storage;
 use std::time::Duration;
 use tasker_core::model::{TaskItem, TaskSeriesNumber};
 use tasker_core::versioning;

@@ -1,0 +1,9 @@
+task
+list
+--all
+--sort
+status,-updated
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

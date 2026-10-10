@@ -1,0 +1,8 @@
+enum
+get
+Платформа
+--json
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

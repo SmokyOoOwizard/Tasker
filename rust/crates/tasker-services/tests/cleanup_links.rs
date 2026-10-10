@@ -102,6 +102,9 @@ fn a_link_to_a_missing_task_is_removed_and_valid_links_stay() {
 
 #[test]
 fn a_link_of_a_missing_link_type_is_removed() {
+    if sqlite() {
+        return; // связь по типу, которого нет в таблице, в БД не записать (внешний ключ)
+    }
     let env = Env::new();
     let blocks = link_type(&env, "Blocks");
     let a = create(&env, "A");
@@ -125,6 +128,9 @@ fn a_link_of_a_missing_link_type_is_removed() {
 
 #[test]
 fn several_bad_links_in_several_tasks_are_all_removed_in_creation_order() {
+    if sqlite() {
+        return; // связь по типу, которого нет в таблице, в БД не записать (внешний ключ)
+    }
     let env = Env::new();
     let blocks = link_type(&env, "Blocks");
     let relates = link_type(&env, "Relates");
@@ -180,6 +186,9 @@ fn a_dry_run_reports_the_same_changes_and_writes_nothing_and_the_cleanup_is_idem
 
 #[test]
 fn links_are_not_cleaned_while_a_task_file_is_unreadable_but_series_still_are() {
+    if sqlite() {
+        return; // нечитаемые файлы — только у папки
+    }
     let env = Env::new();
     let blocks = link_type(&env, "Blocks");
     let series = env.series("TSK");
@@ -220,6 +229,9 @@ fn links_are_not_cleaned_while_a_task_file_is_unreadable_but_series_still_are() 
 
 #[test]
 fn links_are_not_cleaned_while_a_link_type_file_is_unreadable() {
+    if sqlite() {
+        return; // нечитаемые файлы — только у папки
+    }
     let env = Env::new();
     let blocks = link_type(&env, "Blocks");
     let a = create(&env, "A");
@@ -235,6 +247,9 @@ fn links_are_not_cleaned_while_a_link_type_file_is_unreadable() {
 
 #[test]
 fn links_of_the_default_link_types_are_valid_before_the_types_are_saved() {
+    if sqlite() {
+        return; // связь по типу, которого нет в таблице, в БД не записать (внешний ключ)
+    }
     let env = Env::new();
     let a = create(&env, "A");
     let b = create(&env, "B");
@@ -249,6 +264,9 @@ fn links_of_the_default_link_types_are_valid_before_the_types_are_saved() {
 
 #[test]
 fn link_health_counts_tasks_with_bad_links_and_reports_unreadable_files_instead_of_guessing() {
+    if sqlite() {
+        return; // нечитаемые файлы и связь по несуществующему типу — только у папки
+    }
     let env = Env::new();
     let blocks = link_type(&env, "Blocks");
     let a = create(&env, "A");

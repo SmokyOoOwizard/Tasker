@@ -1,0 +1,5 @@
+project
+get
+Golden
+--sqlite
+<ROOT>/golden.db

@@ -1,0 +1,5 @@
+migrate
+--check
+--json
+--sqlite
+<ROOT>/golden.db

@@ -1,0 +1,7 @@
+task
+get
+00000041
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

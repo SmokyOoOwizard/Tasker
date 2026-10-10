@@ -2,6 +2,7 @@
 //! `Имя=значение`, `Имя>=3`, `Имя:set`; `status,-updated,Estimate`.
 use crate::Workspace;
 use crate::error::{Error, Result};
+use crate::storage::Storage;
 use tasker_core::fields;
 use tasker_core::ids::guid_d;
 use tasker_core::model::{FieldDefinition, FieldEnum, FieldOperator, FieldType, Series, Status, StatusSet, TaskType};
@@ -110,7 +111,7 @@ fn resolve_filter_field(
             field_id: Some(field.id),
         });
     }
-    let kinds = ws.index().own_field_kinds(project_id, &field_name_key(name))?;
+    let kinds = ws.own_field_kinds(project_id, &field_name_key(name))?;
     match kinds.len() {
         0 => Err(Error::validation(format!(
             "Field filter '{expression}': no field '{name}' in the project's catalog and no task has an own field with this name"
@@ -267,7 +268,7 @@ fn field_key(
             found.enum_id,
         ),
         None => {
-            let kinds = ws.index().own_field_kinds(project_id, &field_name_key(name))?;
+            let kinds = ws.own_field_kinds(project_id, &field_name_key(name))?;
             match kinds.len() {
                 0 => {
                     let mut names: Vec<&str> = catalog.iter().map(|x| x.name.as_str()).collect();

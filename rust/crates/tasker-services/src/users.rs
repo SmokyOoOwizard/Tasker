@@ -1,15 +1,12 @@
-//! Пользователи и агенты (`UserService`, `AgentService` в .NET) поверх файлов `users/<id>.yaml` (`UserStorage` файлового
-//! хранилища): в файлах только имена — ни почты, ни паролей, ни администраторов, прав нет (десктопный режим,
+//! Пользователи и агенты (`UserService`, `AgentService` в .NET) поверх хранилища области ([`crate::storage::Storage`]: файлы
+//! `users/<id>.yaml` или таблица `users` БД): только имена — ни почты, ни паролей, ни администраторов, прав нет (десктопный режим,
 //! `UserOptions.RequireCredentials = false`). Имя уникально среди всех пользователей, включая агентов, без учёта регистра.
 use crate::error::{Error, Result};
+use crate::storage::Storage;
 use tasker_core::locks::LockedEntity;
 use tasker_core::model::{User, UserKind};
 use tasker_core::tasks::{ListPage, Page};
 use tasker_core::{validate, versioning};
-use tasker_files::files;
-use tasker_files::index::IndexQuery;
-use tasker_files::index::normalize_username;
-use tasker_files::write;
 use uuid::Uuid;
 
 /// `AgentService.LocalAgentName`: агент, от имени которого работает MCP без токена.
@@ -41,32 +38,21 @@ impl<'a> UserService<'a> {
 
     /// Пользователь по id — из файла; None — нет.
     pub fn get_by_id(&self, id: &Uuid) -> Result<Option<User>> {
-        let path = self.ws.directory().user_file(id);
-        let Some(bytes) = write::read_bytes(&path)? else {
-            return Ok(None);
-        };
-        match files::user::parse(&bytes, &path) {
-            Ok(versioned) => Ok(Some(versioned.model)),
-            Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => Ok(None),
-            Err(e) => Err(e.into()),
-        }
+        self.ws.get_user(id)
     }
 
     /// Без учёта регистра (`UserStorage.GetByUsername`).
     pub fn get_by_username(&self, username: &str) -> Result<Option<User>> {
-        Ok(self
-            .ws
-            .index()
-            .first::<User>(&IndexQuery::users(None).with_sort_key(&normalize_username(username)))?)
+        self.ws.user_by_username(username)
     }
 
     /// Страница пользователей по имени; `kind` None — все.
     pub fn get_range(&self, kind: Option<UserKind>, page: Page) -> Result<ListPage<User>> {
-        Ok(self.ws.index().range::<User>(&IndexQuery::users(kind), page)?)
+        self.ws.user_range(kind, page)
     }
 
     pub fn get_all(&self, kind: Option<UserKind>) -> Result<Vec<User>> {
-        Ok(self.ws.index().all::<User>(&IndexQuery::users(kind))?)
+        self.ws.all_users(kind)
     }
 
     /// Локальный пользователь: только имя (`CreateUser` без почты и пароля).
@@ -91,18 +77,10 @@ impl<'a> UserService<'a> {
             created_at: self.ws.now(),
             version: String::new(),
         };
-        // Проверка уникальности и запись — под одной блокировкой каталога пользователей.
-        let path = self.ws.directory().user_file(&user.id);
-        let bytes = files::user::serialize(&user);
-        let version: Result<String> = write::locked(&self.ws.directory().users(), || {
-            Ok(self.ensure_unique(&user.username, None).and_then(|()| {
-                Ok(self
-                    .ws
-                    .index()
-                    .written(std::slice::from_ref(&path), || write::write(&path, &bytes))?)
-            }))
-        })?;
-        Ok(User { version: version?, ..user })
+        // Имя проверяется сервисом и ещё раз хранилищем при записи (у файлов — под блокировкой каталога, у БД — уникальным индексом).
+        self.ensure_unique(&user.username, None)?;
+        let version = self.ws.add_user(&user)?;
+        Ok(User { version, ..user })
     }
 
     /// Имя уникально среди всех пользователей, включая агентов.
@@ -116,17 +94,9 @@ impl<'a> UserService<'a> {
     }
 
     fn write(&self, user: &User, expected: &str) -> Result<Option<User>> {
-        let path = self.ws.directory().user_file(&user.id);
-        let bytes = files::user::serialize(user);
-        let version: Result<Option<String>> = write::locked(&self.ws.directory().users(), || {
-            Ok(self.ensure_unique(&user.username, Some(&user.id)).and_then(|()| {
-                Ok(self
-                    .ws
-                    .index()
-                    .written(std::slice::from_ref(&path), || write::write_if_match(&path, &bytes, expected))?)
-            }))
-        })?;
-        Ok(version?.map(|version| User { version, ..user.clone() }))
+        self.ensure_unique(&user.username, Some(&user.id))?;
+        let version = self.ws.update_user(user, expected)?;
+        Ok(version.map(|version| User { version, ..user.clone() }))
     }
 
     /// Переименование человека; None — пользователя нет.
@@ -162,11 +132,7 @@ impl<'a> UserService<'a> {
     }
 
     fn remove(&self, user: &User, expected: &str, subject: &str) -> Result<bool> {
-        let path = self.ws.directory().user_file(&user.id);
-        let deleted = self
-            .ws
-            .index()
-            .written(std::slice::from_ref(&path), || write::delete_if_match(&path, expected))?;
+        let deleted = self.ws.delete_user(&user.id, expected)?;
         if !deleted {
             return Err(versioning::modified(subject).into());
         }

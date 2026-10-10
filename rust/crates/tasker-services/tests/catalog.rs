@@ -442,7 +442,7 @@ fn a_field_or_enum_locked_by_someone_else_cannot_be_changed_or_deleted() {
 
     let renamed = rename_field(&ivan, p, &f.id, "Memo", Some(&f.version)).unwrap().unwrap();
     assert!(ivan.fields().delete(p, &f.id, Some(&renamed.version)).unwrap());
-    assert!(ivan.locks().get(LockedEntity::Field, &f.id).is_none());
+    assert!(ivan.locks().get(LockedEntity::Field, &f.id).unwrap().is_none());
 }
 
 #[test]
@@ -462,12 +462,12 @@ fn entity_locks_name_fields_and_enums_and_do_not_find_missing_ones() {
         (enum_lock.entity, enum_lock.id, enum_lock.mine),
         (LockedEntity::Enum, priority.id, true)
     );
-    assert!(locks.get(LockedEntity::Field, &f.id).is_some());
-    assert_eq!(locks.get_by_project(p).len(), 2);
+    assert!(locks.get(LockedEntity::Field, &f.id).unwrap().is_some());
+    assert_eq!(locks.get_by_project(p).unwrap().len(), 2);
     assert!(locks.acquire(Some(*p), LockedEntity::Field, &Uuid::new_v4()).unwrap().is_none());
     assert!(locks.acquire(Some(*p), LockedEntity::Enum, &f.id).unwrap().is_none());
     assert!(locks.release(LockedEntity::Field, &f.id).unwrap());
-    assert!(locks.get(LockedEntity::Field, &f.id).is_none());
+    assert!(locks.get(LockedEntity::Field, &f.id).unwrap().is_none());
     assert_eq!(EntityLockService::parse_entity(Some("field")).unwrap(), LockedEntity::Field);
     assert_eq!(EntityLockService::parse_entity(Some("Enum")).unwrap(), LockedEntity::Enum);
     assert!(EntityLockService::is_project_scoped(LockedEntity::Field));
@@ -508,6 +508,9 @@ fn concurrent_creation_of_the_same_name_leaves_exactly_one() {
 
 #[test]
 fn fields_and_enums_are_files_in_their_own_folders_and_unreadable_files_are_counted() {
+    if sqlite() {
+        return; // файлы и нечитаемые файлы — только у папки
+    }
     let env = Env::new();
     let p = &env.project;
     let priority = new_enum(&env, p, "Приоритет", &["Низкий", "Высокий"]).unwrap();
@@ -539,7 +542,7 @@ fn fields_and_enums_are_files_in_their_own_folders_and_unreadable_files_are_coun
     let plain_text = read(project.fields(), &plain.id);
     assert!(!plain_text.contains("multiple:") && !plain_text.contains("enum:"));
 
-    let fresh = Workspace::open(&env.dir).unwrap();
+    let fresh = open_workspace(&env.dir);
     let fields = fresh.fields().get_all(p).unwrap();
     assert_eq!(fields.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), vec!["Level", "Note"]);
     assert_eq!(fields[0].enum_id, Some(priority.id));

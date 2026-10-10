@@ -67,7 +67,12 @@ fn git_in_progress(folder: &str) -> Option<&'static str> {
 /// `read_only` (`--dry-run`/`--check`) не трогает файлы; иначе идущее слияние git — ошибка, чистка переждёт.
 pub fn run(ctx: &mut Context<'_>, dry_run: bool, check: bool, resolve: bool) -> Result<()> {
     let read_only = dry_run || check;
-    if !read_only && let Some(operation) = git_in_progress(ctx.session().location().path()) {
+    // Слияние git касается только папки: у файла SQLite его нет (`--sqlite` в .NET проверку пропускает).
+    let folder = ctx.session().location().kind() == tasker_core::settings::WorkspaceKind::Files;
+    if !read_only
+        && folder
+        && let Some(operation) = git_in_progress(ctx.session().location().path())
+    {
         return Err(CliError::new(format!(
             "A git {operation} is in progress: cleanup would treat half-merged files as final. Finish or abort it, then run cleanup again (--dry-run and --check work meanwhile)"
         )));

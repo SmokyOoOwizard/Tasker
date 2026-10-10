@@ -1,0 +1,7 @@
+Found 6
+BUG-1         In Progress  Bug      Bug with all fields (renamed)
+BUG-2,GLD-51  Backlog      Bug      Bug with own fields
+GLD-52        Отложено     Feature  Feature with values
+BUG-4         007          Feature  Feature without values
+GLD-53        Done         Feature  Feature done
+BUG-3         Done         Bug      Bug done

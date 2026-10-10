@@ -1,0 +1,10 @@
+task
+list
+--all
+--sort
+-series
+--flat
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

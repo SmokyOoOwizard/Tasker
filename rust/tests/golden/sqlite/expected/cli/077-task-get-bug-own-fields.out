@@ -1,0 +1,21 @@
+id:           00000074-0000-4000-8000-000000000074
+title:        Bug with own fields
+type:         Bug (0000003d-0000-4000-8000-00000000003d)
+status:       Backlog (00000018-0000-4000-8000-000000000018)
+series:       BUG-2, GLD-51
+created:      2026-01-01 00:52:52 +00:00
+updated:      2026-01-01 00:52:52 +00:00
+version:      1
+fields:
+  Priority (enum, required): Low
+  Estimate (int): -
+  Tags (string[]): -
+  Ожидание (bool, extra): -
+  Severity (enum, required, own): Medium
+  Reporters (string[], own): alice, Боб
+  Reproducible (bool, own): true
+  Seen (date, own): 2028-02-29
+  Ratio (float, own): 0.5
+  Attempts (int, own): -3
+links:
+  is blocked by  BUG-1  In Progress  Bug with all fields (renamed)

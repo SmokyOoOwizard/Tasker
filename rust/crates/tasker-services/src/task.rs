@@ -4,6 +4,7 @@ use crate::error::{Error, Result};
 use crate::hierarchy::TaskHierarchy;
 use crate::links::{self, TaskLinkView};
 use crate::preview::{self, TaskListItem, TaskTreeItem, TaskTreeList};
+use crate::storage::Storage;
 use crate::task_fields::{self, Catalog, Enums, TaskFieldChanges, TaskFieldView};
 use crate::task_filters;
 use std::collections::HashMap;
@@ -12,8 +13,7 @@ use tasker_core::locks::LockedEntity;
 use tasker_core::model::{FieldDefinition, FieldEnum, Series, StatusSet, TaskItem, TaskSeriesNumber, TaskType};
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::{ShortId, TaskReference, validate, versioning};
-use tasker_files::index::{IndexQuery, LinkEdge};
-use tasker_files::layout::EntityKind;
+use tasker_files::index::LinkEdge;
 use uuid::Uuid;
 
 pub const MAX_TITLE_LENGTH: usize = 500;
@@ -79,18 +79,15 @@ impl<'a> TaskService<'a> {
 
     /// Все задачи проекта по фильтру, в порядке списка (`ITaskStorage.GetAll`).
     pub fn get_all(&self, project_id: &Uuid, filter: Option<&TaskFilter>) -> Result<Vec<TaskItem>> {
-        Ok(self.ws.index().all::<TaskItem>(&IndexQuery::tasks(project_id, filter))?)
+        self.ws.tasks_where(project_id, filter)
     }
 
     pub fn get_range(&self, project_id: &Uuid, filter: Option<&TaskFilter>, page: Page) -> Result<ListPage<TaskItem>> {
-        Ok(self.ws.index().range::<TaskItem>(&IndexQuery::tasks(project_id, filter), page)?)
+        self.ws.task_range(project_id, filter, page)
     }
 
     pub fn count(&self, project_id: &Uuid, filter: &TaskFilter) -> Result<usize> {
-        Ok(self
-            .ws
-            .index()
-            .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(filter)))?)
+        self.ws.count_tasks(project_id, filter)
     }
 
     pub fn create(&self, project_id: &Uuid, command: &CreateTask) -> Result<TaskItem> {
@@ -143,12 +140,12 @@ impl<'a> TaskService<'a> {
                 }
                 numbers.push(TaskSeriesNumber {
                     series_id: *series_id,
-                    number: self.ws.index().max_number(project_id, series_id)? + 1,
+                    number: self.ws.max_number(project_id, series_id)? + 1,
                 });
             }
             task.series_numbers = numbers;
             task.version = self.ws.add(&task)?;
-            Ok(task)
+            Ok(task.clone())
         })
     }
 
@@ -384,10 +381,7 @@ impl<'a> TaskService<'a> {
             });
         }
 
-        let ordered = self
-            .ws
-            .index()
-            .ids(EntityKind::Task, &IndexQuery::tasks(project_id, filter.as_ref()))?;
+        let ordered = self.ws.task_ids(project_id, filter.as_ref())?;
         let top = hierarchy.top_level(&ordered);
         let position: HashMap<Uuid, usize> = ordered.iter().enumerate().map(|(i, id)| (*id, i)).collect();
         let roots: Vec<Uuid> = top.iter().skip(page.offset).take(page.limit).copied().collect();
@@ -437,7 +431,7 @@ impl<'a> TaskService<'a> {
     fn load_hierarchy(&self, project_id: &Uuid) -> Result<TaskHierarchy> {
         let mut edges: Vec<LinkEdge> = Vec::new();
         for type_id in self.ws.links().hierarchical_type_ids(project_id)? {
-            edges.extend(self.ws.index().link_edges(project_id, &type_id)?);
+            edges.extend(self.ws.link_edges(project_id, &type_id)?);
         }
         Ok(if edges.is_empty() {
             TaskHierarchy::default()
@@ -461,7 +455,7 @@ impl<'a> TaskService<'a> {
         hierarchy: &TaskHierarchy,
     ) -> Result<Vec<TaskListItem>> {
         let ids: Vec<Uuid> = items.iter().map(|x| x.id).collect();
-        let inbound = self.ws.index().count_linked_to(project_id, &ids)?;
+        let inbound = self.ws.count_linked_to(project_id, &ids)?;
         Ok(items
             .into_iter()
             .map(|x| {
@@ -546,7 +540,7 @@ impl<'a> TaskService<'a> {
             if task.series_numbers.iter().any(|x| x.series_id == *series_id) {
                 return Ok(Some(task));
             }
-            let number = self.ws.index().max_number(project_id, series_id)? + 1;
+            let number = self.ws.max_number(project_id, series_id)? + 1;
             let mut numbers = task.series_numbers.clone();
             numbers.push(TaskSeriesNumber {
                 series_id: *series_id,
@@ -582,7 +576,7 @@ impl<'a> TaskService<'a> {
     /// Убирает из серии задачу с этим номером. Несколько задач с номером — ошибка со списком id. None — такой задачи в серии нет.
     pub fn remove_from_series_by_number(&self, project_id: &Uuid, series_id: &Uuid, number: i32) -> Result<Option<TaskItem>> {
         self.ws.exclusive(project_id, || {
-            let found = self.ws.index().tasks_by_number(project_id, series_id, number)?;
+            let found = self.ws.tasks_by_number(project_id, series_id, number)?;
             if found.is_empty() {
                 return Ok(None);
             }
@@ -624,14 +618,13 @@ impl<'a> TaskService<'a> {
                 return Ok(None);
             };
             let number = match to {
-                None => self.ws.index().max_number(project_id, series_id)? + 1,
+                None => self.ws.max_number(project_id, series_id)? + 1,
                 Some(number) => {
                     if number < 1 {
                         return Err(Error::in_use(format!("Series number must be 1 or greater, got {number}")));
                     }
                     if self
                         .ws
-                        .index()
                         .tasks_by_number(project_id, series_id, number)?
                         .iter()
                         .any(|x| x.id != *task_id)
@@ -670,7 +663,7 @@ impl<'a> TaskService<'a> {
                 // Серий с одним префиксом должно быть не больше одной; если после слияния их несколько — ищем во всех.
                 let mut found: HashMap<Uuid, TaskItem> = HashMap::new();
                 for series in self.ws.get_all::<Series>(project_id)?.into_iter().filter(|x| x.prefix == prefix) {
-                    for task in self.ws.index().tasks_by_number(project_id, &series.id, number)? {
+                    for task in self.ws.tasks_by_number(project_id, &series.id, number)? {
                         found.insert(task.id, task);
                     }
                 }
@@ -699,7 +692,7 @@ impl<'a> TaskService<'a> {
     }
 
     fn find_by_id_prefix(&self, project_id: &Uuid, key: &str) -> Result<Vec<TaskItem>> {
-        let found: Vec<TaskItem> = self.ws.index().all(&IndexQuery::project(project_id).with_id_prefix(key))?;
+        let found: Vec<TaskItem> = self.ws.tasks_by_id_prefix(project_id, key)?;
         if found.len() > 1 {
             return Err(Error::validation(format!(
                 "Several tasks start with '{}', use a longer prefix or the full id: {}",

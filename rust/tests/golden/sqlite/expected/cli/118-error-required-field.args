@@ -1,0 +1,9 @@
+task
+create
+Bad
+--type
+Bug
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

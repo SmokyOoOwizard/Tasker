@@ -1,0 +1,8 @@
+task
+links
+00000073-0000-4000-8000-000000000073
+--json
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

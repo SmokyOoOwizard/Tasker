@@ -1,23 +1,20 @@
 //! Открытая на время команды рабочая область (`Session` в .NET): папка с `.tasker` — проверка, создание служебных папок и
 //! индекс ([`WorkspaceIndex`]); выбор проекта из `-p`, `TASKER_PROJECT` или единственного в области; поиск сущностей по id,
-//! имени и короткому id (`Refs`). Область SQLite (`--sqlite`) этой сборкой не открывается — по плану (раздел 1, п. 1) её
-//! обслуживает .NET-сборка.
+//! имени и короткому id (`Refs`). Область в файле SQLite (`--sqlite`) — та же БД, что у .NET-десктопа и сервера (TSK-159):
+//! файла нет — он создаётся со схемой EF Core.
 use crate::errors::{CliError, Result};
 use std::path::Path;
 use tasker_core::ShortId;
 use tasker_core::ids::{guid_d, parse_guid};
 use tasker_core::model::Project;
+use tasker_core::settings::WorkspaceKind;
 use tasker_core::settings::WorkspaceLocation;
 use tasker_core::settings::expand_user_path;
 use tasker_core::tasks::Page;
 use tasker_core::validate::to_upper_invariant;
-use tasker_files::index::{IndexQuery, WorkspaceIndex};
 use tasker_files::layout::TaskerDirectory;
-use tasker_services::Workspace;
+use tasker_services::{Storage, Workspace};
 use uuid::Uuid;
-
-/// Текст ошибки `--sqlite`: режим не поддерживается этой сборкой (решение (б) раздела 1 плана).
-pub const SQLITE_NOT_SUPPORTED: &str = "--sqlite is not supported by this build: use the .NET build of Tasker";
 
 pub struct Session {
     location: WorkspaceLocation,
@@ -25,13 +22,13 @@ pub struct Session {
 }
 
 impl Session {
-    /// Рабочая область из параметров: папка (по умолчанию текущая). Папка должна существовать.
+    /// Рабочая область из параметров: файл SQLite или папка (по умолчанию текущая). Папка должна существовать.
     pub fn locate(folder: Option<&str>, sqlite: Option<&str>) -> Result<WorkspaceLocation> {
         if folder.is_some() && sqlite.is_some() {
             return Err(CliError::new("Use either --workspace or --sqlite, not both"));
         }
-        if sqlite.is_some() {
-            return Err(CliError::new(SQLITE_NOT_SUPPORTED));
+        if let Some(file) = sqlite {
+            return Ok(WorkspaceLocation::sqlite(&expand_user_path(file)));
         }
         let folder = match folder {
             Some(folder) => expand_user_path(folder),
@@ -44,9 +41,12 @@ impl Session {
         Ok(location)
     }
 
-    /// Есть ли в папке область: `.tasker/projects`.
+    /// Есть ли область: у папки — `.tasker/projects`, у SQLite — сам файл.
     pub fn exists(location: &WorkspaceLocation) -> bool {
-        TaskerDirectory::new(location.path()).projects().is_dir()
+        match location.kind() {
+            WorkspaceKind::Files => TaskerDirectory::new(location.path()).projects().is_dir(),
+            WorkspaceKind::Sqlite => Path::new(location.path()).is_file(),
+        }
     }
 
     /// Открывает область. `for_completion` — только чтение существующей области (справка, автодополнение): ничего не создаётся,
@@ -57,10 +57,10 @@ impl Session {
             return Err(CliError::new(format!("No workspace at {}", location.path())));
         }
         // Консоль — отдельный держатель блокировок правки («<имя> (console)», ключ cli): блокировка интерфейса останавливает и команды.
-        let workspace = if for_completion {
-            Workspace::attach(location.path())?
-        } else {
-            Workspace::open(location.path())?
+        let workspace = match (location.kind(), for_completion) {
+            (WorkspaceKind::Sqlite, _) => Workspace::open_sqlite(location.path())?,
+            (WorkspaceKind::Files, true) => Workspace::attach(location.path())?,
+            (WorkspaceKind::Files, false) => Workspace::open(location.path())?,
         }
         .with_editor(tasker_services::locks::console_editor(&editor_name()));
         Ok(Session { location, workspace })
@@ -80,17 +80,9 @@ impl Session {
         &self.workspace
     }
 
-    pub fn directory(&self) -> &TaskerDirectory {
-        self.workspace.directory()
-    }
-
-    pub fn index(&self) -> &WorkspaceIndex {
-        self.workspace.index()
-    }
-
-    /// Все проекты области (в порядке индекса: по имени).
+    /// Все проекты области (по имени).
     pub fn all_projects(&self) -> Result<Vec<Project>> {
-        Ok(self.index().all::<Project>(&IndexQuery::default())?)
+        Ok(self.workspace.all_projects()?)
     }
 
     /// Проект по id или имени.
@@ -106,7 +98,7 @@ impl Session {
             return Ok(self.find_project(reference)?.id);
         }
         // Достаточно двух: нужно знать только «один ли».
-        let page = self.index().range::<Project>(&IndexQuery::default(), Page::first(2))?;
+        let page = self.workspace.project_range(None, Page::first(2))?;
         match page.total_count {
             1 => Ok(page.data[0].id),
             0 => Err(CliError::new(
@@ -275,15 +267,14 @@ mod tests {
     }
 
     #[test]
-    fn sqlite_and_a_missing_folder_are_errors() {
+    fn both_locations_and_a_missing_folder_are_errors() {
         assert_eq!(
             Session::locate(Some("a"), Some("b")).unwrap_err().text(),
             "Error: Use either --workspace or --sqlite, not both"
         );
-        assert_eq!(
-            Session::locate(None, Some("x.db")).unwrap_err().text(),
-            format!("Error: {SQLITE_NOT_SUPPORTED}")
-        );
+        let file = Session::locate(None, Some("x.db")).unwrap();
+        assert_eq!(file.kind(), WorkspaceKind::Sqlite);
+        assert!(file.path().ends_with("x.db"));
         assert!(
             Session::locate(Some("/nonexistent/nowhere"), None)
                 .unwrap_err()

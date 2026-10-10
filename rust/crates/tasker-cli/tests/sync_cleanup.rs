@@ -4,6 +4,7 @@
 mod common;
 
 use common::*;
+use tasker_services::Storage;
 
 #[test]
 fn sync_and_cleanup_check_on_the_untouched_corpus_match_the_cli_snapshots() {

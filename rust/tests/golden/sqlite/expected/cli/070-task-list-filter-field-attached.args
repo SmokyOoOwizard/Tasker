@@ -1,0 +1,9 @@
+task
+list
+--all
+--field
+Ожидание:attached
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

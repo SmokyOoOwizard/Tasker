@@ -1,14 +1,13 @@
 //! Наборы статусов (`StatusSetService`): убрать статус из набора нельзя, если он ещё нужен задачам типов с этим набором или доскам.
 use crate::Workspace;
 use crate::error::{Error, Result};
+use crate::storage::Storage;
 use crate::usages::Usages;
 use std::collections::{HashMap, HashSet};
 use tasker_core::locks::LockedEntity;
 use tasker_core::model::{Board, Status, StatusSet, TaskType};
 use tasker_core::tasks::{ListPage, Page, TaskFilter};
 use tasker_core::{validate, versioning};
-use tasker_files::index::IndexQuery;
-use tasker_files::layout::EntityKind;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,11 +146,7 @@ impl<'a> StatusSetService<'a> {
                 status_ids: Some(removed.to_vec()),
                 ..TaskFilter::default()
             };
-            usages.add_tasks(
-                self.ws
-                    .index()
-                    .count(EntityKind::Task, &IndexQuery::tasks(project_id, Some(&filter)))?,
-            );
+            usages.add_tasks(self.ws.count_tasks(project_id, &filter)?);
         }
 
         for board in self.ws.get_all::<Board>(project_id)? {

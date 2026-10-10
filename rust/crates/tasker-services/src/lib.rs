@@ -1,14 +1,14 @@
 //! Сервисы домена Tasker на Rust (TSK-132, фаза 2 плана `docs/rust-migration-plan.md`, п. 3): те же операции, проверки, тексты
-//! ошибок и каскады, что у `Tasker.Core.*Service` (.NET), поверх файлов `.tasker` ([`tasker_files::write`]) и индекса
-//! ([`tasker_files::index::WorkspaceIndex`]). Сервисы синхронные: в домене нет async.
+//! ошибок и каскады, что у `Tasker.Core.*Service` (.NET), поверх хранилища области: папки `.tasker` (файлы и индекс,
+//! [`files_store::FileStore`]) или файла SQLite (та же схема, что у EF Core в `Tasker.Storage.Db`, [`db::DbStore`], TSK-159).
+//! Сервисы синхронные: в домене нет async.
 //!
-//! Точка входа — [`Workspace`]: папка `.tasker`, индекс, часы ([`Clock`]) и держатель блокировок правки ([`EditHolder`]) — то, что в
-//! .NET приходит через контейнер (`TaskerDirectory`, `WorkspaceIndex`, `TimeProvider`, `IEditorIdentity`). Сервисы — лёгкие
+//! Точка входа — [`Workspace`]: хранилище ([`storage::Backend`]), часы ([`Clock`]) и держатель блокировок правки ([`EditHolder`]) —
+//! то, что в .NET приходит через контейнер (`I*Storage`, `IWriteScope`, `TimeProvider`, `IEditorIdentity`). Сервисы — лёгкие
 //! обёртки над `&Workspace` ([`Workspace::tasks`], [`Workspace::series`] и т. д.).
 //!
-//! Хранилища (`*Storage` в .NET) здесь — методы [`Workspace`] над общим [`storage::Entity`]: одна сущность читается из файла,
-//! списки и подсчёты идут из индекса, запись — через [`tasker_files::write`] под `write.lock` и с обновлением индекса
-//! (`written`), секции записи проекта — [`Workspace::exclusive`].
+//! Хранилища (`*Storage` в .NET) — трейт [`storage::Storage`]: сервисы зовут его через [`Workspace`] (`Deref`), не зная, файлы
+//! это или БД; секции записи проекта — [`Workspace::exclusive`].
 //!
 //! Правило переноса: поведение .NET воспроизводится буквально (тексты, коды ошибок, порядок захвата блокировок, число попыток
 //! каскадов). Расхождения — в `README.md` крейта и в отчёте задачи.
@@ -18,10 +18,12 @@ pub mod cascade;
 pub mod cleanup;
 pub mod clock;
 pub mod column_filters;
+pub mod db;
 pub mod error;
 pub mod field;
 pub mod field_conversion;
 pub mod field_enum;
+pub mod files_store;
 pub mod health;
 pub mod hierarchy;
 pub mod link_cycles;
@@ -45,21 +47,21 @@ pub mod users;
 pub use cascade::CascadeResult;
 pub use clock::{Clock, FakeClock, SystemClock};
 pub use error::{Error, Result};
+pub use storage::Storage;
 
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
+use storage::Backend;
 use tasker_core::locks::EditHolder;
-use tasker_files::edit_locks::EditLockStorage;
 use tasker_files::index::WorkspaceIndex;
 use tasker_files::layout::TaskerDirectory;
 use uuid::Uuid;
 
-/// Рабочая область в файловом режиме: всё, что нужно сервисам.
+/// Рабочая область: хранилище и всё, что нужно сервисам.
 #[derive(Clone)]
 pub struct Workspace {
-    directory: TaskerDirectory,
-    index: WorkspaceIndex,
+    backend: Backend,
     clock: Arc<dyn Clock>,
     editor: EditHolder,
     cascade_timeout: Duration,
@@ -73,13 +75,21 @@ impl Workspace {
         directory.ensure_created()?;
         tasker_core::perf::mark("workspace-dirs");
         let index = WorkspaceIndex::open(&directory)?;
-        Ok(Workspace {
-            directory,
-            index,
+        Ok(Self::with_backend(Backend::Files(files_store::FileStore::new(directory, index))))
+    }
+
+    /// Открывает файл SQLite: создаёт его со схемой EF Core, если файла нет (`DbInitializer`), и дописывает недостающие столбцы.
+    pub fn open_sqlite(file: impl AsRef<Path>) -> std::io::Result<Workspace> {
+        Ok(Self::with_backend(Backend::Db(db::DbStore::open(file.as_ref())?)))
+    }
+
+    fn with_backend(backend: Backend) -> Workspace {
+        Workspace {
+            backend,
             clock: Arc::new(SystemClock),
             editor: EditHolder::new(tasker_core::locks::LOCAL_KEY, tasker_core::locks::LOCAL_NAME),
             cascade_timeout: locks::CASCADE_WAIT,
-        })
+        }
     }
 
     /// Открывает папку с уже существующей областью, ничего не создавая, кроме индекса (автодополнение и справка консоли:
@@ -87,13 +97,12 @@ impl Workspace {
     pub fn attach(folder: impl AsRef<Path>) -> std::io::Result<Workspace> {
         let directory = TaskerDirectory::new(folder);
         let index = WorkspaceIndex::open(&directory)?;
-        Ok(Workspace {
-            directory,
-            index,
-            clock: Arc::new(SystemClock),
-            editor: EditHolder::new(tasker_core::locks::LOCAL_KEY, tasker_core::locks::LOCAL_NAME),
-            cascade_timeout: locks::CASCADE_WAIT,
-        })
+        Ok(Self::with_backend(Backend::Files(files_store::FileStore::new(directory, index))))
+    }
+
+    /// Открывает существующий файл SQLite для чтения (автодополнение): файла нет — ошибка; схема не создаётся.
+    pub fn attach_sqlite(file: impl AsRef<Path>) -> std::io::Result<Workspace> {
+        Ok(Self::with_backend(Backend::Db(db::DbStore::attach(file.as_ref())?)))
     }
 
     /// Та же папка, другой держатель блокировок (другой пользователь или клиент).
@@ -114,12 +123,26 @@ impl Workspace {
         self
     }
 
-    pub fn directory(&self) -> &TaskerDirectory {
-        &self.directory
+    pub fn backend(&self) -> &Backend {
+        &self.backend
     }
 
+    /// Хранилище папки; None — область в файле SQLite.
+    pub fn files(&self) -> Option<&files_store::FileStore> {
+        match &self.backend {
+            Backend::Files(files) => Some(files),
+            Backend::Db(_) => None,
+        }
+    }
+
+    /// Папка `.tasker` — только у области-папки (панику у SQLite ловят тесты: вызывающий проверяет [`Workspace::files`]).
+    pub fn directory(&self) -> &TaskerDirectory {
+        self.files().expect("a folder workspace").directory()
+    }
+
+    /// Индекс — только у области-папки.
     pub fn index(&self) -> &WorkspaceIndex {
-        &self.index
+        self.files().expect("a folder workspace").index()
     }
 
     pub fn clock(&self) -> &dyn Clock {
@@ -138,14 +161,11 @@ impl Workspace {
         self.cascade_timeout
     }
 
-    pub(crate) fn edit_locks(&self) -> EditLockStorage<'_> {
-        EditLockStorage::new(&self.directory)
-    }
-
-    /// Атомарная секция записи проекта (`IWriteScope.Exclusive`): `write.lock` между процессами плюс сверка папки задач проекта
-    /// перед действием. Вложенный вызов не ждёт самого себя.
-    pub fn exclusive<T>(&self, project_id: &Uuid, action: impl FnOnce() -> Result<T>) -> Result<T> {
-        self.index.exclusive(project_id, || Ok(action()))?
+    /// Атомарная секция записи проекта (`IWriteScope.Exclusive`): у папки — `write.lock` между процессами плюс сверка папки задач
+    /// проекта перед действием, у БД — транзакция, которая при гонке повторяется целиком (поэтому действие — `FnMut`). Вложенный
+    /// вызов выполняется внутри внешнего.
+    pub fn exclusive<T>(&self, project_id: &Uuid, mut action: impl FnMut() -> Result<T>) -> Result<T> {
+        self.backend.exclusive(project_id, &mut action)
     }
 
     pub fn projects(&self) -> project::ProjectService<'_> {
@@ -218,5 +238,14 @@ impl Workspace {
 
     pub fn agents(&self) -> users::AgentService<'_> {
         users::AgentService::new(self)
+    }
+}
+
+/// Операции хранилища ([`Storage`]) прямо у области: `ws.get_by_id::<Status>(…)`, `ws.tasks(…)`.
+impl std::ops::Deref for Workspace {
+    type Target = Backend;
+
+    fn deref(&self) -> &Backend {
+        &self.backend
     }
 }

@@ -1,0 +1,13 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[invalid] Workspace problems exist only in the desktop app with file storage"
+      }
+    ],
+    "isError": true
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}

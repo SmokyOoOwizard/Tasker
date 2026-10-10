@@ -1,0 +1,8 @@
+task
+get
+00000074-0000-4000-8000-000000000074
+--json
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

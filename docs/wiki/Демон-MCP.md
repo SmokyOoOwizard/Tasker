@@ -22,6 +22,7 @@
 
 ```bash
 tasker mcp workspace add ~/work/project-a   # папка с .tasker
+tasker mcp workspace add ~/data/tasker.db   # или существующий файл SQLite (та же база, что у десктопа и сервера)
 tasker mcp workspace list
 tasker mcp workspace remove ~/work/project-a
 tasker mcp port 5719                        # показать или задать порт; применится после restart
@@ -30,6 +31,7 @@ tasker mcp config                           # файл настроек, пор�
 
 - Порт по умолчанию `5719`, слушается только `127.0.0.1`.
 - Настройки — `settings.json` (раздел `mcp`: `port`, `workspaces`) в каталоге данных, общий у консоли, демона и десктопа: macOS `~/Library/Application Support/Tasker`, Linux `~/.local/share/Tasker`, Windows `%LOCALAPPDATA%\Tasker`; `TASKER_HOME` меняет каталог.
+- Область-файл SQLite называется по имени файла (`tasker.db`); её можно одновременно открывать десктопом, сервером и консолью — запись идёт транзакциями SQLite. Проблем файлов (`list_workspace_problems`) у неё нет.
 - Область, которую не удалось открыть (папку удалили, диск не подключён), не мешает остальным: в `status` она `failed`, повтор раз в 30 с и при изменении настроек.
 - Один демон на пользователя: второй `run` отказывается.
 

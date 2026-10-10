@@ -1,0 +1,19 @@
+formatVersion: 9
+id: a50818f8-83af-4be8-b63a-1c7b23e10e10
+title: 'Rust: поддержка SQLite-областей в консоли и демоне (та же схема EF Core, совместная работа с .NET-десктопом и сервером)'
+description: |-
+  Решение пользователя 2026-10-10: .NET-консоли в релизе больше нет, поэтому Rust-консоль и демон должны поддерживать SQLite-области (--sqlite <файл> в консоли, kind: "sqlite" у областей демона) вместо ответа «use the .NET build of Tasker». Вариант (а) из docs/rust-migration-plan.md (раздел 1, п. 1): перенос на rusqlite с той же схемой таблиц; Postgres в консоли и демоне не нужен.
+
+  Ограничения: один файл .db одновременно открывают .NET-десктоп, .NET-сервер (EF Core, src/Tasker.Storage.Db) и Rust-консоль/демон. Rust читает и пишет ту же схему, что создаёт EnsureCreated, в тех же форматах значений (Guid, DateTimeOffset, bool, enum, JSON-колонки, коллации, индексы, уникальность), версии сущностей совпадают с .NET (ходят через --expected-version, MCP и REST). Схему не менять, своих таблиц не добавлять, миграций не делать (TSK-1). Блокировки и параллельная запись — как у .NET (журнал, busy timeout, транзакции), без потерь, дублей номеров серий и нарушений EditLock.
+
+  План: 1) трейты хранилища в tasker-services по образцу I*Storage, файловая реализация за трейтом без изменения поведения; 2) SQLite-хранилище на rusqlite, создание новой БД с эталонной схемой (rust/tests/golden/sqlite/schema.sql); 3) --sqlite во всех командах консоли как у .NET; 4) области kind: sqlite в демоне и MCP, mcp workspace add <файл.db>; 5) golden-корпус: раздел sqlite в scripts/golden/generate.py, .NET-тесты с хранилищем sqlite против Rust через TASKER_BIN; 6) тест совместной записи .NET и Rust в один файл; 7) документация (wiki, план переноса, rust/README.md).
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-10T20:55:48.1433960+00:00
+updatedAt: 2026-10-10T21:48:22.8210800+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 159
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 603a9c63-f604-429e-84c7-7610e4abee2a

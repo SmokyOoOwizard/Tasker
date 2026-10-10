@@ -5,6 +5,7 @@ use crate::Workspace;
 use crate::error::{Error, Result};
 use crate::link_cycles;
 use crate::rewrites;
+use crate::storage::Storage;
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 use tasker_core::ShortId;
@@ -66,7 +67,7 @@ fn stripes() -> &'static [Mutex<()>; 256] {
 
 /// Убирает у других задач связи, которые указывали на удалённую задачу (`TaskLinks.RemoveInbound`).
 pub fn remove_inbound(ws: &Workspace, project_id: &Uuid, target_id: &Uuid) -> Result<()> {
-    for source in ws.index().tasks_linked_to(project_id, target_id)? {
+    for source in ws.tasks_linked_to(project_id, target_id)? {
         let target = *target_id;
         rewrites::modify(
             ws,
@@ -297,7 +298,7 @@ impl<'a> TaskLinkService<'a> {
                 });
             }
         }
-        for source in self.ws.index().tasks_linked_to(project_id, &task.id)? {
+        for source in self.ws.tasks_linked_to(project_id, &task.id)? {
             for link in source.links.iter().filter(|x| x.target_id == task.id) {
                 let Some(link_type) = known.get(&link.type_id) else {
                     continue;

@@ -1,0 +1,11 @@
+task
+create
+Bad
+--type
+Bug
+--field
+Estimate=abc
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

@@ -1,0 +1,10 @@
+task
+list
+--offset
+5
+--limit
+7
+--sqlite
+<ROOT>/golden.db
+-p
+Golden

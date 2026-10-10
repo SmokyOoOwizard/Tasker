@@ -4,6 +4,7 @@ use crate::Workspace;
 use crate::error::Result;
 use crate::link_cycles::{self, LinkCycle};
 use crate::link_type;
+use crate::storage::Storage;
 use std::collections::HashMap;
 use tasker_core::ids::guid_d;
 use tasker_core::model::{LinkType, Series};
@@ -46,7 +47,7 @@ impl<'a> SeriesHealthService<'a> {
     }
 
     pub fn check(&self, project_id: &Uuid) -> Result<SeriesHealth> {
-        let number_conflicts = self.ws.index().number_conflicts(project_id)?;
+        let number_conflicts = self.ws.number_conflicts(project_id)?;
         let all = self.ws.get_all::<Series>(project_id)?;
         let unreadable = self.ws.count_unreadable::<Series>(project_id)?;
         // Нечитаемая серия выглядела бы несуществующей: тогда ссылки на неё не считаем недействительными.
@@ -54,7 +55,7 @@ impl<'a> SeriesHealthService<'a> {
             0
         } else {
             let known: Vec<Uuid> = all.iter().map(|x| x.id).collect();
-            self.ws.index().tasks_with_series_not_in(project_id, &known)?.len()
+            self.ws.tasks_with_series_not_in(project_id, &known)?.len()
         };
         Ok(SeriesHealth {
             number_conflicts,
@@ -132,7 +133,7 @@ impl<'a> LinkHealthService<'a> {
         }
         let known: Vec<Uuid> = all.iter().map(|x| x.id).collect();
         Ok(LinkHealth {
-            tasks_with_invalid_links: self.ws.index().tasks_with_invalid_links(project_id, &known)?.len(),
+            tasks_with_invalid_links: self.ws.tasks_with_invalid_links(project_id, &known)?.len(),
             unreadable_files: 0,
             cycles,
         })

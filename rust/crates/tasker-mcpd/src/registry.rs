@@ -22,7 +22,8 @@ pub struct OpenWorkspace {
     key: String,
     workspace: Workspace,
     agent: Arc<LocalAgent>,
-    _watcher: WatcherHandle,
+    /// Наблюдатель `.tasker`; у области SQLite его нет — менять файл БД в обход хранилища нечему.
+    _watcher: Option<WatcherHandle>,
 }
 
 impl OpenWorkspace {
@@ -148,9 +149,14 @@ impl WorkspaceRegistry {
 
     fn create(location: &WorkspaceLocation, key: String) -> io::Result<OpenWorkspace> {
         if location.kind() == WorkspaceKind::Sqlite {
-            return Err(io::Error::other(
-                "SQLite workspaces are not supported by this build of tasker-mcpd: use the .NET build",
-            ));
+            // Тот же файл БД, что у .NET-десктопа и сервера (TSK-159): схема EF Core, совместная запись через транзакции SQLite.
+            return Ok(OpenWorkspace {
+                location: location.clone(),
+                key,
+                workspace: Workspace::open_sqlite(location.path())?,
+                agent: Arc::new(LocalAgent::new()),
+                _watcher: None,
+            });
         }
         let workspace = Workspace::open(location.path())?;
         let index = workspace.index().clone();
@@ -172,7 +178,7 @@ impl WorkspaceRegistry {
             key,
             workspace,
             agent: Arc::new(LocalAgent::new()),
-            _watcher: watcher,
+            _watcher: Some(watcher),
         })
     }
 }
@@ -262,15 +268,16 @@ mod tests {
     }
 
     #[test]
-    fn sqlite_is_not_supported_by_this_build() {
+    fn a_sqlite_file_opens_with_the_ef_core_schema_and_without_a_watcher() {
         let registry = WorkspaceRegistry::new();
         let file = temp_dir("db").join("tasker.db");
         std::fs::write(&file, b"").unwrap();
-        let error = registry.open(&WorkspaceLocation::sqlite(file.to_str().unwrap())).unwrap_err();
-        assert_eq!(
-            error.to_string(),
-            "SQLite workspaces are not supported by this build of tasker-mcpd: use the .NET build"
-        );
+        let opened = registry.open(&WorkspaceLocation::sqlite(file.to_str().unwrap())).unwrap();
+        assert_eq!(opened.key(), "tasker.db");
+        assert!(opened.workspace().files().is_none());
+        assert!(opened.workspace().projects().get_all().unwrap().is_empty());
+        assert!(opened._watcher.is_none());
+        drop(opened);
         let _ = std::fs::remove_dir_all(file.parent().unwrap().parent().unwrap());
     }
 }

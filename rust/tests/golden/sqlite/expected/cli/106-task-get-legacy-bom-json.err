@@ -1,0 +1,1 @@
+Error: Task is given by id (the full one, or the first 8+ hex characters shown by 'task list') or by a reference like TSK-5, not 'Legacy four': find it with 'task list'

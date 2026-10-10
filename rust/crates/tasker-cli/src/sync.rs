@@ -21,6 +21,19 @@ pub fn run(ctx: &mut Context<'_>, workspace: Option<&str>, sqlite: Option<&str>)
         Err(_) if quiet && sqlite.is_none() => return Ok(()),
         Err(e) => return Err(e),
     };
+    if location.kind() == tasker_core::settings::WorkspaceKind::Sqlite {
+        if !quiet {
+            ctx.print(
+                &object(vec![
+                    ("path", Value::String(location.path().to_string())),
+                    ("via", Value::Null),
+                    ("problemCount", Value::from(0)),
+                ]),
+                "A SQLite workspace has no cache: nothing to sync",
+            );
+        }
+        return Ok(());
+    }
     if !std::path::Path::new(location.path()).join(NAME).is_dir() {
         if quiet {
             return Ok(());

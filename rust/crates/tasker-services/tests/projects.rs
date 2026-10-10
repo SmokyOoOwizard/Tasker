@@ -65,14 +65,23 @@ fn stats_count_entities_and_delete_removes_the_project_with_everything_in_it() {
     assert_eq!(env.ws.projects().get_range(Page::first(50)).unwrap().total_count, 0);
     assert!(env.ws.task_types().get_all(p).unwrap().is_empty());
     assert!(env.ws.tasks().get_all(p, None).unwrap().is_empty());
-    assert!(!env.ws.directory().project(p).root().exists());
+    if !sqlite() {
+        assert!(!env.ws.directory().project(p).root().exists());
+    }
 
     // «Поздний» писатель не воскрешает папку удалённого проекта.
     let late = err(env.ws.tasks().create(p, &CreateTask::new("Late", env.task_type.id)));
     assert!(late.is_validation());
     let late_series = message(env.ws.series().create(p, &CreateSeries::new("Late", "LT")));
-    assert_eq!(late_series, format!("ProjectId: project not found: {p}"));
-    assert!(!env.ws.directory().project(p).root().exists());
+    if sqlite() {
+        // В БД запись в удалённый проект отвергает внешний ключ (как у .NET: ошибка SaveChanges, а не проверка хранилища).
+        assert!(late_series.contains("FOREIGN KEY constraint failed"), "{late_series}");
+    } else {
+        assert_eq!(late_series, format!("ProjectId: project not found: {p}"));
+    }
+    if !sqlite() {
+        assert!(!env.ws.directory().project(p).root().exists());
+    }
 }
 
 #[test]
@@ -127,6 +136,9 @@ fn projects_are_created_listed_and_renamed_with_a_version() {
 
 #[test]
 fn create_after_the_status_set_vanished_is_not_found_and_describe_after_the_project_vanished_is_not_found() {
+    if sqlite() {
+        return; // набор, на который ссылается тип, в БД не удалить (внешний ключ)
+    }
     let env = Env::new();
     let p = &env.project;
     let task = env.task("One");
