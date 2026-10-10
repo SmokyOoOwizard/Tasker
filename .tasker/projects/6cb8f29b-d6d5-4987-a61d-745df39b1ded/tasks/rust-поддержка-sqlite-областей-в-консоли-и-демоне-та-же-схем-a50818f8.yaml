@@ -8,9 +8,9 @@ description: |-
 
   План: 1) трейты хранилища в tasker-services по образцу I*Storage, файловая реализация за трейтом без изменения поведения; 2) SQLite-хранилище на rusqlite, создание новой БД с эталонной схемой (rust/tests/golden/sqlite/schema.sql); 3) --sqlite во всех командах консоли как у .NET; 4) области kind: sqlite в демоне и MCP, mcp workspace add <файл.db>; 5) golden-корпус: раздел sqlite в scripts/golden/generate.py, .NET-тесты с хранилищем sqlite против Rust через TASKER_BIN; 6) тест совместной записи .NET и Rust в один файл; 7) документация (wiki, план переноса, rust/README.md).
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-10T20:55:48.1433960+00:00
-updatedAt: 2026-10-10T20:55:50.7632270+00:00
+updatedAt: 2026-10-10T21:48:22.8210800+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 159
