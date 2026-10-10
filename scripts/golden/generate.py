@@ -5,7 +5,8 @@ Golden-корпус для переноса консоли и демона на 
 Скрипт на текущей .NET-сборке создаёт рабочую область со всеми сущностями, всеми типами полей, «опасными» строками, файлами
 всех formatVersion 0–9, legacy-именами <guid>.yaml, файлом с маркером конфликта и файлом «из будущего», приводит id и даты
 к детерминированным значениям и снимает эталоны: версии файлов (хэши), результат `tasker migrate`, вывод ключевых команд
-консоли, снапшоты MCP (tools/list, ответы инструментов, по ошибке каждого кода) и стилевые эталоны YamlDotNet.
+консоли, снапшоты MCP (tools/list, ответы инструментов, по ошибке каждого кода, `tasker sync` через демон) и стилевые эталоны
+YamlDotNet.
 
   scripts/golden/generate.py [--bin <каталог с tasker и tasker-mcpd>] [--out rust/tests/golden] [--keep]
   scripts/golden/generate.py --verify [--bin <каталог>]      снять эталоны заново с указанного бинарника и сравнить с rust/tests/golden
@@ -810,6 +811,13 @@ def snapshot_mcp(t: Tasker, run_ws, out_dir, legacy_ids, by_title):
         save(f"{errors}/locked", m.call("update_task", {**G, "taskId": bug["id"], "title": "x", "version": bug["version"]}), scrub_times=True)
         t.run("lock", "release", "task", bug["id"], ws=run_ws, project="Golden")
         save(f"{errors}/unknown-tool", m.call("no_such_tool", {}))
+
+        # tasker sync при работающем демоне, который обслуживает папку: сверяет демон (via daemon), проблемы файлов и серий —
+        # из его ответа (TSK-160). Консоль и демон — проверяемой сборки.
+        s = Snapshots(t, os.path.join(mcp_dir, "cli"), root_replacements(root))
+        s.take("sync-daemon", "sync", ws=run_ws)
+        s.take("sync-daemon-json", "sync", "--json", ws=run_ws)
+        s.take("sync-daemon-quiet", "sync", "-q", ws=run_ws)
     finally:
         t.run("mcp", "stop", check=False)
 

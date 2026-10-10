@@ -31,7 +31,8 @@ cargo build --release                                 # профиль из Carg
                                                       # .cargo/config.toml: -dead_strip_dylibs на macOS (только libSystem)
 ```
 
-Тесты пишут временные файлы в `target/tmp`, системный временный каталог не трогают. Интеграционные тесты `tasker-cli` копируют
+Тесты пишут временные файлы в `target/tmp`; исключение — репозитории git тестов хуков (`tasker-cli/tests/git_hooks.rs`), они в
+системном временном каталоге: `target/tmp` лежит внутри репозитория Tasker, и хук из папки без своего репозитория встал бы в его `.git/hooks`. Интеграционные тесты `tasker-cli` копируют
 `tests/golden/workspace` в `target/tmp` и сверяют `tasker migrate` с `tests/golden/expected/migrate` (дерево и байты файлов,
 вывод, коды выхода), ошибки области и разбора — с `expected/cli/*error-*`, а справку всех 112 команд — байт в байт с
 `expected/cli/*help-*` (`tests/help.rs`; бинарник запускается из корня репозитория, как при снятии эталонов: подсказки
@@ -49,7 +50,12 @@ cargo build --release                                 # профиль из Carg
 корпуса): статус с рабочим процессом, перезапуск упавшего и отказ после пяти падений (паузы 1+2+5+10 с), замена под непрерывной
 нагрузкой (`/mcp` create_task новыми соединениями, `/health` и keep-alive) без единого отказа и с каждой подтверждённой записью ровно
 один раз, откаты замены (нет программы, упал, не успел, не открыл область), вызов в работе у старого процесса, остановка, смерть
-супервизора, передача сокета сообщением; `tasker-cli/tests/mcp_daemon.rs` — `mcp upgrade` и `mcp run` с Ctrl+C. Настоящий демон
+супервизора, передача сокета сообщением; `tasker-cli/tests/mcp_daemon.rs` — `mcp upgrade`, `mcp run` с Ctrl+C и `sync` через демон
+(`via daemon`, проблемы файлов от демона, необслуживаемая папка и остановленный демон — `via direct`); `tasker-cli/tests/git_hooks.rs` —
+`hooks install | status | uninstall` (тексты, блок хука, чужие хуки, `core.hooksPath`) и хуки в деле на настоящем git: `checkout`,
+`merge`, `rebase`, `worktree add` обновляют `index-rs.db` без запуска Tasker, пропавшая программа git не ломает;
+`tasker-cli/tests/concurrency.rs` — параллельные процессы консоли: чтение ждёт `index-rs.lock`, запись — `write.lock`, восемь
+параллельных `task create` — все задачи и номера серии без дублей, из двух правок одной версии проходит одна (TSK-160). Настоящий демон
 пользователя (порт 5719) не трогается. `tasker-mcpd/tests/mcp.rs` поднимает демон с областью-копией корпуса (`golden`) и
 исчезнувшей папкой (`broken`), повторяет вызовы `scripts/golden/generate.py` и сверяет ответы с `expected/mcp/*.json` по смыслу
 (подстановки `<ROOT>`, `<WSID:…>`, `<LOCAL-AGENT-*>`, `<TIME>`; порядок ключей конверта и `isError: false` не в счёт, JSON в `text` —

@@ -1,0 +1,4 @@
+sync
+--json
+-w
+<ROOT>/golden

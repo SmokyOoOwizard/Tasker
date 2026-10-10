@@ -11,12 +11,8 @@ pub fn golden() -> PathBuf {
 
 /// Пустой каталог в `target/tmp`; внутри — копия области под именем `golden`, как у `generate.py` (`<ROOT>/golden`).
 pub fn fresh_copy() -> (PathBuf, PathBuf) {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/tmp")
-        .join(uuid::Uuid::new_v4().simple().to_string());
-    std::fs::create_dir_all(&root).unwrap();
     // Канонический путь (без `..`): так же его покажет консоль в сообщениях об ошибках.
-    let root = canonical(&root);
+    let root = temp_root();
     let workspace = root.join("golden");
     copy_dir(&golden().join("workspace"), &workspace);
     (root, workspace)
@@ -42,17 +38,39 @@ pub struct Run {
 }
 
 pub fn tasker(root: &Path, args: &[&str]) -> Run {
-    let output = Command::new(env!("CARGO_BIN_EXE_tasker"))
+    run(command(root, args))
+}
+
+/// Команда консоли в `root`: свои `TASKER_HOME` (`<root>/.home`), место службы и её имя — настоящая установка и её демон
+/// (`tasker sync` спрашивает работающий демон) тестов не касаются.
+pub fn command(root: &Path, args: &[&str]) -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_tasker"));
+    command
         .args(args)
         .env_remove("TASKER_PROJECT")
-        .current_dir(root)
-        .output()
-        .unwrap();
+        .env("TASKER_HOME", root.join(".home"))
+        .env("TASKER_SERVICE_DIR", root.join(".home").join("service"))
+        .env("TASKER_SERVICE_LABEL", format!("com.tasker.cli-test-{}", std::process::id()))
+        .current_dir(root);
+    command
+}
+
+pub fn run(mut command: Command) -> Run {
+    let output = command.output().unwrap();
     Run {
         stdout: String::from_utf8(output.stdout).unwrap(),
         stderr: String::from_utf8(output.stderr).unwrap(),
-        code: output.status.code().unwrap(),
+        code: output.status.code().unwrap_or(-1),
     }
+}
+
+/// Пустой каталог в `target/tmp` (канонический путь).
+pub fn temp_root() -> PathBuf {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/tmp")
+        .join(uuid::Uuid::new_v4().simple().to_string());
+    std::fs::create_dir_all(&root).unwrap();
+    canonical(&root)
 }
 
 /// Снапшот `expected/<dir>/<name>`: аргументы (с подстановкой `<ROOT>`), stdout, stderr, код.
