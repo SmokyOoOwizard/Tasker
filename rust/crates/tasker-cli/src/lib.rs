@@ -17,7 +17,7 @@ pub mod hints;
 pub mod json;
 pub mod kit;
 pub mod migrate;
-pub mod perf;
+pub use tasker_core::perf;
 pub mod session;
 pub mod spec;
 pub mod suggest;

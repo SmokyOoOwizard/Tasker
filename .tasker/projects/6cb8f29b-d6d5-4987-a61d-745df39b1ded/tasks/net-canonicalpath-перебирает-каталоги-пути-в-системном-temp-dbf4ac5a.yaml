@@ -1,0 +1,11 @@
+formatVersion: 9
+id: dbf4ac5a-fbdf-454e-b955-2ca6afa004c8
+title: '.NET: CanonicalPath перебирает каталоги пути — в системном temp (50 тыс. записей) +40 мс на каждый вызов консоли'
+description: 'CanonicalPath.ActualName (src/Tasker.Storage.Files/Workspaces/CanonicalPath.cs) на каждом компоненте пути перечисляет каталог (EnumerateFileSystemInfos), чтобы узнать настоящий регистр имени. Если область лежит в большом каталоге (системный temp macOS /var/folders/.../T — ~50 000 записей; домашний каталог с тысячами файлов), каждый вызов консоли платит десятки мс. Замер TSK-136 на Rust-порте той же логики: 43 мс на вызов (status list в temp: 53 мс против 10 мс). В Rust исправлено быстрым путём (TSK-136): getattrlist(ATTR_CMN_NAME) по полному пути — если записанное имя совпадает с набранным, каталог не перечисляется. Для .NET: тот же быстрый путь (на macOS — getattrlist через P/Invoke или проверка File.Exists + совпадение регистра через FileSystemInfo по прямому пути); базовая линия docs/rust-migration-baseline.md, вероятно, включает эту стоимость (стенд bench.py создаёт область в системном temp).'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-10T17:55:59.6861910+00:00
+updatedAt: 2026-10-10T17:55:59.6861910+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 150

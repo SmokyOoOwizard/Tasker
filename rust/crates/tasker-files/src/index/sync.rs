@@ -55,7 +55,10 @@ struct Known {
 pub(super) fn run(connection: &mut Connection, directory: &TaskerDirectory, scopes: &[String]) -> io::Result<SyncReport> {
     let transaction = connection.transaction().map_err(db_error)?;
     let indexed = indexed_stamps(&transaction, scopes)?;
+    let started = tasker_core::perf::start();
     let on_disk = scan_disk(directory, scopes);
+    tasker_core::perf::count("sync-scan", started);
+    let started = tasker_core::perf::start();
 
     let mut report = SyncReport::default();
     for (path, known) in &indexed {
@@ -93,7 +96,10 @@ pub(super) fn run(connection: &mut Connection, directory: &TaskerDirectory, scop
         }
         report.updated += 1;
     }
+    tasker_core::perf::count("sync-indexed", started);
+    let started = tasker_core::perf::start();
     transaction.commit().map_err(db_error)?;
+    tasker_core::perf::count("sync-commit", started);
     Ok(report)
 }
 

@@ -27,7 +27,7 @@ pub fn eq_ignore_case(a: &str, b: &str) -> bool {
 
 /// Простое (однознаковое) соответствие верхнего регистра, как `u_toupper` в ICU, которым пользуется .NET для инвариантной
 /// культуры: многознаковые правила (ß → SS) не применяются. Исключение .NET (`pal_casing.c`): ı (U+0131) не меняется.
-fn upper_char(c: char) -> char {
+pub fn upper_char(c: char) -> char {
     if c == '\u{0131}' {
         return c;
     }

@@ -2,6 +2,8 @@
 use std::io::Write;
 
 fn main() {
+    // Первая метка: запуск процесса и загрузка бинарника до входа в main (TASKER_PROFILE=1).
+    tasker_cli::perf::mark("main");
     let _console = tasker_cli::terminal::ConsoleSetup::open();
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut out = std::io::stdout().lock();

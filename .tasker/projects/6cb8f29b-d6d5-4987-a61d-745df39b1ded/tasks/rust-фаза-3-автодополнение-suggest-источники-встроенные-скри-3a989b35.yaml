@@ -5,10 +5,18 @@ description: |-
   Фаза 3 плана docs/rust-migration-plan.md, п. 3–4. Директива [suggest] и источники подсказок (как Sources.cs: проекты, задачи по префиксу, статусы, типы, поля…), существующие скрипты tasker.bash/zsh/ps1/fish встраиваются как есть через include_str! и печатаются tasker completion <shell> байт в байт. PerfTrace (TASKER_PROFILE=1), чтобы scripts/perf/bench.py работал без изменений.
 
   Критерий: bench.py calls показывает целевые времена (единицы-десятки мс на вызов); бинарник статически слинкован и весит единицы МБ; сравнить с базовой линией фазы 0 и записать числа.
+
+  ИТОГ (2026-10-10, docs/rust-migration-results.md): цель достигнута.
+  - Скорость (50 задач, обычная папка, медианы): version 4.3 мс (.NET 59), status list 7.8 (140), task list --limit 1 11 (164–167), task get 13 (188), task create 14 (226) — в 14–18 раз; daemon/nodaemon одинаково.
+  - 2000 задач: get 25 / list 24 / create 39 мс (.NET 203 / 183 / 270); RSS демона 7 МБ (.NET 67).
+  - Размер: tasker 4,3 МиБ, tasker-mcpd 5,0 МиБ (вместе 9,3 МиБ, tar.gz 4,6 МБ) против 152 МБ / 377 файлов; консоль — только libSystem (-dead_strip_dylibs); opt-level s оставлен (z −0,8 МиБ, но на 20–45 % медленнее; 3 +33 % размера за 3–5 %).
+  - Исправлено: CanonicalPath перебирал каталоги пути (в системном temp 43 мс на вызов) → getattrlist; PerfTrace без запуска ps.
+  - Автодополнение: порт логики System.CommandLine, scripts/completion-diff.py — 0 расхождений с .NET на ~18 тыс. строк в 3 режимах; сценарии CompletionTests/ManualCompletionTests/PerformanceGuardTests в Rust.
+  - Бэклог: TSK-150 (.NET CanonicalPath, +130 мс в temp), TSK-151 ([suggest] теряет начальный -p), TSK-152 (дешевле сверка индекса).
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-09T11:34:29.5141990+00:00
-updatedAt: 2026-10-09T11:34:36.7766290+00:00
+updatedAt: 2026-10-10T19:10:30.5333570+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 136

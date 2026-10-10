@@ -13,6 +13,7 @@ pub mod io;
 pub mod json;
 pub mod locks;
 pub mod model;
+pub mod perf;
 pub mod reference;
 pub mod settings;
 pub mod tasks;

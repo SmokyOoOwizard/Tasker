@@ -5,10 +5,12 @@
 //! `TASKER_PROJECT` или единственный), которая открывается только если она есть.
 use crate::commands::manual::{LANGUAGE_VARIABLE, ManualCatalog};
 use crate::session::{Session, refs};
-use crate::spec::{self, Arity, CommandSpec, GLOBAL_OPTIONS, HELP_OPTION, OptKind, OptSpec, VERSION_OPTION};
+use crate::spec::{self, CommandSpec, OptKind, OptSpec};
 use std::cell::OnceCell;
-use std::collections::HashMap;
 use std::io::Write;
+
+mod scl;
+use scl::{Abort, Parsed, Sym, Tree};
 use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType, LinkType, Series, Status, StatusSet, TaskType, UserKind};
 use tasker_core::tasks::{Page, TaskFilter};
 use tasker_core::validate::{eq_ignore_case, to_lower_invariant};
@@ -29,7 +31,19 @@ pub enum Dialect {
 /// Выполняет директиву: печатает варианты, всегда код 0.
 pub fn run(args: &[String], out: &mut dyn Write) -> i32 {
     let directive = args.first().map(String::as_str).unwrap_or_default();
-    let text = args.get(1).cloned().unwrap_or_default();
+    let root = spec::root();
+    let tree = Tree::new(&root);
+    // Строка — второй аргумент программы, и .NET разбирает его как любой аргумент (`parseResult.Tokens.LastOrDefault(...)`):
+    // начатая с короткого параметра строка («-p X status get») теряет его, с `--x=` — делится. Так и здесь, ради паритета.
+    let Ok(tokens) = scl::tokenize(&tree, args.to_vec()) else {
+        return 0;
+    };
+    let text = tokens
+        .iter()
+        .rev()
+        .find(|t| t.kind != scl::Kind::Directive)
+        .map(|t| t.value.clone())
+        .unwrap_or_default();
     let inner = directive.trim_start_matches("[suggest").trim_end_matches(']');
     let parts: Vec<&str> = inner.trim_start_matches(':').split(':').collect();
     let dialect = if parts.get(1) == Some(&"pwsh") {
@@ -50,82 +64,177 @@ pub fn run(args: &[String], out: &mut dyn Write) -> i32 {
     0
 }
 
-/// Варианты для разобранной строки (курсор в конце), уже отсортированные и ограниченные.
+/// Варианты для разобранной строки (курсор в конце), уже отсортированные и ограниченные (`CompleteDirective.Suggest.Invoke`).
 pub fn complete(line: &str) -> Vec<String> {
     let root = spec::root();
-    let tokens = tokenize(line);
-    let typing = !line.is_empty() && !line.ends_with(' ');
-    let (preceding_tokens, word) = if typing {
-        let mut t = tokens.clone();
-        let last = t.pop().unwrap_or_default();
-        (t, last)
-    } else {
-        (tokens.clone(), String::new())
-    };
-    let walk = walk(&root, &preceding_tokens);
-    let command = *walk.path.last().expect("a command");
-    let hidden: &[&str] = if matches!(command.name, "manual" | "completion") {
+    let tree = Tree::new(&root);
+    // Исключение где угодно в .NET — пустой ответ (директива ловит всё).
+    complete_in(&tree, line).unwrap_or_default()
+}
+
+fn complete_in(tree: &Tree<'_>, line: &str) -> Result<Vec<String>, Abort> {
+    let typed = scl::parse(tree, line)?;
+    let hidden: &[&str] = if matches!(typed.innermost_command().name, "manual" | "completion") {
         &["--workspace", "-w", "--sqlite", "--project", "-p"]
     } else {
         &[]
     };
-    let mut lookup = Lookup::new(&walk, &word);
-
-    let mut all: Vec<String> = Vec::new();
-    let dashed = word.starts_with('-');
-    match walk.awaiting.filter(|_| !(dashed && walk.collecting)) {
-        // Значение параметра: только его источник; у группы команд параметр с одним значением без значения — как без него.
-        Some(option) if !command.is_group() || per_token(option) => {
-            all.extend(values_of(&mut lookup, Source::of(&walk.path, Target::Option(option.id()))));
-        }
-        _ => {
-            if command.is_group() {
-                all.extend(command.subcommands.iter().flat_map(|c| c.all_names().map(str::to_string)));
-            }
-            if let Some(argument) = current_argument(command, walk.arguments_typed) {
-                all.extend(values_of(&mut lookup, Source::of(&walk.path, Target::Argument(argument.name))));
-                if !argument.accepted.is_empty() {
-                    all.extend(argument.accepted.iter().map(|a| a.to_string()));
-                }
-            }
-            for option in options_around(&walk.path, false) {
-                if option.hidden {
-                    continue;
-                }
-                all.extend(option.all_names().map(str::to_string));
-            }
-        }
-    }
-    let starts = |x: &str| x.to_lowercase().starts_with(&word.to_lowercase());
-    let mut all: Vec<String> = all
+    let mut all: Vec<String> = completions(tree, &typed, line)?
         .into_iter()
-        .filter(|x| !x.is_empty() && !x.contains('\n') && !is_noise(x) && !hidden.contains(&x.as_str()) && starts(x))
+        .filter(|x| !x.is_empty() && !is_noise(x) && !hidden.contains(&x.as_str()))
         .collect();
     dedup(&mut all);
 
     // Параметры предлагаются, когда слово начато с «-» (или предлагать больше нечего): иначе список значений тонет в --json, -w...
-    let options: Vec<String> = all.iter().filter(|x| x.starts_with('-')).cloned().collect();
     let rest: Vec<String> = all.iter().filter(|x| !x.starts_with('-')).cloned().collect();
+    let (preceding, word) = split_last(line);
+    let dashed = word.starts_with('-');
     let mut wanted = if dashed || rest.is_empty() { all } else { rest };
-    let _ = options;
+
+    // Слово с «-» после параметра, принимающего несколько значений (--status A --al), разбор считает ещё одним его значением и
+    // предлагает только значения: параметры команды собираем сами по строке до этого слова.
     if dashed && !word.contains('=') {
-        for option in options_around(&walk.path, true) {
-            let used = walk.used.iter().any(|u| std::ptr::eq(*u, option));
-            let repeatable = matches!(option.kind, OptKind::Value { multiple: true, .. });
-            if option.hidden || (used && !repeatable) {
-                continue;
-            }
-            for name in option.all_names() {
-                if name.to_lowercase().starts_with(&word.to_lowercase()) && !is_noise(name) && !hidden.contains(&name) {
-                    wanted.push(name.to_string());
-                }
-            }
-        }
+        wanted.extend(
+            options_for(tree, &preceding, &word)?
+                .into_iter()
+                .filter(|x| !hidden.contains(&x.as_str())),
+        );
         dedup(&mut wanted);
     }
     wanted.sort_by(|a, b| natural_order(a, b));
     wanted.truncate(LIMIT);
-    wanted
+    Ok(wanted)
+}
+
+/// `ParseResult.GetCompletions(line.Length)`: варианты для символа под курсором — команды (подкоманды, параметры, значения
+/// аргументов, рекурсивные параметры предков) или параметра (значения), с отбором по вхождению слова под курсором.
+fn completions(tree: &Tree<'_>, typed: &Parsed<'_>, line: &str) -> Result<Vec<String>, Abort> {
+    let current = typed.symbol_to_complete()?;
+    let word = typed.word_to_complete();
+    let path = tree.chain(typed.innermost_command()).into_iter().rev().collect::<Vec<_>>();
+    let mut items: Vec<String> = Vec::new();
+    let add_names = |items: &mut Vec<String>, names: &mut dyn Iterator<Item = &'static str>| {
+        items.extend(names.filter(|n| scl::contains_ignore_case(n, &word)).map(str::to_string));
+    };
+    match current {
+        Sym::Command(command) => {
+            for sub in &command.subcommands {
+                add_names(&mut items, &mut sub.all_names());
+            }
+            for option in tree.options(command) {
+                if !option.hidden {
+                    add_names(&mut items, &mut option.all_names());
+                }
+            }
+            for argument in &command.arguments {
+                let values = argument_values(tree, typed, &path, argument, line);
+                items.extend(values.into_iter().filter(|v| scl::contains_ignore_case(v, &word)));
+            }
+            for parent in tree.chain(command).into_iter().skip(1) {
+                for option in tree.options(parent) {
+                    if tree.recursive(option) && !option.hidden {
+                        add_names(&mut items, &mut option.all_names());
+                    }
+                }
+            }
+            let reached = typed.options_with_limit_reached();
+            items.retain(|item| !reached.contains(&item.as_str()));
+        }
+        Sym::Option(option) => {
+            let values = if scl::shape(option).boolean {
+                vec!["True".to_string(), "False".to_string()]
+            } else {
+                collect(typed, &path, Source::of(&path, Target::Option(option.id())), line)
+            };
+            items.extend(values.into_iter().filter(|v| scl::contains_ignore_case(v, &word)));
+        }
+        Sym::Argument(_) | Sym::None => {}
+    }
+    Ok(items)
+}
+
+/// Значения аргумента команды (`Argument.GetCompletions`): допустимые значения (`AcceptOnlyFromAmong`) или источник Tasker — только
+/// для аргумента, на позиции которого стоит курсор (`Completer.IsCurrent`).
+fn argument_values(tree: &Tree<'_>, typed: &Parsed<'_>, path: &[&CommandSpec], argument: &spec::ArgSpec, line: &str) -> Vec<String> {
+    if !argument.accepted.is_empty() {
+        return argument.accepted.iter().map(|a| a.to_string()).collect();
+    }
+    let source = Source::of(path, Target::Argument(argument.name));
+    if matches!(source, Source::None) {
+        return Vec::new();
+    }
+    let (preceding, _) = split_last(line);
+    if !is_current(tree, &preceding, argument) {
+        return Vec::new();
+    }
+    collect(typed, path, source, line)
+}
+
+/// Дописывают ли именно этот аргумент (`Completer.IsCurrent`): строка до слова разобрана заново, курсор — после уже набранных
+/// аргументов команды и не на значении параметра.
+fn is_current(tree: &Tree<'_>, preceding: &str, argument: &spec::ArgSpec) -> bool {
+    let Ok(parse) = scl::parse(tree, preceding) else { return false };
+    let command = parse.innermost_command();
+    let Some(index) = command.arguments.iter().position(|a| std::ptr::eq(a, argument)) else {
+        return false;
+    };
+    if let Some(last) = parse.tokens.last()
+        && last.kind == scl::Kind::Option
+        && let Some(option) = tree
+            .chain(command)
+            .into_iter()
+            .flat_map(|c| tree.options(c))
+            .find(|o| o.all_names().any(|n| n == last.value))
+        && scl::shape(option).max > 0
+    {
+        return false;
+    }
+    let typed: usize = parse
+        .argument_children(parse.innermost)
+        .filter(|(a, _)| command.arguments.iter().any(|x| std::ptr::eq(x, *a)))
+        .map(|(_, tokens)| tokens.len())
+        .sum();
+    index == typed
+}
+
+/// Параметры команды из строки до слова и всех родительских, начинающиеся с `word` (`CompleteDirective.OptionsFor`); уже набранные
+/// предлагаются снова, только если их можно повторять (несколько значений).
+fn options_for(tree: &Tree<'_>, preceding: &str, word: &str) -> Result<Vec<String>, Abort> {
+    let before = scl::parse(tree, preceding)?;
+    let used = before.used_options();
+    let mut result = Vec::new();
+    for command in tree.chain(before.innermost_command()) {
+        for option in tree.options(command) {
+            let shape = scl::shape(option);
+            let is_used = used.iter().any(|u| std::ptr::eq(*u, option));
+            if option.hidden || (is_used && shape.max <= 1 && !shape.per_token) {
+                continue;
+            }
+            for name in option.all_names() {
+                if scl::starts_with_ignore_case(name, word) && !is_noise(name) {
+                    result.push(name.to_string());
+                }
+            }
+        }
+    }
+    Ok(result)
+}
+
+/// Значения источника (`Completer.Collect`): только начинающиеся с набранного слова, без повторов, по порядку, не больше [`LIMIT`].
+fn collect(typed: &Parsed<'_>, path: &[&CommandSpec], source: Source, line: &str) -> Vec<String> {
+    if matches!(source, Source::None) {
+        return Vec::new();
+    }
+    let (_, word) = split_last(line);
+    let mut lookup = Lookup::new(typed, path, &word);
+    let mut found: Vec<String> = values_of(&mut lookup, source)
+        .into_iter()
+        .filter(|x| !x.is_empty() && !x.contains('\n') && scl::starts_with_ignore_case(x, &word))
+        .collect();
+    dedup(&mut found);
+    found.sort_by(|a, b| natural_order(a, b));
+    found.truncate(LIMIT);
+    found
 }
 
 fn is_noise(label: &str) -> bool {
@@ -133,148 +242,22 @@ fn is_noise(label: &str) -> bool {
 }
 
 fn dedup(items: &mut Vec<String>) {
-    let mut seen: Vec<String> = Vec::new();
-    items.retain(|x| {
-        if seen.contains(x) {
-            false
-        } else {
-            seen.push(x.clone());
-            true
-        }
-    });
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    items.retain(|x| seen.insert(x.clone()));
 }
 
-fn per_token(option: &OptSpec) -> bool {
-    matches!(option.kind, OptKind::Value { per_token: true, .. })
-}
-
-fn takes_value(option: &OptSpec) -> bool {
-    !matches!(option.kind, OptKind::Flag)
-}
-
-/// Параметры команды и всех родительских (общие живут в корне) плюс `--help`; `--version` — только у корня или по запросу.
-fn options_around<'a>(path: &[&'a CommandSpec], with_version: bool) -> Vec<&'a OptSpec> {
-    let mut result: Vec<&OptSpec> = Vec::new();
-    for command in path.iter().rev() {
-        result.extend(command.options.iter());
-    }
-    result.extend(GLOBAL_OPTIONS.iter());
-    result.push(&HELP_OPTION);
-    if with_version || path.len() == 1 {
-        result.push(&VERSION_OPTION);
-    }
-    result
-}
-
-fn current_argument(command: &CommandSpec, typed: usize) -> Option<&spec::ArgSpec> {
-    for (index, argument) in command.arguments.iter().enumerate() {
-        if argument.arity == Arity::ZeroOrMore || index == typed {
-            return Some(argument);
-        }
-    }
-    None
-}
-
-/// Разбор строки до курсора по дереву команд: цепочка команд, набранные значения параметров и аргументов, параметр, ждущий значения.
-pub struct Walk<'a> {
-    pub path: Vec<&'a CommandSpec>,
-    pub arguments_typed: usize,
-    pub awaiting: Option<&'a OptSpec>,
-    /// Параметр с несколькими значениями подряд: следующие слова без дефиса — его значения.
-    pub collecting: bool,
-    pub used: Vec<&'a OptSpec>,
-    pub option_values: HashMap<&'static str, Vec<String>>,
-    pub argument_values: HashMap<&'static str, Vec<String>>,
-}
-
-fn find_option<'a>(path: &[&'a CommandSpec], name: &str) -> Option<&'a OptSpec> {
-    options_around(path, true).into_iter().find(|o| o.all_names().any(|n| n == name))
-}
-
-pub fn walk<'a>(root: &'a CommandSpec, tokens: &[String]) -> Walk<'a> {
-    let mut walk = Walk {
-        path: vec![root],
-        arguments_typed: 0,
-        awaiting: None,
-        collecting: false,
-        used: Vec::new(),
-        option_values: HashMap::new(),
-        argument_values: HashMap::new(),
-    };
-    for token in tokens {
-        let is_option = token.starts_with('-') && token.len() > 1;
-        if let Some(option) = walk.awaiting
-            && !is_option
-        {
-            walk.option_values.entry(option.id()).or_default().push(token.clone());
-            if !per_token(option) {
-                walk.awaiting = None;
-                walk.collecting = false;
-            }
-            continue;
-        }
-        walk.awaiting = None;
-        walk.collecting = false;
-        if is_option {
-            let (name, inline) = match token.split_once(['=', ':']) {
-                Some((name, value)) => (name, Some(value.to_string())),
-                None => (token.as_str(), None),
-            };
-            if let Some(option) = find_option(&walk.path, name) {
-                walk.used.push(option);
-                if takes_value(option) {
-                    match inline {
-                        Some(value) => {
-                            walk.option_values.entry(option.id()).or_default().push(value);
-                        }
-                        None => {
-                            walk.awaiting = Some(option);
-                            walk.collecting = per_token(option);
-                        }
-                    }
-                }
-            }
-            continue;
-        }
-        let command = *walk.path.last().expect("a command");
-        if walk.arguments_typed == 0
-            && let Some(sub) = command.subcommand(token)
-        {
-            walk.path.push(sub);
-            continue;
-        }
-        if let Some(argument) = current_argument(command, walk.arguments_typed) {
-            walk.argument_values.entry(argument.name).or_default().push(token.clone());
-        }
-        walk.arguments_typed += 1;
-    }
-    walk
-}
-
-/// Строка оболочки → слова (двойные кавычки после [`normalize`]).
-pub fn tokenize(line: &str) -> Vec<String> {
-    let mut words = Vec::new();
-    let mut current = String::new();
-    let mut in_word = false;
+/// Строка, уже приведённая [`normalize`], — то, что до последнего слова, и само слово без кавычек (`ShellWords.SplitLast`).
+pub fn split_last(normalized: &str) -> (String, String) {
+    let mut start = 0;
     let mut quoted = false;
-    for c in line.chars() {
+    for (i, c) in normalized.char_indices() {
         if c == '"' {
             quoted = !quoted;
-            in_word = true;
-        } else if c.is_whitespace() && !quoted {
-            if in_word {
-                words.push(std::mem::take(&mut current));
-            }
-            in_word = false;
-        } else {
-            current.push(c);
-            in_word = true;
+        } else if !quoted && c.is_whitespace() {
+            start = i + c.len_utf8();
         }
     }
-    if in_word {
-        words.push(current);
-    }
-    words
+    (normalized[..start].to_string(), normalized[start..].replace('"', ""))
 }
 
 fn is_single_quote(c: char) -> bool {
@@ -466,7 +449,6 @@ enum Source {
         board: bool,
     },
     TypeFields,
-    TrueFalse,
 }
 
 impl Source {
@@ -501,7 +483,6 @@ impl Source {
                 ("task", _, "add-field" | "remove-field") => Source::Fields,
                 ("task", _, "sort") => Source::SortKeys,
                 ("manual", _, "lang") => Source::ManualLanguages,
-                ("link-type", _, "allow-cycles" | "hierarchical") => Source::TrueFalse,
                 _ => Source::None,
             },
             Target::Argument(name) => match (group, leaf, name) {
@@ -530,9 +511,10 @@ impl Source {
     }
 }
 
-/// Что известно источнику: область (лениво), разобранная строка и слово под курсором.
+/// Что известно источнику: область (лениво), разобранная строка целиком и слово под курсором (`Lookup` в .NET).
 struct Lookup<'w, 'a> {
-    walk: &'w Walk<'a>,
+    typed: &'w Parsed<'a>,
+    path: &'w [&'a CommandSpec],
     word: String,
     folder: Option<String>,
     sqlite: Option<String>,
@@ -542,14 +524,18 @@ struct Lookup<'w, 'a> {
 }
 
 impl<'w, 'a> Lookup<'w, 'a> {
-    fn new(walk: &'w Walk<'a>, word: &str) -> Lookup<'w, 'a> {
-        let value = |id: &str| walk.option_values.get(id).and_then(|v| v.last().cloned());
+    fn new(typed: &'w Parsed<'a>, path: &'w [&'a CommandSpec], word: &str) -> Lookup<'w, 'a> {
+        let global = |name: &str| {
+            let option = Tree::global(name)?;
+            typed.single_value(option)
+        };
         Lookup {
-            walk,
+            typed,
+            path,
             word: word.to_string(),
-            folder: value("workspace").map(|f| tasker_core::settings::expand_user_path(&f)),
-            sqlite: value("sqlite"),
-            project: value("project").or_else(|| std::env::var("TASKER_PROJECT").ok()),
+            folder: global("--workspace").map(|f| tasker_core::settings::expand_user_path(&f)),
+            sqlite: global("--sqlite").map(|f| tasker_core::settings::expand_user_path(&f)),
+            project: global("--project").or_else(|| std::env::var("TASKER_PROJECT").ok()),
             session: OnceCell::new(),
             project_id: OnceCell::new(),
         }
@@ -577,12 +563,31 @@ impl<'w, 'a> Lookup<'w, 'a> {
         self.session()?.index().all::<T>(&IndexQuery::project(&project)).ok()
     }
 
-    fn argument(&self, name: &str) -> Option<String> {
-        self.walk.argument_values.get(name).and_then(|v| v.first().cloned())
+    /// Типы связей проекта вместе с встроенными (`LinkTypeService.GetAll`).
+    fn link_types(&self) -> Option<Vec<LinkType>> {
+        let project = self.project()?;
+        self.session()?.workspace().link_types().get_all(&project).ok()
     }
 
+    /// Набранное значение аргумента команды под курсором (`Lookup.Value(argument)`).
+    fn argument(&self, name: &str) -> Option<String> {
+        let command = self.path.last()?;
+        let argument = command.arguments.iter().find(|a| a.name == name)?;
+        self.typed.argument_value(argument)
+    }
+
+    /// Параметр команды под курсором (или её предка) по идентификатору.
+    fn option(&self, id: &str) -> Option<&'a OptSpec> {
+        self.path.iter().rev().flat_map(|c| c.options.iter()).find(|o| o.id() == id)
+    }
+
+    /// Набранные значения параметра: у повторяемого — все (`Lookup.Values`), у одиночного — единственное (`Lookup.Value`).
     fn option_values(&self, id: &str) -> Vec<String> {
-        self.walk.option_values.get(id).cloned().unwrap_or_default()
+        let Some(option) = self.option(id) else { return Vec::new() };
+        match option.kind {
+            OptKind::Value { multiple: true, .. } => self.typed.option_tokens(option).unwrap_or_default(),
+            _ => self.typed.single_value(option).into_iter().collect(),
+        }
     }
 }
 
@@ -596,9 +601,25 @@ fn names<T: IndexEntity>(lookup: &Lookup<'_, '_>, name: impl Fn(&T) -> String) -
 
 fn try_values(lookup: &mut Lookup<'_, '_>, source: Source) -> Option<Vec<String>> {
     let word = lookup.word.clone();
+    // Как `ValueSource` в .NET: источнику проекта сначала нужен проект (`InProject`), источнику области — открытая область
+    // (`NeedsWorkspace`); нет их — пусто, даже если ответ из набранного слова был бы известен.
+    match source {
+        Source::None
+        | Source::FieldTypes
+        | Source::SeveralChoices
+        | Source::ManualTopics
+        | Source::ManualLanguages
+        | Source::McpWorkspaces
+        | Source::EntityKinds => {}
+        Source::Projects | Source::Users | Source::Agents | Source::LockedEntity => {
+            lookup.session()?;
+        }
+        _ => {
+            lookup.project()?;
+        }
+    }
     Some(match source {
         Source::None => return None,
-        Source::TrueFalse => vec!["true".into(), "false".into()],
         Source::FieldTypes => vec![
             "string".into(),
             "int".into(),
@@ -636,16 +657,16 @@ fn try_values(lookup: &mut Lookup<'_, '_>, source: Source) -> Option<Vec<String>
         Source::TaskTypes => names::<TaskType>(lookup, |t| t.name.clone())?,
         Source::Series => names::<Series>(lookup, |s| s.prefix.clone())?,
         Source::Boards => names::<Board>(lookup, |b| b.name.clone())?,
-        Source::LinkTypes => names::<LinkType>(lookup, |t| t.name.clone())?,
+        Source::LinkTypes => lookup.link_types()?.into_iter().map(|t| t.name).collect(),
         Source::LinkPhrases => lookup
-            .all::<LinkType>()?
+            .link_types()?
             .into_iter()
             .flat_map(|t| [t.name, t.outward_name, t.inward_name])
             .collect(),
         Source::Fields => names::<FieldDefinition>(lookup, |f| f.name.clone())?,
         Source::Enums => names::<FieldEnum>(lookup, |e| e.name.clone())?,
         Source::HierarchicalLinkTypes => lookup
-            .all::<LinkType>()?
+            .link_types()?
             .into_iter()
             .filter(|t| t.hierarchical)
             .map(|t| t.name)
@@ -892,7 +913,6 @@ mod tests {
         assert_eq!(normalize("task get \"a b", Dialect::Posix), "task get \"a b");
         assert_eq!(normalize("task list ", Dialect::Posix), "task list ");
         assert_eq!(normalize("task get 'it''s'", Dialect::PowerShell), "task get it's");
-        assert_eq!(tokenize("task get \"a b\" c"), ["task", "get", "a b", "c"]);
     }
 
     #[test]
@@ -904,18 +924,22 @@ mod tests {
 
     #[test]
     fn commands_options_and_values_are_completed_from_the_tree() {
-        let root = spec::root();
-        let w = walk(&root, &["task".into(), "list".into(), "--status".into(), "A".into(), "B".into()]);
-        assert_eq!(w.path.last().unwrap().name, "list");
-        assert_eq!(w.option_values["status"], ["A", "B"]);
-        assert!(w.awaiting.is_some() && w.collecting);
-
         let all = complete("");
         assert!(all.contains(&"howto".to_string()) && all.iter().all(|x| !x.starts_with('-')));
         assert_eq!(complete("task ")[0], "create");
         let options = complete("task list --");
         assert!(options.contains(&"--version".to_string()) && options.contains(&"--flat".to_string()));
-        assert!(!options.contains(&"-h".to_string()));
         assert!(complete("completion ").contains(&"pwsh".to_string()));
+        // Как System.CommandLine: после флага — True/False, имена команд — по вхождению слова.
+        assert_eq!(complete("task list --all "), ["False", "True"]);
+        assert_eq!(complete("task st"), ["list"]);
+    }
+
+    #[test]
+    fn the_last_word_is_split_off_without_quotes() {
+        assert_eq!(split_last("task get TSK-1"), ("task get ".into(), "TSK-1".into()));
+        assert_eq!(split_last("task get "), ("task get ".into(), "".into()));
+        assert_eq!(split_last("status get \"В р"), ("status get ".into(), "В р".into()));
+        assert_eq!(split_last("status get \"В работе\""), ("status get ".into(), "В работе".into()));
     }
 }

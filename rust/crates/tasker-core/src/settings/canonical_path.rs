@@ -13,6 +13,13 @@ use std::path::{Component, Path, PathBuf};
 const MAX_LINKS: usize = 40;
 
 pub fn canonical_path(path: &str) -> String {
+    let started = crate::perf::start();
+    let result = canonical(path);
+    crate::perf::count("canonical-path", started);
+    result
+}
+
+fn canonical(path: &str) -> String {
     let full = PathBuf::from(strip_extended_prefix(&full_path(path).to_string_lossy()));
     let (root, parts) = split(&full);
     let mut current = PathBuf::from(normalize_root(&root));
@@ -97,6 +104,12 @@ fn actual_name(directory: &Path, name: &str) -> String {
     if name == "." || name == ".." {
         return name.to_string();
     }
+    // Быстрый путь macOS: элемент с точно таким именем есть — ответ тот же, что дал бы перебор каталога, а каталог может быть
+    // огромным (системный временный — десятки тысяч записей, перебор — десятки мс на каждый вызов консоли).
+    #[cfg(target_os = "macos")]
+    if stored_name(&directory.join(name)).is_some_and(|stored| stored == name) {
+        return name.to_string();
+    }
     let Ok(entries) = std::fs::read_dir(directory) else {
         return name.to_string();
     };
@@ -110,6 +123,44 @@ fn actual_name(directory: &Path, name: &str) -> String {
     } else {
         matches[0].clone()
     }
+}
+
+/// Имя элемента, как оно записано в каталоге (`getattrlist(ATTR_CMN_NAME)`, симлинк не раскрывается): на файловой системе без учёта
+/// регистра поиск находит элемент и по имени в другом регистре, но возвращает записанное. None — элемента нет или ошибка.
+#[cfg(target_os = "macos")]
+fn stored_name(path: &Path) -> Option<String> {
+    use std::os::unix::ffi::OsStrExt;
+    let c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()?;
+    let mut request = libc::attrlist {
+        bitmapcount: libc::ATTR_BIT_MAP_COUNT,
+        reserved: 0,
+        commonattr: libc::ATTR_CMN_NAME,
+        volattr: 0,
+        dirattr: 0,
+        fileattr: 0,
+        forkattr: 0,
+    };
+    // Длина ответа (u32), attrreference_t (смещение от самой ссылки и длина с нулём), затем имя: до 255 знаков UTF-8 по 3 байта.
+    let mut buffer = [0u8; 4 + 8 + 1024];
+    // SAFETY: путь — строка с нулём, запрос и буфер живут на стеке, размер буфера передаётся.
+    let rc = unsafe {
+        libc::getattrlist(
+            c_path.as_ptr(),
+            (&mut request as *mut libc::attrlist).cast(),
+            buffer.as_mut_ptr().cast(),
+            buffer.len(),
+            libc::FSOPT_NOFOLLOW,
+        )
+    };
+    if rc != 0 {
+        return None;
+    }
+    let offset = i32::from_ne_bytes(buffer[4..8].try_into().ok()?);
+    let length = u32::from_ne_bytes(buffer[8..12].try_into().ok()?) as usize;
+    let start = usize::try_from(4 + i64::from(offset)).ok()?;
+    let bytes = buffer.get(start..start.checked_add(length)?)?;
+    let bytes = bytes.strip_suffix(&[0]).unwrap_or(bytes);
+    String::from_utf8(bytes.to_vec()).ok()
 }
 
 #[cfg(test)]
@@ -148,6 +199,24 @@ mod tests {
         // Цикл не вешает: после 40 переходов ссылки остаются как есть.
         std::os::unix::fs::symlink("loop", dir.join("loop")).unwrap();
         assert_eq!(canonical_path(dir.join("loop").to_str().unwrap()), format!("{canonical_dir}/loop"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn the_stored_name_is_read_without_listing_the_directory() {
+        let dir = crate::test_support::temp_dir();
+        std::fs::create_dir_all(dir.join("Папка")).unwrap();
+        std::os::unix::fs::symlink("nowhere", dir.join("Link")).unwrap();
+        assert_eq!(stored_name(&dir.join("Папка")).as_deref(), Some("Папка"));
+        assert_eq!(stored_name(&dir.join("Link")).as_deref(), Some("Link"));
+        assert_eq!(stored_name(&dir.join("missing")), None);
+        // На томе без учёта регистра поиск по другому регистру находит записанное имя — тогда решает перебор каталога, как раньше.
+        if dir.join("link").symlink_metadata().is_ok() {
+            assert_eq!(stored_name(&dir.join("link")).as_deref(), Some("Link"));
+        }
+        assert_eq!(actual_name(&dir, "Папка"), "Папка");
+        assert_eq!(actual_name(&dir, "missing"), "missing");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

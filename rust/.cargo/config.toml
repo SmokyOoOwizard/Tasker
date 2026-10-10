@@ -1,0 +1,4 @@
+# macOS: в бинарник попадают только библиотеки, символы которых действительно используются. Без этого консоль `tasker` грузила бы
+# CoreFoundation и CoreServices (их тянет `notify`, нужный только демону) — +1,2 мс к каждому запуску (TSK-136).
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-arg=-Wl,-dead_strip_dylibs"]

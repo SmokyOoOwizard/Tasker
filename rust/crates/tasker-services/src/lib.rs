@@ -71,6 +71,7 @@ impl Workspace {
     pub fn open(folder: impl AsRef<Path>) -> std::io::Result<Workspace> {
         let directory = TaskerDirectory::new(folder);
         directory.ensure_created()?;
+        tasker_core::perf::mark("workspace-dirs");
         let index = WorkspaceIndex::open(&directory)?;
         Ok(Workspace {
             directory,

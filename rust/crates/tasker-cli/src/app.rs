@@ -87,6 +87,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
             parse_error(&error, &path, &rest, args, out, err, help_width)
         }
     };
+    crate::perf::mark("end");
     crate::perf::dump(err);
     code
 }
@@ -481,7 +482,7 @@ mod tests {
             (code, err.as_str()),
             (
                 1,
-                "Argument 'fish' not recognized. Must be one of:\n\t'bash'\n\t'powershell'\n\t'pwsh'\n\t'zsh'\n\n"
+                "Argument 'fish' not recognized. Must be one of:\n\t'zsh'\n\t'bash'\n\t'pwsh'\n\t'powershell'\n\n"
             )
         );
 
