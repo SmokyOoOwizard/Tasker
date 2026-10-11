@@ -295,7 +295,16 @@ mod tests {
 
     #[test]
     fn custom_field_syntax_cases_and_errors() {
-        let cases: [(&str, &str, FieldType, bool, bool, Option<&str>, Option<&str>); 6] = [
+        type Case = (
+            &'static str,
+            &'static str,
+            FieldType,
+            bool,
+            bool,
+            Option<&'static str>,
+            Option<&'static str>,
+        );
+        let cases: [Case; 6] = [
             ("Estimate:int", "Estimate", FieldType::Int, false, false, None, None),
             ("Estimate:Int=5", "Estimate", FieldType::Int, false, false, None, Some("5")),
             (
