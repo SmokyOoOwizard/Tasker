@@ -204,8 +204,15 @@ public static class TaskerProcess
         var error = process.StandardError.ReadToEndAsync();
         if (input != null)
         {
-            await process.StandardInput.WriteAsync(input);
-            process.StandardInput.Close();
+            try
+            {
+                await process.StandardInput.WriteAsync(input);
+                process.StandardInput.Close();
+            }
+            catch (IOException)
+            {
+                // Консоль завершилась, не читая ввод (например, отказала без терминала): это и проверяется.
+            }
         }
 
         await process.WaitForExitAsync();

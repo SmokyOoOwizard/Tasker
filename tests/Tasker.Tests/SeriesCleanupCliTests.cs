@@ -383,7 +383,9 @@ public class SeriesCleanupCliTests : IDisposable
         var revert = await _r.Cli("cleanup");
         Assert.Equal(1, revert.Code);
         Assert.Contains("A git revert is in progress", revert.Err);
-        _r.Repo.Git("revert", "--abort");
+        // Консоль, открыв область, вернула .tasker/.gitignore, который убирал откат: revert --abort на таком файле спотыкается.
+        _r.Repo.Git("revert", "--quit");
+        _r.Repo.Git("reset", "--hard", "-q");
         Assert.Equal(0, (await _r.Cli("cleanup")).Code);
 
         // git не установлен (его нет в PATH): проверить операции нечем, чистка идёт дальше.
