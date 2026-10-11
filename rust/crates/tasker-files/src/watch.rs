@@ -9,11 +9,11 @@
 //! `Changed` — относительно `.tasker` через `/`, как в индексе; подключение `Changed` → `Refresh(paths)`, `FullSync` → `Sync` делает
 //! демон.
 //!
-//! Устройство: `notify` (на macOS — FSEvents, на Linux — inotify) → поток-сборщик с окнами .NET; повторы одного пути схлопывает
+//! Устройство: `notify` (на macOS — FSEvents, на Linux — inotify, на Windows — ReadDirectoryChangesW) → поток-сборщик с окнами .NET; повторы одного пути схлопывает
 //! сам сборщик (множество путей), оба пути переименования помечаются, как в .NET. `notify-debouncer-full` из плана не используется:
 //! он считает пару `Create` + `Remove` одного файла в своём окне пустой, а FSEvents несколько секунд держит флаг `Created` на пути —
 //! удаление файла, созданного 2–5 с назад, приходило бы как `Create` + `Remove` и терялось (индекс оставлял бы призрак до следующей
-//! сверки). Отличия от .NET описаны у [`scope_of`] и [`WatcherHandle::stop`].
+//! сверки). Отличия от .NET описаны у [`scope_of`], [`is_folder_change`] и [`WatcherHandle::stop`].
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
@@ -33,7 +33,8 @@ pub type Error = notify::Error;
 pub enum WatchEvent {
     /// Пути относительно `.tasker` через `/`, без повторов, по возрастанию: файлы раскладки (`projects/<guid>/tasks/<slug>-<id8>.yaml`,
     /// `users/<guid>.yaml`, `projects/<guid>/project.yaml`) и папки раскладки (`projects/<guid>`, `projects/<guid>/tasks`, `users`) —
-    /// удалённая или переименованная папка проекта приходит как путь папки, индекс снимает её строки по префиксу. Файл может уже
+    /// созданная, удалённая или переименованная папка приходит как путь папки, индекс сверяет её по префиксу; запись в папку
+    /// (новый, изменённый, удалённый файл в ней) путём папки не приходит — только путём файла. Файл может уже
     /// не существовать (удаление, старое имя при переименовании) — получатель сверяет с диском, как `Sync` в .NET.
     Changed(Vec<String>),
     /// Сверить область целиком: за окно накопилось больше [`WatchOptions::full_sync_threshold`] путей, наблюдатель потерял события
@@ -188,7 +189,8 @@ impl Roots {
                     Some(relative) => match scope_of(&relative) {
                         Scope::Root => return Message::FullSync,
                         Scope::Ignored => {}
-                        Scope::Path => paths.push(relative),
+                        Scope::Folder if !is_folder_change(&event.kind) => {}
+                        Scope::File | Scope::Folder => paths.push(relative),
                     },
                 }
             }
@@ -224,6 +226,16 @@ fn is_change(kind: &EventKind) -> bool {
     )
 }
 
+/// Что считается изменением самой папки раскладки: создание, удаление, переименование (и событие неизвестного вида). Запись в
+/// папку — нет: ReadDirectoryChangesW (Windows) при каждом изменении файла сообщает и `Modify` его папки (`projects/<guid>/tasks`),
+/// FSEvents и inotify такого не присылают. Само изменение файла приходит отдельным событием с путём файла, а путь папки заставил бы
+/// индекс сверять всю папку. Так пачка одинакова на всех ОС. В .NET `FileSystemWatcher` с `LastWrite` на Windows передаёт и путь
+/// папки — индекс там сверяет её целиком; здесь эта лишняя сверка не делается. Новая папка (`Create`) остаётся путём: inotify
+/// встаёт на неё с задержкой, и файл, записанный в неё сразу, бывает виден только событием папки — индекс сверяет папку целиком.
+fn is_folder_change(kind: &EventKind) -> bool {
+    !matches!(kind, EventKind::Modify(modify) if !matches!(modify, ModifyKind::Name(_)))
+}
+
 /// Чем путь является для наблюдателя.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Scope {
@@ -231,14 +243,18 @@ pub enum Scope {
     Root,
     /// Не интересует индекс: `.cache` (там лежит сам индекс и блокировки), `*.tmp` атомарной записи, `.gitignore`, чужие файлы.
     Ignored,
-    /// Файл или папка раскладки — в `Changed`.
-    Path,
+    /// Файл раскладки — в `Changed`.
+    File,
+    /// Папка раскладки (`projects`, `projects/<guid>`, `projects/<guid>/<folder>`, `users`) — в `Changed`, если папку создали,
+    /// удалили или переименовали ([`is_folder_change`]).
+    Folder,
 }
 
 /// Фильтр путей наблюдателя. .NET отбрасывает только `.cache`, а остальное передаёт в `Sync`, где файлы не из раскладки отсеивает
 /// `Classify`; здесь отсев делается до пачки, чтобы `*.tmp` и прочий шум не раздували окно до порога `FullSync` и не будили индекс.
-/// Папки раскладки (`projects`, `projects/<guid>`, `projects/<guid>/<folder>`, `users`) проходят: удалённую или переименованную папку
-/// индекс сверяет по префиксу, как `Sync` в .NET с путём папки.
+/// Папки раскладки (`projects`, `projects/<guid>`, `projects/<guid>/<folder>`, `users`) отличаются от файлов по имени, без обращения к
+/// диску (удалённую папку уже не проверить): созданную, удалённую или переименованную папку индекс сверяет по префиксу, как `Sync`
+/// в .NET с путём папки.
 pub fn scope_of(relative_path: &str) -> Scope {
     if relative_path.is_empty() {
         return Scope::Root;
@@ -251,7 +267,7 @@ pub fn scope_of(relative_path: &str) -> Scope {
         return Scope::Ignored;
     }
     if layout::classify(relative_path).is_some() {
-        return Scope::Path;
+        return Scope::File;
     }
     let is_folder = match parts.as_slice() {
         ["projects"] | ["users"] => true,
@@ -259,7 +275,7 @@ pub fn scope_of(relative_path: &str) -> Scope {
         ["projects", project, folder] => uuid::Uuid::try_parse(project).is_ok() && layout::folder_named(folder).is_some(),
         _ => false,
     };
-    if is_folder { Scope::Path } else { Scope::Ignored }
+    if is_folder { Scope::Folder } else { Scope::Ignored }
 }
 
 /// Цикл сборщика — `Loop` в .NET: ждёт первого события, затем спит `quiet` и повторяет, пока за время сна приходили новые события
@@ -343,20 +359,20 @@ mod tests {
         assert_eq!(scope_of("projects/11111111-1111-4111-8111-111111111111/unknown"), Scope::Ignored);
         assert_eq!(scope_of("stray.yaml"), Scope::Ignored);
 
-        assert_eq!(scope_of("projects"), Scope::Path);
-        assert_eq!(scope_of("users"), Scope::Path);
-        assert_eq!(scope_of("projects/11111111-1111-4111-8111-111111111111"), Scope::Path);
-        assert_eq!(scope_of("projects/11111111-1111-4111-8111-111111111111/tasks"), Scope::Path);
-        assert_eq!(scope_of("projects/11111111-1111-4111-8111-111111111111/project.yaml"), Scope::Path);
+        assert_eq!(scope_of("projects"), Scope::Folder);
+        assert_eq!(scope_of("users"), Scope::Folder);
+        assert_eq!(scope_of("projects/11111111-1111-4111-8111-111111111111"), Scope::Folder);
+        assert_eq!(scope_of("projects/11111111-1111-4111-8111-111111111111/tasks"), Scope::Folder);
+        assert_eq!(scope_of("projects/11111111-1111-4111-8111-111111111111/project.yaml"), Scope::File);
         assert_eq!(
             scope_of("projects/11111111-1111-4111-8111-111111111111/tasks/task-1111aaaa.yaml"),
-            Scope::Path
+            Scope::File
         );
         assert_eq!(
             scope_of("projects/11111111-1111-4111-8111-111111111111/tasks/11111111-1111-4111-8111-111111111111.yaml"),
-            Scope::Path
+            Scope::File
         );
-        assert_eq!(scope_of("users/11111111-1111-4111-8111-111111111111.yaml"), Scope::Path);
+        assert_eq!(scope_of("users/11111111-1111-4111-8111-111111111111.yaml"), Scope::File);
     }
 
     #[test]
@@ -377,6 +393,57 @@ mod tests {
         );
         assert_eq!(roots.relative(Path::new("/tmp/ws/.tasker")).as_deref(), Some(""));
         assert_eq!(roots.relative(Path::new("/tmp/other/.tasker/users/a.yaml")), None);
+    }
+
+    fn roots() -> Roots {
+        Roots {
+            root: PathBuf::from("/ws/.tasker"),
+            canonical: None,
+        }
+    }
+
+    fn message(kind: EventKind, paths: &[&str]) -> Message {
+        let mut event = Event::new(kind);
+        for path in paths {
+            event = event.add_path(PathBuf::from("/ws/.tasker").join(path));
+        }
+        roots().message(&event)
+    }
+
+    #[test]
+    fn folder_write_is_not_a_path_but_folder_create_remove_rename_are() {
+        use notify::event::{CreateKind, DataChange, RemoveKind, RenameMode};
+        const TASKS: &str = "projects/11111111-1111-4111-8111-111111111111/tasks";
+        const FILE: &str = "projects/11111111-1111-4111-8111-111111111111/tasks/task-1111aaaa.yaml";
+
+        // Запись в папку (ReadDirectoryChangesW: Modify(Any) папки при изменении файла в ней) — не путь.
+        for kind in [
+            EventKind::Modify(ModifyKind::Any),
+            EventKind::Modify(ModifyKind::Data(DataChange::Any)),
+            EventKind::Modify(ModifyKind::Metadata(MetadataKind::WriteTime)),
+            EventKind::Modify(ModifyKind::Other),
+        ] {
+            assert_eq!(message(kind, &[TASKS]), Message::Changed(vec![]), "{kind:?}");
+            // Файл с тем же видом события — путь.
+            assert_eq!(message(kind, &[FILE]), Message::Changed(vec![FILE.into()]), "{kind:?}");
+        }
+
+        // Создание, удаление, переименование папки — путь папки.
+        for kind in [
+            EventKind::Create(CreateKind::Any),
+            EventKind::Create(CreateKind::Folder),
+            EventKind::Remove(RemoveKind::Any),
+            EventKind::Remove(RemoveKind::Folder),
+            EventKind::Modify(ModifyKind::Name(RenameMode::From)),
+            EventKind::Modify(ModifyKind::Name(RenameMode::To)),
+            EventKind::Any,
+        ] {
+            assert_eq!(message(kind, &[TASKS]), Message::Changed(vec![TASKS.into()]), "{kind:?}");
+        }
+        assert_eq!(
+            message(EventKind::Modify(ModifyKind::Name(RenameMode::Both)), &["users", FILE]),
+            Message::Changed(vec!["users".into(), FILE.into()])
+        );
     }
 
     fn options() -> WatchOptions {

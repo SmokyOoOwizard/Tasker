@@ -95,7 +95,6 @@ fn append(path: &Path, text: &str) {
 }
 
 #[test]
-#[cfg_attr(windows, ignore = "TSK-155: on Windows the watcher also reports changed folders")]
 fn burst_of_edits_is_one_changed_event_with_relative_paths() {
     let root = workspace_copy();
     let project = root.join("projects").join(PROJECT);
@@ -126,7 +125,6 @@ fn burst_of_edits_is_one_changed_event_with_relative_paths() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore = "TSK-155: on Windows the watcher also reports changed folders")]
 fn cache_and_tmp_files_are_ignored() {
     let root = workspace_copy();
     let project = root.join("projects").join(PROJECT);
@@ -148,7 +146,6 @@ fn cache_and_tmp_files_are_ignored() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore = "TSK-155: on Windows the watcher also reports changed folders")]
 fn rename_reports_old_and_new_paths() {
     let root = workspace_copy();
     let tasks = root.join("projects").join(PROJECT).join("tasks");
