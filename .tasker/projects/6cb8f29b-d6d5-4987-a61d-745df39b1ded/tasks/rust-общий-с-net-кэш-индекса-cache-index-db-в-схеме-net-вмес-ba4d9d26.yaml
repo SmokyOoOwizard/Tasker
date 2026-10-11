@@ -1,0 +1,19 @@
+formatVersion: 9
+id: ba4d9d26-4958-4746-9d21-a92777772168
+title: 'Rust: общий с .NET кэш индекса — .cache/index.db в схеме .NET вместо своего index-rs.db'
+description: |-
+  Кэш индекса файловой области должен быть один. Сейчас Rust (tasker, tasker-mcpd) ведёт свой .tasker/.cache/index-rs.db с блокировкой .cache/index-rs.lock (вариант (Б) раздела 3.2 docs/rust-migration-plan.md, TSK-131), а .NET — .cache/index.db с index.lock. Нужно перейти на вариант (А): Rust читает и пишет ровно index.db в схеме .NET.
+
+  Ограничения: тот же PRAGMA user_version, те же таблицы/колонки/индексы/коллации; колонка data — JSON как IndexJson (System.Text.Json source-gen) байт в байт; size/mtime в тех же единицах (иначе процессы переиндексируют файлы друг друга); при чужой схеме — пересоздать, как .NET; блокировка index.lock тем же способом и в том же порядке (write.lock → файл → index.lock), режим журнала и busy timeout как у .NET. Старый index-rs.db (+ -wal/-shm) при открытии области удаляется.
+
+  План: эталон index.db от .NET-консоли на golden-корпусе (rust/tests/golden/index); перепись хранения индекса в tasker-files; проверки — совпадение с эталоном, перекрёстное чтение без пересборки, совместная запись .NET+Rust (скрипт), .NET-тесты против Rust-консоли, cargo test/clippy/fmt, golden --verify, bench до/после; документация (план 3.2 → (А), README, вики); зелёный CI.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-10T23:04:52.4819450+00:00
+updatedAt: 2026-10-10T23:48:17.9761420+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 161
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 603a9c63-f604-429e-84c7-7610e4abee2a

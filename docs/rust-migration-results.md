@@ -145,7 +145,7 @@ RSS демона после 2000 задач и ~2200 изменений файл
 `bench.py calls --phases --n 30 --tmp <папка> --mode nodaemon` (в `daemon` — те же ±0,3 мс). Медианы длительности фаз, мс; строки
 с `#` — счётчики: число вызовов за процесс и суммарное время. Фазы Rust: `main` — от запуска процесса (время старта у ядра,
 `proc_pidinfo`) до входа в `main`, `env-check` — переменные `TASKER_*`, `build-root` — дерево команд, `parse` — clap, `invoke`,
-`workspace-dirs` — канонический путь и служебные папки, `index-schema` — блокировка и схема `index-rs.db`, `index-sync` — сверка с
+`workspace-dirs` — канонический путь и служебные папки, `index-schema` — блокировка и схема индекса (тогда `index-rs.db`, с TSK-161 — общий `index.db`), `index-sync` — сверка с
 файлами, `session-open` — держатель блокировок, `action` — команда (у `task get` — `get.project`/`get.find`/`get.describe`), `end`.
 JIT нет: `[count] jit.methods 0`.
 

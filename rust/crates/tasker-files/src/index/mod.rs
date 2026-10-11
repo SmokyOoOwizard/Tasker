@@ -1,26 +1,32 @@
-//! Индекс области в SQLite — `.tasker/.cache/index-rs.db` (TSK-131, фаза 2 плана `docs/rust-migration-plan.md`, решение (Б)
-//! раздела 3.2). Файлы `.tasker` — источник правды: индекс хранит для каждого файла его отпечаток (размер, время изменения) и
-//! сущность целиком, а списки, страницы, подсчёты, поиск и `max(number)` серий идут SQL-запросами по нему.
+//! Индекс области в SQLite — `.tasker/.cache/index.db`, общий с .NET-сборкой (TSK-161, решение (А) раздела 3.2 плана
+//! `docs/rust-migration-plan.md`; до него у Rust был свой `index-rs.db`, TSK-131). Файлы `.tasker` — источник правды: индекс хранит
+//! для каждого файла его отпечаток (размер, время изменения) и сущность целиком, а списки, страницы, подсчёты, поиск и
+//! `max(number)` серий идут SQL-запросами по нему.
 //!
-//! Свой файл и своя блокировка: индекс .NET (`index.db`, `index.lock`) не трогаем — у него другая схема и JSON PascalCase; общие
-//! с .NET только `write.lock` и сами YAML. Схема (`user_version` = [`SCHEMA_VERSION`]) повторяет таблицы .NET по смыслу —
-//! `files`, `task_series`, `task_links`, `task_fields`, `task_field_values`, — а колонка `data` держит модель `tasker-core` в
-//! компактном JSON serde (camelCase, `Timestamp` строкой формата `O`). Смена схемы или повреждение файла — индекс удаляется и
-//! строится заново: это кэш.
+//! Один файл на все процессы — десктоп, сервер и консоль .NET, консоль и демон Rust, — поэтому всё как у `WorkspaceIndex` .NET:
+//! схема буква в букву (`user_version` = [`SCHEMA_VERSION`], те же таблицы, колонки, индексы и даже комментарии в CREATE), колонка
+//! `data` — JSON System.Text.Json байт в байт ([`data`]: PascalCase, enum числами), `size`/`mtime` и время задач — в тиках .NET
+//! (100 нс от 0001-01-01; иначе процессы перечитывали бы файлы друг друга без конца), блокировка `.cache/index.lock` тем же
+//! способом ([`FileLock`]: `flock` на Unix, `FileShare.None` на Windows), журнал WAL. Чужая версия схемы — таблицы пересоздаются,
+//! повреждённый файл удаляется и строится заново (как в .NET): это кэш. Старый `index-rs.db` (с `-wal`, `-shm`) и `index-rs.lock`
+//! прежних Rust-сборок удаляются при открытии области.
 //!
 //! Обновление ([`WorkspaceIndex::sync`], [`WorkspaceIndex::refresh`]): обход `.tasker` по [`layout::classify`], сравнение
 //! `(size, mtime)` с записанным, перечитывание изменившихся, удаление пропавших — одной транзакцией под короткой блокировкой
-//! `.cache/index-rs.lock` ([`FileLock`]). Чтение без блокировки. Файл, который не читается (конфликт слияния git, формат новее
-//! поддерживаемого, битый YAML, несовпадение id с именем), остаётся в `files` с текстом ошибки в `error` и не попадает в списки —
-//! это проблемы области ([`WorkspaceIndex::problems`]), которые показывает `tasker sync`.
+//! `index.lock`. Чтение без блокировки: в режиме WAL читатель видит согласованный снимок и не мешает записи. Файл, который не
+//! читается (конфликт слияния git, формат новее поддерживаемого, битый YAML, несовпадение id с именем), остаётся в `files` с
+//! текстом ошибки в `error` и не попадает в списки — это проблемы области ([`WorkspaceIndex::problems`]), которые показывает
+//! `tasker sync`.
 //!
 //! Инвариант нумерации серий: `max(number)` считается после `Refresh(tasks/)` под `write.lock` — [`WorkspaceIndex::exclusive`]
 //! ([`WriteScope`] с этим индексом как [`IndexRefresh`]).
+pub mod data;
 mod query;
 mod sort;
 mod sync;
 
-pub use query::{IndexEntity, IndexQuery, LinkEdge, NumberConflict, OwnFieldKind, WorkspaceProblem};
+pub use data::IndexEntity;
+pub use query::{IndexQuery, LinkEdge, NumberConflict, OwnFieldKind, WorkspaceProblem};
 pub use sync::{FileChange, SyncReport, normalize_username};
 
 use crate::layout::{EntityKind, TaskerDirectory};
@@ -33,11 +39,16 @@ use tasker_core::io::{FileLock, full_path};
 use tasker_core::validate::to_lower_invariant;
 use uuid::Uuid;
 
-/// Поднять при смене схемы или формата `data`: старый индекс пересоберётся.
-pub const SCHEMA_VERSION: i32 = 1;
+/// Версия схемы `WorkspaceIndex.SchemaVersion` в .NET: поднимается там и здесь вместе — при смене схемы или формата `data` старый
+/// индекс пересоберётся.
+pub const SCHEMA_VERSION: i32 = 10;
 
-pub const FILE_NAME: &str = "index-rs.db";
-pub const LOCK_NAME: &str = "index-rs.lock";
+pub const FILE_NAME: &str = "index.db";
+pub const LOCK_NAME: &str = "index.lock";
+
+/// Свой индекс прежних Rust-сборок (TSK-131): при открытии области удаляется, чтобы не копился.
+const LEGACY_FILE_NAME: &str = "index-rs.db";
+const LEGACY_LOCK_NAME: &str = "index-rs.lock";
 
 /// Индекс одной области. Соединения с SQLite не держатся: открываются на время обращения, поэтому, пока никто не работает с
 /// кэшем, файл никем не занят, и его могут делить консоль, демон и наблюдатель.
@@ -70,12 +81,12 @@ impl WorkspaceIndex {
         &self.directory
     }
 
-    /// `.cache/index-rs.db`.
+    /// `.cache/index.db`.
     pub fn file(&self) -> PathBuf {
         self.directory.cache().join(FILE_NAME)
     }
 
-    /// `.cache/index-rs.lock` — короткая блокировка на время Sync/Refresh.
+    /// `.cache/index.lock` — короткая блокировка на время Sync/Refresh (общая с .NET).
     pub fn lock_file(&self) -> PathBuf {
         self.directory.cache().join(LOCK_NAME)
     }
@@ -181,6 +192,7 @@ impl WorkspaceIndex {
     // Схема: при чужой версии таблицы пересоздаются; повреждённый или чужой файл удаляется вместе с -wal и -shm и создаётся заново.
     fn ensure_schema(&self) -> io::Result<()> {
         std::fs::create_dir_all(self.directory.cache())?;
+        self.remove_legacy();
         match self.connect().and_then(|c| create_schema(&c)) {
             Ok(()) => Ok(()),
             Err(_) => {
@@ -192,6 +204,24 @@ impl WorkspaceIndex {
                     }
                 }
                 create_schema(&self.connect()?)
+            }
+        }
+    }
+}
+
+impl WorkspaceIndex {
+    // Индекс прежних Rust-сборок: файл занят (Windows, старая сборка ещё работает) — не беда, удалим в следующий раз.
+    fn remove_legacy(&self) {
+        let cache = self.directory.cache();
+        for name in [
+            LEGACY_FILE_NAME.to_string(),
+            format!("{LEGACY_FILE_NAME}-wal"),
+            format!("{LEGACY_FILE_NAME}-shm"),
+            LEGACY_LOCK_NAME.to_string(),
+        ] {
+            let path = cache.join(name);
+            if path.exists() {
+                let _ = std::fs::remove_file(&path);
             }
         }
     }
@@ -261,87 +291,91 @@ fn create_schema(connection: &Connection) -> io::Result<()> {
             .map_err(db_error)?;
         return Ok(());
     }
+    // Текст — буква в букву из `WorkspaceIndex.CreateSchema` (.NET): SQLite хранит CREATE с комментариями, и `.schema` обеих сборок
+    // совпадает (эталон — rust/tests/golden/index/schema.sql).
     connection
         .execute_batch(&format!(
-            "
-            PRAGMA journal_mode = WAL;
-            DROP TABLE IF EXISTS task_series;
-            DROP TABLE IF EXISTS task_links;
-            DROP TABLE IF EXISTS task_fields;
-            DROP TABLE IF EXISTS task_field_values;
-            DROP TABLE IF EXISTS files;
-            CREATE TABLE files (
-                path         TEXT PRIMARY KEY,   -- относительно .tasker, через «/»
-                size         INTEGER NOT NULL,
-                mtime        INTEGER NOT NULL,   -- наносекунды от эпохи Unix
-                kind         TEXT NOT NULL,      -- Project, User, Status, StatusSet, TaskType, Board, Task, Series, LinkType, Field, FieldEnum
-                project_id   TEXT,
-                id           TEXT NOT NULL,      -- id сущности (D); у нечитаемого файла — из имени или само имя
-                sort_text    TEXT,               -- имя (у пользователя — нормализованное; у задачи — заголовок в нижнем регистре; у серии — префикс)
-                sort_num     INTEGER,            -- у задачи — createdAt, тики Unix
-                sort_updated INTEGER,            -- у задачи — updatedAt, тики Unix
-                type_id      TEXT,
-                status_id    TEXT,
-                user_kind    TEXT,               -- Human, Agent
-                data         TEXT,               -- сущность целиком, JSON (serde, camelCase); null, если файл не прочитан
-                error        TEXT                -- почему файл не прочитан; такие файлы не попадают в списки
-            );
-            CREATE INDEX ix_files_by_name ON files (kind, project_id, sort_text, id);
-            CREATE INDEX ix_files_by_created ON files (kind, project_id, sort_num, id);
-            CREATE INDEX ix_files_by_updated ON files (kind, project_id, sort_updated, sort_num, id);
-            CREATE INDEX ix_files_by_status ON files (kind, project_id, status_id);
-            -- номера задач в сериях; строки файла заменяются и удаляются вместе с ним, в той же транзакции
-            CREATE TABLE task_series (
-                path          TEXT NOT NULL,
-                project_id    TEXT NOT NULL,
-                series_id     TEXT NOT NULL,
-                number        INTEGER NOT NULL,
-                task_id       TEXT NOT NULL,
-                created_ticks INTEGER NOT NULL
-            );
-            CREATE INDEX ix_task_series_by_number ON task_series (project_id, series_id, number);
-            CREATE INDEX ix_task_series_by_path ON task_series (path);
-            -- исходящие связи задач
-            CREATE TABLE task_links (
-                path       TEXT NOT NULL,
-                project_id TEXT NOT NULL,
-                type_id    TEXT NOT NULL,
-                source_id  TEXT NOT NULL,
-                target_id  TEXT NOT NULL
-            );
-            CREATE INDEX ix_task_links_by_target ON task_links (project_id, target_id);
-            CREATE INDEX ix_task_links_by_source ON task_links (project_id, type_id, source_id);
-            CREATE INDEX ix_task_links_by_path ON task_links (path);
-            -- поля, записанные в задаче (значения и дополнительные)
-            CREATE TABLE task_fields (
-                path       TEXT NOT NULL,
-                project_id TEXT NOT NULL,
-                field_id   TEXT NOT NULL,         -- поле каталога или собственное поле задачи
-                enum_id    TEXT,                  -- перечисление собственного поля; у поля каталога null
-                own_name   TEXT,                  -- собственное поле: имя в нижнем регистре; у поля каталога null
-                own_type   INTEGER                -- собственное поле: тип (FieldType: string 0, int 1, float 2, bool 3, date 4, enum 5)
-            );
-            CREATE INDEX ix_task_fields_by_field ON task_fields (project_id, field_id);
-            CREATE INDEX ix_task_fields_by_enum ON task_fields (project_id, enum_id);
-            CREATE INDEX ix_task_fields_by_own_name ON task_fields (own_name);
-            CREATE INDEX ix_task_fields_by_path ON task_fields (path);
-            -- значения полей задач (канонический текст)
-            CREATE TABLE task_field_values (
-                path       TEXT NOT NULL,
-                project_id TEXT NOT NULL,
-                field_id   TEXT NOT NULL,
-                value      TEXT NOT NULL,
-                number     REAL,                  -- значение числом; null, если оно не число. Сравнения int и float идут по нему
-                own_name   TEXT,
-                own_type   INTEGER
-            );
-            CREATE INDEX ix_task_field_values_by_value ON task_field_values (field_id, value);
-            CREATE INDEX ix_task_field_values_by_number ON task_field_values (field_id, number);
-            CREATE INDEX ix_task_field_values_by_own_value ON task_field_values (own_name, value);
-            CREATE INDEX ix_task_field_values_by_own_number ON task_field_values (own_name, number);
-            CREATE INDEX ix_task_field_values_by_path ON task_field_values (path);
-            PRAGMA user_version = {SCHEMA_VERSION};
-            "
+            "\
+PRAGMA journal_mode = WAL;
+DROP TABLE IF EXISTS task_series;
+DROP TABLE IF EXISTS task_links;
+DROP TABLE IF EXISTS task_fields;
+DROP TABLE IF EXISTS task_field_values;
+DROP TABLE IF EXISTS files;
+CREATE TABLE files (
+    path       TEXT PRIMARY KEY,   -- относительно .tasker, через «/»
+    size       INTEGER NOT NULL,
+    mtime      INTEGER NOT NULL,   -- ticks UTC
+    kind       TEXT NOT NULL,
+    project_id TEXT,
+    id         TEXT NOT NULL,
+    sort_text  TEXT,               -- имя (у пользователя — нормализованное; у задачи — заголовок в нижнем регистре, для упорядочивания)
+    sort_num   INTEGER,            -- у задачи — createdAt, ticks UTC
+    sort_updated INTEGER,          -- у задачи — updatedAt, ticks UTC
+    type_id    TEXT,
+    status_id  TEXT,
+    user_kind  TEXT,
+    data       TEXT,               -- сущность целиком, JSON; null, если файл не прочитан
+    error      TEXT                -- почему файл не прочитан; такие файлы не попадают в списки
+);
+CREATE INDEX ix_files_by_name ON files (kind, project_id, sort_text, id);
+CREATE INDEX ix_files_by_created ON files (kind, project_id, sort_num, id);
+CREATE INDEX ix_files_by_updated ON files (kind, project_id, sort_updated, sort_num, id);
+CREATE INDEX ix_files_by_status ON files (kind, project_id, status_id);
+-- номера задач в сериях; строки файла заменяются и удаляются вместе с ним, в той же транзакции
+CREATE TABLE task_series (
+    path          TEXT NOT NULL,      -- файл задачи, как в files
+    project_id    TEXT NOT NULL,
+    series_id     TEXT NOT NULL,
+    number        INTEGER NOT NULL,
+    task_id       TEXT NOT NULL,
+    created_ticks INTEGER NOT NULL    -- createdAt задачи, ticks UTC
+);
+CREATE INDEX ix_task_series_by_number ON task_series (project_id, series_id, number);
+CREATE INDEX ix_task_series_by_path ON task_series (path);
+-- исходящие связи задач; строки файла заменяются и удаляются вместе с ним, в той же транзакции
+CREATE TABLE task_links (
+    path       TEXT NOT NULL,         -- файл задачи-источника, как в files
+    project_id TEXT NOT NULL,
+    type_id    TEXT NOT NULL,         -- тип связи
+    source_id  TEXT NOT NULL,
+    target_id  TEXT NOT NULL
+);
+CREATE INDEX ix_task_links_by_target ON task_links (project_id, target_id);
+CREATE INDEX ix_task_links_by_source ON task_links (project_id, type_id, source_id);
+CREATE INDEX ix_task_links_by_path ON task_links (path);
+-- поля, записанные в задаче (значения и дополнительные); строки файла заменяются и удаляются вместе с ним, в той же транзакции
+CREATE TABLE task_fields (
+    path       TEXT NOT NULL,         -- файл задачи, как в files
+    project_id TEXT NOT NULL,
+    field_id   TEXT NOT NULL,         -- поле каталога или собственное поле задачи
+    enum_id    TEXT,                  -- перечисление собственного поля; у поля каталога null
+    own_name   TEXT,                  -- собственное поле: имя в нижнем регистре (FieldNames.Key); у поля каталога null
+    own_type   INTEGER                -- собственное поле: тип (FieldType); у поля каталога null
+);
+CREATE INDEX ix_task_fields_by_field ON task_fields (project_id, field_id);
+CREATE INDEX ix_task_fields_by_enum ON task_fields (project_id, enum_id);
+CREATE INDEX ix_task_fields_by_own_name ON task_fields (own_name);
+CREATE INDEX ix_task_fields_by_path ON task_fields (path);
+-- значения полей задач (канонический текст); строки файла заменяются и удаляются вместе с ним, в той же транзакции
+CREATE TABLE task_field_values (
+    path       TEXT NOT NULL,         -- файл задачи, как в files
+    project_id TEXT NOT NULL,
+    field_id   TEXT NOT NULL,
+    value      TEXT NOT NULL,
+    number     REAL,                  -- значение числом (FieldNumbers); null, если оно не число. Сравнения int и float идут по нему
+    own_name   TEXT,                  -- собственное поле: имя в нижнем регистре (FieldNames.Key); у поля каталога null
+    own_type   INTEGER                -- собственное поле: тип (FieldType); у поля каталога null
+);
+-- id поля — Guid, общий для проекта и без повторов между проектами, поэтому проект в индексы не входит
+CREATE INDEX ix_task_field_values_by_value ON task_field_values (field_id, value);
+CREATE INDEX ix_task_field_values_by_number ON task_field_values (field_id, number);
+-- собственные поля у каждой задачи со своим id, поэтому ищутся по имени (и типу, он проверяется по строке)
+CREATE INDEX ix_task_field_values_by_own_value ON task_field_values (own_name, value);
+CREATE INDEX ix_task_field_values_by_own_number ON task_field_values (own_name, number);
+CREATE INDEX ix_task_field_values_by_path ON task_field_values (path);
+PRAGMA user_version = {SCHEMA_VERSION};
+"
         ))
         .map_err(db_error)
 }
