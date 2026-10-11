@@ -31,7 +31,8 @@ public partial class InstallScriptTests
 
         foreach (var type in new[] { typeof(Tasker.Web.TaskerWebApp), typeof(Tasker.Daemon.DaemonClient) })
             Assert.Equal(version, type.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion);
-        Assert.Equal(version, (await TaskerProcess.Run("--version")).Out.Trim());
+        // Сборка из исходников добавляет коммит как build metadata: 0.1.0+f2a114d.
+        Assert.Equal(version, (await TaskerProcess.Run("--version")).Out.Trim().Split('+')[0]);
     }
 
     [Fact]
