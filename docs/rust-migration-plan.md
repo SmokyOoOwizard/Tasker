@@ -139,7 +139,7 @@ rust/
 Сначала было принято (Б), TSK-131: файл `.cache/index-rs.db`, `PRAGMA user_version = 1`, блокировка `.cache/index-rs.lock`,
 `data` — JSON serde моделей `tasker-core` (camelCase).
 
-**Решение изменено на (А)** — TSK-161, решение пользователя 2026-10-11: кэш индекса у области должен быть один, без второго
+**Решение — вариант (А)** (TSK-161): кэш индекса у области должен быть один, без второго
 файла рядом с `.NET`-ским. Rust-консоль и демон читают и пишут ровно `.cache/index.db`: схема — буква в букву из
 `WorkspaceIndex.CreateSchema` (`user_version = 10`, те же таблицы, колонки, индексы и комментарии в CREATE), `data` — JSON
 System.Text.Json байт в байт (`tasker_files::index::data`: PascalCase в порядке объявления свойств, вычисляемые `IsAgent` и
