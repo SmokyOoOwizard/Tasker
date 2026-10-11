@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using Tasker.Cli;
 using Tasker.Core.IO;
 using Tasker.Core.Projects;
 using Tasker.Storage.Files;
@@ -264,28 +263,6 @@ public class WindowsFileSystemTests : IDisposable
 
         var bomless = FormatVersions.Upgrade("id: 1\r\nname: x\r\n", "x.yaml");
         Assert.StartsWith("formatVersion: " + FormatVersions.Current + "\r\nid: 1\r\n", bomless);
-    }
-
-    // ---- git-хуки ----
-
-    [Theory]
-    [InlineData(@"C:\Users\me\.local\bin\tasker.exe", true, "C:/Users/me/.local/bin/tasker.exe")]
-    [InlineData(@"C:\Program Files\Tasker\tasker.exe", true, "C:/Program Files/Tasker/tasker.exe")]
-    [InlineData("/usr/local/bin/tasker", false, "/usr/local/bin/tasker")]
-    [InlineData("/home/me/we\\ird", false, "/home/me/we\\ird")] // на Unix обратная косая — обычный знак имени
-    public void Hook_paths_use_forward_slashes_on_windows_only(string path, bool windows, string expected) =>
-        Assert.Equal(expected, GitHooks.ToShellPath(path, windows));
-
-    [Fact]
-    public void A_hook_with_crlf_loses_only_the_tasker_block()
-    {
-        var block = "# >>> tasker (managed by 'tasker hooks install', do not edit) >>>\nif true; then\n  :\nfi\n# <<< tasker <<<\n";
-        var text = "#!/bin/sh\r\n" + block.Replace("\n", "\r\n") + "echo mine\r\n";
-
-        var rest = GitHooks.WithoutBlock(text);
-
-        Assert.Equal("#!/bin/sh\r\necho mine\r\n", rest);
-        Assert.False(GitHooks.HasBlock(rest));
     }
 
     // ---- повторы при занятом файле (Windows) ----

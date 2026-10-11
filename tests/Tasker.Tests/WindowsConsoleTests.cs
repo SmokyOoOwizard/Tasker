@@ -1,18 +1,16 @@
 using System.Diagnostics;
 using System.Text;
-using Tasker.Cli;
-using Tasker.Cli.Completion;
 using Tasker.Global;
 using Xunit;
 
 namespace Tasker.Tests;
 
 /// <summary>
-/// Консоль на Windows (TSK-119): всё, что можно проверить без Windows, — чистые функции (пути, имя пользователя, ширина, кодировка,
-/// разбор строки PowerShell, блок в <c>$PROFILE</c>) и скрипт автодополнения PowerShell (golden-проверка, а при наличии pwsh или образа
-/// Docker с pwsh — настоящий прогон). Что требует самой Windows, перечислено в разделе «ПРОВЕРИТЬ НА WINDOWS» задачи TSK-119.
+/// Консоль на Windows (TSK-119): всё, что можно проверить без Windows, — общие функции путей и имени пользователя, кодировка вывода,
+/// подсказки в диалекте PowerShell, установка блока в <c>$PROFILE</c> командой и скрипт автодополнения PowerShell (golden-проверка, а при
+/// наличии pwsh или образа Docker с pwsh — настоящий прогон). Разбор строки PowerShell, ширина окна и правка профиля по шагам — модульные
+/// тесты Rust (<c>suggest/mod.rs</c>, <c>terminal.rs</c>, <c>commands/completion.rs</c>).
 /// </summary>
-[InProcess]
 public class WindowsConsoleTests
 {
     // ---- пути и имя пользователя ----
@@ -49,62 +47,27 @@ public class WindowsConsoleTests
     [InlineData(null, "user")]
     public void The_domain_is_dropped_from_the_user_name(string? name, string expected) => Assert.Equal(expected, OsUser.Normalize(name));
 
-    // ---- ширина окна и кодировка ----
-
-    [Theory]
-    [InlineData(120, true, 119)]
-    [InlineData(120, false, 120)]
-    [InlineData(1, true, 1)]
-    [InlineData(0, true, 0)]
-    public void The_last_column_is_left_free_only_on_windows(int window, bool windows, int expected) =>
-        Assert.Equal(expected, Terminal.UsableColumns(window, windows));
+    // ---- кодировка вывода ----
 
     [Fact]
-    public void Redirected_output_is_utf8_without_a_byte_order_mark()
+    public async Task Redirected_output_is_utf8_without_a_byte_order_mark()
     {
-        Assert.Empty(ConsoleSetup.Utf8.GetPreamble());
+        var info = TaskerProcess.StartInfo(null, "manual", "--json");
+        using var process = Process.Start(info)!;
+        using var bytes = new MemoryStream();
+        var copy = process.StandardOutput.BaseStream.CopyToAsync(bytes);
+        var error = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        await copy;
 
-        using var stream = new MemoryStream();
-        using (var writer = new StreamWriter(stream, ConsoleSetup.Utf8, 16, leaveOpen: true))
-            writer.WriteLine("Задача №1 ✓");
-        var bytes = stream.ToArray();
-
-        Assert.NotEqual(0xEF, bytes[0]);
-        Assert.Equal("Задача №1 ✓\n", Encoding.UTF8.GetString(bytes).Replace("\r\n", "\n"));
-    }
-
-    [Fact]
-    public void Everything_redirected_does_not_touch_the_console_code_page()
-    {
-        // Три перенаправления: кодовую страницу консоли не меняем (её может не быть), пишем напрямую в потоки.
-        using var setup = ConsoleSetup.Open(true, true, true);
-
-        Assert.NotNull(setup.Input);
-        Assert.NotSame(Console.Out, setup.Output);
+        Assert.Equal(0, process.ExitCode);
+        Assert.Empty(await error);
+        var output = bytes.ToArray();
+        Assert.NotEqual(0xEF, output[0]);
+        Assert.Contains("Проект и первая доска", new UTF8Encoding(false, true).GetString(output));
     }
 
     // ---- разбор строки PowerShell ----
-
-    [Theory]
-    [InlineData("task list --status 'В работе' ", "task list --status \"В работе\" ")]
-    [InlineData("task list --status 'В р", "task list --status \"В р")]
-    [InlineData("task list --status \"В р", "task list --status \"В р")]
-    [InlineData("task list --status В` р", "task list --status \"В р")]
-    [InlineData("task get 'It''s'", "task get It's")]
-    [InlineData("task get \"a\"\"b\"", "task get a\"b")]
-    [InlineData("task list -w C:\\work\\проект", "task list -w C:\\work\\проект")]
-    [InlineData("task list -w 'C:\\my dir\\x' ", "task list -w \"C:\\my dir\\x\" ")]
-    [InlineData("task list -w \"C:\\my dir\\x\" --st", "task list -w \"C:\\my dir\\x\" --st")]
-    [InlineData("task list --status ‘В работе’ ", "task list --status \"В работе\" ")]
-    public void PowerShell_words_are_rewritten_for_the_parser(string typed, string expected) =>
-        Assert.Equal(expected, ShellWords.Normalize(typed, ShellDialect.PowerShell));
-
-    [Fact]
-    public void A_backslash_is_an_escape_for_zsh_and_bash_but_an_ordinary_character_for_PowerShell()
-    {
-        Assert.Equal("C:workproj", ShellWords.Normalize("C:\\work\\proj"));
-        Assert.Equal("C:\\work\\proj", ShellWords.Normalize("C:\\work\\proj", ShellDialect.PowerShell));
-    }
 
     [Fact]
     public async Task The_directive_takes_the_PowerShell_dialect_from_its_value()
@@ -120,100 +83,7 @@ public class WindowsConsoleTests
         Assert.False(Directory.Exists(folder));
     }
 
-    // ---- блок в $PROFILE ----
-
-    private const string Script = "C:\\Users\\Иван\\AppData\\Local\\Tasker\\completions\\tasker.ps1";
-
-    [Fact]
-    public void The_block_loads_the_script_if_it_exists()
-    {
-        var block = PowerShellProfile.Block("C:\\Users\\O'Brien\\tasker.ps1", "\n");
-
-        Assert.Equal(
-            "# >>> tasker completion >>>\n"
-            + "# Tab completion for tasker, added by 'tasker completion pwsh --install'. To undo: delete this block or run 'tasker completion pwsh --uninstall'.\n"
-            + "if (Test-Path -LiteralPath 'C:\\Users\\O''Brien\\tasker.ps1') { . 'C:\\Users\\O''Brien\\tasker.ps1' }\n"
-            + "# <<< tasker completion <<<", block);
-    }
-
-    [Fact]
-    public void Installing_into_an_empty_profile_writes_only_the_block()
-    {
-        var block = PowerShellProfile.Block(Script, "\r\n");
-
-        var (content, change) = PowerShellProfile.Install("", block, "\r\n");
-
-        Assert.Equal(ProfileChange.Added, change);
-        Assert.Equal(block + "\r\n", content);
-    }
-
-    [Theory]
-    [InlineData("Set-Alias g git\n", "\n")]
-    [InlineData("Set-Alias g git\r\n", "\r\n")]
-    [InlineData("Set-Alias g git", "\n")]
-    public void The_block_is_appended_after_the_existing_content_and_removed_without_a_trace(string original, string newline)
-    {
-        var block = PowerShellProfile.Block(Script, newline);
-
-        var (installed, added) = PowerShellProfile.Install(original, block, newline);
-        var (removed, change) = PowerShellProfile.Uninstall(installed, newline);
-
-        Assert.Equal(ProfileChange.Added, added);
-        Assert.StartsWith(original, installed);
-        Assert.EndsWith(block + newline, installed);
-        Assert.Equal(ProfileChange.Removed, change);
-        Assert.Equal(original.EndsWith('\n') ? original : original + newline, removed);
-    }
-
-    [Fact]
-    public void Installing_twice_changes_nothing_and_a_new_path_replaces_the_block()
-    {
-        var first = PowerShellProfile.Block(Script, "\n");
-        var (installed, _) = PowerShellProfile.Install("# mine\n", first, "\n");
-
-        var (again, unchanged) = PowerShellProfile.Install(installed, first, "\n");
-        var (moved, replaced) = PowerShellProfile.Install(installed + "# after\n", PowerShellProfile.Block("D:\\t.ps1", "\n"), "\n");
-
-        Assert.Equal(ProfileChange.Unchanged, unchanged);
-        Assert.Equal(installed, again);
-        Assert.Equal(ProfileChange.Replaced, replaced);
-        Assert.Equal(1, Count(moved, PowerShellProfile.Begin));
-        Assert.Contains("D:\\t.ps1", moved);
-        Assert.DoesNotContain("Иван", moved);
-        Assert.StartsWith("# mine\n", moved);
-        Assert.EndsWith("# after\n", moved);
-    }
-
-    [Fact]
-    public void A_file_with_only_one_mark_is_left_alone()
-    {
-        var broken = "x\n" + PowerShellProfile.Begin + "\ny\n";
-
-        Assert.Equal((broken, ProfileChange.Broken), PowerShellProfile.Install(broken, "block", "\n"));
-        Assert.Equal((broken, ProfileChange.Broken), PowerShellProfile.Uninstall(broken, "\n"));
-    }
-
-    [Fact]
-    public void Removing_from_a_profile_without_the_block_changes_nothing() =>
-        Assert.Equal(("Set-Alias g git\n", ProfileChange.Absent), PowerShellProfile.Uninstall("Set-Alias g git\n", "\n"));
-
-    [Fact]
-    public void Smart_quotes_in_a_path_are_doubled_for_PowerShell() =>
-        Assert.Equal("'a''b\u2019\u2019c'", PowerShellProfile.Quote("a'b\u2019c"));
-
-    [Fact]
-    public void Profiles_are_found_by_platform()
-    {
-        Assert.Equal(
-            [Path.Combine("D:\\Docs", "PowerShell", "Microsoft.PowerShell_profile.ps1"), Path.Combine("D:\\Docs", "WindowsPowerShell", "Microsoft.PowerShell_profile.ps1")],
-            PowerShellProfile.DefaultProfiles(true, "D:\\Docs", "C:\\Users\\u", null));
-        Assert.Equal([Path.Combine("/home/u", ".config", "powershell", "Microsoft.PowerShell_profile.ps1")], PowerShellProfile.DefaultProfiles(false, "", "/home/u", null));
-        Assert.Equal([Path.Combine("/cfg", "powershell", "Microsoft.PowerShell_profile.ps1")], PowerShellProfile.DefaultProfiles(false, "", "/home/u", "/cfg"));
-    }
-
-    private static int Count(string text, string part) => text.Split(part).Length - 1;
-
-    // ---- файлы профиля ----
+    // ---- блок в $PROFILE: команда ----
 
     private sealed class Folder : IDisposable
     {
@@ -222,55 +92,6 @@ public class WindowsConsoleTests
         public string File(string name) => System.IO.Path.Combine(Path, name);
 
         public void Dispose() => System.IO.Directory.Delete(Path, recursive: true);
-    }
-
-    [Fact]
-    public void A_profile_is_backed_up_once_and_keeps_its_byte_order_mark()
-    {
-        using var folder = new Folder();
-        var profile = folder.File("p.ps1");
-        File.WriteAllBytes(profile, [.. Encoding.UTF8.GetPreamble(), .. "Set-Alias g git\r\n"u8.ToArray()]);
-
-        var (change, report) = PowerShellProfileFiles.Apply(profile, "C:\\t\\tasker.ps1", "\r\n");
-        var (second, _) = PowerShellProfileFiles.Apply(profile, "C:\\t\\tasker.ps1", "\r\n");
-
-        Assert.Equal(ProfileChange.Added, change);
-        Assert.Equal(ProfileChange.Unchanged, second);
-        Assert.Contains("backup:", report);
-        Assert.Equal("Set-Alias g git\r\n", File.ReadAllText(profile + PowerShellProfileFiles.BackupSuffix));
-        var bytes = File.ReadAllBytes(profile);
-        Assert.Equal(Encoding.UTF8.GetPreamble(), bytes[..3]);
-        Assert.Contains("\r\n# >>> tasker completion >>>\r\n", Encoding.UTF8.GetString(bytes));
-    }
-
-    [Fact]
-    public void A_new_profile_gets_a_byte_order_mark_only_when_it_has_non_ascii_text()
-    {
-        using var folder = new Folder();
-        var ascii = folder.File("a/p.ps1");
-        var cyrillic = folder.File("b/p.ps1");
-
-        PowerShellProfileFiles.Apply(ascii, "C:\\t\\tasker.ps1", "\n");
-        PowerShellProfileFiles.Apply(cyrillic, "C:\\Users\\Иван\\tasker.ps1", "\n");
-
-        Assert.NotEqual(0xEF, File.ReadAllBytes(ascii)[0]);
-        Assert.Equal(Encoding.UTF8.GetPreamble(), File.ReadAllBytes(cyrillic)[..3]);
-        Assert.False(File.Exists(ascii + PowerShellProfileFiles.BackupSuffix));
-    }
-
-    [Fact]
-    public void A_profile_in_another_code_page_is_not_touched()
-    {
-        using var folder = new Folder();
-        var profile = folder.File("p.ps1");
-        byte[] ansi = [0x23, 0x20, 0xC8, 0xE2, 0xE0, 0xED, 0x0A]; // «# Иван» в Windows-1251
-        File.WriteAllBytes(profile, ansi);
-
-        var (change, report) = PowerShellProfileFiles.Apply(profile, "C:\\t\\tasker.ps1", "\n");
-
-        Assert.Equal(ProfileChange.Broken, change);
-        Assert.Contains("not UTF-8", report);
-        Assert.Equal(ansi, File.ReadAllBytes(profile));
     }
 
     [Fact]
@@ -286,13 +107,13 @@ public class WindowsConsoleTests
         Assert.True(installed.Code == 0, installed.Err);
         Assert.Contains("Register-ArgumentCompleter", File.ReadAllText(script));
         Assert.Contains("already has the tasker completion block", again.Out);
-        Assert.Contains(PowerShellProfile.Quote(script), File.ReadAllText(profile));
+        Assert.Contains("'" + script.Replace("'", "''") + "'", File.ReadAllText(profile));
         Assert.Contains("cmd.exe", installed.Out);
 
         var removed = await TestWorkspace.Invoke(["completion", "pwsh", "--uninstall", "--profile", profile, "--script", script]);
 
         Assert.True(removed.Code == 0, removed.Err);
-        Assert.DoesNotContain(PowerShellProfile.Begin, File.ReadAllText(profile));
+        Assert.DoesNotContain("# >>> tasker completion >>>", File.ReadAllText(profile));
         Assert.False(File.Exists(script));
     }
 

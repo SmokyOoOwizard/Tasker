@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Tasker.Tests;
 
-/// <summary>Где консольная утилита ищет программу демона (tasker-mcpd) и что делает, когда её нет.</summary>
+/// <summary>Где консоль ищет программу демона (tasker-mcpd: рядом с собой, ссылка раскрывается) и что делает, когда её нет.</summary>
 public class DaemonLauncherTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));
@@ -15,82 +15,47 @@ public class DaemonLauncherTests : IDisposable
 
     private string Dir(string name) => Directory.CreateDirectory(Path.Combine(_root, name)).FullName;
 
-    private static string Touch(string directory, string name)
-    {
-        var path = Path.Combine(directory, name);
-        File.WriteAllText(path, "");
-        return path;
-    }
-
     [Fact]
-    public void The_daemon_is_taken_from_the_directory_of_the_running_program()
+    public void The_daemon_of_the_test_run_is_found_next_to_the_console()
     {
-        var app = Dir("app");
-        var tasker = Touch(app, "tasker");
-        var daemon = Touch(app, "tasker-mcpd");
+        var (file, arguments) = TaskerProcess.DaemonCommand();
 
-        var (file, arguments) = Launcher.DaemonCommand(tasker, null);
-
-        Assert.Equal(daemon, file);
+        Assert.True(File.Exists(file), file);
         Assert.Empty(arguments);
+        Assert.StartsWith("tasker-mcpd", Path.GetFileName(file));
     }
 
     [Fact]
-    public void A_link_to_tasker_is_resolved_to_the_real_directory()
+    public async Task A_link_to_tasker_starts_the_daemon_from_the_real_directory()
     {
         if (OperatingSystem.IsWindows())
             return;
 
-        var app = Dir("app");
-        var tasker = Touch(app, "tasker");
-        var daemon = Touch(app, "tasker-mcpd");
-        var bin = Dir("bin");
-        var link = Path.Combine(bin, "tasker");
-        File.CreateSymbolicLink(link, tasker);
+        // Как установка: в bin — ссылка на tasker, а tasker-mcpd лежит только рядом с настоящей программой.
+        var link = Path.Combine(Dir("bin"), "tasker");
+        File.CreateSymbolicLink(link, TaskerProcess.Binary);
+        using var home = new IsolatedHome();
+        home.IsolateDaemon();
 
-        var (file, _) = Launcher.DaemonCommand(link, null);
+        var started = await Run(link, "mcp", "start", "--json");
+        var stopped = await Run(link, "mcp", "stop");
 
-        Assert.Equal(daemon, file);
+        Assert.True(started.Code == 0, started.Err);
+        Assert.Equal(0, stopped.Code);
+        Assert.False(DaemonFiles.IsRunning());
     }
 
-    [Fact]
-    public void Under_dotnet_the_daemon_dll_next_to_the_entry_assembly_is_run_by_dotnet()
+    private static async Task<CliResult> Run(string program, params string[] args)
     {
-        var app = Dir("app");
-        var dll = Touch(app, "tasker.dll");
-        var daemon = Touch(app, "tasker-mcpd.dll");
-
-        var (file, arguments) = Launcher.DaemonCommand("/usr/local/share/dotnet/dotnet", dll);
-
-        Assert.Equal("/usr/local/share/dotnet/dotnet", file);
-        Assert.Equal([daemon], arguments);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void A_missing_daemon_is_explained(bool viaDotnet)
-    {
-        var app = Dir("app");
-        var tasker = Touch(app, viaDotnet ? "tasker.dll" : "tasker");
-
-        var error = Assert.Throws<DaemonStartException>(() =>
-            viaDotnet ? Launcher.DaemonCommand("/usr/local/share/dotnet/dotnet", tasker) : Launcher.DaemonCommand(tasker, null));
-
-        Assert.Contains("tasker-mcpd", error.Message);
-        Assert.Contains("is not installed next to tasker", error.Message);
-        Assert.Contains(app, error.Message);
-        Assert.Contains("--no-daemon", error.Message);
-    }
-
-    [Fact]
-    public void The_daemon_of_the_test_run_is_found_next_to_the_tests()
-    {
-        // Тесты запускают tasker и демон рядом (ссылки на оба проекта): в этом каталоге они и лежат.
-        var (file, arguments) = Launcher.DaemonCommand();
-
-        Assert.True(File.Exists(arguments.Length > 0 ? arguments[0] : file));
-        Assert.Contains("tasker-mcpd", arguments.Length > 0 ? arguments[0] : file);
+        var info = new ProcessStartInfo(program) { RedirectStandardOutput = true, RedirectStandardError = true };
+        Tasker.Global.AppEnvironment.Apply(info);
+        foreach (var arg in args)
+            info.ArgumentList.Add(arg);
+        using var process = Process.Start(info)!;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        return new CliResult(process.ExitCode, await output, await error);
     }
 
     [Fact]
@@ -98,9 +63,7 @@ public class DaemonLauncherTests : IDisposable
     {
         // Копия tasker без tasker-mcpd — как установка с --no-daemon.
         var copy = Dir("cli-only");
-        foreach (var file in Directory.EnumerateFiles(TaskerProcess.ProgramDirectory)
-                     .Where(x => !Path.GetFileName(x).StartsWith("tasker-mcpd", StringComparison.Ordinal)))
-            File.Copy(file, Path.Combine(copy, Path.GetFileName(file)));
+        File.Copy(TaskerProcess.Binary, Path.Combine(copy, Path.GetFileName(TaskerProcess.Binary)));
 
         using var home = new IsolatedHome();
         home.IsolateDaemon(); // на машине может работать настоящий демон: порт по умолчанию и служба автозапуска заняты им
@@ -109,7 +72,11 @@ public class DaemonLauncherTests : IDisposable
         await process.WaitForExitAsync();
 
         Assert.Equal(1, process.ExitCode);
-        Assert.Contains("is not installed next to tasker", await error);
+        var message = await error;
+        Assert.Contains("tasker-mcpd", message);
+        Assert.Contains("is not installed next to tasker", message);
+        Assert.Contains(Path.GetFileName(copy), message);
+        Assert.Contains("--no-daemon", message);
     }
 
     [Fact]

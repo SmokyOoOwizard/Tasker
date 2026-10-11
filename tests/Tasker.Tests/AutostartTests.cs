@@ -1,64 +1,39 @@
 using System.Diagnostics;
-using Tasker.Cli;
+using System.Net;
+using System.Net.Sockets;
 using Tasker.Daemon;
-using Tasker.Daemon.Services;
+using Tasker.Global;
 using Xunit;
 
 namespace Tasker.Tests;
 
 /// <summary>
-/// Автозапуск и управление демоном через службу системы. Служба здесь поддельная: она делает то, что launchd и systemd
-/// (запускает и останавливает настоящий демон), а её команды проверены отдельно в <see cref="ServiceManagerTests"/>.
+/// Автозапуск и управление демоном через службу системы — командами <c>tasker mcp …</c>. Служба поддельная: в PATH процессов
+/// <c>tasker</c> первыми стоят свои <c>launchctl</c> и <c>systemctl</c> (<see cref="FakeService"/>), которые делают то, что launchd и
+/// systemd, — запускают и останавливают настоящий демон. Настоящие launchd и systemd не трогаются; описания служб и команды системы
+/// проверяют модульные тесты Rust (<c>tasker-daemon/src/autostart</c>) и эталоны <c>rust/tests/golden/autostart</c>.
 /// </summary>
 public class AutostartTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();
     private readonly FakeService _service = new();
 
-    public void Dispose() => _daemon.Dispose();
-
-    /// <summary>Ведёт себя как launchd/systemd: «загруженная» служба держит демон, «выгруженная» — останавливает.</summary>
-    private sealed class FakeService : IServiceManager
+    public void Dispose()
     {
-        public List<string> Calls { get; } = [];
-        public string Name => "fake";
-        public bool IsEnabled { get; private set; }
-
-        public Task Enable()
-        {
-            Calls.Add("enable");
-            IsEnabled = true;
-            Spawn();
-            return Task.CompletedTask;
-        }
-
-        public async Task Disable()
-        {
-            Calls.Add("disable");
-            IsEnabled = false;
-            await DaemonClient.RequestStop();
-        }
-
-        public Task Start()
-        {
-            Calls.Add("start");
-            Spawn();
-            return Task.CompletedTask;
-        }
-
-        public async Task Stop()
-        {
-            Calls.Add("stop");
-            await DaemonClient.RequestStop();
-        }
-
-        public Task<bool> IsLoaded() => Task.FromResult(DaemonFiles.IsRunning());
-
-        private static void Spawn() => TaskerProcess.Start("mcp", "run", "--detached");
+        _service.Dispose();
+        _daemon.Dispose();
     }
 
-    private DaemonController Controller(TimeSpan? ready = null) =>
-        new(_service, ready ?? TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(15), () => TaskerProcess.Start("mcp", "run", "--detached"));
+    private static bool Supported => OperatingSystem.IsMacOS() || OperatingSystem.IsLinux();
+
+    private static string Manager => OperatingSystem.IsMacOS() ? "launchd" : "systemd";
+
+    private static async Task<CliResult> Ok(Task<CliResult> run)
+    {
+        var result = await run;
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
+        return result;
+    }
 
     private static async Task<bool> Wait(Func<bool> condition)
     {
@@ -67,198 +42,151 @@ public class AutostartTests : IDisposable
         return condition();
     }
 
+    private static int PidOf(CliResult started) => started.Json["status"]!["pid"]!.GetValue<int>();
+
     [Fact]
     public async Task Enabling_autostart_starts_the_server_through_the_service()
     {
+        if (!Supported)
+            return;
         await _daemon.Workspace("a", "Alpha");
 
-        var status = await Controller().EnableAutostart();
+        await Ok(_daemon.Mcp("autostart", "enable", "--json"));
 
-        Assert.Equal(["enable"], _service.Calls);
-        Assert.Equal(WorkspaceState.Open, status.Workspaces.Single().State);
-        var info = (await Controller().Status()).Autostart;
-        Assert.True(info.Enabled);
-        Assert.True(info.Loaded);
-        Assert.Equal("fake", info.Manager);
+        Assert.Contains("start", _service.Calls);
+        var status = await _daemon.Status();
+        Assert.Equal(WorkspaceState.Open, status!.Workspaces.Single().State);
+        var info = (await Ok(_daemon.Mcp("autostart", "status", "--json"))).Json;
+        Assert.True(info["enabled"]!.GetValue<bool>());
+        Assert.True(info["loaded"]!.GetValue<bool>());
+        Assert.Equal(Manager, info["manager"]!.GetValue<string>());
     }
 
     [Fact]
     public async Task Enabling_takes_over_a_server_that_was_started_by_hand()
     {
+        if (!Supported)
+            return;
         var manual = await _daemon.Start();
 
-        var status = await Controller().EnableAutostart();
+        var enabled = await Ok(_daemon.Mcp("autostart", "enable", "--json"));
 
-        Assert.NotEqual(manual.Pid, status.Pid);
-        Assert.Equal(["enable"], _service.Calls);
+        Assert.NotEqual(manual.Pid, PidOf(enabled));
+        Assert.Contains("start", _service.Calls);
         Assert.True(await Wait(() => !IsAlive(manual.Pid)));
     }
 
     [Fact]
     public async Task With_autostart_on_start_and_stop_go_through_the_service()
     {
-        var controller = Controller();
-        await controller.EnableAutostart();
-        _service.Calls.Clear();
+        if (!Supported)
+            return;
+        await Ok(_daemon.Mcp("autostart", "enable"));
+        _service.ClearCalls();
 
-        Assert.True(await controller.Stop());
+        await Ok(_daemon.Mcp("stop"));
         Assert.False(DaemonFiles.IsRunning());
-        Assert.Equal(["stop"], _service.Calls);
+        Assert.Contains("stop", _service.Calls);
+        Assert.DoesNotContain("start", _service.Calls);
 
         // Автозапуск при этом остаётся включённым, а сервер поднимается службой.
-        Assert.True(_service.IsEnabled);
-        var (status, already) = await controller.Start();
-        Assert.False(already);
-        Assert.Equal(["stop", "start"], _service.Calls);
-        Assert.NotNull(status);
+        Assert.StartsWith($"enabled ({Manager})", (await Ok(_daemon.Mcp("autostart", "status"))).Out.Trim());
+        _service.ClearCalls();
+        await Ok(_daemon.Mcp("start"));
+        Assert.Contains("start", _service.Calls);
+        Assert.True(DaemonFiles.IsRunning());
     }
 
     [Fact]
     public async Task Stop_reaches_a_server_that_the_service_does_not_own()
     {
+        if (!Supported)
+            return;
         // Автозапуск включён, но сервер запущен вручную (tasker mcp run в терминале): служба про него не знает.
-        var controller = Controller();
-        await controller.EnableAutostart();
-        await controller.Stop();
+        await Ok(_daemon.Mcp("autostart", "enable"));
+        await Ok(_daemon.Mcp("stop"));
         using var manual = TaskerProcess.Start("mcp", "run", "--detached");
         Assert.True(await Wait(() => DaemonFiles.IsRunning()));
 
-        await controller.Stop();
+        await Ok(_daemon.Mcp("stop"));
 
         Assert.False(DaemonFiles.IsRunning());
+        Assert.True(manual.WaitForExit(20_000));
     }
 
     [Fact]
     public async Task Disabling_autostart_keeps_a_running_server_running()
     {
-        var controller = Controller();
-        var enabled = await controller.EnableAutostart();
+        if (!Supported)
+            return;
+        var enabled = await Ok(_daemon.Mcp("autostart", "enable", "--json"));
 
-        var status = await controller.DisableAutostart();
+        var disabled = await Ok(_daemon.Mcp("autostart", "disable", "--json"));
 
-        Assert.NotNull(status);
-        Assert.False(_service.IsEnabled);
         Assert.True(DaemonFiles.IsRunning());
-        Assert.NotEqual(enabled.Pid, status.Pid);
-        Assert.Contains("disable", _service.Calls);
+        Assert.NotEqual(PidOf(enabled), PidOf(disabled));
+        Assert.Contains("unload", _service.Calls);
+        Assert.Equal("off", (await Ok(_daemon.Mcp("autostart", "status"))).Out.Trim());
     }
 
     [Fact]
     public async Task Disabling_autostart_of_a_stopped_server_starts_nothing()
     {
-        var controller = Controller();
-        await controller.EnableAutostart();
-        await controller.Stop();
+        if (!Supported)
+            return;
+        await Ok(_daemon.Mcp("autostart", "enable"));
+        await Ok(_daemon.Mcp("stop"));
 
-        var status = await controller.DisableAutostart();
+        var disabled = await Ok(_daemon.Mcp("autostart", "disable", "--json"));
 
-        Assert.Null(status);
+        Assert.Null(disabled.Json["status"]);
         Assert.False(DaemonFiles.IsRunning());
     }
 
     [Fact]
-    public async Task A_server_that_never_answers_is_reported_after_the_timeout()
+    public async Task A_server_that_the_service_never_starts_is_reported_after_the_timeout()
     {
-        var silent = new SilentService();
-        var controller = new DaemonController(silent, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-        await silent.Enable();
+        if (!Supported)
+            return;
+        _service.Silent = true;
 
-        var error = await Assert.ThrowsAsync<DaemonStartException>(() => controller.Start());
+        var result = await _daemon.Mcp("autostart", "enable");
 
-        Assert.Contains("did not answer in 1 s", error.Message);
-    }
-
-    private sealed class SilentService : IServiceManager
-    {
-        public string Name => "silent";
-        public bool IsEnabled { get; private set; }
-        public Task Enable() { IsEnabled = true; return Task.CompletedTask; }
-        public Task Disable() { IsEnabled = false; return Task.CompletedTask; }
-        public Task Start() => Task.CompletedTask;
-        public Task Stop() => Task.CompletedTask;
-        public Task<bool> IsLoaded() => Task.FromResult(false);
+        Assert.Equal(1, result.Code);
+        Assert.Contains("did not answer in 30 s", result.Err);
     }
 
     [Fact]
     public async Task A_server_that_exits_at_start_explains_why()
     {
-        using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, _daemon.Port);
+        using var listener = new TcpListener(IPAddress.Loopback, _daemon.Port);
         listener.Start();
-        var controller = new DaemonController(new UnsupportedNoService(), spawn: () => TaskerProcess.Start("mcp", "run", "--detached"));
 
-        var error = await Assert.ThrowsAsync<DaemonStartException>(() => controller.Start());
+        var result = await _daemon.Mcp("start");
 
-        Assert.Contains($"Port {_daemon.Port} is busy", error.Message);
+        Assert.Equal(1, result.Code);
+        Assert.Contains($"Port {_daemon.Port} is busy", result.Err);
     }
 
-    private sealed class UnsupportedNoService : IServiceManager
-    {
-        public string Name => "none";
-        public bool IsEnabled => false;
-        public Task Enable() => Task.CompletedTask;
-        public Task Disable() => Task.CompletedTask;
-        public Task Start() => Task.CompletedTask;
-        public Task Stop() => Task.CompletedTask;
-        public Task<bool> IsLoaded() => Task.FromResult(false);
-    }
-
-    // ---- через команды tasker ----
-
-    private async Task<CliResult> Cli(params string[] args)
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-        var code = await CliApp.Run(args, output, error, _service);
-        return new CliResult(code, output.ToString(), error.ToString());
-    }
-
-    [InProcess]
     [Fact]
     public async Task Autostart_commands_enable_report_and_disable()
     {
+        if (!Supported)
+            return;
         await _daemon.Workspace("a", "Alpha");
 
-        var before = await Cli("mcp", "autostart", "status");
-        Assert.Equal("off", before.Out.Trim());
+        Assert.Equal("off", (await Ok(_daemon.Mcp("autostart", "status"))).Out.Trim());
 
-        var enabled = await Cli("mcp", "autostart", "enable");
-        Assert.Equal(0, enabled.Code);
-        Assert.Contains("Autostart is enabled (fake)", enabled.Out);
+        var enabled = await Ok(_daemon.Mcp("autostart", "enable"));
+        Assert.Contains($"Autostart is enabled ({Manager})", enabled.Out);
         Assert.Contains("open", enabled.Out);
 
-        Assert.Equal("enabled (fake)", (await Cli("mcp", "autostart", "status")).Out.Trim());
-        var status = await Cli("mcp", "status");
-        Assert.Contains("autostart: enabled (fake)", status.Out);
+        Assert.Equal($"enabled ({Manager})", (await Ok(_daemon.Mcp("autostart", "status"))).Out.Trim());
+        Assert.Contains($"autostart: enabled ({Manager})", (await Ok(_daemon.Mcp("status"))).Out);
 
-        Assert.Equal(0, (await Cli("mcp", "stop")).Code);
-        var disabled = await Cli("mcp", "autostart", "disable");
-        Assert.Equal(0, disabled.Code);
-        Assert.Equal("Autostart is disabled", disabled.Out.Trim());
-        Assert.Equal("off", (await Cli("mcp", "autostart", "status")).Out.Trim());
-    }
-
-    [InProcess]
-    [Fact]
-    public async Task Autostart_on_an_unsupported_system_is_a_clear_error()
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-
-        var code = await CliApp.Run(["mcp", "autostart", "enable"], output, error, new UnsupportedNoServiceThatThrows());
-
-        Assert.Equal(1, code);
-        Assert.Contains("tasker mcp run", error.ToString());
-    }
-
-    private sealed class UnsupportedNoServiceThatThrows : IServiceManager
-    {
-        public string Name => "none";
-        public bool IsEnabled => false;
-        public Task Enable() => throw new ServiceException("Autostart is supported on macOS (launchd) and Linux (systemd) only; on this system run 'tasker mcp run' yourself");
-        public Task Disable() => Task.CompletedTask;
-        public Task Start() => Task.CompletedTask;
-        public Task Stop() => Task.CompletedTask;
-        public Task<bool> IsLoaded() => Task.FromResult(false);
+        await Ok(_daemon.Mcp("stop"));
+        Assert.Equal("Autostart is disabled", (await Ok(_daemon.Mcp("autostart", "disable"))).Out.Trim());
+        Assert.Equal("off", (await Ok(_daemon.Mcp("autostart", "status"))).Out.Trim());
     }
 
     private static bool IsAlive(int pid)
@@ -270,6 +198,124 @@ public class AutostartTests : IDisposable
         catch (ArgumentException)
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Поддельные <c>launchctl</c> и <c>systemctl</c> первыми в PATH процессов <c>tasker</c>: «загрузка» службы — файл-отметка и запуск
+    /// демона (если его ещё нет), «выгрузка» и остановка — запрос <c>/daemon/stop</c> по <c>daemon.json</c>. Что делала служба, видно по
+    /// <see cref="Calls"/>: <c>load</c>, <c>unload</c>, <c>start</c>, <c>stop</c>.
+    /// </summary>
+    private sealed class FakeService : IDisposable
+    {
+        private const string Script = """
+            #!/usr/bin/env python3
+            import json, os, subprocess, sys, urllib.request
+            state = os.environ["FAKE_SERVICE_STATE"]
+            loaded = os.path.join(state, "loaded")
+            def log(action):
+                with open(os.path.join(state, "calls"), "a") as f:
+                    f.write(action + "\n")
+            def info():
+                try:
+                    with open(os.environ["FAKE_SERVICE_INFO"]) as f:
+                        return json.load(f)
+                except (OSError, ValueError):
+                    return None
+            def start():
+                log("start")
+                if os.path.exists(os.path.join(state, "silent")):
+                    return
+                subprocess.Popen([os.environ["FAKE_SERVICE_DAEMON"]], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
+            def stop():
+                log("stop")
+                daemon = info()
+                if daemon:
+                    request = urllib.request.Request(f"http://127.0.0.1:{daemon['port']}/daemon/stop", method="POST",
+                                                     headers={"X-Tasker-Control": daemon["token"]})
+                    try:
+                        urllib.request.urlopen(request, timeout=5).read()
+                    except OSError:
+                        pass
+            def load():
+                log("load")
+                open(loaded, "w").close()
+            def unload():
+                if os.path.exists(loaded):
+                    log("unload")
+                    os.remove(loaded)
+                    stop()
+            args = [a for a in sys.argv[1:] if a not in ("--user", "--now", "--quiet")]
+            verb = args[0] if args else ""
+            if os.path.basename(sys.argv[0]) == "launchctl":
+                if verb == "bootstrap":
+                    load(); start()
+                elif verb == "bootout":
+                    unload()
+                elif verb == "kickstart":
+                    if not os.path.exists(loaded):
+                        sys.exit(113)
+                    start()
+                elif verb == "print":
+                    sys.exit(0 if os.path.exists(loaded) else 113)
+            else:
+                if verb == "enable":
+                    load(); start()
+                elif verb == "disable":
+                    unload()
+                elif verb == "start":
+                    start()
+                elif verb == "stop":
+                    stop()
+                elif verb == "is-active":
+                    sys.exit(0 if os.path.exists(loaded) and info() else 3)
+            """;
+
+        private readonly string _root = Directory.CreateTempSubdirectory("tasker-fake-service-").FullName;
+        private readonly List<IDisposable> _overrides = [];
+
+        public FakeService()
+        {
+            var bin = Directory.CreateDirectory(Path.Combine(_root, "bin")).FullName;
+            State = Directory.CreateDirectory(Path.Combine(_root, "state")).FullName;
+            if (!OperatingSystem.IsWindows())
+            {
+                foreach (var name in new[] { "launchctl", "systemctl" })
+                {
+                    var file = Path.Combine(bin, name);
+                    File.WriteAllText(file, Script.Replace("\r\n", "\n") + "\n");
+                    File.SetUnixFileMode(file, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                }
+            }
+
+            _overrides.Add(AppEnvironment.Override("PATH", bin + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH")));
+            _overrides.Add(AppEnvironment.Override("FAKE_SERVICE_STATE", State));
+            _overrides.Add(AppEnvironment.Override("FAKE_SERVICE_INFO", DaemonFiles.InfoFile));
+            _overrides.Add(AppEnvironment.Override("FAKE_SERVICE_DAEMON", TaskerProcess.DaemonCommand().File));
+        }
+
+        private string State { get; }
+
+        /// <summary>Служба «загружается», но демон не запускает.</summary>
+        public bool Silent
+        {
+            set
+            {
+                if (value)
+                    File.WriteAllText(Path.Combine(State, "silent"), "");
+            }
+        }
+
+        public string[] Calls => File.Exists(Path.Combine(State, "calls")) ? File.ReadAllLines(Path.Combine(State, "calls")) : [];
+
+        public void ClearCalls() => File.Delete(Path.Combine(State, "calls"));
+
+        public void Dispose()
+        {
+            for (var i = _overrides.Count - 1; i >= 0; i--)
+                _overrides[i].Dispose();
+            Directory.Delete(_root, recursive: true);
         }
     }
 }

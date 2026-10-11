@@ -1,11 +1,9 @@
-using Tasker.Cli.Commands;
 using Tasker.Core.Fields;
 using Xunit;
 
 namespace Tasker.Tests;
 
 /// <summary>Консоль для полей, перечислений и значений у задач: оба хранилища.</summary>
-[InProcess]
 public class FieldCliTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
@@ -335,30 +333,5 @@ public class FieldCliTests
         Assert.Contains("Removed 'Low' from 3 tasks\n", dropped.Out);
         Assert.Contains("  Severity (enum): -\n", (await Ok(ws.Run("task", "get", "TSK-1"))).Out);
         Assert.Contains("Priority  Medium", (await Ok(ws.Run("enum", "list"))).Out);
-    }
-
-    [Theory]
-    [InlineData("Estimate:int", "Estimate", FieldType.Int, false, false, null, null)]
-    [InlineData("Estimate:Int=5", "Estimate", FieldType.Int, false, false, null, "5")]
-    [InlineData("Tags:string:multiple:required=a:b=c", "Tags", FieldType.String, true, true, null, "a:b=c")]
-    [InlineData("Risk:enum:enum=Priority=High", "Risk", FieldType.Enum, false, false, "Priority", "High")]
-    [InlineData("Risk:enum:required:enum=Priority", "Risk", FieldType.Enum, true, false, "Priority", null)]
-    [InlineData("Due:date=", "Due", FieldType.Date, false, false, null, null)]
-    public void Custom_field_syntax(string text, string name, FieldType type, bool required, bool multiple, string? enumeration, string? value)
-    {
-        Assert.Equal((name, type, required, multiple, enumeration, value), TaskFieldOptions.ParseCustomField(text));
-    }
-
-    [Theory]
-    [InlineData("Estimate")]
-    [InlineData(":int")]
-    [InlineData("Estimate:")]
-    [InlineData("Estimate:number")]
-    [InlineData("Estimate:int:sometimes")]
-    [InlineData("Estimate:int:enum")]
-    [InlineData("Estimate:int:enum=")]
-    public void Custom_field_syntax_errors(string text)
-    {
-        Assert.Throws<Tasker.Cli.CliException>(() => TaskFieldOptions.ParseCustomField(text));
     }
 }

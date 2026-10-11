@@ -30,7 +30,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Creates_everything_and_lists_it(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         var projectId = await Seed(ws);
 
         var board = await Ok(ws.InProject("Demo", "board", "create", "Main", "--status-set", "Flow",
@@ -63,7 +63,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Status_color_is_stored_in_upper_case_and_defaults_to_gray(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
 
         var statuses = (await Ok(ws.InProject("Demo", "status", "list", "--json"))).Json["data"]!.AsArray();
@@ -75,7 +75,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Board_columns_get_drop_rule_from_first_status_of_each_set(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
         await Ok(ws.InProject("Demo", "status", "create", "Review"));
         await Ok(ws.InProject("Demo", "status-set", "create", "Short", "--status", "Todo", "Review"));
@@ -104,7 +104,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Task_list_filters_by_type_and_status(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
         await Ok(ws.InProject("Demo", "task-type", "create", "Story", "--status-set", "Flow"));
         await Ok(ws.InProject("Demo", "task", "create", "Bug todo", "--type", "Bug"));
@@ -122,7 +122,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Users_and_agents_are_listed_separately(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
 
         Assert.StartsWith("Created user 'Ivan' ", (await Ok(ws.Run("user", "create", "Ivan"))).Out);
         Assert.StartsWith("Created agent 'bot' ", (await Ok(ws.Run("agent", "create", "bot"))).Out);
@@ -139,7 +139,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Lists_are_paged(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         foreach (var name in new[] { "A", "B", "C" })
             await Ok(ws.Run("project", "create", name));
 
@@ -160,7 +160,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task References_accept_id_and_name_ignoring_case(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         var projectId = await Seed(ws);
         var setId = (await Ok(ws.InProject("Demo", "status-set", "list", "--json"))).Json["data"]![0]!["id"]!.GetValue<string>();
 
@@ -171,7 +171,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Ambiguous_name_asks_for_id(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
         await Ok(ws.InProject("Demo", "status-set", "create", "Other", "--status", "Todo"));
         await Ok(ws.InProject("Demo", "status", "create", "Todo"));
@@ -185,7 +185,7 @@ public class CliTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Data_survives_between_commands(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         await Ok(ws.Run("project", "create", "Kept"));
 
         Assert.Contains("Kept", (await Ok(ws.Run("project", "list"))).Out);
@@ -210,7 +210,7 @@ public class CliTests
     [Theory, MemberData(nameof(Failures))]
     public async Task Failing_command_reports_error_and_exits_with_1(string[] args, string message)
     {
-        using var ws = TestWorkspace.Create("files", asProcess: true);
+        using var ws = TestWorkspace.Create("files");
         await Seed(ws);
         await Ok(ws.Run("project", "create", "Other")); // с одним проектом --project необязателен
 
@@ -224,7 +224,7 @@ public class CliTests
     [Fact]
     public async Task Failed_create_leaves_nothing_behind()
     {
-        using var ws = TestWorkspace.Create("files", asProcess: true);
+        using var ws = TestWorkspace.Create("files");
         await Seed(ws);
 
         await ws.InProject("Demo", "task", "create", "T", "--type", "Nope");
@@ -235,7 +235,7 @@ public class CliTests
     [Fact]
     public async Task Workspace_and_sqlite_together_are_rejected()
     {
-        using var ws = TestWorkspace.Create("files", asProcess: true);
+        using var ws = TestWorkspace.Create("files");
 
         var result = await TaskerProcess.Run("project", "list", "--workspace", ws.Root, "--sqlite", Path.Combine(ws.Root, "x.db"));
 
@@ -258,7 +258,7 @@ public class CliTests
     [Fact]
     public async Task Project_can_come_from_environment_variable()
     {
-        using var ws = TestWorkspace.Create("files", asProcess: true);
+        using var ws = TestWorkspace.Create("files");
         await Seed(ws);
 
         using var _ = Tasker.Global.AppEnvironment.Override("TASKER_PROJECT", "Demo");
@@ -275,7 +275,7 @@ public class CliTests
     [Fact]
     public async Task Default_workspace_is_the_current_folder()
     {
-        using var ws = TestWorkspace.Create("files", asProcess: true);
+        using var ws = TestWorkspace.Create("files");
 
         // Текущая папка — свойство процесса, поэтому команды идут отдельными процессами tasker.
         Assert.Equal(0, (await TaskerProcess.RunIn(ws.Root, "project", "create", "Here")).Code);
@@ -286,7 +286,7 @@ public class CliTests
     [Fact]
     public async Task Files_are_written_to_the_tasker_folder()
     {
-        using var ws = TestWorkspace.Create("files", asProcess: true);
+        using var ws = TestWorkspace.Create("files");
         var id = (await Ok(ws.Run("project", "create", "Demo"))).Id;
 
         Assert.True(File.Exists(Path.Combine(ws.Root, ".tasker", "projects", id.ToString(), "project.yaml")));

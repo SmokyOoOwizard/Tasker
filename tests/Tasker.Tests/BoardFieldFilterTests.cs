@@ -425,7 +425,6 @@ public class BoardFieldFilterTests
         return result;
     }
 
-    [InProcess]
     [Theory, MemberData(nameof(Storages))]
     public async Task The_console_creates_and_changes_column_conditions_and_shows_them(string storage)
     {
@@ -497,7 +496,6 @@ public class BoardFieldFilterTests
 
     // ---- формат файла и таблицы БД ----
 
-    [InProcess]
     [Fact]
     public async Task A_board_file_keeps_conditions_by_id_in_format_6_and_a_file_of_format_5_is_read_without_them_and_migrated()
     {

@@ -4,7 +4,6 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Тип задачи в текстовой строке <c>task list</c>: <c>ссылка  статус  тип  заголовок</c>.</summary>
-[InProcess]
 public class TaskListTypeTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
@@ -115,7 +114,7 @@ public class TaskListTypeTests
         Assert.Equal("TSK-1   Todo       Bug   Задача 1", lines[0]);
         Assert.Equal("TSK-10  Готово 🎉  Фича  Задача 10", lines[9]);
         // Заголовок начинается в одной колонке терминала у всех строк.
-        Assert.Single(lines.Select(x => Tasker.Cli.Table.Width(x[..x.IndexOf("Задача", StringComparison.Ordinal)])).Distinct());
+        Assert.Single(lines.Select(x => TextWidth.Of(x[..x.IndexOf("Задача", StringComparison.Ordinal)])).Distinct());
     }
 
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
-using Tasker.Daemon.Host;
 using Tasker.Storage.Files.Workspaces;
 using Tasker.Web;
 using Tasker.Web.Workspaces;
@@ -71,7 +70,7 @@ public class DesktopSharedMcpTests : IAsyncLifetime
     [Fact]
     public async Task Open_tabs_are_the_workspaces_and_the_per_workspace_address_is_gone()
     {
-        var builder = TaskerWebApp.CreateBuilder<DaemonModule>([], TaskerMode.Local);
+        var builder = TaskerWebApp.CreateBuilder<WebTestModule>([], TaskerMode.Local);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         await using var app = builder.Build();
         app.MapTasker();

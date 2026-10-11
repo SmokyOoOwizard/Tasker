@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 using Autofac;
 using Microsoft.Data.Sqlite;
-using Tasker.Cli;
 using Tasker.Core;
 using Tasker.Core.Projects;
 using Tasker.Core.Statuses;
@@ -15,7 +14,6 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Короткий id (первые 8 символов Guid): разбор, показ в списках консоли, поиск в обоих хранилищах, команды и MCP.</summary>
-[InProcess]
 public class ShortIdTests
 {
     // ---- разбор ----
@@ -73,45 +71,6 @@ public class ShortIdTests
     }
 
     // ---- ссылки на сущности: имя сильнее префикса, неоднозначность ----
-
-    private sealed record Item(Guid Id, string Name);
-
-    [Fact]
-    public void Entities_are_found_by_a_prefix_of_the_id_unless_a_name_matches_exactly()
-    {
-        var a = new Item(Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001"), "Alpha");
-        var b = new Item(Guid.Parse("bbbbbbbb-0000-0000-0000-000000000002"), "Beta");
-        var named = new Item(Guid.Parse("cccccccc-0000-0000-0000-000000000003"), "aaaaaaaa");
-        Item[] items = [a, b];
-
-        Assert.Same(a, Refs.FindItem(items, "aaaaaaaa", x => x.Id, x => x.Name, "thing"));
-        Assert.Same(a, Refs.FindItem(items, "AAAAAAAA", x => x.Id, x => x.Name, "thing"));
-        Assert.Same(a, Refs.FindItem(items, "aaaaaaaa0000", x => x.Id, x => x.Name, "thing"));
-        Assert.Same(b, Refs.FindItem(items, "Beta", x => x.Id, x => x.Name, "thing"));
-
-        // Точное имя из 8 hex-символов сильнее префикса.
-        Assert.Same(named, Refs.FindItem([a, b, named], "aaaaaaaa", x => x.Id, x => x.Name, "thing"));
-    }
-
-    [Fact]
-    public void A_short_or_unknown_prefix_is_not_found_and_an_ambiguous_one_lists_the_full_ids()
-    {
-        var a = new Item(Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001"), "Alpha");
-        var b = new Item(Guid.Parse("aaaaaaaa-1111-0000-0000-000000000002"), "Beta");
-        Item[] items = [a, b];
-
-        Assert.Equal("No thing 'aaaaaaa'", Assert.Throws<CliException>(() => Refs.FindItem(items, "aaaaaaa", x => x.Id, x => x.Name, "thing")).Message);
-        Assert.Equal("No thing 'dddddddd'", Assert.Throws<CliException>(() => Refs.FindItem(items, "dddddddd", x => x.Id, x => x.Name, "thing")).Message);
-
-        var ambiguous = Assert.Throws<CliException>(() => Refs.FindItem(items, "aaaaaaaa", x => x.Id, x => x.Name, "thing"));
-        Assert.Contains("Several things start with 'aaaaaaaa'", ambiguous.Message);
-        Assert.Contains(a.Id.ToString(), ambiguous.Message);
-        Assert.Contains(b.Id.ToString(), ambiguous.Message);
-
-        // Дальше префикс различает.
-        Assert.Same(b, Refs.FindItem(items, "aaaaaaaa1", x => x.Id, x => x.Name, "thing"));
-        Assert.Same(a, Refs.FindItem(items, "aaaaaaaa0", x => x.Id, x => x.Name, "thing"));
-    }
 
     // ---- хранилища ----
 
