@@ -1,0 +1,19 @@
+formatVersion: 9
+id: 955b476a-b2e0-49b9-84ad-476b75e003cd
+title: '.NET-тесты в CI: сборка и прогон tests/Tasker.Tests на Linux, macOS и Windows'
+description: |-
+  Десктоп, сервер и общие .NET-библиотеки (Tasker.Core, Tasker.Storage.Files, Tasker.Storage.Db, Tasker.Mcp, Tasker.Web, Tasker.Global, Tasker.Configs) проверяются только локально: в .github/workflows есть только release-build.yml (cargo test и сборка Rust-архивов), .NET-тесты в CI не запускаются ни на одной платформе и на Windows не гонялись ни разу.
+
+  Нужно:
+  - workflow (новый или задачи в существующем) с dotnet build Tasker.slnx и dotnet test tests/Tasker.Tests на ubuntu-latest, macos-latest и windows-latest; тестам нужны Rust-бинарники tasker и tasker-mcpd (tools/RustBinaries.targets собирает их cargo или берёт готовые через -p:TaskerRustBin=<каталог>) — переиспользовать сборку из release-build, если это проще и быстрее, чем собирать заново;
+  - Node.js и сборка фронтенда — только если без них не собираются проекты, которые нужны тестам; если можно, не тянуть их в этот прогон;
+  - таймауты на задачу и на зависшие тесты, вывод результатов (trx или аналог) артефактом прогона; нестабильные тесты (TSK-145) не прятать: при падении — видно в выводе;
+  - на Windows .NET-тесты гоняются впервые: падения, которые чинятся без изменения поведения (пути, концы строк, кодировка, занятые файлы), — чинить; остальное — отдельными задачами и, если нужно, пропуском на Windows со ссылкой на задачу;
+  - зелёный прогон на всех трёх ОС; README раздела тестов в вики «Разработка» — одной строкой, что .NET-тесты идут в CI.
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-11T11:55:32.5991150+00:00
+updatedAt: 2026-10-11T11:55:32.5991150+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 162
