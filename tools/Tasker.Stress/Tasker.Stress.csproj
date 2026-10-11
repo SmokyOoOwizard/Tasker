@@ -11,12 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Клиенты-консоль запускаются настоящими процессами: tasker.dll и tasker-mcpd лежат рядом с этой программой (как у тестов). -->
-    <ProjectReference Include="..\..\src\Tasker.Cli\Tasker.Cli.csproj" />
-    <ProjectReference Include="..\..\src\Tasker.Daemon.Host\Tasker.Daemon.Host.csproj" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
-  <!-- Докладывает в каталог стенда сборки консоли, которых там нет (иначе на Linux `dotnet tasker.dll` падает, TSK-111). -->
-  <Import Project="..\CopyConsoleDependencies.targets" />
+  <!-- Клиенты-консоль и демон — настоящие процессы Rust-программ tasker и tasker-mcpd: они собираются и кладутся рядом со стендом. -->
+  <Import Project="..\RustBinaries.targets" />
 
 </Project>

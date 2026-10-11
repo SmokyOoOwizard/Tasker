@@ -57,16 +57,17 @@ public sealed class Area
 public sealed class Stand : IAsyncDisposable
 {
     private readonly StressOptions _options;
-    private readonly string _dll;
+    private readonly string _tasker;
     private readonly Dictionary<string, string> _env = [];
     private int _daemonPid;
 
     public Stand(StressOptions options)
     {
         _options = options;
-        _dll = options.Tasker ?? System.IO.Path.Combine(AppContext.BaseDirectory, "tasker.dll");
-        if (!File.Exists(_dll))
-            throw new FileNotFoundException($"tasker.dll not found: {_dll} (build the solution or pass --tasker)");
+        // Консоль tasker (Rust); демон tasker-mcpd она находит рядом с собой.
+        _tasker = System.IO.Path.GetFullPath(options.Tasker ?? System.IO.Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "tasker.exe" : "tasker"));
+        if (!File.Exists(_tasker))
+            throw new FileNotFoundException($"tasker not found: {_tasker} (build the stand: it builds tasker and tasker-mcpd with cargo; or pass --tasker)");
 
         Root = System.IO.Path.Combine(options.Dir ?? System.IO.Path.GetTempPath(), "tasker-stress-" + Guid.NewGuid().ToString("N")[..10]);
         Directory.CreateDirectory(Root);
@@ -130,7 +131,7 @@ public sealed class Stand : IAsyncDisposable
 
     public ProcessStartInfo Info(params string[] args)
     {
-        var info = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
+        var info = new ProcessStartInfo(_tasker) { RedirectStandardOutput = true, RedirectStandardError = true };
         // Чужие настройки Tasker (проект и область по умолчанию, порт демона…) не должны просочиться в стенд.
         foreach (DictionaryEntry e in Environment.GetEnvironmentVariables())
         {
@@ -140,7 +141,6 @@ public sealed class Stand : IAsyncDisposable
 
         foreach (var (k, v) in _env)
             info.Environment[k] = v;
-        info.ArgumentList.Add(_dll);
         foreach (var a in args)
             info.ArgumentList.Add(a);
         return info;

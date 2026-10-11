@@ -26,7 +26,7 @@ public sealed class StressOptions
     /// <summary>Где создать временную папку (по умолчанию — системная временная); внутри — свой TASKER_HOME, область и демон.</summary>
     public string? Dir { get; set; }
 
-    /// <summary>Путь к tasker.dll; по умолчанию — рядом со стендом.</summary>
+    /// <summary>Исполняемый файл консоли <c>tasker</c> (демон <c>tasker-mcpd</c> — рядом с ним); по умолчанию — рядом со стендом.</summary>
     public string? Tasker { get; set; }
 
     /// <summary>Записать отчёт ещё и в JSON.</summary>
@@ -87,7 +87,7 @@ public sealed class StressOptions
           --scale 1,2,5,10   client counts of the scale scenario
           --long             also real lock expiry (2 min) and cascade wait until refusal (30 s)
           --keep             keep the temporary folder; --dir <path> puts it elsewhere
-          --tasker <dll>     tasker.dll to drive (default: next to this program)
+          --tasker <path>    tasker executable to drive, tasker-mcpd next to it (default: next to this program)
           --json <file>      write the report as JSON too
           --seed N           random seed
 
