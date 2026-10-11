@@ -5,10 +5,12 @@ description: |-
   В CI на windows-latest один раз упал SeriesIndexTests.Exclusive_gives_unique_consecutive_numbers_under_parallelism_from_two_containers: блокировка .tasker/.cache/write.lock не освободилась за 30 с (таймаут FileLock). В следующем прогоне тест прошёл; на Linux и macOS сбой не встречался.
 
   Нужно: воспроизвести на Windows (повторный запуск теста в цикле), выяснить, кто держит write.lock дольше 30 с — взаимная блокировка двух контейнеров в одном процессе (порядок write.lock → файл → index.lock), медленное освобождение FileShare.None на Windows, антивирус/индексатор раннера или задержка повторов AtomicFile — и исправить причину; если это особенность раннера, а не продукта, — сделать тест устойчивым и описать почему. Связано с TSK-147 (порядок захвата в TaskLinkService.Add) — проверить, не тот ли это сценарий.
+
+  Ещё один сбой на windows-latest (прогон 38140857331): SeriesIndexTests.Exclusive_and_plain_writes_together_do_not_deadlock — «only 14 operations» за отведённое время (19 с). Взаимной блокировки нет, но запись под write.lock на Windows-раннере идёт намного медленнее, чем на Linux и macOS; выяснить, где время (FileLock с повторами, AtomicFile с повторами, антивирус раннера), и сделать порог теста или саму запись устойчивыми.
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-11T12:52:01.0198900+00:00
-updatedAt: 2026-10-11T12:52:24.0909270+00:00
+updatedAt: 2026-10-11T13:13:52.8583620+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 164
