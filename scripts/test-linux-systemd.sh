@@ -13,7 +13,7 @@
 set -uo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-image="${TASKER_SYSTEMD_IMAGE:-tasker-linux-systemd}"
+image="${TASKER_SYSTEMD_IMAGE:-tasker-linux-systemd-rust}"
 name="tasker-systemd-check"
 cargo_volume="${TASKER_LINUX_CARGO_VOLUME:-tasker-cargo-registry}"
 keep=0
