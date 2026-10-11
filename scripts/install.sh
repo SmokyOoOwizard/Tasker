@@ -196,8 +196,8 @@ COMPLETION_BEGIN="# >>> tasker completion >>>"
 COMPLETION_END="# <<< tasker completion <<<"
 COMPLETION_BACKUP_SUFFIX=".tasker-backup"
 
-# Оболочки с автодополнением. Новая оболочка (fish) — это скрипт в src/Tasker.Cli/Completion/Shells,
-# строка в Shells.cs и по ветке в completion_file, completion_rc и completion_block ниже.
+# Оболочки с автодополнением. Новая оболочка (fish) — это скрипт в rust/crates/tasker-cli/completion,
+# ветка в shell() из rust/crates/tasker-cli/src/commands/completion.rs и по ветке в completion_file, completion_rc и completion_block ниже.
 COMPLETION_SHELLS=(zsh bash)
 
 # Имя файла скрипта оболочки $1 в $COMPLETIONS_DIR.
