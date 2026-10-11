@@ -1,21 +1,18 @@
-# Эталоны автозапуска: файлы .NET-генераторов (TSK-140)
+# Эталоны автозапуска: описания служб и команды системы
 
-Файлы служб, которые пишет .NET-версия (`Tasker.Daemon.Services`: `LaunchdService.Plist()`, `SystemdService.UnitFile()`,
-`WindowsTaskDefinition.Xml`), и команды системы, которые она вызывает. Rust-крейт `tasker-daemon` (`autostart`) обязан давать
-байт-идентичные файлы и те же команды — проверяет `crates/tasker-daemon/tests/golden_autostart.rs`.
+Файлы служб (plist launchd, unit systemd, XML Планировщика заданий) и команды системы, которые вызывает `tasker mcp autostart`.
+Крейт `tasker-daemon` (`autostart`) обязан давать байт-идентичные файлы и те же команды — проверяет
+`crates/tasker-daemon/tests/golden_autostart.rs`. Эталоны сняты с .NET-сборки 0.1.0 (генераторы `Tasker.Daemon.Services`, macOS,
+.NET 10.0.201) и меняются только вместе с поведением.
 
 ## Как сняты
 
-Сборка консоли из этого репозитория (`dotnet build src/Tasker.Cli` и `src/Tasker.Daemon.Host -c Release -p:EmbedFrontend=false`
-в один каталог `<BIN>`), macOS, .NET 10.0.201, 2026-10-09.
-
 - `launchd-cli/` — настоящая консоль: `TASKER_HOME=<ROOT>/home TASKER_SERVICE_DIR=<ROOT>/service TASKER_SERVICE_LABEL=com.tasker.golden-autostart
   dotnet <BIN>/tasker.dll mcp autostart enable`, затем `… mcp autostart status`. В `PATH` впереди стоял поддельный `launchctl`
-  (`GoldenGen/fake-launchctl.sh`: пишет аргументы в журнал, код 0) — в настоящем launchd ничего не регистрировалось, `~/Library/LaunchAgents`
+  (пишет аргументы в журнал, код 0) — в настоящем launchd ничего не регистрировалось, `~/Library/LaunchAgents`
   не тронут. `enable` завершился ошибкой «The MCP server did not answer in 30 s» (демон никто не запустил), но plist к тому моменту
   записан. `launchctl-calls.txt` — три вызова: `bootout`, `bootstrap` (enable) и `print` (status).
-- остальные каталоги — программа `GoldenGen/` (ссылается на `src/Tasker.Daemon`, запуск `dotnet GoldenGen.dll <out> <home> "<home с пробелом>"`
-  с `HOME=<ROOT>/home`): конструкторы `LaunchdService`, `SystemdService`, `WindowsTaskService` с явным каталогом и именем и `IProcessRunner`,
+- остальные каталоги — генератор на .NET (запуск с `HOME=<ROOT>/home`): конструкторы `LaunchdService`, `SystemdService`, `WindowsTaskService` с явным каталогом и именем и `IProcessRunner`,
   который записывает вызовы (`calls.txt`, аргументы через табуляцию) и отвечает кодом 0. Так сняты ветки Linux и Windows на macOS:
   генераторы чистые, от ОС зависит только `Launcher.DaemonCommand` (путь `dotnet` и `tasker-mcpd.dll` рядом с главной сборкой —
   пустой файл) и каталог данных по умолчанию.
@@ -34,8 +31,7 @@
 
 Команда демона во всех случаях — `<DOTNET> <BIN>/tasker-mcpd.dll --detached` (консоль запущена через `dotnet tasker.dll`; нативный
 `tasker` дал бы `<BIN>/tasker-mcpd --detached` — генераторы от этого не зависят, Rust-консоль всегда нативная). Эталон с нативным
-`tasker-mcpd.exe`, пробелами и кириллицей в путях — в .NET-тесте `WindowsTaskServiceTests.Task_xml_matches_the_golden_sample`, он
-повторён в `windows_task.rs`.
+`tasker-mcpd.exe`, пробелами и кириллицей в путях — в `windows_task.rs` (`task_xml_matches_the_dotnet_golden_sample`).
 
 ## Плейсхолдеры
 
