@@ -16,3 +16,9 @@ public sealed class UnixFactAttribute : FactAttribute
 {
     public UnixFactAttribute() => Skip = Platform.SkipReason(TestPlatform.Unix);
 }
+
+/// <summary>Тест, который на Windows пропускается из-за известного бага: <paramref name="reason"/> — номер задачи и суть; на macOS и Linux он идёт.</summary>
+public sealed class SkipOnWindowsFactAttribute : FactAttribute
+{
+    public SkipOnWindowsFactAttribute(string reason) => Skip = OperatingSystem.IsWindows() ? reason : null;
+}

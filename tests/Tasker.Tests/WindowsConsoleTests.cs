@@ -107,7 +107,7 @@ public class WindowsConsoleTests
         Assert.True(installed.Code == 0, installed.Err);
         Assert.Contains("Register-ArgumentCompleter", File.ReadAllText(script));
         Assert.Contains("already has the tasker completion block", again.Out);
-        Assert.Contains("'" + script.Replace("'", "''") + "'", File.ReadAllText(profile));
+        Assert.Contains("'" + Path.GetFullPath(script).Replace("'", "''") + "'", File.ReadAllText(profile));
         Assert.Contains("cmd.exe", installed.Out);
 
         var removed = await TestWorkspace.Invoke(["completion", "pwsh", "--uninstall", "--profile", profile, "--script", script]);

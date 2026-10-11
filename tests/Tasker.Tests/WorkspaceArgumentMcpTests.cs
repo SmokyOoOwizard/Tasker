@@ -23,7 +23,7 @@ public class WorkspaceArgumentMcpTests : IDisposable
     }
 
     private static string KeyOf(DaemonStatus status, string folder) =>
-        status.Workspaces.Single(x => x.Path.EndsWith("/" + folder)).Key!;
+        status.Workspaces.Single(x => Path.GetFileName(x.Path) == folder).Key!;
 
     private async Task<JsonNode> Call(string? workspace, string tool, object? args = null)
     {
@@ -68,7 +68,7 @@ public class WorkspaceArgumentMcpTests : IDisposable
     public async Task The_workspace_can_be_named_by_path_and_the_name_ignores_case()
     {
         var status = await StartWithTwo();
-        var path = status.Workspaces.Single(x => x.Path.EndsWith("/b")).Path;
+        var path = status.Workspaces.Single(x => Path.GetFileName(x.Path) == "b").Path;
 
         Assert.Equal(["Beta"], DaemonFixture.ProjectNames((await Call(path, "list_projects")).ToJsonString()));
         Assert.Equal(["Alpha"], DaemonFixture.ProjectNames((await Call(KeyOf(status, "a").ToUpperInvariant(), "list_projects")).ToJsonString()));
@@ -167,7 +167,7 @@ public class WorkspaceArgumentMcpTests : IDisposable
     {
         var status = await StartWithTwo();
         var a = KeyOf(status, "a");
-        var b = status.Workspaces.Single(x => x.Path.EndsWith("/b"));
+        var b = status.Workspaces.Single(x => Path.GetFileName(x.Path) == "b");
         Assert.Equal(["Beta"], DaemonFixture.ProjectNames((await Call(b.Key, "list_projects")).ToJsonString()));
 
         await _daemon.Mcp("workspace", "remove", b.Path);

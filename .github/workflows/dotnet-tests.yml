@@ -1,0 +1,93 @@
+# Сборка .NET-решения (десктоп, сервер, общие библиотеки, стенд) и тесты tests/Tasker.Tests на Linux, macOS и Windows.
+# Тестам нужны консоль tasker и демон tasker-mcpd (Rust): их собирает сама сборка тестов (cargo build, профиль dev,
+# tools/RustBinaries.targets), кэш cargo — Swatinem/rust-cache. Фронтенд в сборку не встраивается (-p:EmbedFrontend=false):
+# тестам веб-слоя интерфейс не нужен, Node.js в этом прогоне не ставится.
+name: .NET tests
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'rust/**'
+      - 'scripts/**'
+      - 'Tasker.slnx'
+      - 'Directory.Build.props'
+      - 'VERSION'
+      - '.github/workflows/dotnet-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'rust/**'
+      - 'scripts/**'
+      - 'Tasker.slnx'
+      - 'Directory.Build.props'
+      - 'VERSION'
+      - '.github/workflows/dotnet-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-tests-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+
+jobs:
+  test:
+    name: dotnet test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # Эталоны и скрипты сравниваются байт в байт: на Windows без перевода строк в CRLF.
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      # Тесты хуков и синхронизации делают коммиты во временных репозиториях.
+      - run: |
+          git config --global user.email ci@example.com
+          git config --global user.name ci
+          git config --global init.defaultBranch main
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: dotnet-tests
+      - name: dotnet build Tasker.slnx
+        run: dotnet build Tasker.slnx -p:EmbedFrontend=false
+      # Тест, который висит дольше 10 минут, снимается с дампом и называется в выводе; остальные результаты — в trx.
+      - name: dotnet test tests/Tasker.Tests
+        run: >-
+          dotnet test tests/Tasker.Tests --no-build -p:EmbedFrontend=false
+          --blame-hang-timeout 10m --blame-hang-dump-type none
+          --results-directory TestResults
+          --logger "trx;LogFileName=tasker-tests.trx"
+          --logger "console;verbosity=normal"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dotnet-test-results-${{ matrix.os }}
+          path: TestResults/
+          if-no-files-found: warn
+          retention-days: 14

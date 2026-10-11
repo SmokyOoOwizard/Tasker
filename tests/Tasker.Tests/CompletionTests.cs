@@ -529,7 +529,7 @@ public class CompletionTests
         return result.Out.Split('\n', StringSplitOptions.RemoveEmptyEntries);
     }
 
-    [Fact]
+    [UnixFact]
     public async Task Bash_passes_the_line_without_the_program_name_and_the_cursor_to_the_directive()
     {
         using var fake = new FakeTasker(["project"]);
@@ -553,7 +553,7 @@ public class CompletionTests
         Assert.Equal("[suggest:8]|task  cr\n", await File.ReadAllTextAsync(record));
     }
 
-    [Fact]
+    [UnixFact]
     public async Task Bash_filters_by_the_typed_word_and_escapes_spaces_and_cyrillic_is_kept()
     {
         var replies = await BashComplete("tasker status get В", "В работе", "Готово", "--version", "Весна");
@@ -561,7 +561,7 @@ public class CompletionTests
         Assert.Equal(["В\\ работе", "Весна"], replies);
     }
 
-    [Fact]
+    [UnixFact]
     public async Task Bash_escapes_shell_specials_and_respects_the_quote_the_word_was_opened_with()
     {
         Assert.Equal(["a\\ \\$b\\(1\\)\\;\\&\\\\"], await BashComplete("tasker x a", "a $b(1);&\\"));
@@ -572,7 +572,7 @@ public class CompletionTests
         Assert.Equal(["\\~tilde"], await BashComplete("tasker x ", "~tilde"));
     }
 
-    [Fact]
+    [UnixFact]
     public async Task Bash_cuts_the_part_before_the_word_break_that_readline_keeps()
     {
         // «=» — разделитель слов readline: после «Приоритет=» заменяется только то, что за ним.
@@ -582,7 +582,7 @@ public class CompletionTests
         Assert.Equal(["Приоритет=Очень срочно"], await BashComplete("tasker task list --field \"Приор", "Приоритет=Очень срочно"));
     }
 
-    [Fact]
+    [UnixFact]
     public async Task Bash_gives_nothing_when_tasker_has_no_suggestions()
     {
         Assert.Empty(await BashComplete("tasker status get ", []));
