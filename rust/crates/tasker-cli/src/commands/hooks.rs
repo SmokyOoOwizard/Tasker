@@ -318,4 +318,45 @@ mod tests {
         assert_eq!(with_block(&installed, block), installed);
         assert!(is_empty("#!/bin/sh\n\n"));
     }
+
+    #[test]
+    fn the_block_quotes_paths_for_the_shell() {
+        let target = HookTarget {
+            relative: "my dir/it's".into(),
+            hooks_directory: PathBuf::from("/repo/.git/hooks"),
+        };
+        assert!(
+            block(&target)
+                .unwrap()
+                .contains("\"$(git rev-parse --show-toplevel)\"/'my dir/it'\\''s'")
+        );
+        assert_eq!(quote("it's"), "'it'\\''s'");
+    }
+
+    #[test]
+    fn hook_paths_use_forward_slashes_on_windows_only() {
+        if cfg!(windows) {
+            assert_eq!(
+                to_shell_path(r"C:\Users\me\.local\bin\tasker.exe"),
+                "C:/Users/me/.local/bin/tasker.exe"
+            );
+            assert_eq!(
+                to_shell_path(r"C:\Program Files\Tasker\tasker.exe"),
+                "C:/Program Files/Tasker/tasker.exe"
+            );
+        } else {
+            assert_eq!(to_shell_path("/usr/local/bin/tasker"), "/usr/local/bin/tasker");
+            // На Unix обратная косая — обычный знак имени.
+            assert_eq!(to_shell_path("/home/me/we\\ird"), "/home/me/we\\ird");
+        }
+    }
+
+    #[test]
+    fn a_hook_with_crlf_loses_only_the_tasker_block() {
+        let block = "# >>> tasker (managed by 'tasker hooks install', do not edit) >>>\nif true; then\n  :\nfi\n# <<< tasker <<<\n";
+        let text = format!("#!/bin/sh\r\n{}echo mine\r\n", block.replace('\n', "\r\n"));
+        let rest = without_block(&text);
+        assert_eq!(rest, "#!/bin/sh\r\necho mine\r\n");
+        assert!(!has_block(&rest));
+    }
 }

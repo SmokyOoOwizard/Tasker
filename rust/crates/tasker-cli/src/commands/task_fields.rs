@@ -292,4 +292,66 @@ mod tests {
                 .contains("Unknown modifier 'nope'")
         );
     }
+
+    #[test]
+    fn custom_field_syntax_cases_and_errors() {
+        let cases: [(&str, &str, FieldType, bool, bool, Option<&str>, Option<&str>); 6] = [
+            ("Estimate:int", "Estimate", FieldType::Int, false, false, None, None),
+            ("Estimate:Int=5", "Estimate", FieldType::Int, false, false, None, Some("5")),
+            (
+                "Tags:string:multiple:required=a:b=c",
+                "Tags",
+                FieldType::String,
+                true,
+                true,
+                None,
+                Some("a:b=c"),
+            ),
+            (
+                "Risk:enum:enum=Priority=High",
+                "Risk",
+                FieldType::Enum,
+                false,
+                false,
+                Some("Priority"),
+                Some("High"),
+            ),
+            (
+                "Risk:enum:required:enum=Priority",
+                "Risk",
+                FieldType::Enum,
+                true,
+                false,
+                Some("Priority"),
+                None,
+            ),
+            ("Due:date=", "Due", FieldType::Date, false, false, None, None),
+        ];
+        for (text, name, field_type, required, multiple, enumeration, value) in cases {
+            let f = parse_custom_field(text).unwrap();
+            assert_eq!(
+                (
+                    f.name.as_str(),
+                    f.field_type,
+                    f.required,
+                    f.multiple,
+                    f.enumeration.as_deref(),
+                    f.value.as_deref()
+                ),
+                (name, field_type, required, multiple, enumeration, value),
+                "{text}"
+            );
+        }
+        for text in [
+            "Estimate",
+            ":int",
+            "Estimate:",
+            "Estimate:number",
+            "Estimate:int:sometimes",
+            "Estimate:int:enum",
+            "Estimate:int:enum=",
+        ] {
+            assert!(parse_custom_field(text).is_err(), "{text}");
+        }
+    }
 }
