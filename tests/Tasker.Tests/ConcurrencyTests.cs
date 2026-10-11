@@ -191,10 +191,13 @@ public class ConcurrencyTests : IDisposable
         var created = await ws.RunProcess("project", "create", "Second");
         Assert.Equal(0, created.Code);
 
+        // Пришёл файл проекта или его новая папка: на Linux (inotify) файл, записанный в только что созданную папку раньше, чем на неё
+        // встал наблюдатель, виден лишь событием папки — индекс сверяет её целиком и сообщает её путь.
+        var id = created.Id.ToString();
         await Eventually(() =>
         {
             lock (changes)
-                return changes.Any(x => x.EndsWith("project.yaml") && x.Contains(created.Id.ToString()));
+                return changes.Any(x => (x.EndsWith("project.yaml") && x.Contains(id)) || x.EndsWith(id));
         });
 
         var projects = await opened.Get<Tasker.Core.Projects.ProjectService>().GetRange(new Tasker.Core.Dto.Page(0, 50));
