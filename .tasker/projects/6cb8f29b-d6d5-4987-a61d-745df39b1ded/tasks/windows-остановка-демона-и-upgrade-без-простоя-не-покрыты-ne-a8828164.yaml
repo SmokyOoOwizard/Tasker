@@ -1,0 +1,19 @@
+formatVersion: 9
+id: a8828164-5a8b-468e-b50a-70ac47d0efad
+title: 'Windows: остановка демона и upgrade без простоя не покрыты .NET-тестами'
+description: |-
+  Разбор прогона .NET-тестов в CI (dotnet-tests.yml): на Windows пропускаются как Unix-only DaemonUpgradeTests (3 теста: замена рабочего процесса без простоя, статус с рабочими процессами, откат неудачного upgrade) и DaemonTests.Foreground_run_stops_on_interrupt_and_cleans_up (остановка tasker mcp run по прерыванию). Вместе с TSK-156 (интеграционные тесты Rust-демона на Windows не доходят до готовности) это значит, что на Windows ни один тест не проверяет остановку демона (именованное событие Local\tasker-mcp-stop-<hash>, Ctrl+C в tasker mcp run) и tasker mcp upgrade (передача сокета через WSADuplicateSocketW, Job Object).
+
+  Нужно: сделать эти сценарии проверяемыми на Windows — тесты с Windows-механизмами вместо сигналов Unix (именованное событие, CTRL_BREAK/GenerateConsoleCtrlEvent для mcp run), включить их на windows-latest в CI, найденные ошибки исправить. Связано с TSK-156.
+
+  Справка: на Windows в отчёте тестов на 7 меньше, чем на Linux и macOS (1574 против 1581). Это не потеря: две параметризованные Unix-only теории InstallScriptTests (Bad_arguments_are_rejected_with_the_usage — 4 набора данных, Conflicting_options_are_rejected_with_the_usage — 5) при пропуске попадают в отчёт одной записью каждая (9 − 2 = 7). Установщик для Windows (install.ps1) покрыт InstallPowerShellTests: на windows-latest 11 из 11.
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-11T12:55:03.0811310+00:00
+updatedAt: 2026-10-11T12:55:03.6019760+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 165
+links:
+- typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
+  taskId: 160dd998-74bf-4563-8d76-b110928ef613
