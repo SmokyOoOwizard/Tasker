@@ -351,8 +351,8 @@ public class FieldsMcpTests : IDisposable
         await _daemon.Workspace("a", "Alpha");
         await _daemon.Workspace("b", "Beta");
         var status = await _daemon.Start();
-        var a = status.Workspaces.Single(x => x.Path.EndsWith("/a")).Key!;
-        var b = status.Workspaces.Single(x => x.Path.EndsWith("/b")).Key!;
+        var a = status.Workspaces.Single(x => Path.GetFileName(x.Path) == "a").Key!;
+        var b = status.Workspaces.Single(x => Path.GetFileName(x.Path) == "b").Key!;
 
         async Task<JsonNode> Call(string? workspace, string tool, object args)
         {

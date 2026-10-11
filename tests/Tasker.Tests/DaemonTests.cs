@@ -85,7 +85,7 @@ public class DaemonTests : IDisposable
 
         await _daemon.Workspace("b", "Beta");
         var withBoth = await WaitFor(x => x.Workspaces.Length == 2 && x.Workspaces.All(w => w.State == WorkspaceState.Open));
-        var beta = withBoth.Workspaces.Single(x => x.Path.EndsWith("/b"));
+        var beta = withBoth.Workspaces.Single(x => Path.GetFileName(x.Path) == "b");
         Assert.Equal(["Beta"], DaemonFixture.ProjectNames(await _daemon.CallTool(KeyOf(beta), "list_projects")));
 
         await _daemon.Mcp("workspace", "remove", beta.Path);
@@ -261,7 +261,8 @@ public class DaemonTests : IDisposable
         Assert.Equal(WorkspaceState.Open, status.Workspaces.Single().State);
     }
 
-    [Fact]
+    // SIGINT (kill -INT) — сигнал Unix; на Windows демон останавливается Ctrl+C в своей консоли.
+    [UnixFact]
     public async Task Foreground_run_stops_on_interrupt_and_cleans_up()
     {
         await _daemon.Workspace("a", "Alpha");

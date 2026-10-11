@@ -1,3 +1,4 @@
+using Tasker.Core.IO;
 using Tasker.Storage.Files.Storages;
 
 namespace Tasker.Storage.Files;
@@ -66,18 +67,19 @@ public class TaskerDirectory(string workspacePath)
         EnsureServiceFilesIgnored();
     }
 
-    // Правила дописываются, если их нет: свои правила пользователя в .gitignore не трогаем.
+    // Правила дописываются, если их нет: свои правила пользователя в .gitignore не трогаем. Область может открываться одновременно
+    // несколькими процессами: на Windows файл, который сейчас дописывает другой, занят — чтение и запись повторяются (AtomicFile).
     // Локальный индекс и блокировки лежат в .cache; *.tmp — временные файлы атомарной записи.
     private void EnsureServiceFilesIgnored()
     {
-        var text = File.Exists(GitIgnore) ? File.ReadAllText(GitIgnore) : "";
+        var text = File.Exists(GitIgnore) ? AtomicFile.ReadAllTextSync(GitIgnore) : "";
         var lines = text.Split('\n').Select(x => x.Trim()).ToHashSet();
         var missing = new[] { "/.cache/", "*.tmp" }.Where(x => !lines.Contains(x)).ToArray();
         if (missing.Length == 0)
             return;
 
         var separator = text.Length > 0 && !text.EndsWith('\n') ? "\n" : "";
-        File.AppendAllText(GitIgnore, $"{separator}# Tasker: local index and locks (rebuilt, not for git) and temporary files of atomic writes\n{string.Join('\n', missing)}\n");
+        AtomicFile.AppendAllTextSync(GitIgnore, $"{separator}# Tasker: local index and locks (rebuilt, not for git) and temporary files of atomic writes\n{string.Join('\n', missing)}\n");
     }
 }
 

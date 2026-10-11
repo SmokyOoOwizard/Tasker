@@ -639,6 +639,8 @@ public class BoardFieldFilterTests
         }
         finally
         {
+            // Пул соединений SQLite держит файл открытым: на Windows такой файл не удалить.
+            SqliteConnection.ClearAllPools();
             Directory.Delete(root, recursive: true);
         }
     }

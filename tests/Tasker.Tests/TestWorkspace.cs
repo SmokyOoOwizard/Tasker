@@ -89,6 +89,8 @@ public sealed class TestWorkspace : IDisposable
 /// </summary>
 public static class TaskerProcess
 {
+    private static readonly System.Text.Encoding Utf8 = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
     private static string Executable(string name) => OperatingSystem.IsWindows() ? name + ".exe" : name;
 
     /// <summary>Исполняемый файл консоли: <c>TASKER_BIN</c> (см. <see cref="TestRun"/>) или <c>tasker</c> из каталога тестов.</summary>
@@ -123,10 +125,14 @@ public static class TaskerProcess
 
     private static ProcessStartInfo StartInfo((string File, string[] Arguments) command, string? workingDirectory, string[] args)
     {
+        // Консоль пишет в каналы UTF-8 на любой ОС; без явной кодировки .NET на Windows читает их в кодовой странице консоли.
         var info = new ProcessStartInfo(command.File)
         {
             RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardError = true,
+            StandardOutputEncoding = Utf8,
+            StandardErrorEncoding = Utf8,
+            StandardInputEncoding = Utf8
         };
         if (workingDirectory != null)
             info.WorkingDirectory = workingDirectory;

@@ -103,6 +103,13 @@ public static class AtomicFile
         Move(temp, path, overwrite: true);
     }
 
+    /// <summary>Дописывает текст (UTF-8 без BOM) в конец файла, создавая его; занятый другим процессом файл — повтор, как у замены.</summary>
+    public static void AppendAllTextSync(string path, string text) => Retry(() =>
+    {
+        File.AppendAllText(path, text, Utf8);
+        return 0;
+    });
+
     /// <summary>Читает файл целиком так, чтобы не мешать его замене или удалению другим процессом.</summary>
     /// <exception cref="FileNotFoundException">Файла нет.</exception>
     public static async Task<byte[]> ReadAllBytes(string path, CancellationToken ct = default)
