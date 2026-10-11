@@ -1,5 +1,3 @@
-using Tasker.Cli;
-using Tasker.Daemon.Services;
 using Xunit;
 
 namespace Tasker.Tests;
@@ -156,14 +154,6 @@ public class GitHooksTests : IDisposable
         Assert.Contains("is not a Tasker workspace", noWorkspace.Err);
     }
 
-    [Fact]
-    public void Block_quotes_paths_for_the_shell()
-    {
-        var block = GitHooks.Block(new HookTarget("/repo", "my dir/it's", "/repo/.git/hooks"));
-
-        Assert.Contains("\"$(git rev-parse --show-toplevel)\"/'my dir/it'\\''s'", block);
-    }
-
     // ---- хуки в деле ----
 
     [Fact]
@@ -307,9 +297,8 @@ public class GitHooksTests : IDisposable
 
         var workspace = await RepoWithTwoBranches();
         await Tasker("hooks", "install", "-w", workspace);
-        // Хук вызывает тот tasker, который его поставил (tasker.dll или сам бинарник): подменяем его путь на несуществующий.
-        var (file, arguments) = TaskerProcess.Command();
-        var program = arguments.Length > 0 ? arguments[0] : file;
+        // Хук вызывает тот tasker, который его поставил: подменяем его путь на несуществующий.
+        var program = TaskerProcess.Binary;
         foreach (var name in new[] { "post-merge", "post-checkout", "post-rewrite" })
         {
             var path = _repo.Hook(name);

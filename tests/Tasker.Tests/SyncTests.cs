@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
-using Tasker.Cli;
 using Tasker.Daemon;
 using Xunit;
 
@@ -87,7 +86,7 @@ public class SyncTests : IDisposable
     [Fact]
     public async Task Sqlite_workspace_has_nothing_to_sync()
     {
-        using var ws = TestWorkspace.Create("sqlite", asProcess: true);
+        using var ws = TestWorkspace.Create("sqlite");
         await ws.Run("project", "create", "P");
 
         var loud = await ws.Run("sync");

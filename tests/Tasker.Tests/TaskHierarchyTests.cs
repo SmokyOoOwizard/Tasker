@@ -10,7 +10,6 @@ namespace Tasker.Tests;
 /// TSK-109: иерархия в <c>task list</c> — эпик и дочерние задачи с отступом, несколько родителей, фильтры, порядок, страницы верхнего уровня,
 /// <c>--flat</c> и плоский <c>--json</c> с <c>parentIds</c>/<c>childCount</c>. Консоль на обоих хранилищах (папка и SQLite), REST, стандартный тип без миграции.
 /// </summary>
-[InProcess]
 public class TaskHierarchyTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
@@ -245,7 +244,7 @@ public class TaskHierarchyTests
         var narrow = await Ok(ws.Run("task", "list", "--width", "30"));
         var lines = narrow.Out.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal("Found 2", lines[0]);
-        Assert.All(lines.Skip(1), x => Assert.True(Tasker.Cli.Table.Width(x) <= 30, x));
+        Assert.All(lines.Skip(1), x => Assert.True(TextWidth.Of(x) <= 30, x));
         Assert.EndsWith("…", lines[2]);
         Assert.StartsWith("    TSK-2", lines[2]);
     }

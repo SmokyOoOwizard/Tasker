@@ -4,7 +4,6 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Статистика проекта и подтверждение удаления: консоль и REST, папка и SQLite.</summary>
-[InProcess]
 public class ProjectDeleteTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
@@ -36,6 +35,9 @@ public class ProjectDeleteTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Prompt_shows_what_will_be_lost_and_yes_deletes(string storage)
     {
+        if (OperatingSystem.IsWindows())
+            return; // терминал для ввода — псевдотерминал python pty: macOS и Linux
+
         using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
 
@@ -54,6 +56,9 @@ public class ProjectDeleteTests
     [InlineData("sqlite", " YES ")]
     public async Task Yes_in_any_case_deletes(string storage, string answer)
     {
+        if (OperatingSystem.IsWindows())
+            return; // терминал для ввода — псевдотерминал python pty: macOS и Linux
+
         using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
 
@@ -69,6 +74,9 @@ public class ProjectDeleteTests
     [InlineData("yep\n")]
     public async Task Anything_but_yes_cancels(string answer)
     {
+        if (OperatingSystem.IsWindows())
+            return; // терминал для ввода — псевдотерминал python pty: macOS и Linux
+
         foreach (var storage in new[] { "files", "sqlite" })
         {
             using var ws = TestWorkspace.Create(storage);
@@ -101,6 +109,9 @@ public class ProjectDeleteTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Yes_flag_deletes_without_any_prompt(string storage)
     {
+        if (OperatingSystem.IsWindows())
+            return; // терминал для ввода — псевдотерминал python pty: macOS и Linux
+
         using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
 
@@ -113,6 +124,9 @@ public class ProjectDeleteTests
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Json_keeps_stdout_clean_and_prompts_on_stderr(string storage)
     {
+        if (OperatingSystem.IsWindows())
+            return; // терминал для ввода — псевдотерминал python pty: macOS и Linux
+
         using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
 
@@ -127,6 +141,9 @@ public class ProjectDeleteTests
     [Fact]
     public async Task Empty_project_and_unknown_project()
     {
+        if (OperatingSystem.IsWindows())
+            return; // терминал для ввода — псевдотерминал python pty: macOS и Linux
+
         using var ws = TestWorkspace.Create("files");
         await Ok(ws.Run("project", "create", "Empty"));
 

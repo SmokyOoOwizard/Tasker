@@ -10,12 +10,11 @@
     <InternalsVisibleTo Include="Tasker.Tests" />
   </ItemGroup>
 
-  <!-- Клиентская часть демона: файлы состояния, управление, службы автозапуска, отчёты о сериях. Без веб-слоя:
-       сам демон (ASP.NET Core) — отдельная программа Tasker.Daemon.Host, а консольная утилита и десктоп зависят только от этого проекта. -->
+  <!-- Что десктопу нужно знать о демоне MCP (tasker-mcpd, Rust: rust/crates/tasker-mcpd): файлы состояния (daemon.lock, daemon.json),
+       статус по /daemon/status и решение, поднимать ли свой MCP. Сам демон и консоль, которая им управляет, — Rust-программы. -->
   <ItemGroup>
     <ProjectReference Include="..\Tasker.Core\Tasker.Core.csproj" />
     <ProjectReference Include="..\Tasker.Global\Tasker.Global.csproj" />
-    <ProjectReference Include="..\Tasker.Storage.Db\Tasker.Storage.Db.csproj" />
     <ProjectReference Include="..\Tasker.Storage.Files\Tasker.Storage.Files.csproj" />
   </ItemGroup>
 

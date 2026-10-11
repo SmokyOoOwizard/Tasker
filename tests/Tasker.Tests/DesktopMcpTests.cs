@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Tasker.Daemon;
-using Tasker.Daemon.Host;
 using Tasker.Global;
 using Tasker.Mcp;
 using Tasker.Storage.Files.Workspaces;
@@ -173,7 +172,7 @@ public class WorkspaceMcpEndpointTests : IAsyncLifetime
 
     private async Task<JsonNode> Ask(int? ownPort, ExternalMcp? external)
     {
-        var builder = TaskerWebApp.CreateBuilder<DaemonModule>([], TaskerMode.Local);
+        var builder = TaskerWebApp.CreateBuilder<WebTestModule>([], TaskerMode.Local);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Services.AddSingleton(new LocalMcpAddress(ownPort));
         if (external != null)
@@ -275,7 +274,7 @@ public class DesktopYieldsPortTests : IDisposable
 
     private static async Task<WebApplication> Start(int mcpPort, LocalMcpAddress address, Action<LocalEndpoints> attach)
     {
-        var builder = TaskerWebApp.CreateBuilder<DaemonModule>([], TaskerMode.Local);
+        var builder = TaskerWebApp.CreateBuilder<WebTestModule>([], TaskerMode.Local);
         attach(LocalEndpoints.Add(builder, mcpPort, address));
         var app = builder.Build();
         app.MapTasker();

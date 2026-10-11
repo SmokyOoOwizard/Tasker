@@ -10,7 +10,7 @@ namespace Tasker.Tests;
 /// </summary>
 internal static class TestRun
 {
-    /// <summary>Путь к консоли <c>tasker</c>; null — тесты гоняют свою сборку (<c>dotnet tasker.dll</c>).</summary>
+    /// <summary>Путь к консоли <c>tasker</c>; null — <c>tasker</c> из каталога тестов.</summary>
     public static string? TaskerBin { get; private set; }
 
     /// <summary>Путь к демону <c>tasker-mcpd</c>; null — он лежит рядом с консолью.</summary>

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Tasker.Cli.Completion;
 using Tasker.Storage.Files.Workspaces;
 using Xunit;
 
@@ -9,7 +8,6 @@ namespace Tasker.Tests;
 /// Автодополнение по Tab: директива <c>[suggest]</c> (команды, параметры, значения из хранилища области) и скрипты оболочек
 /// (<c>tasker completion zsh|bash</c>).
 /// </summary>
-[InProcess]
 public class CompletionTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
@@ -111,37 +109,6 @@ public class CompletionTests
     public async Task Options_are_suggested_after_a_multi_value_option(string line, string expected)
     {
         Assert.Contains(expected, await Suggest(line));
-    }
-
-    /// <summary>Сторож: после любого многозначного параметра любой команды «--&lt;параметр&gt; значение --» предлагает параметры этой команды.</summary>
-    [Fact]
-    public async Task Options_follow_every_multi_value_option_of_every_command()
-    {
-        var root = Tasker.Cli.CliApp.BuildRoot(TextWriter.Null, TextWriter.Null);
-        var cases = new List<(string Path, string Option, string[] Others)>();
-
-        void Walk(System.CommandLine.Command command, string path)
-        {
-            foreach (var many in command.Options.Where(x => !x.Hidden && (x.AllowMultipleArgumentsPerToken || x.Arity.MaximumNumberOfValues > 1)))
-            {
-                var others = command.Options.Where(x => !x.Hidden && x != many && x.Name.StartsWith("--")).Select(x => x.Name).ToArray();
-                cases.Add((path, many.Name, others));
-            }
-
-            foreach (var sub in command.Subcommands)
-                Walk(sub, $"{path} {sub.Name}".Trim());
-        }
-
-        Walk(root, "");
-        Assert.NotEmpty(cases);
-
-        foreach (var (path, option, others) in cases)
-        {
-            var suggestions = await Suggest($"{path} {option} value --");
-            Assert.True(suggestions.Contains(option), $"'{path} {option} value --' does not repeat {option}: {string.Join(' ', suggestions)}");
-            foreach (var other in others)
-                Assert.True(suggestions.Contains(other), $"'{path} {option} value --' does not suggest {other}: {string.Join(' ', suggestions)}");
-        }
     }
 
     [Fact]
@@ -457,32 +424,6 @@ public class CompletionTests
         // true/false предлагает сама библиотека разбора команд (регистр её).
         Assert.Contains("true", await Values(ws, "link-type create X --outward a --hierarchical "), StringComparer.OrdinalIgnoreCase);
         Assert.Contains("false", await Values(ws, "link-type update Blocks --hierarchical "), StringComparer.OrdinalIgnoreCase);
-    }
-
-    // ---- разбор слов, набранных в оболочке ----
-
-    [Theory]
-    [InlineData("task get ", "task get ")]
-    [InlineData("task get  TSK-1", "task get TSK-1")]
-    [InlineData("status get 'В работе' ", "status get \"В работе\" ")]
-    [InlineData("status get В\\ р", "status get \"В р")]
-    [InlineData("status get \"В р", "status get \"В р")]
-    [InlineData("status get 'it''s'", "status get its")]
-    [InlineData("x \"\" y", "x \"\" y")]
-    [InlineData("", "")]
-    public void Shell_words_are_rewritten_for_the_parser(string typed, string expected)
-    {
-        Assert.Equal(expected, ShellWords.Normalize(typed));
-    }
-
-    [Theory]
-    [InlineData("task get TSK-1", "task get ", "TSK-1")]
-    [InlineData("task get ", "task get ", "")]
-    [InlineData("status get \"В р", "status get ", "В р")]
-    [InlineData("status get \"В работе\"", "status get ", "В работе")]
-    public void The_last_word_is_split_off_without_quotes(string normalized, string preceding, string word)
-    {
-        Assert.Equal((preceding, word), ShellWords.SplitLast(normalized));
     }
 
     // ---- команда completion и скрипты ----

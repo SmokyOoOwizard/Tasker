@@ -478,9 +478,10 @@ public static partial class Scenarios
                     using var process = Process.Start(ctx.Stand.Info(Stand.CliArgs(area, true, args)))!;
                     _ = process.StandardOutput.ReadToEndAsync();
                     _ = process.StandardError.ReadToEndAsync();
+                    // Вызов консоли длится десятки миллисекунд: убиваем в пределах этого времени, чтобы попасть в середину записи.
                     int delay;
                     lock (random)
-                        delay = random.Next(120, 1600);
+                        delay = random.Next(1, 60);
                     var exited = await Task.WhenAny(process.WaitForExitAsync(), Task.Delay(delay));
                     if (!process.HasExited)
                     {

@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """
-Golden-корпус для переноса консоли и демона на Rust (TSK-124, docs/rust-migration-plan.md, фаза 0).
+Golden-корпус консоли и демона MCP (rust/tests/golden): эталоны сняты с .NET-сборки 0.1.0 и меняются только вместе с поведением.
 
-Скрипт на текущей .NET-сборке создаёт рабочую область со всеми сущностями, всеми типами полей, «опасными» строками, файлами
+Главный режим — --verify: проверка сборки (по умолчанию — Rust-бинарники из rust/target/release, собираются cargo) по корпусу.
+Генерация (без --verify) переснимает корпус и требует явный --bin с готовой сборкой, поведение которой берётся за эталон.
+
+Скрипт создаёт рабочую область со всеми сущностями, всеми типами полей, «опасными» строками, файлами
 всех formatVersion 0–9, legacy-именами <guid>.yaml, файлом с маркером конфликта и файлом «из будущего», приводит id и даты
 к детерминированным значениям и снимает эталоны: версии файлов (хэши), результат `tasker migrate`, вывод ключевых команд
 консоли, снапшоты MCP (tools/list, ответы инструментов, по ошибке каждого кода, `tasker sync` через демон) и стилевые эталоны
 YamlDotNet.
 
-  scripts/golden/generate.py [--bin <каталог с tasker и tasker-mcpd>] [--out rust/tests/golden] [--keep]
-  scripts/golden/generate.py --verify [--bin <каталог>]      снять эталоны заново с указанного бинарника и сравнить с rust/tests/golden
-  scripts/golden/generate.py --verify --bin <каталог> --only cli,migrate   только консоль и migrate (без демона: для Rust-сборки без tasker-mcpd)
-  scripts/golden/generate.py --only sqlite [--bin <каталог .NET>]          только раздел SQLite (TSK-159): та же область в файле .db
-  scripts/golden/generate.py --only index [--bin <каталог .NET>]           только раздел index (TSK-161): кэш .cache/index.db области
+  scripts/golden/generate.py --verify [--diff]              собрать Rust (cargo build --release), снять эталоны заново и сравнить с rust/tests/golden
+  scripts/golden/generate.py --verify --bin <каталог>      то же с готовыми tasker и tasker-mcpd из каталога
+  scripts/golden/generate.py --verify --only cli,migrate   только консоль и migrate (без демона)
+  scripts/golden/generate.py --bin <каталог> [--out rust/tests/golden] [--only …] [--keep]   переснять корпус (или разделы) этой сборкой
 
 Раздел sqlite (rust/tests/golden/sqlite): та же последовательность создания сущностей .NET-консолью с --sqlite, id и даты в
 таблицах переписаны SQL-запросами в детерминированные, база хранится SQL-дампом (workspace.sql: схема в порядке sqlite_master,
@@ -24,7 +26,7 @@ kind: sqlite в демоне) на этой базе. --verify восстана�
 mtime файлов — <MTIME>, если он в тиках .NET совпал со временем изменения файла, содержимое .cache после выхода). --verify строит
 индекс проверяемой сборкой и сравнивает оба файла байт в байт.
 
-Без --bin консоль и демон собираются из этого репозитория (dotnet build) во временный каталог. Ничего не трогает в настоящей
+Без --bin (только с --verify) консоль и демон собираются из этого репозитория: cargo build --release, rust/target/release. Ничего не трогает в настоящей
 установке: TASKER_HOME, рабочая область и демон (на свободном порту) живут во временном каталоге и удаляются в конце
 (кроме --keep).
 """
@@ -151,11 +153,12 @@ class Tasker:
         return json.loads(self.run(*args, "--json", **kw).out)
 
 
-def build(bin_dir):
+def build():
+    """Rust-консоль и демон из репозитория: каталог rust/target/release."""
     log("building tasker and tasker-mcpd from", REPO)
-    for project, extra in (("src/Tasker.Cli", []), ("src/Tasker.Daemon.Host", ["-p:EmbedFrontend=false"])):
-        subprocess.run(["dotnet", "build", os.path.join(REPO, project), "-c", "Release", "-o", bin_dir, "--nologo", "-v", "quiet", *extra],
-                       check=True)
+    subprocess.run(["cargo", "build", "--release", "--locked", "--bin", "tasker", "--bin", "tasker-mcpd"], cwd=os.path.join(REPO, "rust"),
+                   check=True)
+    return os.path.join(REPO, "rust", "target", "release")
 
 
 # ----------------------------------------------------------------------------- 1. рабочая область
@@ -1390,7 +1393,7 @@ def verify(args, bin_dir, root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--bin", help="каталог с tasker(.dll) и tasker-mcpd(.dll); без него — сборка из репозитория")
+    parser.add_argument("--bin", help="каталог с tasker(.dll) и tasker-mcpd(.dll); без него (только с --verify) — Rust-сборка из репозитория")
     parser.add_argument("--out", default=DEFAULT_OUT, help="куда писать корпус (по умолчанию rust/tests/golden)")
     parser.add_argument("--verify", action="store_true", help="снять эталоны заново и сравнить с --out, ничего не перезаписывая")
     parser.add_argument("--diff", action="store_true", help="с --verify: печатать построчные различия")
@@ -1404,11 +1407,12 @@ def main():
     unknown = [s for s in args.only if s not in SECTIONS]
     if unknown:
         parser.error(f"--only: unknown sections {', '.join(unknown)}; expected {', '.join(SECTIONS)}")
+    if not args.verify and not args.bin:
+        parser.error("generating the corpus needs --bin <directory with the build whose behaviour is the reference>; "
+                     "to check the Rust build against the corpus use --verify")
     root = tempfile.mkdtemp(prefix="tasker-golden-")
     try:
-        bin_dir = os.path.abspath(args.bin) if args.bin else os.path.join(root, "bin")
-        if not args.bin:
-            build(bin_dir)
+        bin_dir = os.path.abspath(args.bin) if args.bin else build()
         code = verify(args, bin_dir, root) if args.verify else (generate(args, bin_dir, root) or 0)
     finally:
         if args.keep:

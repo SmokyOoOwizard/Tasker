@@ -1,5 +1,5 @@
 //! `tasker manual` (`howto`): микро-справочник «как сделать то-то» (`ManualCommands`, `ManualCatalog` в .NET). Страницы
-//! встроены в бинарник (`include_str!` из `src/Tasker.Cli/Manual/<язык>/`), рабочая область не нужна. Язык — `--lang`,
+//! встроены в бинарник (`include_str!` из `rust/crates/tasker-cli/manual/<язык>/`), рабочая область не нужна. Язык — `--lang`,
 //! переменная `TASKER_LANG`, иначе язык по умолчанию; нет страницы — откат на язык по умолчанию с пометкой.
 use crate::context::Context;
 use crate::errors::{CliError, Result};
@@ -16,71 +16,19 @@ pub const DEFAULT_LANGUAGE: &str = "ru";
 
 /// Встроенные страницы: язык, имя файла, текст.
 const PAGES: &[(&str, &str, &str)] = &[
-    (
-        "ru",
-        "01-first-project.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/01-first-project.md"),
-    ),
-    (
-        "ru",
-        "02-tasks.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/02-tasks.md"),
-    ),
-    (
-        "ru",
-        "03-series.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/03-series.md"),
-    ),
-    (
-        "ru",
-        "04-links.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/04-links.md"),
-    ),
-    (
-        "ru",
-        "05-boards.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/05-boards.md"),
-    ),
-    (
-        "ru",
-        "06-fields.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/06-fields.md"),
-    ),
-    (
-        "ru",
-        "07-locks.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/07-locks.md"),
-    ),
-    (
-        "ru",
-        "08-agent.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/08-agent.md"),
-    ),
-    (
-        "ru",
-        "09-migrate.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/09-migrate.md"),
-    ),
-    (
-        "ru",
-        "10-sync-cleanup.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/10-sync-cleanup.md"),
-    ),
-    (
-        "ru",
-        "11-install-daemon.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/11-install-daemon.md"),
-    ),
-    (
-        "ru",
-        "12-statuses-types.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/12-statuses-types.md"),
-    ),
-    (
-        "ru",
-        "13-windows.md",
-        include_str!("../../../../../src/Tasker.Cli/Manual/ru/13-windows.md"),
-    ),
+    ("ru", "01-first-project.md", include_str!("../../manual/ru/01-first-project.md")),
+    ("ru", "02-tasks.md", include_str!("../../manual/ru/02-tasks.md")),
+    ("ru", "03-series.md", include_str!("../../manual/ru/03-series.md")),
+    ("ru", "04-links.md", include_str!("../../manual/ru/04-links.md")),
+    ("ru", "05-boards.md", include_str!("../../manual/ru/05-boards.md")),
+    ("ru", "06-fields.md", include_str!("../../manual/ru/06-fields.md")),
+    ("ru", "07-locks.md", include_str!("../../manual/ru/07-locks.md")),
+    ("ru", "08-agent.md", include_str!("../../manual/ru/08-agent.md")),
+    ("ru", "09-migrate.md", include_str!("../../manual/ru/09-migrate.md")),
+    ("ru", "10-sync-cleanup.md", include_str!("../../manual/ru/10-sync-cleanup.md")),
+    ("ru", "11-install-daemon.md", include_str!("../../manual/ru/11-install-daemon.md")),
+    ("ru", "12-statuses-types.md", include_str!("../../manual/ru/12-statuses-types.md")),
+    ("ru", "13-windows.md", include_str!("../../manual/ru/13-windows.md")),
 ];
 
 /// Страница справочника: тема на одном языке.
@@ -394,8 +342,173 @@ fn show(ctx: &mut Context<'_>, catalog: &ManualCatalog, requested: Option<&str>,
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+
+    /// Блоки ```bash страницы (без строк-ограничителей).
+    pub(crate) fn shell_blocks(markdown: &str) -> Vec<String> {
+        let mut blocks = Vec::new();
+        let mut block: Option<String> = None;
+        for line in markdown.replace("\r\n", "\n").split('\n') {
+            if line.starts_with("```") {
+                match block.take() {
+                    Some(text) => blocks.push(text),
+                    None if line.trim_end() == "```bash" => block = Some(String::new()),
+                    None => {}
+                }
+            } else if let Some(text) = block.as_mut() {
+                text.push_str(line);
+                text.push('\n');
+            }
+        }
+        blocks
+    }
+
+    /// Команды блока: строки, склеенные по `\` в конце; пустые и комментарии пропускаются.
+    pub(crate) fn shell_commands(block: &str) -> Vec<String> {
+        let mut commands = Vec::new();
+        let mut current = String::new();
+        for raw in block.split('\n') {
+            let line = raw.trim_end();
+            if let Some(head) = line.strip_suffix('\\') {
+                current.push_str(head);
+                current.push(' ');
+                continue;
+            }
+            current.push_str(line);
+            let command = current.trim().to_string();
+            current.clear();
+            if !command.is_empty() && !command.starts_with('#') {
+                commands.push(command);
+            }
+        }
+        commands
+    }
+
+    /// Слова строки как в оболочке: по пробелам, кавычки (' и ") склеивают слово, `#` в начале слова — комментарий до конца строки.
+    pub(crate) fn tokenize(command: &str) -> Vec<String> {
+        let mut tokens = Vec::new();
+        let mut token = String::new();
+        let mut started = false;
+        let mut quote: Option<char> = None;
+        for c in command.chars() {
+            if let Some(q) = quote {
+                if c == q {
+                    quote = None;
+                } else {
+                    token.push(c);
+                }
+            } else if c == '\'' || c == '"' {
+                quote = Some(c);
+                started = true;
+            } else if c.is_whitespace() {
+                if started {
+                    tokens.push(std::mem::take(&mut token));
+                }
+                token.clear();
+                started = false;
+            } else if c == '#' && !started {
+                return tokens;
+            } else {
+                token.push(c);
+                started = true;
+            }
+        }
+        assert!(quote.is_none(), "an unclosed quote in: {command}");
+        if started {
+            tokens.push(token);
+        }
+        tokens
+    }
+
+    #[test]
+    fn the_tokenizer_understands_quotes_and_comments() {
+        assert_eq!(
+            tokenize("tasker task create \"Два слова\" --type Task # комментарий"),
+            ["tasker", "task", "create", "Два слова", "--type", "Task"]
+        );
+        assert_eq!(
+            tokenize("tasker board create Main --column 'To do=Todo'"),
+            ["tasker", "board", "create", "Main", "--column", "To do=Todo"]
+        );
+        assert_eq!(tokenize("a \"\""), ["a", ""]);
+        let commands = shell_commands("tasker a \\\n  --b c\n\n# note\ntasker d\n");
+        assert_eq!(
+            commands.iter().map(|c| tokenize(c)).collect::<Vec<_>>(),
+            [vec!["tasker", "a", "--b", "c"], vec!["tasker", "d"]]
+        );
+    }
+
+    #[test]
+    fn the_manual_has_the_planned_topics_in_russian() {
+        let catalog = ManualCatalog::embedded();
+        let ids: Vec<String> = catalog.topics(Some("ru")).into_iter().map(|x| x.id).collect();
+        assert_eq!(
+            ids,
+            [
+                "first-project",
+                "tasks",
+                "series",
+                "links",
+                "boards",
+                "fields",
+                "locks",
+                "agent",
+                "migrate",
+                "sync-cleanup",
+                "install-daemon",
+                "statuses-types",
+                "windows"
+            ]
+        );
+        assert!(catalog.languages().contains(&"ru".to_string()));
+        assert!(catalog.topics(Some("ru")).iter().all(|x| x.language == "ru"));
+    }
+
+    #[test]
+    fn every_page_has_a_title_a_description_sections_and_commands_and_russian_pages_follow_the_recipe() {
+        let catalog = ManualCatalog::embedded();
+        for language in catalog.languages() {
+            for page in catalog.topics(Some(&language)) {
+                let name = format!("{}/{}", page.language, page.id);
+                assert!(!page.title.trim().is_empty(), "{name}: no title");
+                assert!(!page.description.trim().is_empty(), "{name}: no description");
+                assert!(
+                    page.markdown.split('\n').filter(|x| x.starts_with("## ")).count() >= 3,
+                    "{name}: a recipe has sections"
+                );
+                assert!(!shell_blocks(page.markdown).is_empty(), "{name}: no ```bash blocks");
+                if page.language == "ru" {
+                    for section in ["## Что нужно", "## Шаги", "## Пример", "## На что обратить внимание"]
+                    {
+                        assert!(
+                            page.markdown.contains(&format!("{section}\n")) || page.markdown.contains(&format!("{section}\r\n")),
+                            "{name}: no section '{section}'"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn search_works_in_the_chosen_language_and_a_regional_variant_resolves_to_its_language() {
+        let catalog = ManualCatalog::from_pages(&[
+            ("ru", "01-alpha.md", "# Альфа\n\nПервая тема.\n"),
+            ("ru", "02-beta.md", "# Бета\n\nВторая тема.\n"),
+            ("en", "02-beta.md", "# Beta\n\nThe second topic.\n"),
+            ("en", "03-gamma.md", "# Gamma\n\nOnly in English.\n"),
+        ]);
+        let ids = |lang: Option<&str>, query: &str| catalog.find(lang, query).into_iter().map(|p| p.id).collect::<Vec<_>>();
+        assert_eq!(ids(Some("en"), "second"), ["beta"]);
+        assert!(ids(Some("ru"), "second").is_empty());
+        assert_eq!(ids(Some("en"), "GAMMA"), ["gamma"]);
+        assert_eq!(catalog.resolve(Some("en-GB")).language, "en");
+        assert!(catalog.resolve(Some("en-GB")).found);
+        assert!(!catalog.resolve(Some("de")).found);
+        let titles: Vec<String> = catalog.topics(Some("en")).into_iter().map(|p| p.title).collect();
+        assert_eq!(titles, ["Альфа", "Beta", "Gamma"]);
+    }
 
     #[test]
     fn the_catalog_has_the_russian_pages_in_file_order() {

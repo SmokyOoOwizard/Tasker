@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
-using Tasker.Daemon.Host;
 using Tasker.Storage.Files.Workspaces;
 using Tasker.Web;
 using Tasker.Web.Workspaces;
@@ -84,7 +83,7 @@ public class JsonEscapingTests : IDisposable
         for (var i = 0; i < 3; i++)
             Assert.Equal(0, (await TaskerProcess.Run("task", "create", Title + i, "--type", "Bug", "-p", "Alpha", "-w", folder)).Code);
 
-        var builder = TaskerWebApp.CreateBuilder<DaemonModule>([], TaskerMode.Local);
+        var builder = TaskerWebApp.CreateBuilder<WebTestModule>([], TaskerMode.Local);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         await using var app = builder.Build();
         app.MapTasker();
@@ -103,7 +102,6 @@ public class JsonEscapingTests : IDisposable
         Assert.True(escaped.Length > rest.Length * 1.3, $"{escaped.Length} vs {rest.Length}");
     }
 
-    [InProcess]
     [Fact]
     public async Task Cli_json_in_process()
     {

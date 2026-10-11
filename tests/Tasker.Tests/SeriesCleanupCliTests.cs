@@ -1,6 +1,4 @@
 using System.Text.Json.Nodes;
-using Tasker.Cli;
-using Tasker.Daemon.Services;
 using Xunit;
 
 namespace Tasker.Tests;
@@ -21,7 +19,6 @@ public class SeriesCleanupCliTests : IDisposable
 
     // ---- дубликаты номеров ----
 
-    [InProcess]
     [Fact]
     public async Task After_a_merge_both_tasks_are_visible_and_marked_as_a_conflict()
     {
@@ -39,7 +36,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Equal(2, Lines(list).Count(x => x.Contains("TSK-2")));
     }
 
-    [InProcess]
     [Fact]
     public async Task Sync_reports_duplicate_numbers_and_writes_nothing()
     {
@@ -67,7 +63,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Equal(before, _r.Snapshot());
     }
 
-    [InProcess]
     [Fact]
     public async Task Quiet_sync_prints_only_problems()
     {
@@ -82,7 +77,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Contains("TSK-2: tasks", quiet.Out);
     }
 
-    [InProcess]
     [Fact]
     public async Task Default_cleanup_does_not_touch_numbers()
     {
@@ -98,7 +92,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Contains("tasker series renumber-task", result.Out);
     }
 
-    [InProcess]
     [Fact]
     public async Task Resolve_conflicts_renumbers_and_the_earliest_task_keeps_its_number()
     {
@@ -123,7 +116,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.DoesNotContain("Series problems", (await Ok(_r.Cli("sync"))).Out);
     }
 
-    [InProcess]
     [Fact]
     public async Task Dry_run_shows_what_the_real_run_then_does_and_writes_nothing()
     {
@@ -153,7 +145,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Equal(2, dryJson["changeCount"]!.GetValue<int>());
     }
 
-    [InProcess]
     [Fact]
     public async Task Check_exit_codes()
     {
@@ -184,7 +175,6 @@ public class SeriesCleanupCliTests : IDisposable
         _r.Merge("a", "b");
     }
 
-    [InProcess]
     [Fact]
     public async Task A_series_deleted_in_one_branch_leaves_an_invalid_reference_that_sync_reports_and_cleanup_removes()
     {
@@ -215,7 +205,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Equal(0, (await _r.Cli("cleanup", "--check")).Code);
     }
 
-    [InProcess]
     [Fact]
     public async Task Cleanup_json_has_a_stable_shape()
     {
@@ -242,7 +231,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Null(project["skipReason"]);
     }
 
-    [InProcess]
     [Fact]
     public async Task Cleanup_can_be_limited_to_one_project()
     {
@@ -260,7 +248,6 @@ public class SeriesCleanupCliTests : IDisposable
 
     // ---- нечитаемые файлы серий ----
 
-    [InProcess]
     [Fact]
     public async Task An_unreadable_series_file_makes_cleanup_skip_and_leaves_tasks_untouched()
     {
@@ -299,7 +286,6 @@ public class SeriesCleanupCliTests : IDisposable
         _r.Merge("a", "b");
     }
 
-    [InProcess]
     [Fact]
     public async Task Two_series_with_the_same_prefix_require_a_rename()
     {
@@ -339,7 +325,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Throws<InvalidOperationException>(() => _r.Merge("b"));
     }
 
-    [InProcess]
     [Fact]
     public async Task Cleanup_refuses_while_a_merge_is_in_progress_but_check_and_dry_run_work()
     {
@@ -360,7 +345,6 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Equal(0, (await _r.Cli("cleanup")).Code);
     }
 
-    [InProcess]
     [Fact]
     public async Task Cleanup_refuses_while_a_rebase_is_in_progress()
     {
@@ -378,48 +362,49 @@ public class SeriesCleanupCliTests : IDisposable
         Assert.Equal(2, (await _r.Cli("cleanup", "--check")).Code);
     }
 
-    [InProcess]
     [Fact]
-    public async Task Git_operations_are_detected_and_a_missing_git_or_repository_lets_cleanup_go_on()
+    public async Task Cherry_pick_and_revert_in_progress_stop_cleanup_and_a_missing_git_does_not()
     {
-        var git = new GitOperations(new SystemProcessRunner());
         await _r.Seed();
-        Assert.Null(await git.InProgress(_r.Folder));
+        Assert.Equal(0, (await _r.Cli("cleanup")).Code);
 
         var file = _r.FileOf("series", _r.SeriesId("TSK"));
         await _r.Branch("a", async () => await File.WriteAllTextAsync(file, (await File.ReadAllTextAsync(file)).Replace("name: Tasks", "name: FromA")));
         await File.WriteAllTextAsync(file, (await File.ReadAllTextAsync(file)).Replace("name: Tasks", "name: FromMain"));
         _r.Repo.Commit("main");
-        Assert.Throws<InvalidOperationException>(() => _r.Repo.Git("cherry-pick", "a"));
-        Assert.Equal("cherry-pick", await git.InProgress(_r.Folder));
-        _r.Repo.Git("cherry-pick", "--abort");
-        Assert.Throws<InvalidOperationException>(() => _r.Repo.Git("revert", "--no-edit", "HEAD~1"));
-        Assert.Equal("revert", await git.InProgress(_r.Folder));
-        _r.Repo.Git("revert", "--abort");
-        Assert.Null(await git.InProgress(_r.Folder));
 
-        // Папка вне репозитория и отсутствующий git — не мешают.
-        var plain = Directory.CreateTempSubdirectory("tasker-nogit-").FullName;
+        Assert.Throws<InvalidOperationException>(() => _r.Repo.Git("cherry-pick", "a"));
+        var cherryPick = await _r.Cli("cleanup");
+        Assert.Equal(1, cherryPick.Code);
+        Assert.Contains("A git cherry-pick is in progress", cherryPick.Err);
+        _r.Repo.Git("cherry-pick", "--abort");
+
+        Assert.Throws<InvalidOperationException>(() => _r.Repo.Git("revert", "--no-edit", "HEAD~1"));
+        var revert = await _r.Cli("cleanup");
+        Assert.Equal(1, revert.Code);
+        Assert.Contains("A git revert is in progress", revert.Err);
+        // Консоль, открыв область, вернула .tasker/.gitignore, который убирал откат: revert --abort на таком файле спотыкается.
+        _r.Repo.Git("revert", "--quit");
+        _r.Repo.Git("reset", "--hard", "-q");
+        Assert.Equal(0, (await _r.Cli("cleanup")).Code);
+
+        // git не установлен (его нет в PATH): проверить операции нечем, чистка идёт дальше.
+        var noGit = Directory.CreateTempSubdirectory("tasker-nogit-").FullName;
         try
         {
-            Assert.Null(await git.InProgress(plain));
+            using (Tasker.Global.AppEnvironment.Override("PATH", noGit))
+                Assert.Equal(0, (await _r.Cli("cleanup")).Code);
         }
         finally
         {
-            Directory.Delete(plain, true);
+            Directory.Delete(noGit, true);
         }
-        Assert.Null(await new GitOperations(new FakeRunner(127)).InProgress(_r.Folder));
-    }
-
-    private sealed class FakeRunner(int code) : IProcessRunner
-    {
-        public Task<ProcessResult> Run(string file, params string[] arguments) => Task.FromResult(new ProcessResult(code, "", "no git"));
     }
 
     [Fact]
     public async Task Cleanup_works_in_a_folder_that_is_not_a_git_repository()
     {
-        using var ws = TestWorkspace.Create("files", asProcess: true);
+        using var ws = TestWorkspace.Create("files");
         await Ok(ws.Run("project", "create", "Demo"));
 
         var result = await ws.Run("cleanup");
@@ -431,7 +416,7 @@ public class SeriesCleanupCliTests : IDisposable
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Cleanup_of_a_healthy_workspace_changes_nothing_on_both_storages(string storage)
     {
-        using var ws = TestWorkspace.Create(storage, asProcess: true);
+        using var ws = TestWorkspace.Create(storage);
         await Ok(ws.Run("project", "create", "Demo"));
         await Ok(ws.InProject("Demo", "status", "create", "Todo"));
         await Ok(ws.InProject("Demo", "status-set", "create", "Flow", "--status", "Todo"));

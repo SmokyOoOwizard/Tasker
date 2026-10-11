@@ -359,6 +359,14 @@ mod tests {
     }
 
     #[test]
+    fn the_last_column_is_left_free_only_on_windows() {
+        assert_eq!(Terminal::usable_columns(120, true), 119);
+        assert_eq!(Terminal::usable_columns(120, false), 120);
+        assert_eq!(Terminal::usable_columns(1, true), 1);
+        assert_eq!(Terminal::usable_columns(0, true), 0);
+    }
+
+    #[test]
     fn parse_int_is_like_dotnet() {
         assert_eq!(parse_int(" 42 "), Some(42));
         assert_eq!(parse_int("-3"), Some(-3));

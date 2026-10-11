@@ -26,7 +26,7 @@ public class DaemonUpgradeTests : IDisposable
         // Старый процесс ждёт тишины недолго: тесты не должны ждать по две секунды на каждую замену.
         _env.Add(AppEnvironment.Override("TASKER_MCP_DRAIN_QUIET_MS", "300"));
         // На Windows супервизор по умолчанию выключен (страница вики «Windows»): тесты включают его, как это сделает пользователь. На Unix он и так включён.
-        _env.Add(AppEnvironment.Override(DaemonPlatform.SupervisorVariable, "1"));
+        _env.Add(AppEnvironment.Override("TASKER_MCP_SUPERVISOR", "1"));
     }
 
     public void Dispose()

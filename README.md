@@ -16,7 +16,7 @@
 
 macOS (arm64, x64), Linux (x64, arm64; glibc 2.28+ или статическая сборка для Alpine и любого Linux), Windows (x64, arm64): подробнее на странице [Платформы](https://github.com/SmokyOoOwizard/Tasker/wiki/Платформы).
 
-Консоль `tasker` и демон `tasker-mcpd` написаны на Rust: две программы по 4–5 МБ без зависимостей, кроме системной библиотеки C, архив релиза около 5 МБ (прежняя .NET-сборка — папка на 152 МБ и архив 56 МБ). Типичная команда выполняется за 8–15 мс против 140–230 мс у .NET (`tasker --version` — 4 мс). Замеры: [docs/rust-migration-results.md](docs/rust-migration-results.md).
+Консоль `tasker` и демон `tasker-mcpd` написаны на Rust: две программы по 4–5 МБ без зависимостей, кроме системной библиотеки C, архив релиза около 5 МБ. Типичная команда выполняется за 8–15 мс.
 
 ## Установка
 
@@ -27,7 +27,7 @@ scripts/release.sh --rid osx-arm64        # релиз для своей пла�
 artifacts/release/<версия>/install.sh --from artifacts/release/<версия>/tasker-<версия>-osx-arm64.tar.gz
 ```
 
-Из исходников (нужен Rust): `scripts/install.sh --from-source`. Обновление с прежней .NET-сборки — тот же `install.sh`: работающий демон переходит на новую сборку без простоя. На Windows: `scripts/install.ps1`. Подробности и удаление: [Установка](https://github.com/SmokyOoOwizard/Tasker/wiki/Установка).
+Из исходников (нужен Rust): `scripts/install.sh --from-source`. Обновление — тот же `install.sh` с новым архивом: работающий демон переходит на новую сборку без простоя. На Windows: `scripts/install.ps1`. Подробности и удаление: [Установка](https://github.com/SmokyOoOwizard/Tasker/wiki/Установка).
 
 ## Быстрый старт
 

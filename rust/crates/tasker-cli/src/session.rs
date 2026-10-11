@@ -260,6 +260,20 @@ mod tests {
     }
 
     #[test]
+    fn a_prefix_ignores_case_needs_eight_characters_and_a_longer_one_disambiguates() {
+        assert_eq!(find_ref("DEADBEEF0000").unwrap(), "Other");
+        assert_eq!(find_ref("1111111").unwrap_err().text(), "Error: No project '1111111'");
+        assert_eq!(find_ref("33333333").unwrap_err().text(), "Error: No project '33333333'");
+        assert!(
+            find_ref("111111110000")
+                .unwrap_err()
+                .text()
+                .contains("Several projects start with '111111110000'")
+        );
+        assert_eq!(find_ref("11111111000040008000000000000002").unwrap(), "Legacy");
+    }
+
+    #[test]
     fn available_names_are_listed_when_asked() {
         let all = items();
         let error = find_item(&all, "x", |x| x.0, |x| x.1, "status", true).unwrap_err();

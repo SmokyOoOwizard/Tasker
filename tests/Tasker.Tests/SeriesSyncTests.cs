@@ -10,7 +10,6 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Сверка серий: <c>tasker sync</c> напрямую и через демон, сообщения в логе демона.</summary>
-[InProcess]
 public class SeriesSyncTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();
@@ -251,25 +250,5 @@ public class SeriesSyncTests : IDisposable
         public Task<string?> Update(Series series, string expectedVersion, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<bool> Delete(Guid projectId, Guid id, string expectedVersion, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<int> CountUnreadable(Guid projectId, CancellationToken ct = default) => throw new IOException("disk gone");
-    }
-
-    [Fact]
-    public async Task A_failing_health_check_is_reported_as_text_and_does_not_throw()
-    {
-        var report = await SeriesReports.Compute(new OneProject(Guid.NewGuid()), new InMemoryTaskStorage(), new BrokenSeries(), new InMemoryLinkTypeStorage());
-
-        var project = Assert.Single(report);
-        Assert.Equal("Broken", project.ProjectName);
-        Assert.Contains("disk gone", project.Error);
-        Assert.Contains("disk gone", string.Concat(SeriesReports.Describe(project)));
-    }
-
-    [Fact]
-    public void An_old_sync_json_without_series_still_reads()
-    {
-        var result = System.Text.Json.JsonSerializer.Deserialize<SyncResult>(
-            """{"path":"/w","problemCount":0,"problems":[]}""", new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
-
-        Assert.Empty(result.Series);
     }
 }

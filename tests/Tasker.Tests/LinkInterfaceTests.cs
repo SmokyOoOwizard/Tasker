@@ -6,7 +6,6 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>Связи между задачами снаружи: консоль, REST и MCP.</summary>
-[InProcess]
 public class LinkInterfaceTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)

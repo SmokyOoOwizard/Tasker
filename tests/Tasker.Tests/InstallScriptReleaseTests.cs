@@ -24,13 +24,15 @@ public partial class InstallScriptTests
     }
 
     [Fact]
-    public void The_version_is_one_number_from_the_VERSION_file_and_every_program_carries_it()
+    public async Task The_version_is_one_number_from_the_VERSION_file_and_every_program_carries_it()
     {
         var version = File.ReadAllText(RepoFile("VERSION")).Trim();
         Assert.Matches(new Regex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$"), version);
 
-        foreach (var type in new[] { typeof(Tasker.Cli.CliApp), typeof(Tasker.Daemon.DaemonController) })
+        foreach (var type in new[] { typeof(Tasker.Web.TaskerWebApp), typeof(Tasker.Daemon.DaemonClient) })
             Assert.Equal(version, type.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion);
+        // Сборка из исходников добавляет коммит как build metadata: 0.1.0+f2a114d.
+        Assert.Equal(version, (await TaskerProcess.Run("--version")).Out.Trim().Split('+')[0]);
     }
 
     [Fact]

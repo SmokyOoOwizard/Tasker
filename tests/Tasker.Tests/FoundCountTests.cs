@@ -1,10 +1,8 @@
-using Tasker.Cli;
 using Xunit;
 
 namespace Tasker.Tests;
 
 /// <summary>TSK-107: каждый текстовый список начинается строкой с количеством найденного (в stdout, до строк данных).</summary>
-[InProcess]
 public class FoundCountTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
@@ -172,7 +170,7 @@ public class FoundCountTests
         var narrow = await Ok(ws.Run("task", "list", "--limit", "2", "--width", "20"));
         var lines = Lines(narrow.Out);
         Assert.Equal("Found 3, shown 1-2 (use --offset/--limit)", lines[0]); // длиннее 20 знаков, но не обрезана
-        Assert.All(lines.Skip(1), x => Assert.True(Table.Width(x) <= 20, x)); // данные обрезаны
+        Assert.All(lines.Skip(1), x => Assert.True(TextWidth.Of(x) <= 20, x)); // данные обрезаны
 
         // Колонки выровнены без учёта строки итога: те же строки данных, что с -q.
         var data = (await Ok(ws.Run("task", "list"))).Data;

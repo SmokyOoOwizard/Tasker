@@ -2,10 +2,8 @@ using System.Text.RegularExpressions;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-using Tasker.Cli;
 using Tasker.Configs;
 using Tasker.Daemon;
-using Tasker.Daemon.Host;
 using Tasker.Global;
 using Tasker.Web;
 using Xunit;
@@ -270,7 +268,7 @@ public partial class ConfigDiagnosticsTests
     {
         var sink = new ListSink();
 
-        TaskerWebApp.CreateBuilder<DaemonModule>(["--sqllite=x.db"], TaskerMode.Local, log: Logger(sink));
+        TaskerWebApp.CreateBuilder<WebTestModule>(["--sqllite=x.db"], TaskerMode.Local, log: Logger(sink));
 
         Assert.Equal(["Unknown argument --sqllite is ignored. Did you mean --sqlite?"], sink.Warnings);
     }
@@ -280,42 +278,38 @@ public partial class ConfigDiagnosticsTests
     {
         var sink = new ListSink();
 
-        TaskerWebApp.CreateBuilder<DaemonModule>(["--urls", "http://127.0.0.1:0", "--mcpport=6001"], TaskerMode.Local, log: Logger(sink));
+        TaskerWebApp.CreateBuilder<WebTestModule>(["--urls", "http://127.0.0.1:0", "--mcpport=6001"], TaskerMode.Local, log: Logger(sink));
 
         Assert.Empty(sink.Warnings);
     }
 
-    [InProcess]
     [Fact]
     public async Task The_cli_warns_on_stderr_about_a_mistyped_variable_and_keeps_stdout_clean()
     {
         using var home = new IsolatedHome();
-        var output = new StringWriter();
-        var error = new StringWriter();
+        using var typo = AppEnvironment.Override("TASKER_PROJCT", "Demo");
 
-        var code = await CliApp.Run(["mcp", "config", "--json"], output, error, null,
-            new Dictionary<string, string> { ["TASKER_PROJCT"] = "Demo" });
+        var result = await TaskerProcess.Run("mcp", "config", "--json");
 
-        Assert.Equal(0, code);
+        Assert.Equal(0, result.Code);
         Assert.Equal(
             "Warning: Environment variable TASKER_PROJCT is not a Tasker setting and is ignored. Did you mean TASKER_PROJECT?",
-            error.ToString().Trim());
+            result.Err.Trim());
         // stdout остаётся чистым JSON: сценарии, которые его читают, не ломаются.
-        Assert.NotNull(System.Text.Json.Nodes.JsonNode.Parse(output.ToString()));
+        Assert.NotNull(System.Text.Json.Nodes.JsonNode.Parse(result.Out));
     }
 
-    [InProcess]
     [Fact]
     public async Task The_cli_is_silent_when_variables_are_right()
     {
         using var home = new IsolatedHome();
-        var error = new StringWriter();
+        using var project = AppEnvironment.Override("TASKER_PROJECT", "Demo");
+        using var path = AppEnvironment.Override("PATH", "/bin");
 
-        var code = await CliApp.Run(["mcp", "config"], new StringWriter(), error, null,
-            new Dictionary<string, string> { ["TASKER_PROJECT"] = "Demo", ["TASKER_HOME"] = home.Path, ["PATH"] = "/bin" });
+        var result = await TaskerProcess.Run("mcp", "config");
 
-        Assert.Equal(0, code);
-        Assert.Empty(error.ToString());
+        Assert.Equal(0, result.Code);
+        Assert.Empty(result.Err);
     }
 
     [Fact]

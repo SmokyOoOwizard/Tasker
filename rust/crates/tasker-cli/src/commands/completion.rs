@@ -1,5 +1,5 @@
 //! `tasker completion zsh|bash|pwsh` (`CompletionCommands`, `Shells`, `PowerShellProfile*` в .NET): скрипт автодополнения по
-//! Tab (встроен из `src/Tasker.Cli/Completion/Shells/`, печатается байт в байт); для PowerShell — `--install`/`--uninstall`
+//! Tab (встроен из `completion/`, печатается байт в байт); для PowerShell — `--install`/`--uninstall`
 //! помеченного блока в `$PROFILE`.
 use crate::context::Context;
 use crate::errors::{CliError, Result};
@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 use tasker_core::io::full_path;
 use tasker_core::settings::expand_user_path;
 
-const ZSH: &str = include_str!("../../../../../src/Tasker.Cli/Completion/Shells/tasker.zsh");
-const BASH: &str = include_str!("../../../../../src/Tasker.Cli/Completion/Shells/tasker.bash");
-const PWSH: &str = include_str!("../../../../../src/Tasker.Cli/Completion/Shells/tasker.ps1");
+const ZSH: &str = include_str!("../../completion/tasker.zsh");
+const BASH: &str = include_str!("../../completion/tasker.bash");
+const PWSH: &str = include_str!("../../completion/tasker.ps1");
 
 /// Оболочка по имени или псевдониму (`powershell` — то же, что `pwsh`).
 pub fn shell(name: &str) -> Option<(&'static str, &'static str)> {
@@ -317,5 +317,143 @@ mod tests {
         assert_eq!(uninstall("x\n", "\n").1, ProfileChange::Absent);
         assert_eq!(install(BEGIN, &b, "\n").1, ProfileChange::Broken);
         assert_eq!(quote("it's"), "'it''s'");
+    }
+
+    const SCRIPT: &str = "C:\\Users\\Иван\\AppData\\Local\\Tasker\\completions\\tasker.ps1";
+
+    #[test]
+    fn the_block_loads_the_script_if_it_exists() {
+        assert_eq!(
+            block("C:\\Users\\O'Brien\\tasker.ps1", "\n"),
+            "# >>> tasker completion >>>\n\
+             # Tab completion for tasker, added by 'tasker completion pwsh --install'. To undo: delete this block or run 'tasker completion pwsh --uninstall'.\n\
+             if (Test-Path -LiteralPath 'C:\\Users\\O''Brien\\tasker.ps1') { . 'C:\\Users\\O''Brien\\tasker.ps1' }\n\
+             # <<< tasker completion <<<"
+        );
+        let crlf = block(SCRIPT, "\r\n");
+        assert_eq!(install("", &crlf, "\r\n"), (format!("{crlf}\r\n"), ProfileChange::Added));
+    }
+
+    #[test]
+    fn the_block_is_appended_after_the_existing_content_and_removed_without_a_trace() {
+        for (original, newline) in [
+            ("Set-Alias g git\n", "\n"),
+            ("Set-Alias g git\r\n", "\r\n"),
+            ("Set-Alias g git", "\n"),
+        ] {
+            let b = block(SCRIPT, newline);
+            let (installed, added) = install(original, &b, newline);
+            let (removed, change) = uninstall(&installed, newline);
+            assert_eq!(added, ProfileChange::Added);
+            assert!(
+                installed.starts_with(original) && installed.ends_with(&format!("{b}{newline}")),
+                "{installed:?}"
+            );
+            assert_eq!(change, ProfileChange::Removed);
+            let expected = if original.ends_with('\n') {
+                original.to_string()
+            } else {
+                format!("{original}{newline}")
+            };
+            assert_eq!(removed, expected);
+        }
+    }
+
+    #[test]
+    fn installing_twice_changes_nothing_and_a_new_path_replaces_the_block() {
+        let first = block(SCRIPT, "\n");
+        let (installed, _) = install("# mine\n", &first, "\n");
+        let (again, unchanged) = install(&installed, &first, "\n");
+        let (moved, replaced) = install(&format!("{installed}# after\n"), &block("D:\\t.ps1", "\n"), "\n");
+        assert_eq!((again == installed, unchanged), (true, ProfileChange::Unchanged));
+        assert_eq!(replaced, ProfileChange::Replaced);
+        assert_eq!(moved.matches(BEGIN).count(), 1);
+        assert!(moved.contains("D:\\t.ps1") && !moved.contains("Иван"));
+        assert!(moved.starts_with("# mine\n") && moved.ends_with("# after\n"));
+    }
+
+    #[test]
+    fn a_file_with_only_one_mark_is_left_alone_and_a_profile_without_the_block_is_not_changed() {
+        let broken = format!("x\n{BEGIN}\ny\n");
+        assert_eq!(install(&broken, "block", "\n"), (broken.clone(), ProfileChange::Broken));
+        assert_eq!(uninstall(&broken, "\n"), (broken.clone(), ProfileChange::Broken));
+        assert_eq!(
+            uninstall("Set-Alias g git\n", "\n"),
+            ("Set-Alias g git\n".to_string(), ProfileChange::Absent)
+        );
+    }
+
+    #[test]
+    fn smart_quotes_in_a_path_are_doubled_for_powershell() {
+        assert_eq!(quote("a'b\u{2019}c"), "'a''b\u{2019}\u{2019}c'");
+    }
+
+    #[test]
+    fn profiles_are_found_by_platform() {
+        let file = "Microsoft.PowerShell_profile.ps1";
+        assert_eq!(
+            default_profiles(true, Path::new("D:\\Docs"), Path::new("C:\\Users\\u"), None),
+            [
+                Path::new("D:\\Docs").join("PowerShell").join(file),
+                Path::new("D:\\Docs").join("WindowsPowerShell").join(file)
+            ]
+        );
+        assert_eq!(
+            default_profiles(false, Path::new(""), Path::new("/home/u"), None),
+            [Path::new("/home/u").join(".config").join("powershell").join(file)]
+        );
+        assert_eq!(
+            default_profiles(false, Path::new(""), Path::new("/home/u"), Some("/cfg")),
+            [Path::new("/cfg").join("powershell").join(file)]
+        );
+    }
+
+    fn folder() -> PathBuf {
+        let path = std::env::temp_dir().join(format!("tasker-pwsh-{}", uuid::Uuid::new_v4().simple()));
+        std::fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    #[test]
+    fn a_profile_is_backed_up_once_and_keeps_its_byte_order_mark() {
+        let dir = folder();
+        let profile = dir.join("p.ps1");
+        std::fs::write(&profile, b"\xEF\xBB\xBFSet-Alias g git\r\n").unwrap();
+        let (change, report) = apply(&profile, Some("C:\\t\\tasker.ps1"), "\r\n").unwrap();
+        let (second, _) = apply(&profile, Some("C:\\t\\tasker.ps1"), "\r\n").unwrap();
+        assert_eq!((change, second), (ProfileChange::Added, ProfileChange::Unchanged));
+        assert!(report.contains("backup:"), "{report}");
+        let backup = PathBuf::from(format!("{}{BACKUP_SUFFIX}", profile.display()));
+        assert_eq!(std::fs::read(&backup).unwrap(), b"\xEF\xBB\xBFSet-Alias g git\r\n");
+        let bytes = std::fs::read(&profile).unwrap();
+        assert_eq!(&bytes[..3], b"\xEF\xBB\xBF");
+        assert!(String::from_utf8_lossy(&bytes).contains("\r\n# >>> tasker completion >>>\r\n"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_new_profile_gets_a_byte_order_mark_only_when_it_has_non_ascii_text() {
+        let dir = folder();
+        let ascii = dir.join("a").join("p.ps1");
+        let cyrillic = dir.join("b").join("p.ps1");
+        apply(&ascii, Some("C:\\t\\tasker.ps1"), "\n").unwrap();
+        apply(&cyrillic, Some("C:\\Users\\Иван\\tasker.ps1"), "\n").unwrap();
+        assert_ne!(std::fs::read(&ascii).unwrap()[0], 0xEF);
+        assert_eq!(&std::fs::read(&cyrillic).unwrap()[..3], b"\xEF\xBB\xBF");
+        assert!(!PathBuf::from(format!("{}{BACKUP_SUFFIX}", ascii.display())).exists());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_profile_in_another_code_page_is_not_touched() {
+        let dir = folder();
+        let profile = dir.join("p.ps1");
+        let ansi = [0x23, 0x20, 0xC8, 0xE2, 0xE0, 0xED, 0x0A]; // «# Иван» в Windows-1251
+        std::fs::write(&profile, ansi).unwrap();
+        let (change, report) = apply(&profile, Some("C:\\t\\tasker.ps1"), "\n").unwrap();
+        assert_eq!(change, ProfileChange::Broken);
+        assert!(report.contains("not UTF-8"), "{report}");
+        assert_eq!(std::fs::read(&profile).unwrap(), ansi);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

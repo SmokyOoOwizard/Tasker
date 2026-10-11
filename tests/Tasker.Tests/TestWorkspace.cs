@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json.Nodes;
-using Tasker.Cli;
-using Tasker.Daemon;
 
 namespace Tasker.Tests;
 
@@ -19,72 +17,57 @@ public record CliResult(int Code, string Out, string Err)
 }
 
 /// <summary>
-/// Временная рабочая область для CLI: папка с файлами или файл SQLite. Команды идут либо внутри процесса тестов
-/// (<see cref="CliApp.Run"/>), либо отдельным процессом <c>tasker</c> (<paramref name="asProcess"/> в <see cref="Create"/>) —
-/// такой тест проверяет и чужой бинарник (<c>TASKER_BIN</c>, см. <see cref="TaskerProcess"/>).
+/// Временная рабочая область для CLI: папка с файлами или файл SQLite. Команды выполняются отдельным процессом консоли
+/// <c>tasker</c> (<see cref="TaskerProcess"/>).
 /// </summary>
 public sealed class TestWorkspace : IDisposable
 {
     private readonly string[] _location;
-    private readonly bool _asProcess;
 
-    private TestWorkspace(string root, string[] location, bool asProcess)
+    private TestWorkspace(string root, string[] location)
     {
         Root = root;
         _location = location;
-        _asProcess = asProcess;
     }
 
     public string Root { get; }
 
     /// <param name="storage"><c>files</c> или <c>sqlite</c>.</param>
-    /// <param name="asProcess">Выполнять команды отдельным процессом <c>tasker</c>, а не внутри процесса тестов.</param>
-    public static TestWorkspace Create(string storage, bool asProcess = false)
+    public static TestWorkspace Create(string storage)
     {
         var root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         return storage == "sqlite"
-            ? new TestWorkspace(root, ["--sqlite", Path.Combine(root, "tasker.db")], asProcess)
-            : new TestWorkspace(root, ["--workspace", root], asProcess);
+            ? new TestWorkspace(root, ["--sqlite", Path.Combine(root, "tasker.db")])
+            : new TestWorkspace(root, ["--workspace", root]);
     }
 
     public static IEnumerable<object[]> Storages() => [["files"], ["sqlite"]];
 
     /// <summary>Выполняет команду в этой области.</summary>
-    public Task<CliResult> Run(params string[] args) => Execute([.. args, .. _location]);
+    public Task<CliResult> Run(params string[] args) => Invoke([.. args, .. _location]);
 
-    /// <summary>Та же команда, но заведомо отдельным процессом <c>tasker</c>.</summary>
-    public Task<CliResult> RunProcess(params string[] args) => TaskerProcess.Run([.. args, .. _location]);
+    /// <summary>То же, что <see cref="Run"/>: команда отдельным процессом <c>tasker</c>.</summary>
+    public Task<CliResult> RunProcess(params string[] args) => Run(args);
 
     /// <summary>Аргументы, выбирающие эту область.</summary>
     public string[] Location => _location;
 
     /// <summary>Команда внутри проекта <paramref name="project"/> (id или имя).</summary>
-    public Task<CliResult> InProject(string project, params string[] args) => Execute([.. args, "--project", project, .. _location]);
+    public Task<CliResult> InProject(string project, params string[] args) => Invoke([.. args, "--project", project, .. _location]);
 
     /// <summary>
-    /// Команда с заданным вводом: <paramref name="input"/> — то, что «набрал пользователь» (null — ввод пуст, как EOF); interactive — подключён ли терминал.
-    /// Отдельному процессу терминал не подключить, поэтому в режиме процесса доступен только неинтерактивный ввод.
+    /// Команда с заданным вводом: <paramref name="input"/> — то, что «набрал пользователь» (null — ввод пуст, как EOF); <paramref name="interactive"/>
+    /// — стандартный ввод консоли — терминал (псевдотерминал, <see cref="TaskerProcess.RunInTerminal"/>), а не перенаправленный поток.
     /// </summary>
-    public Task<CliResult> RunWithInput(string? input, bool interactive, params string[] args)
-    {
-        if (!_asProcess)
-            return Invoke([.. args, .. _location], input, interactive);
-        if (interactive)
-            throw new NotSupportedException("A separate tasker process has no terminal: interactive input works in-process only");
-        return TaskerProcess.RunWithInput(input, [.. args, .. _location]);
-    }
+    public Task<CliResult> RunWithInput(string? input, bool interactive, params string[] args) =>
+        interactive ? TaskerProcess.RunInTerminal(input, [.. args, .. _location]) : Invoke([.. args, .. _location], input);
 
-    private Task<CliResult> Execute(string[] args) => _asProcess ? TaskerProcess.Run(args) : Invoke(args);
-
-    /// <summary>По умолчанию ввод не интерактивный: тест не должен зависеть от настоящего stdin.</summary>
-    public static async Task<CliResult> Invoke(string[] args, string? input = null, bool interactive = false)
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-        var code = await CliApp.Run(args, output, error, new StringReader(input ?? ""), interactive);
-        return new CliResult(code, output.ToString(), error.ToString());
-    }
+    /// <summary>
+    /// Команда отдельным процессом <c>tasker</c> вне какой-либо области. Стандартный ввод — <paramref name="input"/> (по умолчанию пустой, сразу
+    /// EOF): тест не должен зависеть от настоящего stdin.
+    /// </summary>
+    public static Task<CliResult> Invoke(string[] args, string? input = null) => TaskerProcess.RunWithInput(input, args);
 
     public void Dispose()
     {
@@ -99,45 +82,33 @@ public sealed class TestWorkspace : IDisposable
 }
 
 /// <summary>
-/// Запуск настоящего процесса <c>tasker</c> — чтобы проверять работу нескольких процессов с одной папкой и чужой бинарник.
-/// По умолчанию это <c>dotnet tasker.dll</c> из каталога тестов (туда ссылки на проекты кладут и консоль, и демон).
-/// Переменная <c>TASKER_BIN</c> — путь к исполняемому файлу консоли: тогда запускается он, напрямую. Демон (<c>tasker-mcpd</c>)
-/// консоль всегда ищет рядом с собой, поэтому он должен лежать в том же каталоге, что и <c>TASKER_BIN</c>; <c>TASKER_MCPD_BIN</c>
-/// нужна только тестам, которые запускают демон сами (<see cref="DaemonCommand"/>), и по умолчанию равна этому соседу.
+/// Запуск настоящего процесса <c>tasker</c> (Rust, <c>rust/crates/tasker-cli</c>). По умолчанию — бинарник из каталога тестов: его и демон
+/// <c>tasker-mcpd</c> туда кладёт сборка тестов (<c>tools/RustBinaries.targets</c>). Переменная <c>TASKER_BIN</c> — путь к другому
+/// исполняемому файлу консоли. Демон консоль всегда ищет рядом с собой, поэтому он должен лежать в том же каталоге, что и консоль;
+/// <c>TASKER_MCPD_BIN</c> нужна только тестам, которые запускают демон сами (<see cref="DaemonCommand"/>), и по умолчанию равна этому соседу.
 /// </summary>
 public static class TaskerProcess
 {
-    /// <summary>Исполняемый файл консоли из <c>TASKER_BIN</c> (см. <see cref="TestRun"/>); null — тесты гоняют свою сборку через <c>dotnet</c>.</summary>
-    public static string? Binary => TestRun.TaskerBin;
+    private static string Executable(string name) => OperatingSystem.IsWindows() ? name + ".exe" : name;
 
-    /// <summary>Каталог, где лежат программы <c>tasker</c> и <c>tasker-mcpd</c> (или их dll).</summary>
-    public static string ProgramDirectory =>
-        Binary is { } binary ? Path.GetDirectoryName(Path.GetFullPath(binary))! : AppContext.BaseDirectory;
+    /// <summary>Исполняемый файл консоли: <c>TASKER_BIN</c> (см. <see cref="TestRun"/>) или <c>tasker</c> из каталога тестов.</summary>
+    public static string Binary => Path.GetFullPath(TestRun.TaskerBin ?? Path.Combine(AppContext.BaseDirectory, Executable("tasker")));
 
-    /// <summary>Команда запуска консоли: сам бинарник или <c>dotnet</c> с путём к <c>tasker.dll</c>.</summary>
+    /// <summary>Каталог, где лежат программы <c>tasker</c> и <c>tasker-mcpd</c>.</summary>
+    public static string ProgramDirectory => Path.GetDirectoryName(Binary)!;
+
+    /// <summary>Команда запуска консоли.</summary>
     public static (string File, string[] Arguments) Command() => CommandIn(ProgramDirectory);
 
-    /// <summary>
-    /// Команда запуска консоли, лежащей в <paramref name="directory"/> (например, в копии каталога программ): тот же способ,
-    /// что и у <see cref="Command"/>, но файлы берутся оттуда.
-    /// </summary>
-    public static (string File, string[] Arguments) CommandIn(string directory) =>
-        Binary is { } binary
-            ? (Path.Combine(directory, Path.GetFileName(binary)), [])
-            : ("dotnet", [Path.Combine(directory, "tasker.dll")]);
+    /// <summary>Команда запуска консоли, лежащей в <paramref name="directory"/> (например, в копии каталога программ).</summary>
+    public static (string File, string[] Arguments) CommandIn(string directory) => (Path.Combine(directory, Path.GetFileName(Binary)), []);
 
-    /// <summary>
-    /// Команда запуска демона <c>tasker-mcpd</c>: <c>TASKER_MCPD_BIN</c>, иначе программа рядом с <c>TASKER_BIN</c>, иначе —
-    /// как находит его сама консоль тестовой сборки (<see cref="Launcher.DaemonCommand()"/>).
-    /// </summary>
-    public static (string File, string[] Arguments) DaemonCommand()
-    {
-        if (TestRun.TaskerMcpdBin is { } daemon)
-            return (daemon, []);
-        if (Binary is { } binary)
-            return (Path.Combine(ProgramDirectory, Launcher.DaemonName + Path.GetExtension(binary)), []);
-        return Launcher.DaemonCommand();
-    }
+    /// <summary>Команда запуска демона <c>tasker-mcpd</c>: <c>TASKER_MCPD_BIN</c>, иначе программа рядом с консолью.</summary>
+    public static (string File, string[] Arguments) DaemonCommand() =>
+        (TestRun.TaskerMcpdBin ?? Path.Combine(ProgramDirectory, Executable(DaemonName)), []);
+
+    /// <summary>Имя программы демона без расширения.</summary>
+    public const string DaemonName = "tasker-mcpd";
 
     public static Process Start(params string[] args) => StartIn(null, args);
 
@@ -184,6 +155,39 @@ public static class TaskerProcess
         return new LockHolder(Process.Start(info)!);
     }
 
+    /// <summary>
+    /// Консоль, у которой стандартный ввод — псевдотерминал (как у человека за клавиатурой), а вывод и ошибки — по-прежнему потоки.
+    /// В терминал «набирается» <paramref name="input"/>; ввод без перевода строки в конце завершается Ctrl+D (EOF). Псевдотерминал
+    /// открывает python3 (модуль <c>pty</c>, только macOS и Linux).
+    /// </summary>
+    public static Task<CliResult> RunInTerminal(string? input, params string[] args)
+    {
+        if (OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("A pseudo-terminal for the console is opened with python3 pty: macOS and Linux only");
+
+        var info = new ProcessStartInfo("python3") { RedirectStandardOutput = true, RedirectStandardError = true };
+        Tasker.Global.AppEnvironment.Apply(info);
+        info.ArgumentList.Add("-c");
+        info.ArgumentList.Add(TerminalScript);
+        info.ArgumentList.Add(input ?? "");
+        info.ArgumentList.Add(Binary);
+        foreach (var arg in args)
+            info.ArgumentList.Add(arg);
+        return Run(info, null);
+    }
+
+    private const string TerminalScript = """
+        import os, pty, subprocess, sys
+        master, slave = pty.openpty()
+        child = subprocess.Popen(sys.argv[2:], stdin=slave)
+        os.close(slave)
+        typed = sys.argv[1].encode()
+        os.write(master, typed if typed.endswith(b"\n") else typed + b"\x04")
+        code = child.wait()
+        os.close(master)
+        sys.exit(code)
+        """;
+
     public static Task<CliResult> Run(params string[] args) => RunIn(null, args);
 
     /// <summary>Как <see cref="Run"/>, но в папке <paramref name="workingDirectory"/> — вместо смены текущей папки всего процесса тестов.</summary>
@@ -200,8 +204,15 @@ public static class TaskerProcess
         var error = process.StandardError.ReadToEndAsync();
         if (input != null)
         {
-            await process.StandardInput.WriteAsync(input);
-            process.StandardInput.Close();
+            try
+            {
+                await process.StandardInput.WriteAsync(input);
+                process.StandardInput.Close();
+            }
+            catch (IOException)
+            {
+                // Консоль завершилась, не читая ввод (например, отказала без терминала): это и проверяется.
+            }
         }
 
         await process.WaitForExitAsync();

@@ -1,0 +1,34 @@
+<Project>
+
+  <!-- Консоль tasker и демон tasker-mcpd — Rust-программы (rust/). Тесты (tests/Tasker.Tests) и стенд (tools/Tasker.Stress) запускают их
+       отдельными процессами из своего выходного каталога: после сборки проекта `cargo build` собирает оба бинарника (профиль dev,
+       rust/target/debug; повторная сборка без изменений — доли секунды), и они копируются рядом с программой.
+       -p:TaskerRustBin=<каталог> — взять готовые tasker и tasker-mcpd оттуда (например, rust/target/release) без cargo. -->
+  <PropertyGroup>
+    <TaskerRustDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..', 'rust'))</TaskerRustDir>
+    <TaskerExeSuffix Condition="'$(OS)' == 'Windows_NT'">.exe</TaskerExeSuffix>
+  </PropertyGroup>
+
+  <Target Name="BuildTaskerRustBinaries" AfterTargets="Build" Condition="'$(TaskerRustBin)' == ''">
+    <Exec Command="cargo build --locked --quiet --bin tasker --bin tasker-mcpd" WorkingDirectory="$(TaskerRustDir)" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_TaskerCargoExit" />
+    </Exec>
+    <Error Condition="'$(_TaskerCargoExit)' != '0'"
+           Text="cargo build of tasker and tasker-mcpd failed (exit code $(_TaskerCargoExit)) in $(TaskerRustDir). Install Rust (https://rustup.rs) or pass -p:TaskerRustBin=&lt;directory with built tasker and tasker-mcpd&gt;." />
+    <PropertyGroup>
+      <_TaskerRustOutput>$(TaskerRustDir)target$([System.IO.Path]::DirectorySeparatorChar)debug$([System.IO.Path]::DirectorySeparatorChar)</_TaskerRustOutput>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="CopyTaskerRustBinaries" AfterTargets="Build" DependsOnTargets="BuildTaskerRustBinaries">
+    <PropertyGroup>
+      <_TaskerRustOutput Condition="'$(TaskerRustBin)' != ''">$([MSBuild]::EnsureTrailingSlash('$(TaskerRustBin)'))</_TaskerRustOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TaskerRustBinary Include="$(_TaskerRustOutput)tasker$(TaskerExeSuffix);$(_TaskerRustOutput)tasker-mcpd$(TaskerExeSuffix)" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_TaskerRustBinary.FullPath)')" Text="Not found: %(_TaskerRustBinary.FullPath)" />
+    <Copy SourceFiles="@(_TaskerRustBinary)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

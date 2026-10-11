@@ -917,6 +917,27 @@ mod tests {
     }
 
     #[test]
+    fn powershell_words_are_rewritten_for_the_parser() {
+        for (typed, expected) in [
+            ("task list --status 'В работе' ", "task list --status \"В работе\" "),
+            ("task list --status 'В р", "task list --status \"В р"),
+            ("task list --status \"В р", "task list --status \"В р"),
+            ("task list --status В` р", "task list --status \"В р"),
+            ("task get 'It''s'", "task get It's"),
+            ("task get \"a\"\"b\"", "task get a\"b"),
+            ("task list -w C:\\work\\проект", "task list -w C:\\work\\проект"),
+            ("task list -w 'C:\\my dir\\x' ", "task list -w \"C:\\my dir\\x\" "),
+            ("task list -w \"C:\\my dir\\x\" --st", "task list -w \"C:\\my dir\\x\" --st"),
+            ("task list --status ‘В работе’ ", "task list --status \"В работе\" "),
+        ] {
+            assert_eq!(normalize(typed, Dialect::PowerShell), expected, "{typed}");
+        }
+        // Обратная косая черта — экранирование в zsh и bash, но обычный знак в PowerShell.
+        assert_eq!(normalize("C:\\work\\proj", Dialect::Posix), "C:workproj");
+        assert_eq!(normalize("C:\\work\\proj", Dialect::PowerShell), "C:\\work\\proj");
+    }
+
+    #[test]
     fn natural_order_sorts_numbers_by_value_and_ignores_case() {
         let mut items = vec!["TSK-10", "tsk-2", "task", "--all", "-h", "--help"];
         items.sort_by(|a, b| natural_order(a, b));

@@ -46,7 +46,7 @@ internal sealed class ApiHost : IAsyncDisposable
     {
         var root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
-        var builder = TaskerWebApp.CreateBuilder<Tasker.Daemon.Host.DaemonModule>([], TaskerMode.Local);
+        var builder = TaskerWebApp.CreateBuilder<WebTestModule>([], TaskerMode.Local);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         var app = builder.Build();
         app.MapTasker();
@@ -445,7 +445,7 @@ public class SeriesApiTests
     }
 
     [Theory, MemberData(nameof(Storages))]
-    public async Task Lease_resolves_the_services_of_the_open_workspace_and_the_daemon_report_uses_them(string storage)
+    public async Task Lease_resolves_the_services_of_the_open_workspace(string storage)
     {
         await using var api = await ApiHost.Start(storage);
         var tsk = await api.NewSeries("TSK");
@@ -454,25 +454,6 @@ public class SeriesApiTests
         // Тот же контейнер, что обслуживает API: хранилище и индекс не создаются заново.
         Assert.Same(api.Lease.Resolve<Tasker.Core.TaskSeries.ISeriesStorage>(), api.Lease.Resolve<Tasker.Core.TaskSeries.ISeriesStorage>());
         Assert.Equal(1, (await api.Lease.Resolve<Tasker.Core.TaskSeries.ISeriesStorage>().GetAll(api.ProjectId)).Length);
-
-        Assert.Empty(await Tasker.Daemon.Host.WorkspaceSync.ComputeSeries(api.Lease, default));
-    }
-
-    [Fact]
-    public async Task The_daemon_series_report_sees_a_duplicated_number_through_the_lease()
-    {
-        await using var api = await ApiHost.Start("files");
-        var tsk = await api.NewSeries("TSK");
-        var original = await api.NewTask("original", tsk);
-        await DuplicateTaskFile(api, original, x => x);
-
-        var report = await Eventually<Tasker.Daemon.ProjectSeriesHealth[]>(async () =>
-        {
-            var found = await Tasker.Daemon.Host.WorkspaceSync.ComputeSeries(api.Lease, default);
-            return found.Length == 1 ? found : null;
-        });
-        Assert.Null(report[0].Error);
-        Assert.Equal("TSK-1", Assert.Single(report[0].NumberConflicts).Reference);
     }
 
     [Fact]

@@ -8,16 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Tasker.Cli\Tasker.Cli.csproj" />
-    <!-- Сам демон — отдельная программа (tasker-mcpd): тесты запускают её рядом с tasker.dll и проверяют веб-слой в процессе. -->
-    <ProjectReference Include="..\..\src\Tasker.Daemon.Host\Tasker.Daemon.Host.csproj" />
+    <!-- Веб-слой (десктоп, сервер) и клиент демона для десктопа проверяются в процессе тестов. -->
     <ProjectReference Include="..\..\src\Tasker.Web\Tasker.Web.csproj" />
     <!-- Стенд параллельной работы: тесты запускают его с малыми числами (ParallelWorkTests). -->
     <ProjectReference Include="..\..\tools\Tasker.Stress\Tasker.Stress.csproj" />
   </ItemGroup>
 
-  <!-- Докладывает в каталог тестов сборки консоли, которых там нет (иначе на Linux `dotnet tasker.dll` падает, TSK-111). -->
-  <Import Project="..\..\tools\CopyConsoleDependencies.targets" />
+  <!-- Консоль tasker и демон tasker-mcpd (Rust) — рядом с тестами: процессные тесты запускают их (TASKER_BIN/TASKER_MCPD_BIN — другие). -->
+  <Import Project="..\..\tools\RustBinaries.targets" />
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />

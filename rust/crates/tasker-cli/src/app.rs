@@ -424,6 +424,68 @@ fn parse_error(
 mod tests {
     use super::*;
 
+    /// Строка `tasker …` разбирается деревом команд, команда выполняема (не группа) и проходит проверки System.CommandLine
+    /// (обязательные параметры, числа, значения). Команда не выполняется.
+    fn check_example(tokens: &[String]) -> std::result::Result<(), String> {
+        let root = spec::root();
+        let matches = spec::clap_root(&root)
+            .try_get_matches_from(std::iter::once("tasker".to_string()).chain(tokens.iter().cloned()))
+            .map_err(|e| e.kind().to_string())?;
+        let (mut command, mut leaf) = (&root, &matches);
+        while let Some((name, sub)) = leaf.subcommand() {
+            command = command.subcommand(name).expect("a known subcommand");
+            leaf = sub;
+        }
+        if command.is_group() {
+            return Err("not an executable command (a group without a subcommand)".into());
+        }
+        let errors = validate(command, leaf);
+        if errors.is_empty() { Ok(()) } else { Err(errors.join("; ")) }
+    }
+
+    /// Справочник не устаревает: каждая команда `tasker …` из блоков ```bash всех страниц существует и правильно записана.
+    #[test]
+    fn every_tasker_command_in_the_manual_examples_exists() {
+        use crate::commands::manual::{ManualCatalog, tests as manual};
+        let catalog = ManualCatalog::embedded();
+        for language in catalog.languages() {
+            for page in catalog.topics(Some(&language)) {
+                let mut problems = Vec::new();
+                let mut count = 0;
+                for block in manual::shell_blocks(page.markdown) {
+                    for command in manual::shell_commands(&block) {
+                        let tokens = manual::tokenize(&command);
+                        if tokens.first().map(String::as_str) != Some("tasker") {
+                            continue;
+                        }
+                        count += 1;
+                        if let Err(problem) = check_example(&tokens[1..]) {
+                            problems.push(format!("{command}: {problem}"));
+                        }
+                    }
+                }
+                assert!(
+                    problems.is_empty(),
+                    "{}/{}: commands do not match the command tree:\n{}",
+                    page.language,
+                    page.id,
+                    problems.join("\n")
+                );
+                assert!(count > 0, "{}/{}: no tasker commands in ```bash blocks", page.language, page.id);
+            }
+        }
+    }
+
+    #[test]
+    fn the_example_check_catches_a_renamed_command_and_option() {
+        let tokens = |line: &str| line.split(' ').map(str::to_string).collect::<Vec<_>>();
+        assert!(check_example(&tokens("task make x")).is_err());
+        assert!(check_example(&tokens("task list --nonexistent")).is_err());
+        assert!(check_example(&tokens("task create x")).is_err()); // обязательный --type пропущен
+        assert!(check_example(&tokens("task")).is_err());
+        assert_eq!(check_example(&tokens("task create x --type Task")), Ok(()));
+    }
+
     fn run_text(args: &[&str]) -> (String, String, i32) {
         let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
         let (mut out, mut err) = (Vec::new(), Vec::new());
