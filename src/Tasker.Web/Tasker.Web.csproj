@@ -26,7 +26,7 @@
 
   <!-- Собранный фронтенд (frontend/dist) встраивается в сборку как ресурс wwwroot/**.
        Перед сборкой .NET выполнить: cd frontend && npm run build.
-       Консольной утилите (Tasker.Cli) фронтенд не нужен: при -p:EmbedFrontend=false он не встраивается. -->
+       Где интерфейс не нужен (тесты веб-слоя), его можно не встраивать: -p:EmbedFrontend=false. -->
   <ItemGroup>
     <EmbeddedResource Include="..\..\frontend\dist\**\*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(EmbedFrontend)' != 'false'" />
   </ItemGroup>
