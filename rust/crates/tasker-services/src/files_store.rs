@@ -20,6 +20,18 @@ use tasker_files::layout::{EntityKind, TaskerDirectory};
 use tasker_files::write;
 use uuid::Uuid;
 
+/// Сколько раз искать файл сущности заново, если найденный по имени файл пропал до чтения (его переименовал или удалил другой
+/// процесс).
+const RESOLVE_ATTEMPTS: usize = 5;
+
+/// Прочитанный файл-кандидат сущности.
+enum Candidate<T> {
+    /// Прочитан; None — файл пуст.
+    Read(Option<T>),
+    /// Файла (уже) нет.
+    Missing,
+}
+
 /// Папка `.tasker` и её индекс.
 #[derive(Debug, Clone)]
 pub struct FileStore {
@@ -44,44 +56,51 @@ impl FileStore {
         EditLockStorage::new(&self.directory)
     }
 
-    /// Файл сущности по пути; None — файла нет или он пуст (`YamlFile.Read`). Ошибки разбора — как в .NET: исключение.
-    fn read_entity<T: Entity>(&self, project_id: &Uuid, path: &Path) -> Result<Option<T>> {
+    /// Файл-кандидат: прочитан (None — пуст) или пропал.
+    fn read_candidate<T: Entity>(&self, project_id: &Uuid, path: &Path) -> Result<Candidate<T>> {
+        #[cfg(test)]
+        hooks::before_read(path);
         let Some(bytes) = write::read_bytes(path)? else {
-            return Ok(None);
+            return Ok(Candidate::Missing);
         };
         match T::parse(*project_id, &bytes, path) {
-            Ok(versioned) => Ok(Some(versioned.model)),
-            Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => Ok(None),
+            Ok(versioned) => Ok(Candidate::Read(Some(versioned.model))),
+            Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => Ok(Candidate::Read(None)),
             Err(e) => Err(e.into()),
         }
     }
 
-    /// Где может лежать файл: сначала то, что знает индекс, затем поиск по имени (`EntityFiles.Candidates`).
-    fn candidates<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Vec<PathBuf>> {
-        let mut result = Vec::new();
-        let indexed = self.index.entity_path(T::KIND, project_id, id)?;
-        if let Some(indexed) = &indexed
-            && indexed.exists()
-        {
-            result.push(indexed.clone());
-        }
-        for path in self.directory.project(project_id).find_files(T::FOLDER, id) {
-            let same = indexed
-                .as_ref()
-                .is_some_and(|i| tasker_core::io::same_path(&path.to_string_lossy(), &i.to_string_lossy()));
-            if !same {
-                result.push(path);
-            }
-        }
-        Ok(result)
-    }
-
+    /// Файл сущности по id (`EntityFiles.ResolvePath`): сначала там, где его знает индекс, затем поиск по имени — старому Guid
+    /// и суффиксу id (`ProjectDirectory.FindFiles`); совпадение id проверяется по содержимому. None — сущности нет.
+    ///
+    /// Путь из индекса читается до поиска по имени, как в .NET: если другой процесс переименовал файл, пока шёл запрос, поиск
+    /// по имени уже видит новый файл (переименование пишет новый файл раньше, чем удаляет старый). Найденный по имени файл тоже
+    /// может пропасть до чтения — тогда поиск повторяется: «нет сущности» — только если её действительно нет.
     fn resolve_path<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Option<(PathBuf, T)>> {
-        for path in self.candidates::<T>(project_id, id)? {
-            if let Some(entity) = self.read_entity::<T>(project_id, &path)?
+        for _ in 0..RESOLVE_ATTEMPTS {
+            let indexed = self.index.entity_path(T::KIND, project_id, id)?;
+            if let Some(indexed) = &indexed
+                && let Candidate::Read(Some(entity)) = self.read_candidate::<T>(project_id, indexed)?
                 && entity.id() == *id
             {
-                return Ok(Some((path, entity)));
+                return Ok(Some((indexed.clone(), entity)));
+            }
+            let mut vanished = false;
+            for path in self.directory.project(project_id).find_files(T::FOLDER, id) {
+                if indexed
+                    .as_ref()
+                    .is_some_and(|i| tasker_core::io::same_path(&path.to_string_lossy(), &i.to_string_lossy()))
+                {
+                    continue;
+                }
+                match self.read_candidate::<T>(project_id, &path)? {
+                    Candidate::Read(Some(entity)) if entity.id() == *id => return Ok(Some((path, entity))),
+                    Candidate::Read(_) => {}
+                    Candidate::Missing => vanished = true,
+                }
+            }
+            if !vanished {
+                break;
             }
         }
         Ok(None)
@@ -379,5 +398,290 @@ impl Storage for FileStore {
     /// учитывает и файлы, принесённые `git pull`. Вложенный вызов не ждёт самого себя.
     fn exclusive<T>(&self, project_id: &Uuid, action: &mut dyn FnMut() -> Result<T>) -> Result<T> {
         self.index.exclusive(project_id, || Ok(action()))?
+    }
+}
+
+/// Крючок тестов: действие перед чтением файла-кандидата сущности — чтобы «другой процесс» изменил файл ровно между поиском
+/// пути и чтением, без расчёта на тайминги.
+#[cfg(test)]
+mod hooks {
+    use std::cell::RefCell;
+    use std::path::Path;
+
+    type Hook = Box<dyn FnMut(&Path)>;
+
+    thread_local! {
+        static BEFORE_READ: RefCell<Option<Hook>> = const { RefCell::new(None) };
+    }
+
+    pub(super) fn set_before_read(hook: impl FnMut(&Path) + 'static) {
+        BEFORE_READ.with(|h| *h.borrow_mut() = Some(Box::new(hook)));
+    }
+
+    pub(super) fn clear() {
+        BEFORE_READ.with(|h| *h.borrow_mut() = None);
+    }
+
+    /// Пока крючок работает, его нет: записи внутри него не зовут его снова.
+    pub(super) fn before_read(path: &Path) {
+        let Some(mut hook) = BEFORE_READ.with(|h| h.borrow_mut().take()) else {
+            return;
+        };
+        hook(path);
+        BEFORE_READ.with(|h| {
+            let mut slot = h.borrow_mut();
+            if slot.is_none() {
+                *slot = Some(hook);
+            }
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Workspace;
+    use crate::project::CreateProject;
+    use crate::status::{CreateStatus, UpdateStatus};
+    use crate::status_set::CreateStatusSet;
+    use crate::task::{CreateTask, UpdateTask};
+    use crate::task_type::CreateTaskType;
+    use tasker_core::ConflictCode;
+    use tasker_core::model::Status;
+
+    /// Две открытые области над одной папкой во временном каталоге системы — два процесса.
+    struct Two {
+        dir: PathBuf,
+        first: Workspace,
+        second: Workspace,
+        project: Uuid,
+    }
+
+    impl Two {
+        fn new() -> Two {
+            let dir = std::env::temp_dir().join(format!("tasker-tsk166-{}", Uuid::new_v4().simple()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let first = Workspace::open(&dir).unwrap();
+            let second = Workspace::open(&dir).unwrap();
+            let project = first.projects().create(&CreateProject { name: "Test".into() }).unwrap().id;
+            Two {
+                dir,
+                first,
+                second,
+                project,
+            }
+        }
+
+        fn status(&self, name: &str) -> Status {
+            self.first
+                .statuses()
+                .create(
+                    &self.project,
+                    &CreateStatus {
+                        name: name.into(),
+                        color: "#000000".into(),
+                        description: None,
+                    },
+                )
+                .unwrap()
+        }
+
+        fn file_name(&self, path: &Path) -> String {
+            path.strip_prefix(&self.dir)
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned()
+        }
+
+        /// Перед первым чтением файла `target` второй процесс переименовывает сущность (`rename`).
+        fn rename_before_read(&self, target: PathBuf, rename: impl FnOnce(&Workspace) + 'static) {
+            let second = self.second.clone();
+            let mut rename = Some(rename);
+            hooks::set_before_read(move |path| {
+                if tasker_core::io::same_path(&path.to_string_lossy(), &target.to_string_lossy())
+                    && let Some(rename) = rename.take()
+                {
+                    rename(&second);
+                }
+            });
+        }
+    }
+
+    impl Drop for Two {
+        fn drop(&mut self) {
+            hooks::clear();
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    fn rename_status(project: Uuid, id: Uuid, version: String, name: &'static str) -> impl FnOnce(&Workspace) {
+        move |ws: &Workspace| {
+            ws.statuses()
+                .update(
+                    &project,
+                    &id,
+                    &UpdateStatus {
+                        name: Some(name.into()),
+                        version: Some(version),
+                        ..UpdateStatus::default()
+                    },
+                )
+                .unwrap()
+                .unwrap();
+        }
+    }
+
+    fn status_file(two: &Two, id: &Uuid) -> PathBuf {
+        two.first
+            .index()
+            .entity_path(EntityKind::Status, &two.project, id)
+            .unwrap()
+            .unwrap()
+    }
+
+    #[test]
+    fn updating_an_entity_renamed_by_another_process_is_a_version_conflict() {
+        let two = Two::new();
+        let status = two.status("Old");
+        let old_file = status_file(&two, &status.id);
+        two.rename_before_read(
+            old_file.clone(),
+            rename_status(two.project, status.id, status.version.clone(), "First"),
+        );
+
+        let error = two
+            .first
+            .statuses()
+            .update(
+                &two.project,
+                &status.id,
+                &UpdateStatus {
+                    name: Some("Second".into()),
+                    version: Some(status.version.clone()),
+                    ..UpdateStatus::default()
+                },
+            )
+            .unwrap_err();
+        assert_eq!(error.conflict_code(), Some(ConflictCode::Modified), "{error}");
+        assert!(!old_file.exists());
+        let current = two.first.statuses().get_by_id(&two.project, &status.id).unwrap().unwrap();
+        assert_eq!(current.name, "First");
+        assert_eq!(
+            two.file_name(&status_file(&two, &status.id)),
+            format!("first-{}.yaml", &guid_d(&status.id)[..8])
+        );
+    }
+
+    #[test]
+    fn deleting_an_entity_renamed_by_another_process_is_a_version_conflict() {
+        let two = Two::new();
+        let status = two.status("Old");
+        two.rename_before_read(
+            status_file(&two, &status.id),
+            rename_status(two.project, status.id, status.version.clone(), "First"),
+        );
+
+        let error = two
+            .first
+            .statuses()
+            .delete(&two.project, &status.id, Some(&status.version))
+            .unwrap_err();
+        assert_eq!(error.conflict_code(), Some(ConflictCode::Modified), "{error}");
+        assert!(two.first.statuses().get_by_id(&two.project, &status.id).unwrap().is_some());
+    }
+
+    #[test]
+    fn a_task_renamed_by_another_process_is_found_by_its_id() {
+        let two = Two::new();
+        let status = two.status("Backlog");
+        let set = two
+            .first
+            .status_sets()
+            .create(
+                &two.project,
+                &CreateStatusSet {
+                    name: "Main".into(),
+                    status_ids: vec![status.id],
+                },
+            )
+            .unwrap();
+        let task_type = two
+            .first
+            .task_types()
+            .create(
+                &two.project,
+                &CreateTaskType {
+                    name: "Task".into(),
+                    status_set_id: set.id,
+                    fields: None,
+                    description: None,
+                },
+            )
+            .unwrap();
+        let task = two
+            .first
+            .tasks()
+            .create(&two.project, &CreateTask::new("Old title", task_type.id))
+            .unwrap();
+        let file = two
+            .first
+            .index()
+            .entity_path(EntityKind::Task, &two.project, &task.id)
+            .unwrap()
+            .unwrap();
+        let (project, id, version) = (two.project, task.id, task.version.clone());
+        two.rename_before_read(file, move |ws| {
+            ws.tasks()
+                .update(
+                    &project,
+                    &id,
+                    &UpdateTask {
+                        title: Some("First".into()),
+                        version: Some(version),
+                        ..UpdateTask::default()
+                    },
+                )
+                .unwrap()
+                .unwrap();
+        });
+
+        let error = two
+            .first
+            .tasks()
+            .update(
+                &two.project,
+                &task.id,
+                &UpdateTask {
+                    title: Some("Second".into()),
+                    version: Some(task.version.clone()),
+                    ..UpdateTask::default()
+                },
+            )
+            .unwrap_err();
+        assert_eq!(error.conflict_code(), Some(ConflictCode::Modified), "{error}");
+    }
+
+    #[test]
+    fn a_file_found_by_name_and_renamed_before_reading_is_searched_again() {
+        // Индекс не знает, где файл: он переложен мимо Tasker, поэтому его находит только поиск по имени, а до чтения его
+        // переименовывает второй процесс.
+        let two = Two::new();
+        let status = two.status("Old");
+        let indexed = status_file(&two, &status.id);
+        let moved = indexed.with_file_name(format!("moved-{}.yaml", &guid_d(&status.id)[..8]));
+        std::fs::rename(&indexed, &moved).unwrap();
+        two.rename_before_read(
+            moved.clone(),
+            rename_status(two.project, status.id, status.version.clone(), "First"),
+        );
+
+        let files = two.first.files().unwrap();
+        let found: Status = files.get_by_id(&two.project, &status.id).unwrap().unwrap();
+        assert_eq!(found.name, "First");
+        assert!(!moved.exists());
+        // Сущности нет — «нет», без бесконечных повторов.
+        assert!(files.get_by_id::<Status>(&two.project, &Uuid::new_v4()).unwrap().is_none());
     }
 }
