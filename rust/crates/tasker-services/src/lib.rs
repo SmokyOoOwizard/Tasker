@@ -168,6 +168,32 @@ impl Workspace {
         self.backend.exclusive(project_id, &mut action)
     }
 
+    /// Ссылка (полный id или префикс id) на сущность вида T, которой нет среди прочитанных: если она указывает на файл, который не
+    /// удалось прочитать, — ошибка его чтения, та же, что у чтения по полному id ([`Storage::unreadable`]). Ссылка не id или
+    /// таких файлов нет — Ok.
+    pub fn unreadable_reference<T: storage::Entity>(&self, project_id: &Uuid, reference: &str) -> Result<()> {
+        match id_key(reference) {
+            Some(key) => self.backend.unreadable::<T>(project_id, &key),
+            None => Ok(()),
+        }
+    }
+
+    /// То же для проекта.
+    pub fn unreadable_project_reference(&self, reference: &str) -> Result<()> {
+        match id_key(reference) {
+            Some(key) => self.backend.unreadable_project(&key),
+            None => Ok(()),
+        }
+    }
+
+    /// То же для пользователя или агента.
+    pub fn unreadable_user_reference(&self, reference: &str) -> Result<()> {
+        match id_key(reference) {
+            Some(key) => self.backend.unreadable_user(&key),
+            None => Ok(()),
+        }
+    }
+
     pub fn projects(&self) -> project::ProjectService<'_> {
         project::ProjectService::new(self)
     }
@@ -238,6 +264,14 @@ impl Workspace {
 
     pub fn agents(&self) -> users::AgentService<'_> {
         users::AgentService::new(self)
+    }
+}
+
+/// Ключ поиска по id: полный Guid — в форме D, короткий id — [`tasker_core::ShortId::try_key`]; None — текст не id.
+fn id_key(reference: &str) -> Option<String> {
+    match tasker_core::ids::parse_guid(reference.trim()) {
+        Some(id) => Some(tasker_core::ids::guid_d(&id)),
+        None => tasker_core::ShortId::try_key(Some(reference)),
     }
 }
 

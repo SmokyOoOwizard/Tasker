@@ -407,6 +407,37 @@ impl WorkspaceIndex {
         Ok(count.max(0) as usize)
     }
 
+    /// Файлы вида, которые не удалось прочитать и которые по имени могут быть сущностью с id, начинающимся с ключа (ключ — как у
+    /// `ShortId::try_key`, полный id в форме D — тоже ключ): у имени `<guid>.yaml` (и у `project.yaml` — по папке проекта) id из
+    /// имени начинается с ключа, у `<название>-<id8>.yaml` суффикс совпадает с первыми 8 знаками ключа. `project_id` None — без
+    /// условия на проект (проекты и пользователи). Полные пути по порядку `path`.
+    pub fn unreadable_paths(&self, kind: EntityKind, project_id: Option<&Uuid>, key: &str) -> io::Result<Vec<PathBuf>> {
+        let key = key.to_ascii_lowercase();
+        let connection = self.connect()?;
+        let mut statement = connection
+            .prepare("SELECT path FROM files WHERE kind = ?1 AND error IS NOT NULL AND (?2 IS NULL OR project_id = ?2) ORDER BY path")
+            .map_err(db_error)?;
+        let rows = statement
+            .query_map(params![kind_name(kind), project_id.map(guid_d)], |row| row.get::<_, String>(0))
+            .map_err(db_error)?;
+        let mut found = Vec::new();
+        for relative in rows {
+            let relative = relative.map_err(db_error)?;
+            let Some(layout) = crate::layout::classify(&relative) else {
+                continue;
+            };
+            let matches = match (&layout.id, &layout.id_prefix) {
+                (Some(id), _) => guid_d(id).starts_with(&key),
+                (None, Some(prefix)) => key.get(..crate::names::ID_LENGTH) == Some(prefix.as_str()),
+                (None, None) => false,
+            };
+            if matches {
+                found.push(self.absolute(&relative));
+            }
+        }
+        Ok(found)
+    }
+
     /// Путь файла сущности проекта (полный) по id — из индекса; None — индекс такого файла не знает. Подсказка, а не истина:
     /// индекс мог отстать, поэтому вызывающий проверяет, что файл есть, и ищет по имени, если нет
     /// (`ProjectDirectory::find_files`).

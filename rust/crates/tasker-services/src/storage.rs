@@ -47,6 +47,14 @@ pub trait Storage {
     fn get_range<T: Entity>(&self, project_id: &Uuid, page: Page) -> Result<ListPage<T>>;
     /// Сколько записей этого вида не удалось прочитать (`CountUnreadable`); у БД таких не бывает.
     fn count_unreadable<T: Entity>(&self, project_id: &Uuid) -> Result<usize>;
+    /// Ссылка на сущность вида T, которой нет среди прочитанных: если файл, который по имени может быть сущностью с id,
+    /// начинающимся с ключа (`ShortId::try_key`; полный id в форме D — тоже ключ), не удалось прочитать — ошибка его чтения, та
+    /// же, что у [`Storage::get_by_id`] по полному id. Ok — таких файлов нет (у БД — никогда). Пустой файл ошибкой не считается.
+    fn unreadable<T: Entity>(&self, project_id: &Uuid, key: &str) -> Result<()>;
+    /// То же для проектов (`project.yaml`).
+    fn unreadable_project(&self, key: &str) -> Result<()>;
+    /// То же для пользователей и агентов (`users/<id>.yaml`).
+    fn unreadable_user(&self, key: &str) -> Result<()>;
     fn add<T: Entity>(&self, entity: &T) -> Result<String>;
     fn update<T: Entity>(&self, entity: &T, expected_version: &str) -> Result<Option<String>>;
     fn delete<T: Entity>(&self, project_id: &Uuid, id: &Uuid, expected_version: &str) -> Result<bool>;
@@ -146,6 +154,15 @@ impl Storage for Backend {
     }
     fn count_unreadable<T: Entity>(&self, project_id: &Uuid) -> Result<usize> {
         dispatch!(self, s => s.count_unreadable::<T>(project_id))
+    }
+    fn unreadable<T: Entity>(&self, project_id: &Uuid, key: &str) -> Result<()> {
+        dispatch!(self, s => s.unreadable::<T>(project_id, key))
+    }
+    fn unreadable_project(&self, key: &str) -> Result<()> {
+        dispatch!(self, s => s.unreadable_project(key))
+    }
+    fn unreadable_user(&self, key: &str) -> Result<()> {
+        dispatch!(self, s => s.unreadable_user(key))
     }
     fn add<T: Entity>(&self, entity: &T) -> Result<String> {
         dispatch!(self, s => s.add(entity))
