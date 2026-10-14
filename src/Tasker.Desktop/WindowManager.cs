@@ -8,8 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Serilog;
 using Tasker.Desktop.Tabs;
-using Tasker.Mcp;
-
+using Tasker.Daemon;
 using Tasker.Web.Workspaces;
 
 namespace Tasker.Desktop;
@@ -22,14 +21,14 @@ public sealed class WindowManager
 {
     private readonly WorkspaceRegistry _registry;
     private readonly FrontendAddress _frontend;
-    private readonly LocalMcpAddress _mcp;
+    private readonly DesktopDaemon _daemon;
     private readonly List<WorkspaceWindow> _windows = [];
 
-    public WindowManager(WorkspaceRegistry registry, FrontendAddress frontend, LocalMcpAddress mcp)
+    public WindowManager(WorkspaceRegistry registry, FrontendAddress frontend, DesktopDaemon daemon)
     {
         _registry = registry;
         _frontend = frontend;
-        _mcp = mcp;
+        _daemon = daemon;
         Commands = new WindowCommands(this);
         Drag = new TabDragController(this);
     }
@@ -162,12 +161,18 @@ public sealed class WindowManager
     private async Task OpenIn(TabModel tab, WorkspaceLocation location)
     {
         await tab.Open(location);
-        if (tab.Lease is { } lease)
+        if (tab.Lease == null)
+            return;
+
+        // Агенты работают с открытой папкой через демон MCP: она становится его областью (settings.json, как tasker mcp workspace add).
+        try
         {
-            Log.Information("Tab {Name}: MCP {Address}, argument workspace=\"{Key}\"",
-                location.Name,
-                _mcp.Port is { } port ? McpRegistration.LocalUrl(port) : "is served by the MCP daemon or unavailable",
-                lease.Key);
+            if (await _daemon.Allow(location))
+                Log.Information("Workspace {Path} is added to the MCP workspaces: the MCP server serves it", location.Path);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Log.Warning("Cannot add {Path} to the MCP workspaces: {Error}", location.Path, e.Message);
         }
     }
 

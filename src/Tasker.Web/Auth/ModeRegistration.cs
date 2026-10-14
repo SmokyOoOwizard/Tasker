@@ -13,7 +13,7 @@ using Tasker.Web.Workspaces;
 
 namespace Tasker.Web.Auth;
 
-/// <summary>Всё, что отличается у сервера и десктопа: вход, текущий пользователь, доступ к проектам, MCP.</summary>
+/// <summary>Всё, что отличается у сервера и десктопа: вход, текущий пользователь, доступ к проектам, MCP (только на сервере).</summary>
 internal static class ModeRegistration
 {
     /// <summary>Сервисы ASP.NET Core — до Build().</summary>
@@ -22,19 +22,20 @@ internal static class ModeRegistration
         // Общие настройки JSON (TaskerJson): enum строками, Unicode без \uXXXX.
         services.ConfigureHttpJsonOptions(o => TaskerJson.Configure(o.SerializerOptions));
 
-        // Текущий пользователь берётся из запроса в обоих режимах: на десктопе — это локальный агент MCP.
+        // Текущий пользователь берётся из запроса; на десктопе входа нет, и REST идёт ни от чьего имени.
         services.AddHttpContextAccessor();
 
-        if (mode == TaskerMode.Server)
-        {
-            // JWT людей — схема по умолчанию для REST; токен агента — отдельная схема только для /mcp.
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
-            services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-                .Configure<TokenService>((bearer, tokens) => tokens.Configure(bearer));
-            services.AddAuthorization();
-        }
+        if (mode != TaskerMode.Server)
+            return;
 
-        services.AddTaskerMcp(requireAgentToken: mode == TaskerMode.Server);
+        // JWT людей — схема по умолчанию для REST; токен агента — отдельная схема только для /mcp.
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<TokenService>((bearer, tokens) => tokens.Configure(bearer));
+        services.AddAuthorization();
+
+        // Десктоп своего MCP не поднимает: локальный MCP — у демона tasker-mcpd.
+        services.AddTaskerMcp();
     }
 
     /// <summary>Регистрации Autofac.</summary>
@@ -48,8 +49,6 @@ internal static class ModeRegistration
             builder.RegisterInstance(new UserOptions(RequireCredentials: false));
             builder.RegisterType<OpenProjectAccess>().As<IProjectAccess>().SingleInstance();
             builder.RegisterType<WorkspaceRegistry>().AsSelf().SingleInstance();
-            // Область MCP — аргумент вызова: какие области доступны агентам, знает реестр.
-            builder.RegisterType<McpWorkspaceCatalog>().AsSelf().As<IMcpWorkspaces>().SingleInstance();
             return;
         }
 

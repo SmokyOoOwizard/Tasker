@@ -30,4 +30,12 @@
     <ProjectReference Include="..\Tasker.Web\Tasker.Web.csproj" />
     <ProjectReference Include="..\Tasker.Daemon\Tasker.Daemon.csproj" />
   </ItemGroup>
+
+  <!-- Демон MCP tasker-mcpd (Rust) — в сборке и пакете десктопа: десктоп запускает его, если демон не работает, а консоль tasker
+       не установлена (с ней берётся её демон). Только он: консоль tasker десктопу не нужна, а её имя на macOS совпало бы
+       с программой Tasker без учёта регистра. -->
+  <PropertyGroup>
+    <TaskerRustPrograms>tasker-mcpd</TaskerRustPrograms>
+  </PropertyGroup>
+  <Import Project="..\..\tools\RustBinaries.targets" />
 </Project>

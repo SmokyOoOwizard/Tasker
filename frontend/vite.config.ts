@@ -10,9 +10,8 @@ export default defineConfig({
     proxy: {
       // Tasker.Server.
       '/api': 'http://localhost:5156',
-      // Tasker.Desktop (TASKER_FRONTEND_DEV_URL=http://localhost:5173): API рабочих областей — на постоянном порту MCP.
-      '^/w/[^/]+/api': 'http://127.0.0.1:5719',
-      '^/mcp': 'http://127.0.0.1:5719',
+      // Tasker.Desktop (TASKER_FRONTEND_DEV_URL=http://localhost:5173): с Vite хост десктопа слушает постоянный порт 5720.
+      '^/w/[^/]+/api': 'http://127.0.0.1:5720',
     },
   },
 })
