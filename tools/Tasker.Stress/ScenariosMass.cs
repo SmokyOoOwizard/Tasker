@@ -437,8 +437,7 @@ public static partial class Scenarios
         r.Check(!stillListed, "the deleted project is not listed", stillListed ? "still listed" : "gone");
         if (!area.IsSqlite)
         {
-            var folder = Path.Combine(area.TaskerDir, "projects", area.ProjectId.ToString());
-            var left = Directory.Exists(folder) ? Directory.GetFiles(folder, "*", SearchOption.AllDirectories).Select(Path.GetFileName).ToArray() : [];
+            var left = area.ProjectDirs.SelectMany(folder => Directory.GetFiles(folder, "*", SearchOption.AllDirectories)).Select(Path.GetFileName).ToArray();
             r.Check(left.Length == 0, "no file of the deleted project is left on disk (a late writer does not resurrect it)", left.Length == 0 ? "gone" : $"{left.Length} files: {string.Join(", ", left.Take(5))}");
         }
 

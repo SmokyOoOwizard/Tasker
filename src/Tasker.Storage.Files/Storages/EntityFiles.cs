@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Tasker.Core.IO;
 using Tasker.Storage.Files.Index;
 
@@ -30,76 +29,116 @@ internal sealed class EntityFiles<T>(
     Func<string, string, T, string, CancellationToken, Task<string?>> update) where T : class
 {
     /// <returns>null — файла этой сущности нет.</returns>
-    public async Task<T?> GetById(Guid projectId, Guid id, CancellationToken ct)
-    {
-        await foreach (var path in Candidates(projectId, id, ct))
-        {
-            if (await read(projectId, path, ct) is { } entity && idOf(entity) == id)
-                return entity;
-        }
-        return null;
-    }
+    public async Task<T?> GetById(Guid projectId, Guid id, CancellationToken ct) => (await Resolve(projectId, id, ct))?.Entity;
 
     /// <exception cref="Tasker.Core.TaskerValidationException">Проект удалён, пока запрос шёл (метка <see cref="TaskerDirectory.DeletedProjectMarker"/>).</exception>
-    public Task<string> Add(T entity, CancellationToken ct)
+    public async Task<string> Add(T entity, CancellationToken ct)
     {
-        var project = directory.Project(projectOf(entity));
-        var path = project.EntityFile(folder, idOf(entity), nameOf(entity));
-
         // Проект удаляют под блокировкой записи, и запись файла сама создаёт недостающие папки: без проверки под той же блокировкой
         // «поздний» писатель (агент, чей запрос проверил проект до удаления) воскресил бы папку удалённого проекта с одним своим файлом.
-        return index.Written(path, YamlFile.Locked(project.Root, ct, () => File.Exists(project.ProjectFile) || !File.Exists(directory.DeletedProjectMarker(projectOf(entity)))
-            ? write(path, entity, ct)
-            : throw new Tasker.Core.TaskerValidationException($"ProjectId: project not found: {projectOf(entity)}")), ct);
+        // Папку проекта ищут под той же блокировкой: её переносит переименование проекта.
+        string? written = null;
+        try
+        {
+            return await YamlFile.Locked(directory.Projects, ct, () =>
+            {
+                var project = directory.Project(projectOf(entity));
+                var path = written = project.EntityFile(folder, idOf(entity), nameOf(entity));
+                return File.Exists(project.ProjectFile) || !File.Exists(directory.DeletedProjectMarker(projectOf(entity)))
+                    ? write(path, entity, ct)
+                    : throw new Tasker.Core.TaskerValidationException($"ProjectId: project not found: {projectOf(entity)}");
+            });
+        }
+        finally
+        {
+            if (written != null)
+                await index.Refresh(written, ct);
+        }
     }
 
     /// <returns>Новая версия; null — файла нет или он изменён с <paramref name="expectedVersion"/>.</returns>
     /// <exception cref="IOException">Под новым именем уже лежит другой файл.</exception>
+    /// <remarks>
+    /// Файл пишется в основную папку проекта (из второй — переносится). Файл пропал до записи, потому что проект переименовали и папка
+    /// переехала, — поиск повторяется.
+    /// </remarks>
     public async Task<string?> Update(T entity, string expectedVersion, CancellationToken ct)
     {
         var projectId = projectOf(entity);
-        if (await ResolvePath(projectId, idOf(entity), ct) is not { } current)
-            return null;
-
-        var renamed = directory.Project(projectId).EntityFile(folder, idOf(entity), nameOf(entity));
-        return await index.Written([current, renamed], update(current, renamed, entity, expectedVersion, ct), ct);
-    }
-
-    public async Task<bool> Delete(Guid projectId, Guid id, string expectedVersion, CancellationToken ct)
-    {
-        if (await ResolvePath(projectId, id, ct) is not { } path)
-            return false;
-
-        return await index.Written(path, YamlFile.DeleteIfMatch(path, expectedVersion, ct), ct);
-    }
-
-    /// <summary>Сколько файлов этого вида не удалось прочитать.</summary>
-    public Task<int> CountUnreadable(Guid projectId, CancellationToken ct) =>
-        index.CountProblems(directory.Project(projectId).Folder(folder), ct);
-
-    private async Task<string?> ResolvePath(Guid projectId, Guid id, CancellationToken ct)
-    {
-        await foreach (var path in Candidates(projectId, id, ct))
+        for (var attempt = 0; attempt < ResolveAttempts; attempt++)
         {
-            if (await read(projectId, path, ct) is { } entity && idOf(entity) == id)
-                return path;
+            if (await ResolvePath(projectId, idOf(entity), ct) is not { } current)
+                return null;
+
+            var renamed = directory.Project(projectId).EntityFile(folder, idOf(entity), nameOf(entity));
+            var version = await index.Written([current, renamed], update(current, renamed, entity, expectedVersion, ct), ct);
+            if (version != null || File.Exists(current))
+                return version;
         }
         return null;
     }
 
-    /// <summary>
-    /// Где может лежать файл: сначала то, что знает индекс, затем поиск по имени. Лишние кандидаты не читаются, пока подходящий не найден.
-    /// </summary>
-    private async IAsyncEnumerable<string> Candidates(Guid projectId, Guid id, [EnumeratorCancellation] CancellationToken ct)
+    public async Task<bool> Delete(Guid projectId, Guid id, string expectedVersion, CancellationToken ct)
     {
-        var indexed = await index.EntityPath(folder.Kind, projectId, id, ct);
-        if (indexed != null && File.Exists(indexed))
-            yield return indexed;
-
-        foreach (var path in directory.Project(projectId).FindFiles(folder, id))
+        for (var attempt = 0; attempt < ResolveAttempts; attempt++)
         {
-            if (indexed == null || !PathRules.SamePath(path, indexed))
-                yield return path;
+            if (await ResolvePath(projectId, id, ct) is not { } path)
+                return false;
+
+            var deleted = await index.Written(path, YamlFile.DeleteIfMatch(path, expectedVersion, ct), ct);
+            if (deleted || File.Exists(path))
+                return deleted;
         }
+        return false;
+    }
+
+    /// <summary>Сколько файлов этого вида не удалось прочитать (во всех папках проекта).</summary>
+    public async Task<int> CountUnreadable(Guid projectId, CancellationToken ct)
+    {
+        var count = 0;
+        foreach (var project in directory.ProjectDirs(projectId))
+            count += await index.CountProblems(project.Folder(folder), ct);
+        return count;
+    }
+
+    // Сколько раз искать файл заново, если его папку перенёс другой процесс (переименование проекта) между поиском и записью.
+    private const int ResolveAttempts = 5;
+
+    private async Task<string?> ResolvePath(Guid projectId, Guid id, CancellationToken ct) => (await Resolve(projectId, id, ct))?.Path;
+
+    /// <summary>
+    /// Файл сущности и сама сущность: сначала там, где файл знает индекс, затем поиск по имени во всех папках проекта (вторая папка после
+    /// слияния git — тоже его). Файл пропал до чтения (его переименовал или удалил другой процесс, папку проекта перенесло переименование
+    /// проекта) — поиск повторяется: «нет сущности» — только если её действительно нет.
+    /// </summary>
+    private async Task<(string Path, T Entity)?> Resolve(Guid projectId, Guid id, CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < ResolveAttempts; attempt++)
+        {
+            var vanished = false;
+            var indexed = await index.EntityPath(folder.Kind, projectId, id, ct);
+            if (indexed != null)
+            {
+                if (await read(projectId, indexed, ct) is { } entity && idOf(entity) == id)
+                    return (indexed, entity);
+                vanished |= !File.Exists(indexed);
+            }
+
+            var projects = directory.ProjectDirs(projectId);
+            foreach (var path in projects.SelectMany(x => x.FindFiles(folder, id)))
+            {
+                if (indexed != null && PathRules.SamePath(path, indexed))
+                    continue;
+                if (await read(projectId, path, ct) is { } entity && idOf(entity) == id)
+                    return (path, entity);
+                vanished |= !File.Exists(path);
+            }
+
+            // Во время переноса папки проекта список папок может её не увидеть вовсе.
+            vanished |= projects.Length == 0 || projects.Any(x => !Directory.Exists(x.Root));
+            if (!vanished)
+                break;
+        }
+        return null;
     }
 }

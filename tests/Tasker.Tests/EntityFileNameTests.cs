@@ -47,6 +47,9 @@ public class EntityFileNameTests : IDisposable
 
     private ProjectDirectory Project => new TaskerDirectory(_root).Project(_project);
 
+    // Папки проектов этих путей на диске нет: проект прежнего имени папки (Guid) узнаётся по имени.
+    private LayoutEntry? Classify(string path) => WorkspaceLayout.Classify(path, new ProjectFolders(new TaskerDirectory(_root)));
+
     private static string[] Names(string folder) =>
         Directory.Exists(folder) ? Directory.GetFiles(folder, "*.yaml").Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray()! : [];
 
@@ -65,16 +68,16 @@ public class EntityFileNameTests : IDisposable
         var id = Guid.Parse("3f2a9c1e-7b4d-4e6a-8c1f-5d2b9a7e4c30");
         var kind = EntityFolders.Named(folder)!.Kind;
 
-        var named = WorkspaceLayout.Classify($"projects/{project}/{folder}/исправить-вход-3f2a9c1e.yaml")!;
+        var named = Classify($"projects/{project}/{folder}/исправить-вход-3f2a9c1e.yaml")!;
         Assert.Equal((kind, project, (Guid?)null, "3f2a9c1e"), (named.Kind, named.ProjectId, named.Id, named.IdPrefix));
 
-        var legacy = WorkspaceLayout.Classify($"projects/{project}/{folder}/{id}.yaml")!;
+        var legacy = Classify($"projects/{project}/{folder}/{id}.yaml")!;
         Assert.Equal((kind, project, (Guid?)id, (string?)null), (legacy.Kind, legacy.ProjectId, legacy.Id, legacy.IdPrefix));
 
-        Assert.Null(WorkspaceLayout.Classify($"projects/{project}/{folder}/readme.yaml"));
-        Assert.Null(WorkspaceLayout.Classify($"projects/{project}/{folder}/name-3f2a9c1e.txt"));
-        Assert.Null(WorkspaceLayout.Classify($"projects/{project}/{folder}/name-3f2a9c1.yaml")); // 7 знаков
-        Assert.Null(WorkspaceLayout.Classify($"projects/{project}/{folder}/sub/name-3f2a9c1e.yaml"));
+        Assert.Null(Classify($"projects/{project}/{folder}/readme.yaml"));
+        Assert.Null(Classify($"projects/{project}/{folder}/name-3f2a9c1e.txt"));
+        Assert.Null(Classify($"projects/{project}/{folder}/name-3f2a9c1.yaml")); // 7 знаков
+        Assert.Null(Classify($"projects/{project}/{folder}/sub/name-3f2a9c1e.yaml"));
     }
 
     [Fact]
@@ -83,11 +86,11 @@ public class EntityFileNameTests : IDisposable
         var project = Guid.NewGuid();
         var user = Guid.NewGuid();
 
-        Assert.Equal(IndexKind.User, WorkspaceLayout.Classify($"users/{user}.yaml")!.Kind);
-        Assert.Null(WorkspaceLayout.Classify("users/ivan-3f2a9c1e.yaml")); // пользователи по-прежнему по Guid
-        Assert.Equal(IndexKind.Project, WorkspaceLayout.Classify($"projects/{project}/project.yaml")!.Kind);
-        Assert.Null(WorkspaceLayout.Classify($"projects/{project}/notes/name-3f2a9c1e.yaml"));
-        Assert.Null(WorkspaceLayout.Classify($"projects/{project}/statuses.yaml"));
+        Assert.Equal(IndexKind.User, Classify($"users/{user}.yaml")!.Kind);
+        Assert.Null(Classify("users/ivan-3f2a9c1e.yaml")); // пользователи по-прежнему по Guid
+        Assert.Equal(IndexKind.Project, Classify($"projects/{project}/project.yaml")!.Kind);
+        Assert.Null(Classify($"projects/{project}/notes/name-3f2a9c1e.yaml"));
+        Assert.Null(Classify($"projects/{project}/statuses.yaml"));
     }
 
     [Fact]
@@ -104,11 +107,11 @@ public class EntityFileNameTests : IDisposable
     }
 
     [Fact]
-    public void Format_version_4_files_are_read_as_version_9_and_a_newer_one_is_refused()
+    public void Format_version_4_files_are_read_as_version_10_and_a_newer_one_is_refused()
     {
-        Assert.Equal(9, FormatVersions.Current);
-        Assert.StartsWith("formatVersion: 9\n", FormatVersions.Upgrade("formatVersion: 4\nid: 1\n", "x.yaml"));
-        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 10\nid: 1\n", "x.yaml"));
+        Assert.Equal(10, FormatVersions.Current);
+        Assert.StartsWith("formatVersion: 10\n", FormatVersions.Upgrade("formatVersion: 4\nid: 1\n", "x.yaml"));
+        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 11\nid: 1\n", "x.yaml"));
     }
 
     // ---- хранилище: создание, переименование, старые файлы ----

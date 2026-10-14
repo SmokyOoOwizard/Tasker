@@ -14,7 +14,9 @@ internal class WriteScope(TaskerDirectory directory, WorkspaceIndex index) : IWr
     public Task<T> Exclusive<T>(Guid projectId, Func<Task<T>> action, CancellationToken ct = default) =>
         FileLock.Run(directory.WriteLock, async () =>
         {
-            await index.Refresh(directory.Project(projectId).Tasks, ct);
+            // Задачи всех папок проекта (вторая папка после слияния git — тоже задачи проекта).
+            var tasks = directory.ProjectDirs(projectId).Select(x => x.Tasks).ToArray();
+            await index.Refresh(tasks.Length > 0 ? tasks : [directory.Project(projectId).Tasks], ct);
             return await action();
         }, ct);
 }

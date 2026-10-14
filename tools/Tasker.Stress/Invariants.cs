@@ -132,9 +132,8 @@ public static class Invariants
 
     private static async Task CheckFiles(StressContext ctx, Area area, string[] listedIds, string label, Findings f)
     {
-        var root = Path.Combine(area.TaskerDir, "projects", area.ProjectId.ToString());
         var taskFiles = new List<string>();
-        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (var file in area.ProjectDirs.SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)))
         {
             var name = Path.GetFileName(file);
             if (name.EndsWith(".tmp"))

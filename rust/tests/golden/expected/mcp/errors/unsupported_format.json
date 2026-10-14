@@ -1,13 +1,13 @@
 {
+  "jsonrpc": "2.0",
+  "id": 1,
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "[unsupported_format] from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (9): update Tasker"
+        "text": "[unsupported_format] from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker"
       }
     ],
     "isError": true
-  },
-  "id": 1,
-  "jsonrpc": "2.0"
+  }
 }

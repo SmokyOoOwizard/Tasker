@@ -144,7 +144,7 @@ impl Fixture {
     }
 
     fn task_titles(&self) -> Vec<String> {
-        let tasks = self.root.join("ws/.tasker/projects").join(PROJECT).join("tasks");
+        let tasks = self.root.join("ws/.tasker/projects/golden-11111111/tasks");
         std::fs::read_dir(tasks)
             .unwrap()
             .flatten()

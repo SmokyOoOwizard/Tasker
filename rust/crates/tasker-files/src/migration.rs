@@ -1,10 +1,12 @@
 //! `tasker migrate` (`FileMigration` в .NET): приводит файлы сущностей `.tasker` к текущему формату на диске — добавляет или
 //! обновляет `formatVersion`, остальной текст не трогает — и называет файлы сущностей проекта по их названию
-//! (`<slug>-<id8>.yaml`). Файлы более нового формата и файлы с конфликтом слияния git не меняются, а попадают в отчёт. Каждый файл
+//! (`<slug>-<id8>.yaml`), а папки проектов — по названию проекта (`projects/<slug>-<id8>/`, вторые папки проекта сливаются в
+//! основную, см. [`project_folders::tidy`]). Файлы более нового формата и файлы с конфликтом слияния git не меняются, а попадают в отчёт. Каждый файл
 //! переписывается под блокировкой записи, индекс обновляется после ([`IndexRefresh`]).
 use crate::format;
 use crate::layout::{EntityFolder, EntityHead, LayoutEntry, TaskerDirectory, classify, folder_of};
 use crate::names;
+use crate::project_folders::{self, ProjectFolders, TidyOptions};
 use crate::write::{self, IndexRefresh};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -50,6 +52,10 @@ pub struct MigrationReport {
     pub migrated: Vec<MigrationFile>,
     /// Файлы сущностей проекта, имя которых не по названию: переименованы (при `dry_run` — были бы).
     pub renamed: Vec<MigrationRename>,
+    /// Папки проектов, имя которых не по названию проекта (`projects/<guid>` или название изменили мимо Tasker): переименованы.
+    pub renamed_folders: Vec<MigrationRename>,
+    /// Вторые папки проектов: их файлы перенесены в основную (файлы, которые там уже есть с другим содержимым, — в `unreadable`).
+    pub merged_folders: Vec<MigrationRename>,
     /// Файлы более нового формата: не тронуты, нужен более новый Tasker.
     pub newer: Vec<MigrationFile>,
     /// Файлы, которые не удалось проверить: не тронуты.
@@ -59,7 +65,12 @@ pub struct MigrationReport {
 impl MigrationReport {
     /// Есть что мигрировать или о чём нужно знать: старые файлы, файлы нового формата, нечитаемые.
     pub fn needs_attention(&self) -> bool {
-        !self.migrated.is_empty() || !self.renamed.is_empty() || !self.newer.is_empty() || !self.unreadable.is_empty()
+        !self.migrated.is_empty()
+            || !self.renamed.is_empty()
+            || !self.renamed_folders.is_empty()
+            || !self.merged_folders.is_empty()
+            || !self.newer.is_empty()
+            || !self.unreadable.is_empty()
     }
 }
 
@@ -89,8 +100,21 @@ pub fn run(directory: &TaskerDirectory, index: &dyn IndexRefresh, options: Migra
         changed: Vec::new(),
     };
 
+    // Сначала папки проектов: файлы ниже проверяются уже на своих местах.
+    let folders = project_folders::tidy(
+        directory,
+        index,
+        TidyOptions {
+            dry_run: options.dry_run,
+            rename: true,
+            project: None,
+        },
+    )?;
+    state.unreadable.extend(folders.problems);
+
     if directory.root().is_dir() {
-        for (full, relative) in layout_files(directory) {
+        let project_folders = directory.folders();
+        for (full, relative) in layout_files(directory, &project_folders) {
             scanned += 1;
 
             let text = match read_all_text(&full) {
@@ -121,7 +145,7 @@ pub fn run(directory: &TaskerDirectory, index: &dyn IndexRefresh, options: Migra
 
             // Файл в папке сущностей проекта должен быть настоящей сущностью: проверяем до любых изменений, чтобы чужой или битый
             // файл не тронуть вовсе.
-            let layout = classify(&relative).expect("layout files only");
+            let layout = classify(&relative, &project_folders).expect("layout files only");
             let folder = folder_of(layout.kind);
             let mut head = None;
             if let Some(folder) = folder {
@@ -166,6 +190,8 @@ pub fn run(directory: &TaskerDirectory, index: &dyn IndexRefresh, options: Migra
         up_to_date,
         migrated,
         renamed: state.renamed,
+        renamed_folders: folders.renamed,
+        merged_folders: folders.merged,
         newer,
         unreadable: state.unreadable,
     })
@@ -244,7 +270,7 @@ fn relative_path(root: &Path, path: &Path) -> String {
 /// Все `*.yaml` под `.tasker`, которые относятся к раскладке (`.cache`, временные и чужие файлы — не сущности), по относительному
 /// пути в порядке Ordinal (по единицам UTF-16, как `StringComparer.Ordinal`). Недоступные папки пропускаются
 /// (`IgnoreInaccessible`).
-fn layout_files(directory: &TaskerDirectory) -> Vec<(PathBuf, String)> {
+fn layout_files(directory: &TaskerDirectory, folders: &ProjectFolders) -> Vec<(PathBuf, String)> {
     let mut files = Vec::new();
     collect_yaml(directory.root(), &mut files);
     let mut entries: Vec<(PathBuf, String)> = files
@@ -253,7 +279,7 @@ fn layout_files(directory: &TaskerDirectory) -> Vec<(PathBuf, String)> {
             let relative = relative_path(directory.root(), &full);
             (full, relative)
         })
-        .filter(|(_, relative)| classify(relative).is_some())
+        .filter(|(_, relative)| classify(relative, folders).is_some())
         .collect();
     entries.sort_by(|a, b| {
         let x: Vec<u16> = a.1.encode_utf16().collect();
@@ -327,7 +353,11 @@ mod tests {
         std::fs::write(tasks.join("bad-0000007d.yaml"), format!("formatVersion: x\n{TASK}")).unwrap();
         // Старое имя и занятое новое: переименовать нельзя.
         std::fs::write(dir.project(&project).legacy_file(&TASKS, &id), TASK).unwrap();
-        std::fs::write(tasks.join("legacy-one-0000007d.yaml"), format!("formatVersion: 9\n{TASK}")).unwrap();
+        std::fs::write(
+            tasks.join("legacy-one-0000007d.yaml"),
+            format!("formatVersion: {}\n{TASK}", format::CURRENT),
+        )
+        .unwrap();
         // Не сущность: не считается.
         std::fs::write(tasks.join("notes.yaml"), b"x").unwrap();
         std::fs::write(tasks.join("legacy-one-0000007d.yaml.tmp"), b"x").unwrap();
@@ -375,7 +405,7 @@ mod tests {
         // Мигрирован только файл со старым именем; остальные байты не тронуты.
         assert_eq!(
             std::fs::read_to_string(dir.project(&project).legacy_file(&TASKS, &id)).unwrap(),
-            format!("formatVersion: 9\n{TASK}")
+            format!("formatVersion: {}\n{TASK}", format::CURRENT)
         );
         assert_eq!(std::fs::read_to_string(tasks.join("legacy-one-ffffffff.yaml")).unwrap(), TASK);
         assert_eq!(
@@ -419,7 +449,10 @@ mod tests {
         assert_eq!(real.renamed, dry.renamed);
         assert!(!old.exists());
         let new = tasks.join("legacy-one-0000007d.yaml");
-        assert_eq!(std::fs::read_to_string(&new).unwrap(), format!("formatVersion: 9\n{TASK}"));
+        assert_eq!(
+            std::fs::read_to_string(&new).unwrap(),
+            format!("formatVersion: {}\n{TASK}", format::CURRENT)
+        );
         assert_eq!(*recorder.0.lock().unwrap(), vec![old.clone(), old.clone(), new.clone()]);
 
         let again = run(&dir, &NoIndex, MigrationOptions::default()).unwrap();

@@ -13,6 +13,11 @@ use uuid::Uuid;
 const GOLDEN: &str = "11111111-1111-4111-8111-111111111111";
 const LEGACY: &str = "22222222-2222-4222-8222-222222222222";
 
+/// Папка проекта корпуса: Golden — по названию (`golden-11111111`), Legacy — прежнее имя по Guid.
+fn folder(project: &str) -> &str {
+    if project == GOLDEN { "golden-11111111" } else { project }
+}
+
 fn golden() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
 }
@@ -129,7 +134,7 @@ fn default_link_type_ids_follow_the_md5_rule() {
     let mut checked = 0;
     for project in [GOLDEN, LEGACY] {
         let project_id = Uuid::parse_str(project).unwrap();
-        let dir = workspace().join("projects").join(project).join("link-types");
+        let dir = workspace().join("projects").join(folder(project)).join("link-types");
         for entry in std::fs::read_dir(&dir).unwrap() {
             let text = read(&entry.unwrap().path());
             let name = top_level(&text, "name").unwrap();
@@ -149,7 +154,7 @@ struct Catalog {
 }
 
 fn catalog(project: &str) -> Catalog {
-    let base = workspace().join("projects").join(project);
+    let base = workspace().join("projects").join(folder(project));
     let project_id = Uuid::parse_str(project).unwrap();
     let mut enums = BTreeMap::new();
     for entry in std::fs::read_dir(base.join("enums")).unwrap() {
@@ -195,7 +200,7 @@ fn field_of(_: &str, get: impl Fn(&str) -> Option<String>) -> (String, FieldType
 fn stored_field_values_are_already_canonical() {
     let catalog = catalog(GOLDEN);
     let mut checked = 0;
-    for entry in std::fs::read_dir(workspace().join("projects").join(GOLDEN).join("tasks")).unwrap() {
+    for entry in std::fs::read_dir(workspace().join("projects").join(folder(GOLDEN)).join("tasks")).unwrap() {
         let text = read(&entry.unwrap().path());
         for (item, values) in section(&text, "fields") {
             let field_id = Uuid::parse_str(&item["id"]).unwrap();

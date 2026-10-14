@@ -31,27 +31,36 @@ internal record LayoutEntry(IndexKind Kind, Guid? ProjectId, Guid? Id, string St
 /// </summary>
 internal static class WorkspaceLayout
 {
+    /// <summary>
+    /// Чем является файл. Проект файла — по его папке (<see cref="ProjectFolders.ProjectId"/>); файлы папки, проект которой не узнать, — null.
+    /// <c>project.yaml</c> второй папки проекта — тоже null: проект — <c>project.yaml</c> основной папки, о второй сообщают проблемы области
+    /// (<see cref="ProjectFolders.SecondFolderProblems"/>). У папки с новым именем id проекта — в файле, а в имени только начало
+    /// (<see cref="LayoutEntry.IdPrefix"/>, сверяется при чтении).
+    /// </summary>
     /// <param name="relativePath">Путь относительно .tasker, через «/».</param>
-    public static LayoutEntry? Classify(string relativePath)
+    public static LayoutEntry? Classify(string relativePath, ProjectFolders folders)
     {
         var parts = relativePath.Split('/');
-        return parts switch
+        switch (parts)
         {
-            ["users", var file] when IdOf(file) is { } id =>
-                new LayoutEntry(IndexKind.User, null, id, Stem(file)),
+            case ["users", var file] when IdOf(file) is { } id:
+                return new LayoutEntry(IndexKind.User, null, id, Stem(file));
 
-            ["projects", var project, ProjectDirectory.ProjectFileName] when Guid.TryParse(project, out var projectId) =>
-                new LayoutEntry(IndexKind.Project, null, projectId, Stem(ProjectDirectory.ProjectFileName)),
+            case ["projects", var project, ProjectDirectory.ProjectFileName] when ProjectFolders.TryParse(project, out var id8, out var guid):
+                if (folders.ProjectId(project) is { } projectId && folders.Primary(projectId) is { } primary && primary != project)
+                    return null;
+                return new LayoutEntry(IndexKind.Project, null, guid, Stem(ProjectDirectory.ProjectFileName), guid == null ? id8 : null);
 
             // Сущности проекта: имя — «название-первые знаки id» (см. EntityFileNames) или, в старом формате, полный Guid.
-            ["projects", var project, var folder, var file]
-                when Guid.TryParse(project, out var projectId)
+            case ["projects", var project, var folder, var file]
+                when ProjectFolders.TryParse(project, out _, out _)
                      && EntityFolders.Named(folder) is { } entityFolder
-                     && EntityFileNames.TryParse(file, out var fullId, out var prefix) =>
-                new LayoutEntry(entityFolder.Kind, projectId, fullId, Stem(file), prefix),
+                     && EntityFileNames.TryParse(file, out var fullId, out var prefix):
+                return folders.ProjectId(project) is { } owner ? new LayoutEntry(entityFolder.Kind, owner, fullId, Stem(file), prefix) : null;
 
-            _ => null
-        };
+            default:
+                return null;
+        }
     }
 
     private static string Stem(string fileName) =>

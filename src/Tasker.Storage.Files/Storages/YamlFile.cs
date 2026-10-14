@@ -64,6 +64,10 @@ internal static class YamlFile
         return model == null ? null : new Versioned<T>(model, Hash(bytes));
     }
 
+    /// <summary>Модель из уже прочитанных байтов (старый формат — в памяти); null — файл пуст.</summary>
+    public static Versioned<T>? Parse<T>(byte[] bytes, string path) where T : class =>
+        Deserializer.Deserialize<T?>(FormatVersions.Upgrade(Decode(bytes), path)) is { } model ? new Versioned<T>(model, Hash(bytes)) : null;
+
     /// <summary>Запись нового файла. Возвращает его версию.</summary>
     public static Task<string> Write<T>(string path, T model, CancellationToken ct) where T : class =>
         WithLock(path, ct, () => WriteUnlocked(path, model, ct));
@@ -130,6 +134,29 @@ internal static class YamlFile
 
             delete();
             return true;
+        });
+
+    /// <summary>
+    /// Перезапись <c>project.yaml</c> с переносом папки проекта: если файл <paramref name="path"/> (в папке <paramref name="folder"/>) не
+    /// изменился с версии <paramref name="expectedVersion"/>, папка переименовывается в <paramref name="newFolder"/> (одной операцией:
+    /// другие процессы видят старую или новую папку, не смесь; на Windows занятые файлы — с повторами), затем файл пишется в неё. Всё под
+    /// блокировкой записи. Папка <paramref name="newFolder"/> уже есть — файл пишется на месте, папки сливает <c>tasker cleanup</c>.
+    /// </summary>
+    /// <returns>Новая версия; null — файл изменён или удалён.</returns>
+    public static Task<string?> WriteIfMatchMoving<T>(string path, string folder, string newFolder, T model, string expectedVersion, CancellationToken ct)
+        where T : class =>
+        WithLock(path, ct, async () =>
+        {
+            if (await CurrentVersion(path, ct) != expectedVersion)
+                return null;
+
+            var file = path;
+            if (!PathRules.SamePath(folder, newFolder) && !Directory.Exists(newFolder) && !File.Exists(newFolder))
+            {
+                AtomicFile.MoveDirectory(folder, newFolder);
+                file = Path.Combine(newFolder, Path.GetFileName(path));
+            }
+            return await WriteUnlocked(file, model, ct);
         });
 
     /// <summary>

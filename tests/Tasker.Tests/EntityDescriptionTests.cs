@@ -186,17 +186,17 @@ public class EntityDescriptionTests : IDisposable
     public void The_step_from_7_to_8_only_changes_the_version()
     {
         var old = "formatVersion: 7\nid: 1\nname: Todo\ncolor: '#112233'\n";
-        Assert.Equal("formatVersion: 9\nid: 1\nname: Todo\ncolor: '#112233'\n", FormatVersions.Upgrade(old, "x.yaml"));
-        Assert.Equal("formatVersion: 9\nid: 1\nname: Todo\ncolor: '#112233'\n", FormatVersions.Upgrade("formatVersion: 8\nid: 1\nname: Todo\ncolor: '#112233'\n", "x.yaml"));
+        Assert.Equal("formatVersion: 10\nid: 1\nname: Todo\ncolor: '#112233'\n", FormatVersions.Upgrade(old, "x.yaml"));
+        Assert.Equal("formatVersion: 10\nid: 1\nname: Todo\ncolor: '#112233'\n", FormatVersions.Upgrade("formatVersion: 8\nid: 1\nname: Todo\ncolor: '#112233'\n", "x.yaml"));
     }
 
     [Fact]
-    public void The_format_version_is_9_and_the_step_from_8_only_changes_the_version()
+    public void The_format_version_is_10_and_the_steps_from_8_only_change_the_version()
     {
-        Assert.Equal(9, FormatVersions.Current);
+        Assert.Equal(10, FormatVersions.Current);
 
         var old = "formatVersion: 8\nid: 1\nname: Needs\noutwardName: needs\ninwardName: is needed by\nallowCycles: true\n";
-        Assert.Equal(old.Replace("formatVersion: 8", "formatVersion: 9"), FormatVersions.Upgrade(old, "x.yaml"));
+        Assert.Equal(old.Replace("formatVersion: 8", "formatVersion: 10"), FormatVersions.Upgrade(old, "x.yaml"));
     }
 
     [Fact]

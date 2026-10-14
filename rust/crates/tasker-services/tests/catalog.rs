@@ -527,7 +527,7 @@ fn fields_and_enums_are_files_in_their_own_folders_and_unreadable_files_are_coun
         std::fs::read_to_string(file.path()).unwrap()
     };
     let enum_text = read(project.enums(), &priority.id);
-    assert!(enum_text.starts_with("formatVersion: 9\n"));
+    assert!(enum_text.starts_with("formatVersion: 10\n"));
     assert!(
         enum_text.contains("name: Приоритет")
             && enum_text.contains(&format!("id: {}", priority.values[0].id))

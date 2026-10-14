@@ -193,11 +193,12 @@ public class ConcurrencyTests : IDisposable
 
         // Пришёл файл проекта или его новая папка: на Linux (inotify) файл, записанный в только что созданную папку раньше, чем на неё
         // встал наблюдатель, виден лишь событием папки — индекс сверяет её целиком и сообщает её путь.
-        var id = created.Id.ToString();
+        // Папка проекта называется по названию и первым 8 знакам id: projects/second-<id8>.
+        var folder = $"-{created.Id.ToString("N")[..8]}";
         await Eventually(() =>
         {
             lock (changes)
-                return changes.Any(x => (x.EndsWith("project.yaml") && x.Contains(id)) || x.EndsWith(id));
+                return changes.Any(x => (x.EndsWith("project.yaml") && x.Contains(folder + "/")) || x.EndsWith(folder));
         });
 
         var projects = await opened.Get<Tasker.Core.Projects.ProjectService>().GetRange(new Tasker.Core.Dto.Page(0, 50));

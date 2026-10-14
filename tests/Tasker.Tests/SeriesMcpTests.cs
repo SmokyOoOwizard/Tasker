@@ -167,7 +167,7 @@ public class SeriesMcpTests : IDisposable
         Assert.Equal([$"{Id(tsk)}:10"], Numbers(byTitle["first"]));
         Assert.Equal([$"{Id(tsk)}:11"], Numbers(byTitle["second"]));
         Assert.Equal([$"{Id(bug)}:2"], Numbers(byTitle["plain"]));
-        Assert.True(File.Exists(FileFinder.In(Path.Combine(agent.Folder, ".tasker", "projects", agent.ProjectId.ToString("D"), "series"), Guid.Parse(Id(tsk)))));
+        Assert.True(File.Exists(FileFinder.In(Path.Combine(ProjectPaths.Folder(agent.Folder, agent.ProjectId), "series"), Guid.Parse(Id(tsk)))));
 
         // Удаление серии с задачами: номера убираются, задачи остаются.
         var (deleteFailed, deleted) = await agent.Raw("delete_series", new { projectId = agent.ProjectId, seriesId = Id(bug), version = Version(bug) });

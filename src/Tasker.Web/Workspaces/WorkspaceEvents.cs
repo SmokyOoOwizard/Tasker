@@ -145,34 +145,31 @@ public sealed class WorkspaceEvents : IDisposable
     }
 
     /// <summary>
-    /// Изменённый файл → что изменилось (раскладка — см. <see cref="TaskerDirectory"/>). Вид сущности и проект — из пути, а id — от индекса,
-    /// из содержимого файла: сущности проекта называются по названию (<c>исправить-вход-3f2a9c1e.yaml</c>), и id в имени только начало.
-    /// Папка целиком (<c>tasks/</c>) — без id.
+    /// Изменённый файл → что изменилось (раскладка — см. <see cref="TaskerDirectory"/>). Вид сущности — из пути, а проект и id — от индекса,
+    /// из содержимого файла: папка проекта и сущности называются по названию (<c>projects/мой-проект-3f2a9c1e/tasks/исправить-вход-3f2a9c1e.yaml</c>),
+    /// и id в именах только начало. Папка целиком (<c>tasks/</c>) — без id; проект которой не узнать (папку удалили) — «перечитать всё».
     /// </summary>
     private static WorkspaceChange? Parse(WorkspaceFileChange file)
     {
         var parts = file.Path.Split('/');
         var id = file.Id;
-        switch (parts)
+        if (parts is ["users", _])
+            return new WorkspaceChange("user", null, id);
+        if (parts is not ["projects", _, ..] || parts.Length > 4)
+            return null;
+        if (file.ProjectId is not { } projectId)
+            return new WorkspaceChange("unknown", null, null);
+
+        return parts switch
         {
-            case ["users", _]:
-                return new WorkspaceChange("user", null, id);
-
-            case ["projects", var project] when Guid.TryParse(project, out var projectId):
-                return new WorkspaceChange("project", projectId, projectId);
-
-            case ["projects", var project, var item] when Guid.TryParse(project, out var projectId):
-                return item == ProjectDirectory.ProjectFileName
-                    ? new WorkspaceChange("project", projectId, projectId)
-                    // Папка tasks/ и т. п. целиком.
-                    : new WorkspaceChange(EntityOf(item), projectId, null);
-
-            case ["projects", var project, var folder, _] when Guid.TryParse(project, out var projectId):
-                return new WorkspaceChange(EntityOf(folder), projectId, id);
-
-            default:
-                return null;
-        }
+            ["projects", _] => new WorkspaceChange("project", projectId, projectId),
+            ["projects", _, var item] => item == ProjectDirectory.ProjectFileName
+                ? new WorkspaceChange("project", projectId, projectId)
+                // Папка tasks/ и т. п. целиком.
+                : new WorkspaceChange(EntityOf(item), projectId, null),
+            ["projects", _, var folder, _] => new WorkspaceChange(EntityOf(folder), projectId, id),
+            _ => null
+        };
     }
 
     private static string EntityOf(string folder) => folder switch

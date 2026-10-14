@@ -98,7 +98,7 @@ public class ParallelWorkTests
         };
         await Assert.ThrowsAsync<Tasker.Core.TaskerValidationException>(() => storage.Add(late));
 
-        Assert.False(Directory.Exists(Path.Combine(ws.Root, ".tasker", "projects", project.ToString())), "the folder of the deleted project must stay deleted");
+        Assert.False(ProjectPaths.Exists(ws.Root, project), "the folder of the deleted project must stay deleted");
     }
 
     /// <summary>

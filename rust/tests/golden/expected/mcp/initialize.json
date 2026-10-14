@@ -1,4 +1,6 @@
 {
+  "jsonrpc": "2.0",
+  "id": 1,
   "result": {
     "protocolVersion": "2025-06-18",
     "capabilities": {
@@ -9,7 +11,5 @@
       "name": "tasker",
       "version": "1.0.0"
     }
-  },
-  "id": 1,
-  "jsonrpc": "2.0"
+  }
 }

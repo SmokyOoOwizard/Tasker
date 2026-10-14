@@ -24,6 +24,7 @@ use notify::event::{MetadataKind, ModifyKind};
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::layout::{self, CACHE_NAME};
+use crate::project_folders;
 
 /// Ошибка запуска наблюдателя (нет папки, нет прав, лимит дескрипторов) — ошибка `notify` как есть.
 pub type Error = notify::Error;
@@ -31,8 +32,8 @@ pub type Error = notify::Error;
 /// Что изменилось за окно наблюдения.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WatchEvent {
-    /// Пути относительно `.tasker` через `/`, без повторов, по возрастанию: файлы раскладки (`projects/<guid>/tasks/<slug>-<id8>.yaml`,
-    /// `users/<guid>.yaml`, `projects/<guid>/project.yaml`) и папки раскладки (`projects/<guid>`, `projects/<guid>/tasks`, `users`) —
+    /// Пути относительно `.tasker` через `/`, без повторов, по возрастанию: файлы раскладки (`projects/<папка>/tasks/<slug>-<id8>.yaml`,
+    /// `users/<guid>.yaml`, `projects/<папка>/project.yaml`) и папки раскладки (`projects/<папка>`, `projects/<папка>/tasks`, `users`) —
     /// созданная, удалённая или переименованная папка приходит как путь папки, индекс сверяет её по префиксу; запись в папку
     /// (новый, изменённый, удалённый файл в ней) путём папки не приходит — только путём файла. Файл может уже
     /// не существовать (удаление, старое имя при переименовании) — получатель сверяет с диском, как `Sync` в .NET.
@@ -227,7 +228,7 @@ fn is_change(kind: &EventKind) -> bool {
 }
 
 /// Что считается изменением самой папки раскладки: создание, удаление, переименование (и событие неизвестного вида). Запись в
-/// папку — нет: ReadDirectoryChangesW (Windows) при каждом изменении файла сообщает и `Modify` его папки (`projects/<guid>/tasks`),
+/// папку — нет: ReadDirectoryChangesW (Windows) при каждом изменении файла сообщает и `Modify` его папки (`projects/<папка>/tasks`),
 /// FSEvents и inotify такого не присылают. Само изменение файла приходит отдельным событием с путём файла, а путь папки заставил бы
 /// индекс сверять всю папку. Так пачка одинакова на всех ОС. В .NET `FileSystemWatcher` с `LastWrite` на Windows передаёт и путь
 /// папки — индекс там сверяет её целиком; здесь эта лишняя сверка не делается. Новая папка (`Create`) остаётся путём: inotify
@@ -245,14 +246,14 @@ pub enum Scope {
     Ignored,
     /// Файл раскладки — в `Changed`.
     File,
-    /// Папка раскладки (`projects`, `projects/<guid>`, `projects/<guid>/<folder>`, `users`) — в `Changed`, если папку создали,
+    /// Папка раскладки (`projects`, `projects/<папка>`, `projects/<папка>/<folder>`, `users`) — в `Changed`, если папку создали,
     /// удалили или переименовали ([`is_folder_change`]).
     Folder,
 }
 
 /// Фильтр путей наблюдателя. .NET отбрасывает только `.cache`, а остальное передаёт в `Sync`, где файлы не из раскладки отсеивает
 /// `Classify`; здесь отсев делается до пачки, чтобы `*.tmp` и прочий шум не раздували окно до порога `FullSync` и не будили индекс.
-/// Папки раскладки (`projects`, `projects/<guid>`, `projects/<guid>/<folder>`, `users`) отличаются от файлов по имени, без обращения к
+/// Папки раскладки (`projects`, `projects/<папка>`, `projects/<папка>/<folder>`, `users`) отличаются от файлов по имени, без обращения к
 /// диску (удалённую папку уже не проверить): созданную, удалённую или переименованную папку индекс сверяет по префиксу, как `Sync`
 /// в .NET с путём папки.
 pub fn scope_of(relative_path: &str) -> Scope {
@@ -266,13 +267,13 @@ pub fn scope_of(relative_path: &str) -> Scope {
     if parts[0] == CACHE_NAME {
         return Scope::Ignored;
     }
-    if layout::classify(relative_path).is_some() {
+    if layout::is_layout_file(relative_path) {
         return Scope::File;
     }
     let is_folder = match parts.as_slice() {
         ["projects"] | ["users"] => true,
-        ["projects", project] => uuid::Uuid::try_parse(project).is_ok(),
-        ["projects", project, folder] => uuid::Uuid::try_parse(project).is_ok() && layout::folder_named(folder).is_some(),
+        ["projects", project] => project_folders::parse_name(project).is_some(),
+        ["projects", project, folder] => project_folders::parse_name(project).is_some() && layout::folder_named(folder).is_some(),
         _ => false,
     };
     if is_folder { Scope::Folder } else { Scope::Ignored }
@@ -373,6 +374,12 @@ mod tests {
             Scope::File
         );
         assert_eq!(scope_of("users/11111111-1111-4111-8111-111111111111.yaml"), Scope::File);
+        // Папка проекта по имени: `<slug>-<id8>`.
+        assert_eq!(scope_of("projects/golden-11111111"), Scope::Folder);
+        assert_eq!(scope_of("projects/golden-11111111/tasks"), Scope::Folder);
+        assert_eq!(scope_of("projects/golden-11111111/project.yaml"), Scope::File);
+        assert_eq!(scope_of("projects/golden-11111111/tasks/task-1111aaaa.yaml"), Scope::File);
+        assert_eq!(scope_of("projects/golden/tasks/task-1111aaaa.yaml"), Scope::Ignored);
     }
 
     #[test]

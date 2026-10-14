@@ -57,6 +57,9 @@ BASE_TIME = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
 # Канонические id проектов: по ним считаются id типов связей по умолчанию (MD5, см. DefaultLinkTypes.IdOf).
 PROJECT_IDS = {"Golden": "11111111-1111-4111-8111-111111111111", "Legacy": "22222222-2222-4222-8222-222222222222"}
+# Папки проектов: Golden — по названию и первым 8 знакам id (формат 10), Legacy — прежнее имя по полному Guid.
+GOLDEN_FOLDER = "golden-11111111"
+LEGACY_FOLDER = PROJECT_IDS["Legacy"]
 DEFAULT_LINK_TYPES = {"Blocks": "blocks", "Duplicate": "duplicate", "Cloners": "cloners", "Relates": "relates",
                       "Problem/Incident": "problem", "Parent/Child": "parent"}
 
@@ -386,15 +389,17 @@ def canonicalize(tasker_root):
     files = sorted(texts, key=lambda rel: entity_sort_key(rel, texts[rel]))
 
     mapping = {}
-    # Проекты и их типы связей по умолчанию.
+    # Проекты и их типы связей по умолчанию; папка проекта — projects/<slug>-<id8>, id — в project.yaml.
+    folder_ids = {}
     for rel, text in texts.items():
         if rel.endswith("/project.yaml"):
             old = re.search(r"^id: (\S+)$", text, re.M).group(1)
             name = re.search(r"^name: (.*)$", text, re.M).group(1)
             mapping[old] = PROJECT_IDS[name]
+            folder_ids[rel.split("/")[1]] = old
     for rel, text in texts.items():
         if "/link-types/" in rel:
-            project_old = rel.split("/")[1]
+            project_old = folder_ids[rel.split("/")[1]]
             old = re.search(r"^id: (\S+)$", text, re.M).group(1)
             name = re.search(r"^name: (.*)$", text, re.M).group(1)
             if name in DEFAULT_LINK_TYPES and old == default_link_type_id(project_old, DEFAULT_LINK_TYPES[name]):
@@ -422,6 +427,7 @@ def canonicalize(tasker_root):
 
     def fix_name(rel):
         rel = fix(rel)
+        rel = re.sub(r"^projects/(.+)-([0-9a-f]{8})/", lambda m: f"projects/{m.group(1)}-{id8.get(m.group(2), m.group(2))}/", rel)
         return re.sub(r"-([0-9a-f]{8})\.yaml$", lambda m: f"-{id8.get(m.group(1), m.group(1))}.yaml", rel)
 
     for rel in files:
@@ -447,8 +453,10 @@ def set_version(text, version):
 
 
 def make_legacy(tasker_root, mapping):
-    """Проект Legacy: файлы разных formatVersion, имена <guid>.yaml, CRLF, BOM, конфликт слияния, файл новее текущего формата."""
-    project = os.path.join(tasker_root, "projects", PROJECT_IDS["Legacy"])
+    """Проект Legacy: папка и файлы со старыми именами (<guid>), файлы разных formatVersion, CRLF, BOM, конфликт слияния, файл новее
+    текущего формата."""
+    project = os.path.join(tasker_root, "projects", LEGACY_FOLDER)
+    os.rename(os.path.join(tasker_root, "projects", "legacy-" + PROJECT_IDS["Legacy"][:8]), project)
     plan = {}  # относительный путь → (версия, legacy-имя?)
 
     def files_in(folder):
@@ -835,7 +843,7 @@ def snapshot_mcp(t: Tasker, run_ws, out_dir, legacy_ids, by_title):
 
 def yaml_style(ws_tasker, out_dir, by_title):
     """Для каждой задачи-пробы: значение (из JSON консоли) и то, как YamlDotNet записал его в файл."""
-    project = os.path.join(ws_tasker, "projects", PROJECT_IDS["Golden"], "tasks")
+    project = os.path.join(ws_tasker, "projects", GOLDEN_FOLDER, "tasks")
     files = {}
     for name in os.listdir(project):
         text = read_bytes(os.path.join(project, name)).decode("utf-8")
@@ -1259,7 +1267,7 @@ def snapshot_all(t: Tasker, canonical_tasker, root, out_dir, legacy_ids, only=No
     # Версии из консоли должны совпасть с посчитанными по байтам.
     computed = versions(canonical_tasker)
     for title, task in by_title.items():
-        matches = [v for rel, v in computed.items() if rel.endswith(f"-{task['id'][:8]}.yaml") and PROJECT_IDS["Golden"] in rel]
+        matches = [v for rel, v in computed.items() if rel.endswith(f"-{task['id'][:8]}.yaml") and rel.startswith(f"projects/{GOLDEN_FOLDER}/")]
         if task["version"] not in matches:
             raise RuntimeError(f"version mismatch for {title!r}: console {task['version']}, files {matches}")
     if "migrate" in only:

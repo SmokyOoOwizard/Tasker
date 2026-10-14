@@ -1,4 +1,6 @@
 {
+  "jsonrpc": "2.0",
+  "id": 1,
   "result": {
     "content": [
       {
@@ -7,7 +9,5 @@
       }
     ],
     "isError": true
-  },
-  "id": 1,
-  "jsonrpc": "2.0"
+  }
 }

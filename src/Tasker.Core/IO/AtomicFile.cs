@@ -64,6 +64,16 @@ public static class AtomicFile
         return 0;
     });
 
+    /// <summary>
+    /// Переименование папки одной операцией (другие процессы видят старую или новую папку, не смесь). На Windows папку с открытым
+    /// кем-то файлом переименовать нельзя — кратковременный отказ повторяется, как у файлов.
+    /// </summary>
+    public static void MoveDirectory(string from, string to) => Retry(() =>
+    {
+        Directory.Move(from, to);
+        return 0;
+    });
+
     /// <summary>Удаление файла; файла нет — не ошибка.</summary>
     public static void Delete(string path) => Retry(() =>
     {
@@ -129,6 +139,16 @@ public static class AtomicFile
             }
         }
     }
+
+    /// <summary>Синхронная <see cref="ReadAllBytes"/>.</summary>
+    /// <exception cref="FileNotFoundException">Файла нет.</exception>
+    public static byte[] ReadAllBytesSync(string path) => Retry(() =>
+    {
+        using var stream = Open(path, FileOptions.SequentialScan);
+        var bytes = new byte[stream.Length];
+        stream.ReadExactly(bytes);
+        return bytes;
+    });
 
     /// <summary>Читает текст (UTF-8, BOM отбрасывается) так же, как <see cref="ReadAllBytes"/>.</summary>
     public static async Task<string> ReadAllText(string path, CancellationToken ct = default) =>

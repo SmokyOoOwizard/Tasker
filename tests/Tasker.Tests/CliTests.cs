@@ -289,7 +289,7 @@ public class CliTests
         using var ws = TestWorkspace.Create("files");
         var id = (await Ok(ws.Run("project", "create", "Demo"))).Id;
 
-        Assert.True(File.Exists(Path.Combine(ws.Root, ".tasker", "projects", id.ToString(), "project.yaml")));
+        Assert.True(File.Exists(Path.Combine(ProjectPaths.Folder(ws.Root, id), "project.yaml")));
     }
 
     [Fact]

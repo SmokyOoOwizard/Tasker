@@ -4,8 +4,9 @@ use super::data::IndexEntity;
 use super::{db_error, is_busy, kind_name};
 use crate::error::Error;
 use crate::files;
-use crate::layout::{self, EntityKind, LayoutEntry, TaskerDirectory};
+use crate::layout::{self, EntityKind, LayoutEntry, PROJECT_FILE_NAME, TaskerDirectory};
 use crate::names;
+use crate::project_folders::{self, ProjectFolders};
 use crate::write::read_bytes;
 use rusqlite::{Connection, Transaction, TransactionBehavior, params};
 use std::collections::HashMap;
@@ -71,9 +72,11 @@ fn run_in(
     behavior: TransactionBehavior,
 ) -> io::Result<SyncReport> {
     let transaction = connection.transaction_with_behavior(behavior).map_err(db_error)?;
+    let folders = ProjectFolders::new(directory);
+    let scopes = &with_sibling_projects(scopes, &folders);
     let indexed = indexed_stamps(&transaction, scopes)?;
     let started = tasker_core::perf::start();
-    let on_disk = scan_disk(directory, scopes);
+    let on_disk = scan_disk(directory, &folders, scopes);
     tasker_core::perf::count("sync-scan", started);
     let started = tasker_core::perf::start();
 
@@ -118,6 +121,29 @@ fn run_in(
     transaction.commit().map_err(db_error)?;
     tasker_core::perf::count("sync-commit", started);
     Ok(report)
+}
+
+/// Какая папка проекта основная, зависит от соседних папок с теми же первыми 8 знаками id ([`project_folders`]): изменилась одна —
+/// их `project.yaml` сверяются заново (вторая папка стала основной или наоборот).
+fn with_sibling_projects(scopes: &[String], folders: &ProjectFolders) -> Vec<String> {
+    let mut result = scopes.to_vec();
+    for scope in scopes {
+        let mut parts = scope.split('/');
+        let (Some("projects"), Some(folder)) = (parts.next(), parts.next()) else {
+            continue;
+        };
+        let Some(name) = project_folders::parse_name(folder) else {
+            continue;
+        };
+        let id8 = name.id8();
+        for (other, parsed) in folders.listing() {
+            let sibling = format!("projects/{other}/{PROJECT_FILE_NAME}");
+            if other != folder && parsed.id8() == id8 && !result.contains(&sibling) {
+                result.push(sibling);
+            }
+        }
+    }
+    result
 }
 
 fn indexed_stamps(transaction: &Transaction<'_>, scopes: &[String]) -> io::Result<HashMap<String, Known>> {
@@ -175,7 +201,7 @@ fn stamp_of(metadata: &std::fs::Metadata) -> Stamp {
     }
 }
 
-fn scan_disk(directory: &TaskerDirectory, scopes: &[String]) -> HashMap<String, DiskFile> {
+fn scan_disk(directory: &TaskerDirectory, folders: &ProjectFolders, scopes: &[String]) -> HashMap<String, DiskFile> {
     let mut result = HashMap::new();
     for scope in scopes {
         let full = if scope.is_empty() {
@@ -198,7 +224,7 @@ fn scan_disk(directory: &TaskerDirectory, scopes: &[String]) -> HashMap<String, 
             let Some(relative) = relative_to(directory.root(), &file) else {
                 continue;
             };
-            let Some(layout) = layout::classify(&relative) else {
+            let Some(layout) = layout::classify(&relative, folders) else {
                 continue;
             };
             if let Ok(metadata) = std::fs::metadata(&file)
@@ -343,6 +369,12 @@ fn read<'a>(path: &'a str, file: &'a DiskFile) -> Option<Row<'a>> {
     if let Some(prefix) = &layout.id_prefix
         && names::id_prefix(&id) != *prefix
     {
+        if layout.kind == EntityKind::Project {
+            return Some(problem(format!(
+                "Id in the file ({}) does not match the end of the folder name ({prefix})",
+                guid_d(&id)
+            )));
+        }
         return Some(problem(format!(
             "Id in the file ({}) does not match the end of the file name ({prefix})",
             guid_d(&id)

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
@@ -174,24 +175,28 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
     public async Task<ListDto<WorkspaceProblem>> GetProblems(Page page, CancellationToken ct = default)
     {
         await EnsureReady();
-        return await Cache(async connection =>
+        // Файлы, которые не удалось прочитать, и вторые папки проектов (их файлы в списках, но папки нужно слить).
+        var problems = await Cache(async connection =>
         {
-            await using var count = connection.CreateCommand();
-            count.CommandText = "SELECT count(*) FROM files WHERE error IS NOT NULL";
-            var total = Convert.ToInt32(await count.ExecuteScalarAsync(ct));
-
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT path, error FROM files WHERE error IS NOT NULL ORDER BY path LIMIT @limit OFFSET @offset";
-            command.Parameters.AddWithValue("@limit", (int)page.Limit);
-            command.Parameters.AddWithValue("@offset", page.Offset);
+            command.CommandText = "SELECT path, error FROM files WHERE error IS NOT NULL ORDER BY path";
 
-            var problems = new List<WorkspaceProblem>();
+            var found = new List<WorkspaceProblem>();
             await using var reader = await command.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
-                problems.Add(new WorkspaceProblem(reader.GetString(0), reader.GetString(1)));
-
-            return new ListDto<WorkspaceProblem> { TotalCount = total, Offset = page.Offset, Limit = page.Limit, Data = problems.ToArray() };
+                found.Add(new WorkspaceProblem(reader.GetString(0), reader.GetString(1)));
+            return found;
         }, ct);
+        problems.AddRange(ProjectFolders.SecondFolderProblems(directory));
+        // Как ORDER BY path в SQLite: побайтно (UTF-8).
+        var sorted = problems.OrderBy(x => Encoding.UTF8.GetBytes(x.Path), ByteOrder.Instance).ToArray();
+        return new ListDto<WorkspaceProblem>
+        {
+            TotalCount = sorted.Length,
+            Offset = page.Offset,
+            Limit = page.Limit,
+            Data = sorted.Skip(page.Offset).Take((int)page.Limit).ToArray()
+        };
     }
 
     public async Task Rescan(CancellationToken ct = default)
@@ -453,9 +458,11 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
             await using var connection = await Open(ct);
             await using var transaction = connection.BeginTransaction();
 
-            var indexed = await IndexedStamps(transaction, scopes, ct);
+            var folders = new ProjectFolders(directory);
+            var scanned = WithSiblingProjects(scopes, folders);
+            var indexed = await IndexedStamps(transaction, scanned, ct);
             PerfTrace.Mark("sync-indexed");
-            var onDisk = ScanDisk(scopes);
+            var onDisk = ScanDisk(scanned, folders);
             PerfTrace.Mark("sync-scan");
 
             // Что изменилось: путь и id сущности — из содержимого файла (а у удалённого — из индекса), не из имени.
@@ -464,7 +471,7 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
             foreach (var path in indexed.Keys.Where(x => !onDisk.ContainsKey(x)))
             {
                 await Delete(transaction, path, ct);
-                changed.Add(new WorkspaceFileChange(path, IdOf(indexed[path].Id)));
+                changed.Add(new WorkspaceFileChange(path, IdOf(indexed[path].Id), indexed[path].ProjectId));
                 removed++;
             }
 
@@ -477,12 +484,14 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                 if (await Read(path, file, ct) is { } row)
                 {
                     await Upsert(transaction, row, ct);
-                    changed.Add(new WorkspaceFileChange(path, row.EntityId ?? file.Layout.Id));
+                    var id = row.EntityId ?? file.Layout.Id;
+                    changed.Add(new WorkspaceFileChange(path, id, file.Layout.Kind == IndexKind.Project ? id : file.Layout.ProjectId));
                 }
                 else
                 {
                     await Delete(transaction, path, ct);
-                    changed.Add(new WorkspaceFileChange(path, IdOf(known.Id) ?? file.Layout.Id));
+                    var id = IdOf(known.Id) ?? file.Layout.Id;
+                    changed.Add(new WorkspaceFileChange(path, id, file.Layout.Kind == IndexKind.Project ? id : file.Layout.ProjectId));
                 }
                 updated++;
             }
@@ -497,7 +506,7 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                 foreach (var scope in scopes)
                 {
                     if (!(ownWrites.TryGetValue(scope, out var written) && now - written < OwnWriteWindow) && changed.All(x => x.Path != scope))
-                        changed.Add(new WorkspaceFileChange(scope, null));
+                        changed.Add(new WorkspaceFileChange(scope, null, ProjectOf(scope, folders)));
                 }
             }
 
@@ -520,7 +529,36 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
         public string IdKey => EntityId is { } entity ? Key(entity) : Layout.Id is { } named ? Key(named) : Layout.Stem;
     }
 
-    private Dictionary<string, DiskFile> ScanDisk(string[] scopes)
+    /// <summary>
+    /// Какая папка проекта основная, зависит от соседних папок с теми же первыми 8 знаками id (<see cref="ProjectFolders"/>): изменилась
+    /// одна — их <c>project.yaml</c> сверяются заново (вторая папка стала основной или наоборот).
+    /// </summary>
+    private static string[] WithSiblingProjects(string[] scopes, ProjectFolders folders)
+    {
+        var result = scopes.ToList();
+        foreach (var scope in scopes)
+        {
+            var parts = scope.Split('/');
+            if (parts.Length < 2 || parts[0] != "projects" || !ProjectFolders.TryParse(parts[1], out var id8, out _))
+                continue;
+            foreach (var (other, otherId8, _) in folders.Listing())
+            {
+                var sibling = $"projects/{other}/{ProjectDirectory.ProjectFileName}";
+                if (other != parts[1] && otherId8 == id8 && !result.Contains(sibling))
+                    result.Add(sibling);
+            }
+        }
+        return result.ToArray();
+    }
+
+    /// <summary>Проект пути внутри <c>projects/&lt;папка&gt;</c> (для событий о папке); null — не узнать (папки уже нет).</summary>
+    private static Guid? ProjectOf(string scope, ProjectFolders folders)
+    {
+        var parts = scope.Split('/');
+        return parts.Length >= 2 && parts[0] == "projects" ? folders.ProjectId(parts[1]) : null;
+    }
+
+    private Dictionary<string, DiskFile> ScanDisk(string[] scopes, ProjectFolders folders)
     {
         var result = new Dictionary<string, DiskFile>();
         foreach (var scope in scopes)
@@ -540,7 +578,7 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                 foreach (var file in files)
                 {
                     var relative = Relative(file);
-                    if (WorkspaceLayout.Classify(relative) is not { } layout)
+                    if (WorkspaceLayout.Classify(relative, folders) is not { } layout)
                         continue;
 
                     var info = new FileInfo(file);
@@ -625,7 +663,9 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                 return Problem($"Id in the file ({id(entity)}) does not match the file name");
             // Имя по заголовку: из id в нём только начало.
             if (layout.IdPrefix is { } prefix && !EntityFileNames.IdPrefix(id(entity)).Equals(prefix, StringComparison.Ordinal))
-                return Problem($"Id in the file ({id(entity)}) does not match the end of the file name ({prefix})");
+                return Problem(layout.Kind == IndexKind.Project
+                    ? $"Id in the file ({id(entity)}) does not match the end of the folder name ({prefix})"
+                    : $"Id in the file ({id(entity)}) does not match the end of the file name ({prefix})");
 
             var c = columns(entity);
             return new IndexRow(path, file.Stamp, layout, c.SortText, c.SortNum, c.SortUpdated, c.TypeId, c.StatusId, c.UserKind,
@@ -653,7 +693,7 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
     }
 
     /// <summary>Что индекс знает о файле: отпечаток и значение колонки id (id сущности из содержимого; у нечитаемого файла — из имени).</summary>
-    private record struct Known(Stamp Stamp, string Id);
+    private record struct Known(Stamp Stamp, string Id, Guid? ProjectId);
 
     private static async Task<Dictionary<string, Known>> IndexedStamps(SqliteTransaction transaction, string[] scopes, CancellationToken ct)
     {
@@ -662,14 +702,18 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
         {
             await using var command = Command(transaction);
             command.CommandText = scope == ""
-                ? "SELECT path, size, mtime, id FROM files"
-                : "SELECT path, size, mtime, id FROM files WHERE path = @scope OR substr(path, 1, length(@prefix)) = @prefix";
+                ? "SELECT path, size, mtime, id, kind, project_id FROM files"
+                : "SELECT path, size, mtime, id, kind, project_id FROM files WHERE path = @scope OR substr(path, 1, length(@prefix)) = @prefix";
             command.Parameters.AddWithValue("@scope", scope);
             command.Parameters.AddWithValue("@prefix", scope + "/");
 
             await using var reader = await command.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
-                result[reader.GetString(0)] = new Known(new Stamp(reader.GetInt64(1), reader.GetInt64(2)), reader.GetString(3));
+            {
+                var id = reader.GetString(3);
+                var project = reader.GetString(4) == nameof(IndexKind.Project) ? IdOf(id) : reader.IsDBNull(5) ? null : IdOf(reader.GetString(5));
+                result[reader.GetString(0)] = new Known(new Stamp(reader.GetInt64(1), reader.GetInt64(2)), id, project);
+            }
         }
         return result;
     }
@@ -1167,6 +1211,13 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
             command.Parameters.AddWithValue("@known", IndexJsonContext.Array(knownSeriesIds.Select(Key)));
             return await ReadData<TaskItem>(command, ct);
         }, ct);
+    }
+
+    /// <summary>Побайтное сравнение — порядок ORDER BY в SQLite для текста UTF-8.</summary>
+    private sealed class ByteOrder : IComparer<byte[]>
+    {
+        public static readonly ByteOrder Instance = new();
+        public int Compare(byte[]? x, byte[]? y) => x.AsSpan().SequenceCompareTo(y);
     }
 
     private async Task<int> GetProblemsCount()

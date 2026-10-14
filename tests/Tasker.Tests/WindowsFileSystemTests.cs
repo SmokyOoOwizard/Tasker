@@ -127,7 +127,7 @@ public class WindowsFileSystemTests : IDisposable
     {
         var workspace = Path.Combine(_root, "w");
         var directory = new TaskerDirectory(workspace);
-        var project = directory.Project(Guid.NewGuid());
+        var project = directory.NamedProject(new string('я', 200), Guid.NewGuid());
         var longest = EntityFolders.All
             .Select(folder => project.EntityFile(folder, Guid.NewGuid(), new string('я', 200)) + ".tmp")
             .Max(x => Path.GetRelativePath(directory.Root, x).Length + TaskerDirectory.Name.Length + 1);

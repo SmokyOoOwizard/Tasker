@@ -3,7 +3,7 @@
 //!
 //! Модели файлов работают с байтами: [`parse`](files::project::parse) принимает содержимое файла и путь (для текстов ошибок),
 //! [`serialize`](files::project::serialize) возвращает байты для записи (LF, UTF-8 без BOM). Поверх них (TSK-130): имена файлов
-//! `<slug>-<id8>.yaml` ([`names`]), раскладка `.tasker` ([`layout`]), запись под блокировками ([`write`]), блокировки правки
+//! `<slug>-<id8>.yaml` ([`names`]), раскладка `.tasker` ([`layout`]) и папки проектов ([`project_folders`]), запись под блокировками ([`write`]), блокировки правки
 //! ([`edit_locks`]) и `tasker migrate` ([`migration`]); индекс области в SQLite `.cache/index.db`, общий с .NET ([`index`], TSK-131, TSK-161);
 //! наблюдатель файлов для демона ([`watch`], TSK-133).
 //!
@@ -18,6 +18,7 @@ pub mod index;
 pub mod layout;
 pub mod migration;
 pub mod names;
+pub mod project_folders;
 pub mod watch;
 pub mod write;
 pub mod yaml;

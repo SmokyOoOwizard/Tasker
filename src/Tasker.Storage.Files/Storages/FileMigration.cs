@@ -7,7 +7,8 @@ namespace Tasker.Storage.Files.Storages;
 
 /// <summary>
 /// Приводит файлы сущностей .tasker к текущему формату на диске (<see cref="FormatVersions"/>): добавляет или обновляет
-/// <c>formatVersion</c> и применяет шаги миграции, остальной текст не трогает. Файлы более нового формата и файлы с конфликтом
+/// <c>formatVersion</c> и применяет шаги миграции, остальной текст не трогает; папки проектов называет по названию проекта и сливает
+/// вторые папки проекта в основную (<see cref="ProjectFolders.Tidy"/>). Файлы более нового формата и файлы с конфликтом
 /// слияния git не меняются, а попадают в отчёт. Каждый файл переписывается под блокировкой записи, индекс обновляется после.
 /// </summary>
 internal sealed partial class FileMigration(TaskerDirectory directory, WorkspaceIndex index) : IFileMigration
@@ -28,12 +29,20 @@ internal sealed partial class FileMigration(TaskerDirectory directory, Workspace
         var unreadable = new List<MigrationProblem>();
         var changed = new List<string>();
 
+        // Сначала папки проектов (под блокировкой записи): файлы ниже проверяются уже на своих местах.
+        var tidy = options.DryRun
+            ? new ProjectFolders(directory).Tidy(dryRun: true, rename: true)
+            : await FileLock.Run(directory.WriteLock, () => Task.FromResult(new ProjectFolders(directory).Tidy(dryRun: false, rename: true)), ct);
+        unreadable.AddRange(tidy.Problems);
+        changed.AddRange(tidy.Changed);
+
         if (Directory.Exists(directory.Root))
         {
+            var folders = new ProjectFolders(directory);
             var files = Directory.EnumerateFiles(directory.Root, "*" + YamlFile.Extension,
                     new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true })
                 .Select(x => (Full: x, Relative: Relative(x)))
-                .Where(x => WorkspaceLayout.Classify(x.Relative) != null) // .cache, временные и чужие файлы — не сущности
+                .Where(x => WorkspaceLayout.Classify(x.Relative, folders) != null) // .cache, временные и чужие файлы — не сущности
                 .OrderBy(x => x.Relative, StringComparer.Ordinal);
 
             foreach (var (full, relative) in files)
@@ -78,7 +87,7 @@ internal sealed partial class FileMigration(TaskerDirectory directory, Workspace
                 // Файл в папке сущностей проекта должен быть настоящей сущностью: проверяем до любых изменений, чтобы чужой или битый файл
                 // не тронуть вовсе.
                 EntityHead? head = null;
-                var layout = WorkspaceLayout.Classify(relative)!;
+                var layout = WorkspaceLayout.Classify(relative, folders)!;
                 var folder = EntityFolders.Find(layout.Kind);
                 if (folder != null)
                 {
@@ -111,7 +120,8 @@ internal sealed partial class FileMigration(TaskerDirectory directory, Workspace
         if (changed.Count > 0)
             await index.Refresh(changed, ct);
 
-        return new MigrationReport(FormatVersions.Current, scanned, upToDate, migrated.ToArray(), renamed.ToArray(), newer.ToArray(), unreadable.ToArray());
+        return new MigrationReport(FormatVersions.Current, scanned, upToDate, migrated.ToArray(), renamed.ToArray(), newer.ToArray(), unreadable.ToArray(),
+            tidy.Renamed.ToArray(), tidy.Merged.ToArray());
     }
 
     /// <summary>

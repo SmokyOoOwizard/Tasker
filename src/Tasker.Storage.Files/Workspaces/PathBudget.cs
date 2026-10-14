@@ -14,14 +14,19 @@ public static class PathBudget
     /// <summary>MAX_PATH Windows: 259 знаков и завершающий нуль.</summary>
     public const int WindowsMaxPath = 260;
 
+    /// <summary>Самая длинная папка проекта: <c>{название}-{id8}</c> с названием предельной длины (длиннее прежнего имени — Guid).</summary>
+    public static int LongestProjectFolder { get; } =
+        Math.Max(EntityFileNames.MaxSlugLength + 1 + EntityFileNames.IdLength, Guid.Empty.ToString().Length);
+
     /// <summary>
-    /// Самый длинный путь файла внутри рабочей папки (без неё самой): <c>.tasker\projects\{guid}\status-sets\{название}-{id8}.yaml.tmp</c>
-    /// — с самой длинной папкой сущностей, названием предельной длины и временным файлом записи.
+    /// Самый длинный путь файла внутри рабочей папки (без неё самой):
+    /// <c>.tasker\projects\{название}-{id8}\status-sets\{название}-{id8}.yaml.tmp</c> — с самой длинной папкой проекта, самой длинной
+    /// папкой сущностей, названием предельной длины и временным файлом записи.
     /// </summary>
     public static int LongestRelativePath { get; } =
         TaskerDirectory.Name.Length + 1
         + "projects".Length + 1
-        + Guid.Empty.ToString().Length + 1
+        + LongestProjectFolder + 1
         + EntityFolders.All.Max(x => x.Name.Length) + 1
         + EntityFileNames.MaxSlugLength + 1 + EntityFileNames.IdLength + YamlFile.Extension.Length + ".tmp".Length;
 

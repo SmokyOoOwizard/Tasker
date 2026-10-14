@@ -61,7 +61,7 @@ fn errors_use_the_dotnet_texts() {
     let empty = root.join("empty");
     std::fs::create_dir_all(&empty).unwrap();
     let run = tasker(&root, &["migrate", "-w", empty.to_str().unwrap()]);
-    assert_eq!(run.stdout, "Nothing to migrate: all 0 file(s) are in the current format (9)\n");
+    assert_eq!(run.stdout, "Nothing to migrate: all 0 file(s) are in the current format (10)\n");
     assert_eq!((run.stderr.as_str(), run.code), ("", 0));
     assert!(empty.join(".tasker").join("projects").is_dir());
     assert_eq!(
@@ -71,7 +71,7 @@ fn errors_use_the_dotnet_texts() {
     let run = tasker(&root, &["migrate", "--check", "--json", "-w", empty.to_str().unwrap()]);
     assert_eq!(
         run.stdout,
-        "{\"applicable\":true,\"dryRun\":false,\"check\":true,\"currentFormat\":9,\"scanned\":0,\"upToDate\":0,\"needsAttention\":false,\"migrated\":[],\"renamed\":[],\"newer\":[],\"unreadable\":[]}\n"
+        "{\"applicable\":true,\"dryRun\":false,\"check\":true,\"currentFormat\":10,\"scanned\":0,\"upToDate\":0,\"needsAttention\":false,\"migrated\":[],\"renamed\":[],\"renamedFolders\":[],\"mergedFolders\":[],\"newer\":[],\"unreadable\":[]}\n"
     );
     assert_eq!(run.code, 0);
 
@@ -79,7 +79,7 @@ fn errors_use_the_dotnet_texts() {
     let run = tasker(&root, &["migrate", "--check", "-q", "--workspace", "empty"]);
     assert_eq!(
         run.stdout,
-        "Nothing is written (dry run):\nNothing to migrate: all 0 file(s) are in the current format (9)\n"
+        "Nothing is written (dry run):\nNothing to migrate: all 0 file(s) are in the current format (10)\n"
     );
     assert_eq!(run.code, 0);
     std::fs::remove_dir_all(&root).unwrap();

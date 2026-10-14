@@ -62,11 +62,21 @@ enum Kind {
     Task,
 }
 
+/// Id проекта по папке корпуса: прежнее имя — сам Guid, новое (`golden-11111111`, `legacy-22222222` после migrate) — по первым 8
+/// знакам: в корпусе их id — 11111111-… и 22222222-….
+fn project_of(folder: &str) -> Uuid {
+    Uuid::parse_str(folder).unwrap_or_else(|_| match &folder[folder.len() - 8..] {
+        "11111111" => Uuid::parse_str("11111111-1111-4111-8111-111111111111").unwrap(),
+        "22222222" => Uuid::parse_str("22222222-2222-4222-8222-222222222222").unwrap(),
+        other => panic!("unknown project folder {other}"),
+    })
+}
+
 fn classify(relative: &str) -> (Kind, Option<Uuid>) {
     let parts: Vec<&str> = relative.split('/').collect();
     match parts.as_slice() {
         ["users", _] => (Kind::User, None),
-        ["projects", id, "project.yaml"] => (Kind::Project, Some(Uuid::parse_str(id).unwrap())),
+        ["projects", id, "project.yaml"] => (Kind::Project, Some(project_of(id))),
         ["projects", id, folder, _] => {
             let kind = match *folder {
                 "statuses" => Kind::Status,
@@ -80,7 +90,7 @@ fn classify(relative: &str) -> (Kind, Option<Uuid>) {
                 "tasks" => Kind::Task,
                 other => panic!("unknown folder {other}"),
             };
-            (kind, Some(Uuid::parse_str(id).unwrap()))
+            (kind, Some(project_of(id)))
         }
         other => panic!("unexpected path {other:?}"),
     }
@@ -143,7 +153,23 @@ fn versions(path: &Path) -> BTreeMap<String, String> {
 
 /// Файл области после `tasker migrate`: в той же папке, с тем же id внутри (имя могло измениться).
 fn migrated_file(relative: &str, id: &Uuid) -> (PathBuf, Vec<u8>) {
-    let folder = migrated().join(Path::new(relative).parent().unwrap());
+    // migrate переименовывает и папку проекта (`projects/<guid>` → `projects/legacy-22222222`): та же папка — по первым 8 знакам id.
+    let mut parts: Vec<String> = Path::new(relative)
+        .parent()
+        .unwrap()
+        .iter()
+        .map(|x| x.to_string_lossy().into_owned())
+        .collect();
+    if parts.len() >= 2 && parts[0] == "projects" {
+        let id8 = &parts[1][..8];
+        parts[1] = std::fs::read_dir(migrated().join("projects"))
+            .unwrap()
+            .flatten()
+            .map(|x| x.file_name().to_string_lossy().into_owned())
+            .find(|name| name.ends_with(&format!("-{id8}")) || name.starts_with(id8))
+            .unwrap();
+    }
+    let folder = parts.iter().fold(migrated(), |path, part| path.join(part));
     let needle = format!("id: {id}");
     all_yaml_files(&folder)
         .into_iter()
@@ -178,7 +204,7 @@ fn every_workspace_file_round_trips_byte_for_byte() {
             let error = result.unwrap_err();
             assert_eq!(
                 error.message(),
-                "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (9): update Tasker"
+                "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker"
             );
             assert!(matches!(error, Error::UnsupportedFormat(_)));
             continue;
@@ -225,7 +251,7 @@ fn every_workspace_file_round_trips_byte_for_byte() {
     }
     assert!(failures.is_empty(), "{} files differ:\n{}", failures.len(), failures.join("\n"));
     assert!(exact >= 100, "only {exact} current-format files checked");
-    assert_eq!(via_migrate, 16, "legacy files checked via tasker migrate");
+    assert_eq!(via_migrate, 19, "legacy files checked via tasker migrate");
 }
 
 /// Файлы после `tasker migrate` (все в текущем формате) тоже читаются и пишутся байт в байт (кроме CRLF-файла и типов связей

@@ -805,7 +805,7 @@ fn a_board_file_keeps_conditions_by_id_and_is_read_back_by_a_fresh_workspace() {
     let folder = env.ws.directory().project(&env.project).boards();
     let file = std::fs::read_dir(&folder).unwrap().flatten().next().unwrap().path();
     let text = std::fs::read_to_string(&file).unwrap();
-    assert!(text.starts_with("formatVersion: 9\n"));
+    assert!(text.starts_with("formatVersion: 10\n"));
     assert!(text.contains(&format!(
         "  fieldFilters:\n  - field: {}\n    op: greaterOrEqual\n    value: \"3\"\n  - field: {}\n    op: unset\n",
         p.estimate.id, p.level.id
