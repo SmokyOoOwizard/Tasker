@@ -4,11 +4,27 @@ title: Комментарии с названиями в YAML
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:12.8590050+00:00
-updatedAt: 2026-10-01T15:51:12.8590050+00:00
+updatedAt: 2026-10-14T11:17:19.8878890+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 3
 description: |-
-  Раздел бэклога: Данные и хранилища.
+  Проблема
+  Ссылки в YAML-файлах `.tasker` — голые Guid (`typeId`, `statusId`, списки `statuses` наборов, статусы колонок досок, поля типов задач, связи и т. п.): человеку при чтении файла или диффа в git непонятно, на что они указывают. Чтение комментарии уже пропускает, но при записи сущности они теряются.
 
-  Ссылки в файлах — голые Guid, человеку их трудно читать. При записи добавлять рядом комментарий с названием (`- aaaa… # Готово`); при чтении он игнорируется.
+  Где
+  - rust/crates/tasker-files/src/yaml/emitter.rs, rust/crates/tasker-files/src/write.rs, rust/crates/tasker-files/src/files/ — запись файлов в Rust (консоль, демон)
+  - src/Tasker.Storage.Files/Storages/*File.cs, src/Tasker.Storage.Files/Storages/EntityFiles.cs — запись файлов в .NET (десктоп)
+  - docs/wiki/Хранение-и-git.md — описание формата файлов
+
+  Как повторить
+  - `tasker project create Demo`, `tasker status create Todo`, `tasker status-set create Basic --status Todo`, `tasker task-type create Task --status-set Basic`, `tasker task create "Первая" --type Task`.
+  - Открыть `.tasker/projects/demo-*/tasks/первая-*.yaml` и `status-sets/*.yaml`: в `typeId`, `statusId`, `statuses` только Guid, без названий.
+  - Дописать вручную `# Todo` к строке статуса набора, выполнить `tasker status-set update Basic --name Basic2` — комментарий из файла исчезает.
+
+  Что нужно сделать
+  - При записи добавлять к каждой ссылке на сущность комментарий с её текущим названием: `- aaaa… # Готово`, `statusId: aaaa… # Готово`.
+  - При чтении комментарии игнорируются (название в комментарии не источник данных; устаревший комментарий не ошибка).
+  - Одинаковый вывод в Rust и .NET, чтобы запись разными программами не давала лишних диффов; учесть, что версия сущности считается по тексту файла.
+  - Описать в вики.
+  - Проверка: после создания и правки сущностей ссылки в файлах снабжены комментариями с названиями; файлы с комментариями и без читаются одинаково; тесты формата файлов (Rust и .NET) проходят.

@@ -4,15 +4,30 @@ title: 'Флаки тестов под нагрузкой: SettingsTests.Paralle
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-09T12:57:02.7763650+00:00
-updatedAt: 2026-10-09T12:57:02.7763650+00:00
+updatedAt: 2026-10-14T11:17:17.5358830+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 145
 description: |-
-  Замечено при полных прогонах в TSK-125 (load ~5, параллельные прогоны): три теста падают в обоих режимах (in-process и TASKER_BIN), в изоляции проходят и на ветке, и на чистом main.
+  Проблема
+  Под нагрузкой (load ~5, параллельные прогоны) три .NET-теста падают, а в изоляции проходят:
+  - SettingsTests.Parallel_updates_are_not_lost — таймаут `settings.lock` 30 с;
+  - DaemonUpgradeTests.Status_json_lists_the_worker_with_its_build — пустой `build` рабочего процесса в `tasker mcp status --json`;
+  - DaemonTests.Foreground_run_stops_on_interrupt_and_cleans_up — `tasker mcp run` после SIGINT не завершается за 30 с.
+  Неизвестно, это короткие таймауты или настоящие гонки.
 
-  - SettingsTests.Parallel_updates_are_not_lost — таймаут settings.lock 30 с.
-  - DaemonUpgradeTests.Status_json_lists_the_worker_with_its_build — пустой build воркера.
-  - DaemonTests.Foreground_run_stops_on_interrupt_and_cleans_up — SIGINT дольше 30 с.
+  Где
+  - tests/Tasker.Tests/SettingsTests.cs — Parallel_updates_are_not_lost (20 параллельных `SettingsStore.AddWorkspace`)
+  - tests/Tasker.Tests/DaemonUpgradeTests.cs — Status_json_lists_the_worker_with_its_build
+  - tests/Tasker.Tests/DaemonTests.cs — Foreground_run_stops_on_interrupt_and_cleans_up
+  - src/Tasker.Global/SettingsStore.cs — `settings.lock`, AddWorkspace
+  - rust/crates/tasker-mcpd/src/ — статус рабочих процессов и остановка демона (supervisor.rs, worker.rs, shutdown.rs)
 
-  Разобраться: это ограничения таймаутов под нагрузкой (поднять/сделать адаптивными) или настоящие гонки. Прогон с нагрузкой на машине воспроизводит.
+  Как повторить
+  - Нагрузить машину (второй полный `dotnet test` параллельно или стресс-стенд tools/Tasker.Stress) и прогнать `dotnet test tests/Tasker.Tests --filter "FullyQualifiedName~SettingsTests|FullyQualifiedName~DaemonUpgradeTests|FullyQualifiedName~DaemonTests"` несколько раз подряд — тесты падают с описанными ошибками; без нагрузки проходят.
+
+  Что нужно сделать
+  - Для каждого теста выяснить причину: долгая работа под блокировкой или ожидание (тогда поднять таймаут или сделать его адаптивным) либо гонка в продукте (тогда исправить продукт).
+  - Пустой `build` рабочего процесса: проверить, не отдаёт ли демон статус до того, как рабочий процесс сообщил свою сборку.
+  - Остановка `tasker mcp run` по SIGINT: где уходит больше 30 с.
+  - Проверка: три теста проходят в цикле под нагрузкой (параллельный полный прогон) на macOS и Linux.

@@ -4,7 +4,7 @@ title: 'Структура репозитория по языку: rust/ и dotn
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-13T14:53:36.0705610+00:00
-updatedAt: 2026-10-14T00:16:55.5505650+00:00
+updatedAt: 2026-10-14T11:17:18.5808760+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 170
@@ -20,31 +20,44 @@ links:
 - typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
   taskId: e8364d99-0adb-4c27-9410-7aaccc8b9b2e
 description: |-
-  Код разделяется по языку, у каждой половины свой инструментарий.
+  Проблема
+  .NET-код (Tasker.slnx, Directory.Build.props, src/, tests/Tasker.Tests, tools/) лежит в корне репозитория вперемешку с общими каталогами, а Rust — в rust/; корпус эталонов поведения консоли и демона лежит внутри rust/ (rust/tests/golden), хотя им пользуются и .NET-тесты. В репозитории остались артефакты перехода на Rust: спайки, планы и замеры миграции, скрипты, которым нужна несуществующая .NET-консоль, генератор эталонов с .NET, уборка .NET-установки в установщиках, .NET-специфика в замерах и комментарии в Rust-коде со ссылками на удалённые C#-консоль и демон.
 
-  Целевая структура:
-  rust/      — Cargo workspace: Cargo.toml, crates/* (консоль, демон, библиотеки), свои тесты; .cargo/, .config/nextest.toml, rustfmt.toml
-  dotnet/    — Tasker.slnx, Directory.Build.props, src/* (десктоп, сервер, библиотеки), tests/Tasker.Tests, tools/Tasker.Stress, tools/RustBinaries.targets
-  tests/golden/ — общий корпус эталонов поведения консоли и демона (сейчас rust/tests/golden): им пользуются Rust-тесты и .NET-тесты
-  frontend/, scripts/, docs/wiki/, .tasker, VERSION, README.md — в корне, как сейчас.
+  Где
+  - корень: Tasker.slnx, Directory.Build.props, src/*, tests/Tasker.Tests, tools/Tasker.Stress, tools/RustBinaries.targets
+  - rust/: Cargo.toml, crates/*, rust/.cargo/config.toml, rust/.config/nextest.toml, rust/rustfmt.toml, rust/tests/golden, rust/spikes/ (rmcp-echo, yaml-emitter), rust/README.md
+  - docs/rust-migration-plan.md, docs/rust-migration-baseline.md, docs/rust-migration-results.md, docs/perf-baseline/
+  - scripts/test-shared-index.py, scripts/test-sqlite-shared.py, scripts/golden/generate.py, scripts/release.sh, scripts/install.sh, scripts/install.ps1, scripts/test-linux*.sh, scripts/perf/bench.py, scripts/perf/publish.sh
+  - .github/workflows/release-build.yml, .github/workflows/dotnet-tests.yml; .gitignore, .gitattributes
+  - rust/crates/tasker-core/src/perf.rs — колонка jit в TASKER_PROFILE
+  - README.md, docs/wiki/Разработка.md
 
-  Перенос (git mv, чтобы история файлов сохранилась) и всё, что от него зависит:
-  - ProjectReference во всех .csproj, Tasker.slnx, Directory.Build.props, пути в tools/RustBinaries.targets (к rust/ и к frontend/);
-  - rust/.cargo/config.toml, .config/nextest.toml, .gitignore, .gitattributes;
-  - оба workflow CI (.github/workflows/release-build.yml, dotnet-tests.yml): фильтры путей, рабочие каталоги, пути к результатам;
-  - scripts/release.sh, scripts/install.sh и install.ps1 (--from-source), scripts/test-linux*.sh, scripts/perf/*;
-  - пути к корпусу в Rust-тестах (~20 файлов) и .NET-тестах (AutostartTests, WindowsConsoleTests и др.), TestWorkspace и путь к бинарникам;
-  - README, rust/README.md, вики «Разработка» (структура, команды сборки и тестов).
+  Как повторить
+  - `ls` в корне репозитория: .NET-решение и проекты в корне рядом с rust/, frontend/, scripts/.
+  - `ls rust/spikes docs/rust-migration-*.md docs/perf-baseline scripts/test-shared-index.py scripts/test-sqlite-shared.py scripts/golden/generate.py` — остатки перехода на месте.
+  - `grep -n "dotnet\|\.NET" scripts/install.sh scripts/install.ps1` — уборка .NET-установки и сообщение про .NET-супервизор; `grep -n "DOTNET_gcServer\|jit" scripts/perf/bench.py`; `TASKER_PROFILE=1 tasker project list` — третья колонка меток (jit) всегда 0.
+  - `grep -rn "_like_dotnet\|match_the_dotnet_snapshots\|EntityFiles.cs" rust/crates` — имена тестов и комментарии со ссылками на удалённый C#-код.
 
-  Удалить остатки перехода:
-  - rust/spikes/ (rmcp-echo, yaml-emitter);
-  - docs/rust-migration-plan.md, docs/rust-migration-baseline.md, docs/rust-migration-results.md, docs/perf-baseline/ и ссылки на них;
-  - scripts/test-shared-index.py, scripts/test-sqlite-shared.py (нужна .NET-консоль 0.1.0, которой нет);
-  - scripts/golden/generate.py целиком: эталоны переснимаются из Rust-тестов — TASKER_GOLDEN_UPDATE=1 cargo test перезаписывает файлы tests/golden, обычный cargo test сверяет; README корпуса — как переснимать и что в нём, без истории снятия с .NET;
-  - в install.sh и install.ps1 — уборку .NET-файлов при обновлении со старой установки и сообщение про .NET-супервизор;
-  - .NET-специфику в замерах: колонку jit в TASKER_PROFILE (PerfTrace), DOTNET_gcServer и фазы JIT в scripts/perf/bench.py;
-  - в Rust-коде — комментарии со ссылками на удалённую C#-консоль и демон («порт EntityFiles.cs», «как в .NET», имена тестов …_like_dotnet, …_match_the_dotnet_snapshots): переписать как описание поведения. Ссылки на .NET-код, с которым Rust делит формат (хранилище десктопа и сервера: файлы .tasker, index.db, схема SQLite, протокол демона), оставить.
-
-  Поведение консоли, демона, десктопа и сервера не меняется.
-
-  Проверка: cargo test (в том числе сверка с tests/golden), dotnet build и dotnet test, scripts/release.sh для своей платформы, install.sh --from-source во временный префикс, CI зелёный на трёх ОС.
+  Что нужно сделать
+  - Целевая структура:
+    - rust/ — Cargo workspace: Cargo.toml, crates/* (консоль, демон, библиотеки), свои тесты; .cargo/, .config/nextest.toml, rustfmt.toml;
+    - dotnet/ — Tasker.slnx, Directory.Build.props, src/* (десктоп, сервер, библиотеки), tests/Tasker.Tests, tools/Tasker.Stress, tools/RustBinaries.targets;
+    - tests/golden/ — общий корпус эталонов поведения консоли и демона (сейчас rust/tests/golden): им пользуются Rust-тесты и .NET-тесты;
+    - frontend/, scripts/, docs/wiki/, .tasker, VERSION, README.md — в корне.
+  - Перенос через `git mv` (история файлов сохраняется) и всё, что от него зависит:
+    - ProjectReference во всех .csproj, Tasker.slnx, Directory.Build.props, пути в tools/RustBinaries.targets (к rust/ и к frontend/);
+    - rust/.cargo/config.toml, .config/nextest.toml, .gitignore, .gitattributes;
+    - оба workflow CI (release-build.yml, dotnet-tests.yml): фильтры путей, рабочие каталоги, пути к результатам;
+    - scripts/release.sh, scripts/install.sh и install.ps1 (`--from-source`), scripts/test-linux*.sh, scripts/perf/*;
+    - пути к корпусу в Rust-тестах (~24 файла) и .NET-тестах (AutostartTests, WindowsConsoleTests, McpInputSchemaTests, ProjectFolderTests, TaskFileKeyOrderTests), TestWorkspace и путь к бинарникам;
+    - README.md, rust/README.md, вики «Разработка» (структура, команды сборки и тестов).
+  - Удалить остатки перехода:
+    - rust/spikes/ (rmcp-echo, yaml-emitter);
+    - docs/rust-migration-plan.md, docs/rust-migration-baseline.md, docs/rust-migration-results.md, docs/perf-baseline/ и ссылки на них (в т. ч. из lib.rs крейтов и rust/README.md);
+    - scripts/test-shared-index.py, scripts/test-sqlite-shared.py (нужна .NET-консоль, которой нет);
+    - scripts/golden/generate.py целиком: эталоны переснимаются из Rust-тестов — добавить режим `TASKER_GOLDEN_UPDATE=1 cargo test`, который перезаписывает файлы tests/golden, обычный `cargo test` сверяет; README корпуса — как переснимать и что в нём, без истории снятия с .NET;
+    - в install.sh и install.ps1 — уборку .NET-файлов при обновлении со старой установки и сообщение про .NET-супервизор;
+    - .NET-специфику в замерах: колонку jit в TASKER_PROFILE (perf.rs), `DOTNET_gcServer` и фазы JIT в scripts/perf/bench.py;
+    - в Rust-коде — комментарии со ссылками на удалённую C#-консоль и демон («порт EntityFiles.cs», «как в .NET», имена тестов `…_like_dotnet`, `…_match_the_dotnet_snapshots`): переписать как описание поведения. Ссылки на .NET-код, с которым Rust делит формат (хранилище десктопа и сервера: файлы .tasker, index.db, схема SQLite, протокол демона), оставить.
+  - Поведение консоли, демона, десктопа и сервера не меняется.
+  - Проверка: `cargo test` (в том числе сверка с tests/golden), `dotnet build` и `dotnet test`, `scripts/release.sh` для своей платформы, `install.sh --from-source` во временный префикс, CI зелёный на трёх ОС.

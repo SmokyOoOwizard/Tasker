@@ -4,7 +4,7 @@ title: 'Rust-демон: REST API и живые события для интер
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-13T15:50:15.9213130+00:00
-updatedAt: 2026-10-13T15:52:13.1063480+00:00
+updatedAt: 2026-10-14T11:17:18.6564630+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 171
@@ -12,15 +12,28 @@ links:
 - typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
   taskId: 3a39f602-a962-4b6b-ae39-3bccb6751bc6
 description: |-
-  Сейчас REST API и живые события интерфейса есть только в .NET: src/Tasker.Web (TaskerApi.cs — около 90 маршрутов, Workspaces/WorkspaceEvents.cs — события по SSE, text/event-stream; маршрутизация /w/<key>, реестр областей, LoopbackOnly, режимы desktop/server в Auth/ModeRegistration). Их обслуживает .NET-процесс внутри десктопа поверх .NET-хранилища. Rust-демон tasker-mcpd отдаёт только MCP и /daemon/*.
+  Проблема
+  REST API и живые события интерфейса есть только в .NET: Tasker.Web (около 90 маршрутов, события по SSE, маршрутизация `/w/<key>`, реестр областей, LoopbackOnly, режимы desktop/server). Их обслуживает .NET-процесс внутри десктопа поверх .NET-хранилища. Rust-демон tasker-mcpd отдаёт только MCP, `/daemon/*`, `/health`, `/ready` и `/api/health`; на `/w/<key>/api/…` отвечает 404. Поэтому десктоп не может работать поверх демона без .NET-сервера внутри себя.
 
-  Нужно: tasker-mcpd обслуживает тот же REST API и те же события для локального интерфейса, чтобы десктоп работал поверх демона без .NET-сервера внутри себя.
+  Где
+  - src/Tasker.Web/TaskerApi.cs — маршруты REST
+  - src/Tasker.Web/Workspaces/WorkspaceEvents.cs — события (SSE, `GET /w/{key}/api/events`); WorkspaceRegistry.cs, WorkspaceRouting.cs — реестр и маршрутизация областей
+  - src/Tasker.Web/LoopbackOnly.cs, Auth/ModeRegistration.cs, TaskerMode.cs — loopback и режимы desktop/server
+  - src/Tasker.Desktop/Program.cs — `app.MapTasker()` внутри десктопа
+  - rust/crates/tasker-mcpd/src/http.rs — маршруты демона и `fallback` (404 для `/w/{key}/…`)
+  - tests/Tasker.Tests — FieldsApiTests, SeriesApiTests, LinkInterfaceTests, EditLockInterfaceTests, WebTestModule.cs
+  - docs/wiki/Демон-MCP.md, docs/wiki/Интерфейс.md
 
-  Что входит:
-  - маршруты и формы ответов REST как у Tasker.Web в режиме desktop (JSON camelCase, коды ошибок и тексты 400/404/409/423, заголовки версий и блокировок правки) — перенос без изменения контракта, чтобы фронтенд (frontend/) работал без правок;
-  - события: SSE по области с теми же типами событий, что WorkspaceEvents; источник — наблюдатель файлов демона и записи через сам демон (совпадает с тем, что видят агенты по MCP);
-  - маршрутизация по области (/w/<key>/…) и реестр областей демона; только loopback (Host/Origin), как MCP;
-  - аутентификации нет (локальный режим desktop); режим server с JWT и токенами агентов остаётся в .NET (Tasker.Server) и не переносится;
-  - статику фронтенда демон не отдаёт: демон обслуживает только API (REST, события, MCP, /daemon/*); фронтенд остаётся в оболочке десктопа;
-  - проверка паритета: те же .NET-тесты REST (FieldsApiTests, SeriesApiTests, LinkInterfaceTests, EditLockInterfaceTests и др. в режиме desktop) против демона, снимки ответов в golden-корпусе; фронтенд вручную против демона;
-  - вики: «Демон-MCP» и «Интерфейс» — текущее поведение.
+  Как повторить
+  - Запустить демон с временным `TASKER_HOME` и своим портом, добавить область (`tasker mcp workspace add <папка>`, `tasker mcp start`).
+  - `curl -i http://127.0.0.1:<порт>/w/<папка>/api/projects` — 404 без тела; `curl -i http://127.0.0.1:<порт>/w/<папка>/api/events` — тоже 404. Тот же запрос к десктопу (Tasker.Web) возвращает список проектов и поток событий.
+
+  Что нужно сделать
+  - tasker-mcpd обслуживает тот же REST API и те же события для локального интерфейса, чтобы десктоп работал поверх демона без .NET-сервера внутри себя:
+    - маршруты и формы ответов REST как у Tasker.Web в режиме desktop (JSON camelCase, коды ошибок и тексты 400/404/409/423, заголовки версий и блокировок правки) — без изменения контракта, фронтенд (frontend/) работает без правок;
+    - события: SSE по области с теми же типами событий, что WorkspaceEvents; источник — наблюдатель файлов демона и записи через сам демон (совпадает с тем, что видят агенты по MCP);
+    - маршрутизация по области (`/w/<key>/…`) и реестр областей демона; только loopback (Host/Origin), как MCP;
+    - аутентификации нет (локальный режим desktop); режим server с JWT и токенами агентов остаётся в .NET (Tasker.Server) и не переносится;
+    - статику фронтенда демон не отдаёт: только API (REST, события, MCP, `/daemon/*`); фронтенд остаётся в оболочке десктопа.
+  - Вики «Демон-MCP» и «Интерфейс» — текущее поведение.
+  - Проверка: те же .NET-тесты REST (FieldsApiTests, SeriesApiTests, LinkInterfaceTests, EditLockInterfaceTests и др. в режиме desktop) проходят против демона; снимки ответов в golden-корпусе; фронтенд вручную против демона.

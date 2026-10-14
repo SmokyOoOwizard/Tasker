@@ -4,8 +4,29 @@ title: Проверить демон и службу systemd на настоящ
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-07T21:41:44.6133240+00:00
-updatedAt: 2026-10-07T21:41:44.6133240+00:00
+updatedAt: 2026-10-14T11:17:17.3337950+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 122
-description: 'Продолжение TSK-111: на Linux в контейнере (arm64, systemd --user) всё проверено, не проверено — настоящая машина или виртуалка x86_64: автозапуск после перезагрузки с linger и без, enable по sudo -u/ssh без сеанса (сообщение с подсказкой), дистрибутивы без systemd, scripts/test-linux.sh --platform linux/amd64 (под эмуляцией Docker Desktop на Apple Silicon образ amd64 не запускается: exec format error). Чек-лист — README, «ПРОВЕРИТЬ НА LINUX С SYSTEMD».'
+description: |-
+  Проблема
+  Автозапуск демона через `systemd --user` проверен только в контейнере Docker (arm64, systemd как PID 1). На настоящей машине или виртуалке Linux x86_64 не проверены: подъём демона после перезагрузки с linger и без, `tasker mcp autostart enable` без сеанса пользователя, поведение на дистрибутивах без systemd. Прогон под `--platform linux/amd64` на Apple Silicon не запускается.
+
+  Где
+  - rust/crates/tasker-daemon/src/autostart/systemd.rs — служба `~/.config/systemd/user/tasker-mcp.service`, сообщение про отсутствующий сеанс
+  - scripts/test-linux-systemd.sh — чек-лист автозапуска в контейнере с systemd
+  - scripts/test-linux.sh — тесты на Linux в контейнере (`--platform`)
+  - docs/wiki/Платформы.md (раздел «Linux»), docs/wiki/Демон-MCP.md — описанное поведение
+
+  Как повторить
+  - На Mac с Apple Silicon: `scripts/test-linux-systemd.sh --platform linux/amd64` (или `scripts/test-linux.sh --platform linux/amd64`) — сборка образа падает с `exec /bin/sh: exec format error`.
+  - Отчёта о проверке на настоящем x86_64 Linux нет.
+
+  Что нужно сделать
+  - На машине или виртуалке Linux x86_64 с systemd установить tasker (`install.sh`) и пройти чек-лист `scripts/test-linux-systemd.sh` вне контейнера: enable/disable/status, замена на лету под службой, перезапуск после падения, `systemctl --user stop`.
+  - Перезагрузка: с `loginctl enable-linger` демон поднимается без входа; без linger — после входа пользователя.
+  - `tasker mcp autostart enable` через `sudo -u` / `su` / ssh без сеанса logind — сообщение с подсказкой, файл службы не остаётся.
+  - Дистрибутив без systemd: автозапуск сообщает, что недоступен, `tasker mcp start` работает.
+  - `scripts/test-linux.sh` на x86_64 (нативно или на машине, где amd64 запускается).
+  - Найденные расхождения исправить; вики «Платформы» привести к проверенному поведению.
+  - Проверка: все пункты чек-листа пройдены на x86_64 Linux, результат записан в задаче.

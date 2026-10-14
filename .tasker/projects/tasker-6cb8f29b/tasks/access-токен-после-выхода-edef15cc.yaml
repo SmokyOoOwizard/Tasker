@@ -4,11 +4,25 @@ title: Access-токен после выхода
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:18.2436280+00:00
-updatedAt: 2026-10-01T15:51:18.2436280+00:00
+updatedAt: 2026-10-14T11:17:19.3044450+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 21
 description: |-
-  Раздел бэклога: Агенты и MCP.
+  Проблема
+  Выход отзывает refresh-токены сессии, но выданный access-токен (JWT) продолжает приниматься до своего срока — по умолчанию до 15 минут. При проверке JWT сверяются только пользователь и его SecurityStamp, сессия не проверяется.
 
-  Выход отзывает refresh-токены сессии, но уже выданный access-токен действует до своего срока (до 15 минут). Если нужно мгновенно — проверять сессию при каждом запросе (id сессии в JWT).
+  Где
+  - src/Tasker.Web/Auth/TokenService.cs — выдача JWT и проверка `EnsureNotRevoked`
+  - src/Tasker.Core/Auth/AuthService.cs (`SignOut`, `Issue`) — выход и выдача пары токенов
+  - src/Tasker.Storage.Db/Storages/RefreshTokenStorage.cs (`IsFamilyRevoked`) — признак закрытой сессии
+  - src/Tasker.Web/Configs/Tasker/AuthConfigs.cs — `AccessTokenLifetime`
+
+  Как повторить
+  - Сервер: `POST /api/auth/login`, сохранить `accessToken` и `refreshToken`.
+  - `POST /api/auth/logout` с этим `refreshToken`.
+  - `GET /api/auth/me` с `Authorization: Bearer <accessToken>` — ответ 200, хотя сессия закрыта.
+
+  Что нужно сделать
+  - Класть id сессии (FamilyId refresh-токена) в JWT и при проверке токена отклонять его, если сессия закрыта (`IsFamilyRevoked`).
+  - Проверка: тест — после `/auth/logout` старый access-токен получает 401, токены других сессий того же пользователя работают.

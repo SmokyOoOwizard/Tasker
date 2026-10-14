@@ -4,11 +4,25 @@ title: Подпись и нотаризация, Homebrew
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:25.6155840+00:00
-updatedAt: 2026-10-01T15:51:25.6155840+00:00
+updatedAt: 2026-10-14T11:17:21.0037380+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 46
 description: |-
-  Раздел бэклога: Консоль.
+  Проблема
+  Релизные бинарники `tasker` и `tasker-mcpd` для macOS не подписаны и не нотаризованы: скачанный браузером архив Gatekeeper не даст запустить (`install.sh` снимает карантин, но это обход, а не подпись). Формулы Homebrew нет, Windows-бинарники тоже без подписи.
 
-  Собранная локально утилита запускается без подписи Apple, но готовую сборку для других людей понадобится подписать и нотаризовать (и, возможно, выложить формулу Homebrew).
+  Где
+  - scripts/release.sh — сборка и упаковка архивов (без подписи)
+  - .github/workflows/release-build.yml — сборка под платформы (без подписи и публикации)
+  - scripts/install.sh — снятие `com.apple.quarantine`
+
+  Как повторить
+  - Собрать `scripts/release.sh --rid osx-arm64`, распаковать архив, проверить `codesign -dv app/tasker` и `spctl -a -vv app/tasker` — подписи разработчика нет.
+  - `brew install tasker` — формулы нет.
+
+  Что нужно сделать
+  - Подписывать бинарники macOS сертификатом Developer ID (hardened runtime) и нотаризовать (`notarytool`) в релизной сборке; секреты — в CI.
+  - Подписывать Windows-бинарники (Authenticode), если есть сертификат.
+  - Формула Homebrew (свой tap), ставящая `tasker` и `tasker-mcpd` из архива релиза.
+  - Проверка: `spctl -a -vv` принимает бинарники из скачанного браузером архива без снятия карантина; `brew install` из tap ставит рабочий `tasker`.

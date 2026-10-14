@@ -1,0 +1,29 @@
+formatVersion: 10
+id: 4d668f84-0889-4045-85c4-cd76db30d644
+title: 'Проверить демон MCP на Windows: фоновый запуск и автозапуск'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:26.5244700+00:00
+updatedAt: 2026-10-14T11:17:22.1892430+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 49
+description: |-
+  Проблема
+  Запуск демона без окна (`tasker mcp start`) и автозапуск через Планировщик заданий (`tasker mcp autostart enable`, задача «Tasker MCP») для Windows написаны, но ветки, работающие только на Windows (`schtasks`, `powershell`, пользователь по умолчанию), на Windows не проверялись: автозапуск проверен лишь тестами XML-определения, а .NET-тесты автозапуска на Windows пропускаются.
+
+  Где
+  - rust/crates/tasker-daemon/src/autostart/windows_task.rs — задача Планировщика (`schtasks`, XML, `conhost.exe --headless`)
+  - rust/crates/tasker-cli/src/daemon.rs — `spawn_daemon` (запуск без окна, `CREATE_NO_WINDOW`)
+  - tests/Tasker.Tests/AutostartTests.cs — `Supported` только macOS и Linux
+  - rust/crates/tasker-daemon/tests/golden_autostart.rs — эталоны определения задачи
+
+  Как повторить
+  - На Windows: `tasker mcp autostart enable`, `tasker mcp autostart status`, выйти и войти в систему, `tasker mcp status`; убить процесс `tasker-mcpd` и проверить перезапуск; `tasker mcp autostart disable`.
+  - В CI windows-latest тесты `AutostartTests` ничего не проверяют (ранний `return`).
+
+  Что нужно сделать
+  - Проверить на Windows: `mcp start` не открывает окно и не держит вывод вызвавшей программы; автозапуск создаёт задачу, демон стартует при входе без окна, перезапускается при падении, `status`/`disable` работают; пути с пробелами и кириллицей.
+  - Исправить найденные ошибки и убрать из windows_task.rs пометку «на Windows не проверены».
+  - Включить `AutostartTests` на Windows (поддельный `schtasks` или настоящая задача с отдельным именем через `TASKER_SERVICE_LABEL`).
+  - Проверка: `AutostartTests` проходят на windows-latest в CI; ручная проверка входа в систему на Windows 10/11 пройдена.

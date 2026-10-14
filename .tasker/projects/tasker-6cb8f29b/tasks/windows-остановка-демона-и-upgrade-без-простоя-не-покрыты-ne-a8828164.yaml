@@ -4,7 +4,7 @@ title: 'Windows: остановка демона и upgrade без просто�
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-11T12:55:03.0811310+00:00
-updatedAt: 2026-10-11T13:13:52.3186520+00:00
+updatedAt: 2026-10-14T11:17:18.4292560+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 165
@@ -12,10 +12,22 @@ links:
 - typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
   taskId: 160dd998-74bf-4563-8d76-b110928ef613
 description: |-
-  Разбор прогона .NET-тестов в CI (dotnet-tests.yml): на Windows пропускаются как Unix-only DaemonUpgradeTests (3 теста: замена рабочего процесса без простоя, статус с рабочими процессами, откат неудачного upgrade) и DaemonTests.Foreground_run_stops_on_interrupt_and_cleans_up (остановка tasker mcp run по прерыванию). Вместе с TSK-156 (интеграционные тесты Rust-демона на Windows не доходят до готовности) это значит, что на Windows ни один тест не проверяет остановку демона (именованное событие Local\tasker-mcp-stop-<hash>, Ctrl+C в tasker mcp run) и tasker mcp upgrade (передача сокета через WSADuplicateSocketW, Job Object).
+  Проблема
+  На Windows ни один тест не проверяет остановку демона и `tasker mcp upgrade`. DaemonUpgradeTests (A_new_process_that_dies_at_the_start_leaves_the_old_one_serving, A_new_process_that_never_gets_ready_is_removed_after_the_timeout, A_new_process_that_cannot_open_a_workspace_open_in_the_old_one_is_rolled_back) и DaemonTests.Foreground_run_stops_on_interrupt_and_cleans_up помечены `[UnixFact]` (sh-скрипты, SIGINT), Upgrade_under_load_loses_no_call_and_no_write_and_duplicates_none пропущен на Windows: в CI во время upgrade под нагрузкой запросы к `/mcp` и `/health` получали HttpRequestException — соединения обрываются при передаче сокета новому рабочему процессу. Rust-тесты демона на Windows тоже не идут (TSK-156).
 
-  Нужно: сделать эти сценарии проверяемыми на Windows — тесты с Windows-механизмами вместо сигналов Unix (именованное событие, CTRL_BREAK/GenerateConsoleCtrlEvent для mcp run), включить их на windows-latest в CI, найденные ошибки исправить. Связано с TSK-156.
+  Где
+  - tests/Tasker.Tests/DaemonUpgradeTests.cs — `[UnixFact]` и `[SkipOnWindowsFact("TSK-165: …")]`
+  - tests/Tasker.Tests/DaemonTests.cs — Foreground_run_stops_on_interrupt_and_cleans_up (`kill -INT`)
+  - rust/crates/tasker-mcpd/src/shutdown.rs — именованное событие `Local\tasker-mcp-stop-<hash>`
+  - rust/crates/tasker-mcpd/src/supervisor.rs, worker.rs — передача сокета (WSADuplicateSocketW), Job Object
+  - .github/workflows/dotnet-tests.yml — прогон на windows-latest
 
-  Справка: на Windows в отчёте тестов на 7 меньше, чем на Linux и macOS (1574 против 1581). Это не потеря: две параметризованные Unix-only теории InstallScriptTests (Bad_arguments_are_rejected_with_the_usage — 4 набора данных, Conflicting_options_are_rejected_with_the_usage — 5) при пропуске попадают в отчёт одной записью каждая (9 − 2 = 7). Установщик для Windows (install.ps1) покрыт InstallPowerShellTests: на windows-latest 11 из 11.
+  Как повторить
+  - На Windows: `dotnet test tests/Tasker.Tests --filter "FullyQualifiedName~DaemonUpgradeTests|FullyQualifiedName~DaemonTests"` — перечисленные тесты в отчёте пропущены.
+  - Убрать пропуск у Upgrade_under_load_loses_no_call_and_no_write_and_duplicates_none и прогнать в цикле — изредка HttpRequestException на вызовах во время upgrade.
 
-  Сбой в CI (windows-latest, прогон 38140857331): DaemonUpgradeTests.Upgrade_under_load_loses_no_call_and_no_write_and_duplicates_none упал — во время upgrade под нагрузкой запросы к /mcp и /health получили HttpRequestException «An error occurred while sending the request» (load 0-7…5-9, health); в предыдущем прогоне на той же ветке тест прошёл. Значит, на Windows upgrade не всегда без простоя: соединения обрываются при передаче сокета новому рабочему процессу. Этот тест — первый кандидат на проверку.
+  Что нужно сделать
+  - Сделать сценарии проверяемыми на Windows: вместо sh-скриптов и сигналов Unix — Windows-механизмы (именованное событие остановки, CTRL_BREAK через GenerateConsoleCtrlEvent для `tasker mcp run`, скрипты-заглушки нового процесса для Windows).
+  - Начать с Upgrade_under_load_loses_no_call_and_no_write_and_duplicates_none: найти, где обрываются соединения при передаче сокета, и исправить.
+  - Включить тесты на windows-latest в CI; найденные ошибки демона исправить.
+  - Проверка: DaemonUpgradeTests и Foreground_run_stops_on_interrupt_and_cleans_up проходят на windows-latest (в цикле — без обрывов соединений).

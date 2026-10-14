@@ -4,11 +4,26 @@ title: Удаление проекта через MCP
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:16.7565720+00:00
-updatedAt: 2026-10-01T15:51:16.7565720+00:00
+updatedAt: 2026-10-14T11:17:18.1755260+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 16
 description: |-
-  Раздел бэклога: Агенты и MCP.
+  Проблема
+  Через MCP нельзя удалить проект: есть `create_project` и `update_project`, а `delete_project` нет ни у сервера, ни у демона. Удаление проекта убирает всё его содержимое, поэтому инструмент не добавлялся; удалить проект можно только из интерфейса, REST или `tasker project delete`.
 
-  Инструмента `delete_project` нет намеренно: удаление проекта убирает всё содержимое. Добавить, если агентам это нужно.
+  Где
+  - src/Tasker.Mcp/Tools/ProjectTools.cs — инструменты проектов MCP сервера
+  - rust/crates/tasker-mcp/src/tools.json, rust/crates/tasker-mcp/src/catalog.rs, rust/crates/tasker-mcp/src/tools/mod.rs, rust/crates/tasker-mcp/src/tools/project.rs — инструменты демона
+  - src/Tasker.Core/Projects/ProjectService.cs (`Delete`), rust/crates/tasker-services/src/project.rs — удаление проекта
+  - rust/crates/tasker-mcpd/tests/mcp.rs — тесты MCP демона
+  - docs/wiki/MCP-и-агенты.md
+
+  Как повторить
+  - `tools/list` у демона (`http://127.0.0.1:<порт>/mcp`) или у сервера — инструмента `delete_project` нет; `tools/call` с `delete_project` отвечает, что инструмент неизвестен.
+
+  Что нужно сделать
+  - Добавить инструмент `delete_project` в MCP сервера и демона с одинаковой схемой и описанием: обязательные `projectId` и `version`, проверка блокировки правки проекта, аннотация `destructiveHint`, описание явно предупреждает, что удаляется всё содержимое проекта.
+  - На сервере — те же права, что у удаления проекта через REST.
+  - Обновить список инструментов в вики и счётчик инструментов в каталоге демона.
+  - Проверка: `delete_project` с верной версией удаляет проект и его содержимое, с устаревшей — `[modified]`, при чужой блокировке — `[locked]`; тесты MCP сервера и демона.

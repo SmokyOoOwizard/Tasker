@@ -4,8 +4,27 @@ title: 'sync и демон: предупреждать о файлах не те
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T23:29:02.8424740+00:00
-updatedAt: 2026-10-01T23:29:02.8424740+00:00
+updatedAt: 2026-10-14T11:17:21.7848180+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 69
-description: 'Версия формата в файлах .tasker (TSK-66) и tasker migrate готовы, но о файлах старого формата никто сам не сообщает: в tasker sync, git-хуках и логе демона добавить строку вида «N файлов в старом формате: запустите tasker migrate» (по аналогии с отчётом о сериях). Файлы более нового формата уже видны в списке проблем рабочей области; сюда же — понятное предупреждение при открытии папки, где такие файлы есть.'
+description: |-
+  Проблема
+  О файлах `.tasker` старого формата никто сам не сообщает: `tasker sync`, git-хуки и демон молчат, хотя `tasker migrate --dry-run` такие файлы находит. При открытии папки с файлами более нового формата понятного предупреждения тоже нет (они видны только в списке проблем области).
+
+  Где
+  - rust/crates/tasker-cli/src/sync.rs — `tasker sync` (отчёт о сериях и связях)
+  - rust/crates/tasker-cli/src/commands/hooks.rs — хуки запускают `tasker sync --quiet`
+  - rust/crates/tasker-mcpd/src/registry.rs, rust/crates/tasker-mcpd/src/sync.rs — открытие области и сверка в демоне
+  - rust/crates/tasker-files/src/format.rs, rust/crates/tasker-files/src/migration.rs — версия формата (`CURRENT`) и миграция
+  - src/Tasker.Desktop/WindowManager.cs — открытие папки в десктопе
+
+  Как повторить
+  - В рабочей папке заменить в файле задачи `formatVersion: 10` на `formatVersion: 8`
+  - `tasker sync` → только «Synced … (via direct)», без предупреждения; `tasker migrate --dry-run` → «would migrate … (format 8 -> 10)»
+
+  Что нужно сделать
+  - `tasker sync` (в том числе с `--quiet` из хуков) и `--json`: строка «N файлов в старом формате: запустите tasker migrate»
+  - Демон: та же строка в журнале при открытии и сверке области
+  - Файлы более нового формата: понятное предупреждение при открытии папки (консоль, демон, десктоп) — обновить Tasker
+  - Проверка: тесты — после понижения formatVersion в файле `tasker sync` и `sync --quiet` печатают предупреждение, после `tasker migrate` его нет; журнал демона содержит строку

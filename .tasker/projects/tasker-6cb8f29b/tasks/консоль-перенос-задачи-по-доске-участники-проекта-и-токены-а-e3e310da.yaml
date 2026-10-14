@@ -1,0 +1,29 @@
+formatVersion: 10
+id: e3e310da-ef26-4f9e-bfcd-a5b8205127b7
+title: 'Консоль: перенос задачи по доске, участники проекта и токены агентов'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:28.0108190+00:00
+updatedAt: 2026-10-14T11:17:22.5685760+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 54
+description: |-
+  Проблема
+  В консоли нет переноса задачи в колонку доски: в ядре и MCP он есть (`move_task`), а у `tasker board` только create, list, get, tasks, show, update, delete. Нет команд для участников проекта и токенов агентов — они есть только в REST сервера, а консоль к серверу не подключается.
+
+  Где
+  - rust/crates/tasker-cli/src/commands/board.rs — команды `tasker board`
+  - rust/crates/tasker-services/src/board.rs — `move_task` (статус из правила переноса колонки, проверка условий по полям)
+  - rust/crates/tasker-mcp/src/tools/board.rs — MCP `move_task`
+  - rust/crates/tasker-cli/src/commands/user.rs — `tasker agent`
+  - src/Tasker.Web/TaskerApi.cs — REST `/projects/{id}/members`, `/agents/{id}/tokens`
+
+  Как повторить
+  - `tasker board --help` — команды переноса нет
+  - `tasker agent --help` — нет токенов; `tasker project --help` — нет участников
+
+  Что нужно сделать
+  - `tasker board move <доска> <колонка> <задача>` (задача по ссылке или id, `--expected-version`, `--json`) с теми же ошибками, что у `move_task`; автодополнение, `tasker manual`, вики «Консоль»
+  - Участники проекта (список, добавить, удалить) и токены агентов (список, выпуск, отзыв) — в режиме работы консоли с сервером
+  - Проверка: тест консоли — задача переносится в колонку и получает статус из правила, неподходящая по полям отклоняется; участники и токены — тестом против сервера

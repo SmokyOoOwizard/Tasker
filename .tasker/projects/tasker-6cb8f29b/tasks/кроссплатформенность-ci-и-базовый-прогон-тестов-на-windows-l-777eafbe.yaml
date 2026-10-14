@@ -4,14 +4,30 @@ title: 'Кроссплатформенность: CI и базовый прог�
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-07T18:51:17.9695460+00:00
-updatedAt: 2026-10-07T18:51:17.9695460+00:00
+updatedAt: 2026-10-14T11:17:17.1412990+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 115
 description: |-
-  Сегодня нет ни удалённого репозитория, ни CI (в корне нет .github, git remote пуст), всё проверяется на одном macOS. Без прогона на Windows и Linux остальные задачи нельзя считать готовыми.
+  Проблема
+  CI есть: Rust-тесты (cargo nextest) и .NET-тесты (tests/Tasker.Tests) идут на ubuntu-latest, macos-latest и windows-latest. Но .NET-тесты на Windows на main падают, фронтенд в CI не собирается и не проверяется (`-p:EmbedFrontend=false`, Node.js не ставится), стенд tools/Tasker.Stress в CI не запускается, а в вики нет матрицы «платформа × что проверено».
 
-  РЕШЕНИЯ ПОЛЬЗОВАТЕЛЯ (общие для всей фичи «Windows, macOS и Linux»): Windows поддерживается обязательно и на равных с macOS и Linux; автозапуск демона на Windows — Планировщик задач Windows для текущего пользователя (без прав администратора, перезапуск при падении, запуск без окна); поставка на первом этапе — самодостаточные сборки (без установленного .NET) для win-x64, win-arm64, linux-x64, linux-arm64, osx-arm64, osx-x64 и скрипты установки (install.ps1 для Windows, общий install.sh для macOS и Linux вместо install-macos.sh); winget/brew/apt — отдельными задачами позже; бесшовное обновление демона (TSK-103: супервизор и рабочие процессы, общий слушающий сокет) влито для macOS и Linux, на Windows демон пока однопроцессный (режим --single), `tasker mcp upgrade` на Windows работает как перезапуск до задачи про сокет.
-  ВАЖНО: основная машина разработки — macOS; проверить Windows локально нельзя. Нужен способ запускать сборку и тесты на Windows (CI-сервис, виртуальная машина или отдельная машина) — первая задача фичи (CI). Каждая Windows-задача считается готовой, только когда тесты ПРОХОДЯТ НА WINDOWS.
+  Где
+  - .github/workflows/dotnet-tests.yml, .github/workflows/release-build.yml
+  - rust/.config/nextest.toml — профиль ci
+  - tests/Tasker.Tests/PlatformFactAttribute.cs, tests/Tasker.Tests/PlatformFacts.cs — пометки платформенных тестов
+  - frontend/package.json — `build` (tsc -b && vite build), `lint`
+  - tools/Tasker.Stress — стенд параллельной работы
+  - docs/wiki/Платформы.md, docs/wiki/Разработка.md
 
-  Что сделать: (1) выбрать, где гонять: CI-сервис с матрицей windows-latest / ubuntu-latest / macos-latest (например, GitHub Actions — тогда нужен удалённый репозиторий; решить вместе с пользователем: хостинг, приватность), либо виртуальные машины/отдельная Windows-машина с воспроизводимым скриптом запуска; (2) единый скрипт сборки и тестов для трёх платформ (dotnet build/test, фронтенд npm ci и tsc), кэш NuGet и npm; (3) БАЗОВЫЙ ПРОГОН: собрать и запустить все тесты на Windows и Linux, ЗАФИКСИРОВАТЬ результат (сколько тестов падает и почему, сгруппировать причины: пути и разделители, имена файлов, блокировки, процессы, переводы строк, зависимость от sh/bash/python/launchctl/ps/kill в тестах и скриптах, кодировка), завести по группам задачи-баги и привязать к эпику; на Linux известная проблема: в контейнере CLI не находит Microsoft.Extensions.Logging.Abstractions (отдельная проблема сборки, TSK-111); (4) пометки платформ в тестах (`[SkippableFact]`/трейты) там, где тест по своей природе платформенный (launchd, systemd, Планировщик задач), чтобы пропуск был явным, а не молчаливым; (5) в CI включить стенд tools/Tasker.Stress в малом объёме; (6) README: матрица «платформа × что проверено».
+  Как повторить
+  - `gh run list --workflow ".NET tests" --branch main` — задание windows-latest с ошибкой; `gh run view <id> --log-failed` — SeriesIndexTests.Exclusive_gives_unique_consecutive_numbers_under_parallelism_from_two_containers, DaemonTests.Only_one_server_runs_at_a_time, ConcurrencyTests.Of_two_processes_changing_the_same_version_only_one_wins, ParallelWorkTests, LinkInterfaceTests
+  - `grep -n 'npm\|Stress' .github/workflows/*.yml` — пусто
+
+  Что нужно сделать
+  - Разобрать падения .NET-тестов на Windows по группам причин (пути, блокировки файлов, процессы, переводы строк, кодировка) и завести на каждую группу задачу-баг в эпике
+  - Платформенные по природе тесты (launchd, systemd, Планировщик заданий) — с явным пропуском на других ОС
+  - CI: сборка фронтенда (`npm ci`, `npm run build`, `npm run lint`) с кэшем npm
+  - CI: стенд tools/Tasker.Stress в малом объёме на трёх платформах
+  - docs/wiki/Платформы.md: матрица «платформа × что проверено в CI»
+  - Проверка: оба workflow зелёные на main на трёх платформах; задание фронтенда и стенда проходят

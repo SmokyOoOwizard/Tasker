@@ -4,11 +4,26 @@ title: PostgreSQL для серий не проверялся
 typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:23.5043390+00:00
-updatedAt: 2026-10-01T15:51:23.5043390+00:00
+updatedAt: 2026-10-14T11:17:20.6010530+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 39
 description: |-
-  Раздел бэклога: Серии задач.
+  Проблема
+  Серии в хранилище БД проверены только на SQLite. На Postgres не запускались: транзакция `Serializable` в `IWriteScope.Exclusive`, повтор при сбое сериализации (`40001`) и взаимной блокировке (`40P01`), перевод запроса `GetWithSeriesNotIn` (`Contains` по массиву id) в SQL.
 
-  Модели и запросы серий проверены на SQLite; уровень изоляции Serializable и повтор при сбоях сериализации и взаимных блокировках (`40001`, `40P01`), а также перевод `GetWithSeriesNotIn` в SQL на Postgres не запускались.
+  Где
+  - src/Tasker.Storage.Db/Storages/WriteScope.cs — транзакция и повторы
+  - src/Tasker.Storage.Db/Storages/TaskStorage.cs — `GetWithSeriesNotIn`
+  - src/Tasker.Storage.Db/DbStorageModule.cs — выбор провайдера Postgres
+  - tests/Tasker.Tests — тестов на Postgres нет
+
+  Как повторить
+  - `grep -rln -i "postgres\|npgsql" tests` — тестов с Postgres нет.
+  - Запустить сервер с Postgres: `dotnet run --project src/Tasker.Server -- --postgres="Host=...;Database=...;Username=...;Password=..."` и параллельно создавать задачи в одной серии.
+
+  Что нужно сделать
+  - Прогнать на Postgres сценарии серий: параллельное создание задач в одной серии (уникальные номера без дыр и падений), повторы при `40001`/`40P01`, `cleanup` с `GetWithSeriesNotIn`.
+  - Исправить найденные ошибки.
+  - Добавить тесты на Postgres (например, Testcontainers или сервис Postgres в CI), запускаемые в workflow .NET-тестов.
+  - Проверка: тесты серий проходят на Postgres в CI.

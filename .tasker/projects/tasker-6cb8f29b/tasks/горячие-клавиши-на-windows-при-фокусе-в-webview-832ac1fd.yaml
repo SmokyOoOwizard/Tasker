@@ -4,11 +4,22 @@ title: Горячие клавиши на Windows при фокусе в WebView
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:21.4427570+00:00
-updatedAt: 2026-10-01T15:51:21.4427570+00:00
+updatedAt: 2026-10-14T11:17:20.1443170+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 32
 description: |-
-  Раздел бэклога: Десктоп.
+  Проблема
+  На Windows и Linux горячие клавиши окна (Ctrl+T, Ctrl+N, Ctrl+O, Ctrl+W, Ctrl+Tab, Ctrl+1…9) заданы через `KeyBindings` окна, а когда фокус в WebView, нажатия до окна не доходят — WebView2 обрабатывает их сам. На macOS команды идут через меню и работают.
 
-  На macOS команды вкладок идут через меню и работают из WebView; на Windows WebView2 забирает клавиши себе — нужен `AcceleratorKeyPressed` или аналог.
+  Где
+  - src/Tasker.Desktop/WindowCommands.cs — меню и `KeyBindings` (ветка `!OperatingSystem.IsMacOS()`)
+  - src/Tasker.Desktop/WorkspaceWindow.axaml.cs — вкладка с `NativeWebView`
+
+  Как повторить
+  - Собрать и запустить десктоп на Windows, открыть папку, кликнуть в страницу интерфейса и нажать Ctrl+T или Ctrl+W — новая вкладка не открывается, вкладка не закрывается; при фокусе на полосе вкладок те же клавиши работают.
+
+  Что нужно сделать
+  - Перехватывать сочетания команд окна, когда фокус в WebView на Windows (WebView2 `AcceleratorKeyPressed` или аналог в Avalonia WebView), и выполнять те же команды, что `WindowCommands`; остальные клавиши оставлять странице.
+  - То же для Linux, если там WebView тоже забирает клавиши.
+  - Проверка: на Windows с фокусом в странице все сочетания из `WindowCommands` срабатывают ровно один раз, ввод текста и Ctrl+C/Ctrl+V в странице работают.

@@ -4,11 +4,24 @@ title: Сборка фронта из `dotnet build`
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:20.5785290+00:00
-updatedAt: 2026-10-01T15:51:20.5785290+00:00
+updatedAt: 2026-10-14T11:17:19.8059170+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 29
 description: |-
-  Раздел бэклога: Фронтенд.
+  Проблема
+  Фронтенд встраивается в Tasker.Web из `frontend/dist`, но `dotnet build` его не собирает: перед сборкой .NET нужно вручную запустить `npm run build`. Без этого сервер и десктоп собираются без интерфейса (в лог пишется только предупреждение).
 
-  Сейчас `npm run build` нужно запускать вручную перед сборкой .NET.
+  Где
+  - src/Tasker.Web/Tasker.Web.csproj — встраивание `frontend/dist`, свойство `EmbedFrontend`
+  - src/Tasker.Web/TaskerWebExtensions.cs (`CreateFrontendProvider`) — предупреждение «Frontend is not embedded»
+  - docs/wiki/Разработка.md — инструкция по сборке
+
+  Как повторить
+  - В свежем клоне или worktree: `dotnet build` и `dotnet run --project src/Tasker.Server` — страницы не открываются, в логе «Frontend is not embedded: run `npm run build`…».
+
+  Что нужно сделать
+  - MSBuild-цель в Tasker.Web: перед сборкой `npm ci`/`npm install` (если нет `node_modules`) и `npm run build` с инкрементальностью по исходникам `frontend/`, чтобы повторная сборка без изменений не пересобирала фронт.
+  - При `-p:EmbedFrontend=false` цель не выполняется (CI-тесты без Node).
+  - Обновить docs/wiki/Разработка.md.
+  - Проверка: в чистом клоне `dotnet build` и запуск сервера открывают интерфейс; повторный `dotnet build` не запускает npm; `-p:EmbedFrontend=false` собирается без npm.

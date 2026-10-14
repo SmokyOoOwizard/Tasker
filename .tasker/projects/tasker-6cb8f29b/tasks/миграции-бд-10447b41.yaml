@@ -4,11 +4,29 @@ title: Миграции БД
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:12.2824440+00:00
-updatedAt: 2026-10-01T15:51:12.2824440+00:00
+updatedAt: 2026-10-14T11:17:16.7692010+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 1
 description: |-
-  Раздел бэклога: Данные и хранилища.
+  Проблема
+  Схема БД создаётся только в пустой базе (`EnsureCreated` в .NET, `SCHEMA` в Rust) и потом не обновляется: из изменений схемы поддержаны лишь два столбца `link_types` (`AllowCycles`, `Hierarchical`), дописанные вручную. После любого другого изменения моделей базу, созданную раньше, приходится пересоздавать. Для SQLite и Postgres нужны разные миграции, а файл SQLite одновременно открывают .NET (десктоп, сервер) и Rust (консоль, демон).
 
-  Сейчас схему создаёт `EnsureCreated`, он не обновляет уже существующую схему: после изменения моделей старую БД приходится удалять. У SQLite и Postgres миграции разные.
+  Где
+  - src/Tasker.Storage.Db/DbInitializer.cs — `EnsureCreatedAsync` и `AddMissingColumns`
+  - src/Tasker.Storage.Db/AppDbContext.cs, src/Tasker.Storage.Db/Models/ — модели EF Core
+  - rust/crates/tasker-services/src/db/mod.rs — создание схемы и `add_missing_columns`
+  - rust/crates/tasker-services/src/db/schema.sql, rust/tests/golden/sqlite/schema.sql, rust/crates/tasker-services/tests/db_schema.rs — схема SQLite и её эталон
+  - docs/wiki/Хранение-и-git.md, docs/wiki/Настройка-и-сервер.md — «схема не мигрирует»
+
+  Как повторить
+  - `tasker --sqlite x.db project create Demo` — создаётся база со схемой.
+  - `sqlite3 x.db 'DROP TABLE edit_locks'` (имитация базы, созданной до появления таблицы).
+  - `tasker --sqlite x.db lock acquire project Demo` → `SQLite Error 1: 'no such table: edit_locks'`: недостающая таблица не создаётся, схема не доводится до текущей.
+
+  Что нужно сделать
+  - Ввести версионирование схемы БД и миграции для SQLite и Postgres вместо `EnsureCreated` и ручного `AddMissingColumns`.
+  - Rust-хранилище SQLite (консоль, демон) должно доводить файл до той же версии схемы и тем же способом, что и .NET, либо проверять версию и отказывать с понятной ошибкой.
+  - Существующие базы (в т. ч. без столбцов `AllowCycles`/`Hierarchical`) обновляются без потери данных.
+  - Обновить вики: убрать «схема не мигрирует».
+  - Проверка: база, созданная по прежней схеме (без таблицы/столбца), открывается десктопом, сервером и консолью и доводится до текущей схемы; тесты схемы (`db_schema.rs`, .NET-тесты хранилища) проходят для новой и обновлённой базы.

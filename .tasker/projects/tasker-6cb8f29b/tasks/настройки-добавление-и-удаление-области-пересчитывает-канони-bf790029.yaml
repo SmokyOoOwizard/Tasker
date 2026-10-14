@@ -1,0 +1,30 @@
+formatVersion: 10
+id: bf790029-9efe-418e-8802-e6c42e692f55
+title: 'Настройки: добавление и удаление области пересчитывает канонический путь всех записей (.NET и Rust)'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-09T13:15:29.9674740+00:00
+updatedAt: 2026-10-14T11:17:22.7566390+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 146
+description: |-
+  Проблема
+  Добавление и удаление рабочей области в глобальных настройках сравнивает области по `Location.Id`, а `Location` каждой записи строится заново на каждом сравнении — с вычислением канонического пути, который перечисляет каталоги пути. Поэтому каждый вызов стоит O(число записей × длина пути × размер каталогов). В каталоге с ~50 тыс. записей (временный каталог macOS) 20 последовательных добавлений занимают ~12 с.
+
+  Где
+  - src/Tasker.Global/SettingsStore.cs — AddWorkspace, RemoveWorkspace (`x.Location.Id`)
+  - src/Tasker.Global/GlobalSettings.cs — `WorkspaceEntry.Location` (строится при каждом обращении)
+  - src/Tasker.Storage.Files/Workspaces/WorkspaceLocation.cs, CanonicalPath.cs
+  - rust/crates/tasker-core/src/settings/store.rs — add_workspace, remove_workspace (`x.location().id()`)
+  - rust/crates/tasker-core/src/settings/global_settings.rs — `WorkspaceEntry::location`
+
+  Как повторить
+  - С временным `TASKER_HOME` добавить несколько областей подряд с `TASKER_PROFILE=1 tasker mcp workspace add <папка>` — счётчик `[count] canonical-path` растёт с числом записей (1, 2, 3, …): на каждое добавление пересчитываются пути всех записей. В каталоге с десятками тысяч записей (`$TMPDIR` на macOS) каждое добавление заметно медленнее предыдущего.
+  - .NET: SettingsTests.Parallel_updates_are_not_lost при переполненном временном каталоге упирается в таймаут `settings.lock`.
+
+  Что нужно сделать
+  - Не вычислять канонический путь существующих записей на каждом сравнении: кэшировать `Location` в записи или сравнивать с уже сохранённым каноническим путём без повторного раскрытия.
+  - Id области (детерминизм) не меняется.
+  - Исправить в обеих реализациях (.NET SettingsStore и Rust store.rs).
+  - Проверка: тест — N добавлений областей вычисляют канонический путь O(N) раз, а не O(N²); SettingsTests проходят при переполненном временном каталоге.

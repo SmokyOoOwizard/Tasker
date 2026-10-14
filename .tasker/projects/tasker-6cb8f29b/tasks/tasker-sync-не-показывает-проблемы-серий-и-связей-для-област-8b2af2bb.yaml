@@ -1,0 +1,27 @@
+formatVersion: 10
+id: 8b2af2bb-4e77-4d8f-a809-51c7d2c7cd4c
+title: '`tasker sync` не показывает проблемы серий и связей для области SQLite'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-01T15:51:24.1212090+00:00
+updatedAt: 2026-10-14T11:17:22.2763210+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 41
+description: |-
+  Проблема
+  `tasker sync` для области в файле SQLite сразу отвечает «A SQLite workspace has no cache: nothing to sync» и не показывает состояние серий и связей проектов, как для папки. Сверять кэш у SQLite действительно нечего, но проблемы серий и связей (ссылки на отсутствующие серии, связи с отсутствующими задачами и типами) так не видны; `cleanup --check` и MCP `series_health` на SQLite работают.
+
+  Где
+  - rust/crates/tasker-cli/src/sync.rs — ранний выход для `WorkspaceKind::Sqlite`
+  - rust/crates/tasker-services/src/health.rs — `health::compute`, `describe`, `describe_links`
+  - rust/crates/tasker-mcpd/src/sync.rs — сверка через демон (для SQLite уже считает `health::compute`)
+
+  Как повторить
+  - `tasker --sqlite /tmp/a.db project create Demo`
+  - `tasker --sqlite /tmp/a.db sync` — «A SQLite workspace has no cache: nothing to sync», отчёта о сериях и связях нет; с `--json` — только `path`, `via: null`, `problemCount: 0`.
+
+  Что нужно сделать
+  - Для SQLite в `tasker sync` пропускать сверку кэша, но печатать (и отдавать в `--json` в поле `series`) проблемы серий и связей проектов так же, как для папки; с `-q` — молчать, если проблем нет.
+  - Обновить docs/wiki/Консоль.md (там сказано, что для SQLite `sync` сообщает, что делать нечего).
+  - Проверка: в БД с задачей, ссылающейся на удалённую серию, `tasker --sqlite <файл> sync` показывает проблему, а без проблем — короткое сообщение.

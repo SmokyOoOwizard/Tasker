@@ -4,11 +4,29 @@ title: Проверить Postgres
 typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:13.1656790+00:00
-updatedAt: 2026-10-01T15:51:13.1656790+00:00
+updatedAt: 2026-10-14T11:17:20.6795590+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 4
 description: |-
-  Раздел бэклога: Данные и хранилища.
+  Проблема
+  Хранение в Postgres (только сервер) ни разу не запускалось: тесты и CI работают на SQLite и файлах. В коде есть ветки только для Postgres — коды ошибок уникальности, сериализации и взаимоблокировки, `ALTER TABLE … IF NOT EXISTS`, сортировка серий в памяти из-за сортировки по локали, — их поведение не проверено.
 
-  Всё проверялось на SQLite и файлах; на Postgres ни разу не запускалось.
+  Где
+  - src/Tasker.Storage.Db/DbStorageModule.cs, src/Tasker.Storage.Db/Configs/Tasker/DbConfigs.cs — выбор провайдера (`--postgres`, `TASKER_DB_CONFIGS_POSTGRES_CONNECTION_STRING`)
+  - src/Tasker.Storage.Db/DbInitializer.cs — создание схемы и добавление столбцов для Postgres
+  - src/Tasker.Storage.Db/Storages/WriteScope.cs, src/Tasker.Storage.Db/Storages/DbErrors.cs, src/Tasker.Storage.Db/Storages/SeriesStorage.cs, src/Tasker.Storage.Db/AppDbContext.cs
+  - src/Tasker.Web/StorageRegistration.cs, src/Tasker.Server
+  - tests/Tasker.Tests, .github/workflows/dotnet-tests.yml — тестов на Postgres нет
+  - docs/wiki/Настройка-и-сервер.md, docs/wiki/Хранение-и-git.md — «Postgres не проверялся»
+
+  Как повторить
+  - `grep -rli postgres tests --include='*.cs'` — только тесты разбора параметров (`ConfigDiagnosticsTests`), хранилище на Postgres не тестируется.
+  - Запустить сервер с `--postgres="Host=…;Database=…;Username=…;Password=…"` на пустой базе — сценарий не проверялся ни вручную, ни в CI.
+
+  Что нужно сделать
+  - Запустить сервер на реальном Postgres: создание схемы на пустой базе, повторный запуск на существующей, регистрация, проекты, задачи, серии, связи, поля, доски, блокировки правки, токены агентов.
+  - Проверить ветки, специфичные для Postgres: повтор записи при сериализационном конфликте и взаимоблокировке, нарушение уникальности (гонка за номер серии), регистр в поиске по имени, добавление столбцов `link_types`.
+  - Исправить найденные ошибки; добавить тесты хранилища на Postgres (например, через контейнер в CI или по переменной окружения со строкой подключения).
+  - Убрать из вики «Postgres не проверялся», если всё работает.
+  - Проверка: сервер с `--postgres` проходит перечисленные сценарии; тесты хранилища на Postgres проходят.

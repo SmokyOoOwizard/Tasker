@@ -4,11 +4,23 @@ title: Тесты API и сервера
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:28.8861960+00:00
-updatedAt: 2026-10-01T15:51:28.8861960+00:00
+updatedAt: 2026-10-14T11:17:21.5122140+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 57
 description: |-
-  Раздел бэклога: Качество.
+  Проблема
+  REST проверен в тестовом проекте лишь частично: в tests/Tasker.Tests приложение поднимается в процессе (`TaskerWebApp.CreateBuilder`, SQLite в памяти, временная папка) для задач, серий, полей, перечислений, связей и блокировок, а в серверном режиме — для серий, полей, входа и токенов агентов. Не покрыты тестами REST доски и перенос задачи по доске, участники проекта, статусы и наборы статусов, пользователи, обновление сессии, выход и смена пароля, статистика и проблемы области.
 
-  Есть тесты CLI и рабочих областей (`tests/Tasker.Tests`), но сквозные проверки API — Python-скрипты вне репозитория. Перенести в тестовый проект (`WebApplicationFactory`, SQLite in-memory + временная папка для файлов) и запускать в CI.
+  Где
+  - src/Tasker.Web/TaskerApi.cs — маршруты REST
+  - tests/Tasker.Tests/SeriesApiTests.cs, FieldsApiTests.cs, SeriesServerApiTests.cs, FieldsServerTests.cs — существующие тесты API
+  - .github/workflows/dotnet-tests.yml — прогон tests/Tasker.Tests в CI
+
+  Как повторить
+  - `grep -l '/boards\|/members\|auth/refresh\|auth/logout\|/password' tests/Tasker.Tests/*.cs` — тестов этих маршрутов через HTTP нет
+
+  Что нужно сделать
+  - Тесты REST в tests/Tasker.Tests для непокрытых маршрутов: доски и `/boards/{id}/columns/{columnId}/move`, участники проекта, статусы и наборы статусов, пользователи, `/auth/refresh`, `/auth/logout`, `/users/{id}/password`, `/projects/{id}/stats`, `/workspace/problems`
+  - В серверном режиме — права: без входа 401, чужой проект недоступен, участник видит только свои проекты
+  - Проверка: `dotnet test tests/Tasker.Tests` проходит локально и в CI
