@@ -7,7 +7,8 @@
 //!   .gitignore            — исключает .cache и временные файлы записи
 //!   .cache/               — локальный индекс и блокировки, в git не попадает
 //!   users/<id>.yaml        — пользователи общие для всех проектов
-//!   projects/<projectId>/
+//!   projects/<название>-<id8>/      — папка проекта: название проекта и первые 8 знаков его id, как у файлов сущностей (см.
+//!                                    `project_folders`); старое имя — полный Guid: <projectId>/
 //!     project.yaml
 //!     tasks/<заголовок>-<id8>.yaml   — задачи; как и у всех сущностей проекта ниже, в имени файла — название (у задачи заголовок)
 //!                                      и первые 8 знаков id (см. `names`); старые имена — по полному Guid: <id>.yaml
@@ -15,6 +16,7 @@
 //! ```
 use crate::error::{Error, Result};
 use crate::names::{self, EXTENSION, ParsedName};
+use crate::project_folders::{self, FolderName, ProjectFolders};
 use std::io;
 use std::path::{Path, PathBuf};
 use tasker_core::ids::{guid_d, parse_guid};
@@ -140,8 +142,8 @@ pub const ENUMS: EntityFolder = EntityFolder {
     empty_slug: "enum",
 };
 
-/// Все папки сущностей проекта (`EntityFolders.All`). Пользователи (`users/<id>.yaml`) и проекты (`projects/<id>/project.yaml`)
-/// сюда не входят: у них файл называется по id.
+/// Все папки сущностей проекта (`EntityFolders.All`). Пользователи (`users/<id>.yaml`) и проекты (`projects/<папка>/project.yaml`)
+/// сюда не входят.
 pub const ALL_FOLDERS: [EntityFolder; 9] = [TASKS, TASK_TYPES, STATUSES, STATUS_SETS, BOARDS, SERIES, LINK_TYPES, FIELDS, ENUMS];
 
 /// `EntityFolders.Find`: None — у этого вида нет папки сущностей в проекте (пользователь, проект).
@@ -166,36 +168,68 @@ pub struct LayoutEntry {
     pub id_prefix: Option<String>,
 }
 
-/// `WorkspaceLayout.Classify`: индексируются только файлы раскладки. Всё остальное в `.tasker` — `.cache`, временные файлы
-/// атомарной записи, `.gitignore`, чужие файлы — None. `relative_path` — относительно `.tasker`, через `/`.
-pub fn classify(relative_path: &str) -> Option<LayoutEntry> {
+/// Чем является путь по одной своей форме, без обращения к диску.
+enum Shape<'a> {
+    User(Uuid, &'a str),
+    ProjectFile(&'a str, FolderName),
+    Entity(&'a str, &'static EntityFolder, ParsedName, &'a str),
+}
+
+fn shape(relative_path: &str) -> Option<Shape<'_>> {
     let parts: Vec<&str> = relative_path.split('/').collect();
     match parts.as_slice() {
-        ["users", file] => {
-            let id = parse_guid(file.strip_suffix(EXTENSION)?)?;
-            Some(LayoutEntry {
-                kind: EntityKind::User,
-                project_id: None,
-                id: Some(id),
-                stem: names::stem(file).to_string(),
-                id_prefix: None,
-            })
+        ["users", file] => Some(Shape::User(parse_guid(file.strip_suffix(EXTENSION)?)?, file)),
+        ["projects", project, PROJECT_FILE_NAME] => Some(Shape::ProjectFile(project, project_folders::parse_name(project)?)),
+        // Сущности проекта: имя — «название-первые знаки id» или, в старом формате, полный Guid.
+        ["projects", project, folder, file] => {
+            project_folders::parse_name(project)?;
+            Some(Shape::Entity(project, folder_named(folder)?, names::try_parse(file)?, file))
         }
-        ["projects", project, PROJECT_FILE_NAME] => {
-            let project_id = parse_guid(project)?;
+        _ => None,
+    }
+}
+
+/// Похож ли путь на файл раскладки — по одному имени, без обращения к диску (наблюдатель отсеивает шум до сверки).
+pub fn is_layout_file(relative_path: &str) -> bool {
+    shape(relative_path).is_some()
+}
+
+/// `WorkspaceLayout.Classify`: индексируются только файлы раскладки. Всё остальное в `.tasker` — `.cache`, временные файлы
+/// атомарной записи, `.gitignore`, чужие файлы — None. `relative_path` — относительно `.tasker`, через `/`.
+///
+/// Проект файла — по его папке ([`ProjectFolders::project_id`]); файлы папки, проект которой не узнать, — None. `project.yaml`
+/// второй папки проекта — тоже None: проект — `project.yaml` основной папки, о второй сообщает
+/// [`project_folders::second_folder_problems`]. У папки с новым именем id проекта — в файле, а в имени только начало
+/// (`id_prefix`, сверяется при чтении).
+pub fn classify(relative_path: &str, folders: &ProjectFolders) -> Option<LayoutEntry> {
+    match shape(relative_path)? {
+        Shape::User(id, file) => Some(LayoutEntry {
+            kind: EntityKind::User,
+            project_id: None,
+            id: Some(id),
+            stem: names::stem(file).to_string(),
+            id_prefix: None,
+        }),
+        Shape::ProjectFile(folder, name) => {
+            let (id, id_prefix) = match &name {
+                FolderName::Guid(id) => (Some(*id), None),
+                FolderName::Named(prefix) => (None, Some(prefix.clone())),
+            };
+            if let Some(project_id) = folders.project_id(folder)
+                && folders.primary(&project_id).is_some_and(|primary| primary != folder)
+            {
+                return None;
+            }
             Some(LayoutEntry {
                 kind: EntityKind::Project,
                 project_id: None,
-                id: Some(project_id),
+                id,
                 stem: names::stem(PROJECT_FILE_NAME).to_string(),
-                id_prefix: None,
+                id_prefix,
             })
         }
-        // Сущности проекта: имя — «название-первые знаки id» или, в старом формате, полный Guid.
-        ["projects", project, folder, file] => {
-            let project_id = parse_guid(project)?;
-            let entity_folder = folder_named(folder)?;
-            let parsed = names::try_parse(file)?;
+        Shape::Entity(folder, entity_folder, parsed, file) => {
+            let project_id = folders.project_id(folder)?;
             let (id, id_prefix) = match parsed {
                 ParsedName::FullId(id) => (Some(id), None),
                 ParsedName::IdPrefix(prefix) => (None, Some(prefix)),
@@ -208,7 +242,6 @@ pub fn classify(relative_path: &str) -> Option<LayoutEntry> {
                 id_prefix,
             })
         }
-        _ => None,
     }
 }
 
@@ -302,8 +335,42 @@ impl TaskerDirectory {
         self.project(project_id).project_file().exists() || !self.deleted_project_marker(project_id).exists()
     }
 
+    /// Снимок папок проектов на одну операцию.
+    pub fn folders(&self) -> ProjectFolders {
+        ProjectFolders::new(self)
+    }
+
+    /// Основная папка проекта (см. [`project_folders`]); папки нет — прежнее имя `projects/<guid>/` (такого проекта нет, и путь
+    /// никуда не ведёт, или его папку создаст запись).
     pub fn project(&self, project_id: &Uuid) -> ProjectDirectory {
-        ProjectDirectory::new(self.projects().join(guid_d(project_id)))
+        self.project_dirs(project_id)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| self.legacy_project(project_id))
+    }
+
+    /// Все папки проекта, основная первой; пусто — папки нет.
+    pub fn project_dirs(&self, project_id: &Uuid) -> Vec<ProjectDirectory> {
+        self.folders()
+            .folders_of(project_id)
+            .iter()
+            .map(|folder| self.project_named(folder))
+            .collect()
+    }
+
+    /// Папка `projects/<folder>/`.
+    pub fn project_named(&self, folder: &str) -> ProjectDirectory {
+        ProjectDirectory::new(self.projects().join(folder))
+    }
+
+    /// Папка проекта с этим названием: `projects/<slug>-<id8>/`.
+    pub fn named_project(&self, name: &str, project_id: &Uuid) -> ProjectDirectory {
+        self.project_named(&project_folders::folder_name(name, project_id))
+    }
+
+    /// Прежнее имя папки проекта — полный Guid (формат до версии 10).
+    pub fn legacy_project(&self, project_id: &Uuid) -> ProjectDirectory {
+        self.project_named(&guid_d(project_id))
     }
 
     pub fn user_file(&self, id: &Uuid) -> PathBuf {
@@ -463,16 +530,21 @@ pub mod path_budget {
     /// MAX_PATH Windows: 259 знаков и завершающий нуль.
     pub const WINDOWS_MAX_PATH: usize = 260;
 
+    /// Самая длинная папка проекта: `{название}-{id8}` с названием предельной длины (длиннее прежнего имени — Guid).
+    pub fn longest_project_folder() -> usize {
+        (MAX_SLUG_LENGTH + 1 + ID_LENGTH).max(36)
+    }
+
     /// Самый длинный путь файла внутри рабочей папки (без неё самой):
-    /// `.tasker\projects\{guid}\status-sets\{название}-{id8}.yaml.tmp` — с самой длинной папкой сущностей, названием предельной
-    /// длины и временным файлом записи.
+    /// `.tasker\projects\{название}-{id8}\status-sets\{название}-{id8}.yaml.tmp` — с самой длинной папкой проекта, самой длинной
+    /// папкой сущностей, названием предельной длины и временным файлом записи.
     pub fn longest_relative_path() -> usize {
         let longest_folder = ALL_FOLDERS.iter().map(|x| x.name.len()).max().unwrap_or(0);
         NAME.len()
             + 1
             + "projects".len()
             + 1
-            + 36
+            + longest_project_folder()
             + 1
             + longest_folder
             + 1
@@ -501,41 +573,97 @@ mod tests {
 
     #[test]
     fn classify_recognises_layout_files_only() {
+        let ws = temp_dir();
+        let dir = TaskerDirectory::new(&ws);
         let p = "11111111-1111-4111-8111-111111111111";
+        let project_id = Uuid::parse_str(p).unwrap();
+        let named = "golden-11111111";
+        std::fs::create_dir_all(dir.projects().join(named)).unwrap();
+        std::fs::write(
+            dir.projects().join(named).join(PROJECT_FILE_NAME),
+            format!("formatVersion: 10\nid: {p}\nname: Golden\ncreatedAt: 2026-01-01T00:00:00.0000000+00:00\n"),
+        )
+        .unwrap();
+        let folders = dir.folders();
+        let classify = |path: &str| classify(path, &folders);
+
         let user = classify("users/00000080-0000-4000-8000-000000000080.yaml").unwrap();
         assert_eq!(user.kind, EntityKind::User);
         assert_eq!(user.id.map(|x| guid_d(&x)).as_deref(), Some("00000080-0000-4000-8000-000000000080"));
         assert_eq!(user.stem, "00000080-0000-4000-8000-000000000080");
 
-        let project = classify(&format!("projects/{p}/project.yaml")).unwrap();
+        // Прежнее имя папки — Guid; второй папки у проекта 2222… нет.
+        let legacy_project = "22222222-2222-4222-8222-222222222222";
+        let project = classify(&format!("projects/{legacy_project}/project.yaml")).unwrap();
         assert_eq!((project.kind, project.project_id), (EntityKind::Project, None));
-        assert_eq!(project.id.map(|x| guid_d(&x)).as_deref(), Some(p));
+        assert_eq!(project.id.map(|x| guid_d(&x)).as_deref(), Some(legacy_project));
         assert_eq!(project.stem, "project");
 
-        let task = classify(&format!("projects/{p}/tasks/fix-login-3f2a9c1e.yaml")).unwrap();
+        // Новое имя: id — в файле, в имени только начало.
+        let project = classify(&format!("projects/{named}/project.yaml")).unwrap();
+        assert_eq!(
+            (project.kind, project.id, project.id_prefix.as_deref()),
+            (EntityKind::Project, None, Some("11111111"))
+        );
+
+        let task = classify(&format!("projects/{named}/tasks/fix-login-3f2a9c1e.yaml")).unwrap();
         assert_eq!(task.kind, EntityKind::Task);
-        assert_eq!(task.project_id.map(|x| guid_d(&x)).as_deref(), Some(p));
+        assert_eq!(task.project_id, Some(project_id));
         assert_eq!((task.id, task.id_prefix.as_deref()), (None, Some("3f2a9c1e")));
         assert_eq!(task.stem, "fix-login-3f2a9c1e");
 
-        let legacy = classify(&format!("projects/{p}/statuses/00000075-0000-4000-8000-000000000075.yaml")).unwrap();
+        let legacy = classify(&format!(
+            "projects/{legacy_project}/statuses/00000075-0000-4000-8000-000000000075.yaml"
+        ))
+        .unwrap();
         assert_eq!(legacy.kind, EntityKind::Status);
+        assert_eq!(legacy.project_id.map(|x| guid_d(&x)).as_deref(), Some(legacy_project));
         assert!(legacy.id.is_some() && legacy.id_prefix.is_none());
 
         for other in [
             ".gitignore",
             ".cache/index.db",
             ".cache/edit-locks/Task-x.json",
-            &format!("projects/{p}/tasks/fix-login-3f2a9c1e.yaml.tmp"),
-            &format!("projects/{p}/notes/a-00000001.yaml"),
-            &format!("projects/{p}/tasks/notes.yaml"),
-            &format!("projects/{p}/tasks/sub/a-00000001.yaml"),
+            &format!("projects/{named}/tasks/fix-login-3f2a9c1e.yaml.tmp"),
+            &format!("projects/{named}/notes/a-00000001.yaml"),
+            &format!("projects/{named}/tasks/notes.yaml"),
+            &format!("projects/{named}/tasks/sub/a-00000001.yaml"),
             "projects/not-a-guid/project.yaml",
+            "projects/golden/tasks/a-00000001.yaml",
+            // Папка с новым именем, проект которой не узнать: project.yaml нет и соседей с теми же 8 знаками нет.
+            "projects/lost-33333333/tasks/a-00000001.yaml",
             "users/bob.yaml",
-            &format!("projects/{p}/readme.yaml"),
+            &format!("projects/{named}/readme.yaml"),
         ] {
             assert_eq!(classify(other), None, "{other}");
+            assert!(other.contains("lost-") || !is_layout_file(other), "{other}");
         }
+        std::fs::remove_dir_all(&ws).unwrap();
+    }
+
+    #[test]
+    fn the_project_file_of_a_second_folder_is_not_a_project() {
+        let ws = temp_dir();
+        let dir = TaskerDirectory::new(&ws);
+        let p = "11111111-1111-4111-8111-111111111111";
+        let text = format!("formatVersion: 10\nid: {p}\nname: Golden\ncreatedAt: 2026-01-01T00:00:00.0000000+00:00\n");
+        for folder in ["golden-11111111", "old-11111111", p] {
+            std::fs::create_dir_all(dir.projects().join(folder)).unwrap();
+            std::fs::write(dir.projects().join(folder).join(PROJECT_FILE_NAME), &text).unwrap();
+        }
+        let folders = dir.folders();
+        assert!(classify("projects/golden-11111111/project.yaml", &folders).is_some());
+        assert_eq!(classify("projects/old-11111111/project.yaml", &folders), None);
+        assert_eq!(classify(&format!("projects/{p}/project.yaml"), &folders), None);
+        // Сущности всех папок — сущности проекта.
+        let task = classify("projects/old-11111111/tasks/a-00000001.yaml", &folders).unwrap();
+        assert_eq!(task.project_id.map(|x| guid_d(&x)).as_deref(), Some(p));
+        assert_eq!(
+            dir.project(&Uuid::parse_str(p).unwrap()).root(),
+            dir.projects().join("golden-11111111")
+        );
+        assert_eq!(dir.project_dirs(&Uuid::parse_str(p).unwrap()).len(), 3);
+        std::fs::remove_dir_all(&ws).unwrap();
     }
 
     #[test]
@@ -650,11 +778,12 @@ mod tests {
 
     #[test]
     fn path_budget_matches_dotnet_numbers() {
-        // ".tasker/projects/<36>/status-sets/<60>-<8>.yaml.tmp"
+        // ".tasker/projects/<60>-<8>/status-sets/<60>-<8>.yaml.tmp"
         assert_eq!(
             path_budget::longest_relative_path(),
-            7 + 1 + 8 + 1 + 36 + 1 + 11 + 1 + 60 + 1 + 8 + 5 + 4
+            7 + 1 + 8 + 1 + 60 + 1 + 8 + 1 + 11 + 1 + 60 + 1 + 8 + 5 + 4
         );
+        assert_eq!(path_budget::max_workspace_root_length(), 81);
         assert_eq!(
             path_budget::max_workspace_root_length(),
             260 - 2 - path_budget::longest_relative_path()

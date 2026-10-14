@@ -180,8 +180,8 @@ public class FieldsMcpTests : IDisposable
         var cli = await TaskerProcess.Run("task", "list", "--json", "--project", agent.ProjectId.ToString(), "-w", agent.Folder);
         Assert.Equal(0, cli.Code);
         Assert.Equal("Feature", cli.Json["data"]![0]!["title"]!.GetValue<string>());
-        Assert.True(File.Exists(FileFinder.In(Path.Combine(agent.Folder, ".tasker", "projects", agent.ProjectId.ToString("D"), "fields"), Guid.Parse(Id(estimate)))));
-        Assert.True(File.Exists(FileFinder.In(Path.Combine(agent.Folder, ".tasker", "projects", agent.ProjectId.ToString("D"), "enums"), Guid.Parse(Id(levels)))));
+        Assert.True(File.Exists(FileFinder.In(Path.Combine(ProjectPaths.Folder(agent.Folder, agent.ProjectId), "fields"), Guid.Parse(Id(estimate)))));
+        Assert.True(File.Exists(FileFinder.In(Path.Combine(ProjectPaths.Folder(agent.Folder, agent.ProjectId), "enums"), Guid.Parse(Id(levels)))));
 
         // Переименование поля и перечисления; значение перечисления остаётся тем же.
         var renamed = await agent.Call("update_field", new { fieldId = Id(estimate), version = Version(estimate), name = "Points" });

@@ -49,7 +49,12 @@ impl<'a> WriteScope<'a> {
 
     pub fn exclusive<T>(&self, project_id: &Uuid, action: impl FnOnce() -> io::Result<T>) -> io::Result<T> {
         FileLock::run(&self.directory.write_lock(), None, || {
-            self.index.refresh(&[self.directory.project(project_id).tasks()])?;
+            // Задачи всех папок проекта (вторая папка после слияния git — тоже задачи проекта).
+            let mut tasks: Vec<PathBuf> = self.directory.project_dirs(project_id).iter().map(|x| x.tasks()).collect();
+            if tasks.is_empty() {
+                tasks.push(self.directory.project(project_id).tasks());
+            }
+            self.index.refresh(&tasks)?;
             action()
         })?
     }
@@ -157,6 +162,33 @@ pub fn write_if_match_renaming(path: &Path, new_path: &Path, bytes: &[u8], expec
         let version = write_unlocked(new_path, bytes)?;
         atomic::delete(path)?;
         Ok(Some(version))
+    })
+}
+
+/// Перезапись `project.yaml` с переносом папки проекта: если файл `path` (в папке `folder`) не изменился с версии
+/// `expected_version`, папка переименовывается в `new_folder` (одной операцией: другие процессы видят старую или новую папку, не
+/// смесь; на Windows занятые файлы — с повторами), затем файл пишется в неё. Всё под блокировкой записи. Папка `new_folder` уже
+/// есть — файл пишется на месте, папки сливает `tasker cleanup`. Возвращает новую версию или None, если файл изменён или удалён.
+pub fn write_if_match_moving(
+    path: &Path,
+    folder: &Path,
+    new_folder: &Path,
+    bytes: &[u8],
+    expected_version: &str,
+) -> io::Result<Option<String>> {
+    with_lock(path, || {
+        if current_version(path)?.as_deref() != Some(expected_version) {
+            return Ok(None);
+        }
+        let mut file = path.to_path_buf();
+        if !same_path(&folder.to_string_lossy(), &new_folder.to_string_lossy())
+            && !new_folder.exists()
+            && let Some(name) = path.file_name()
+        {
+            atomic::move_file(folder, new_folder, false)?;
+            file = new_folder.join(name);
+        }
+        write_unlocked(&file, bytes).map(Some)
     })
 }
 
@@ -326,32 +358,32 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, b"\xEF\xBB\xBFformatVersion: 3\r\nid: 1\r\ntitle: x\r\n").unwrap();
         assert_eq!(upgrade_on_disk(&path, false).unwrap(), Some(3));
-        assert_eq!(std::fs::read(&path).unwrap(), b"formatVersion: 9\r\nid: 1\r\ntitle: x\r\n");
+        assert_eq!(std::fs::read(&path).unwrap(), b"formatVersion: 10\r\nid: 1\r\ntitle: x\r\n");
         assert_eq!(upgrade_on_disk(&path, false).unwrap(), None);
         std::fs::write(&path, b"id: 1\n").unwrap();
         assert_eq!(upgrade_on_disk(&path, false).unwrap(), Some(0));
-        assert_eq!(std::fs::read(&path).unwrap(), b"formatVersion: 9\nid: 1\n");
+        assert_eq!(std::fs::read(&path).unwrap(), b"formatVersion: 10\nid: 1\n");
         std::fs::write(&path, b"formatVersion: 99\nid: 1\n").unwrap();
         let error = upgrade_on_disk(&path, false).unwrap_err();
         assert_eq!(
             error.to_string(),
-            "a-00000001.yaml: format version 99 is newer than this Tasker supports (9): update Tasker"
+            "a-00000001.yaml: format version 99 is newer than this Tasker supports (10): update Tasker"
         );
         assert_eq!(upgrade_on_disk(&tasker_file(&ws, "missing.yaml"), false).unwrap(), None);
         // Файл задачи текущего формата в прежнем порядке ключей: описание уходит в конец.
-        std::fs::write(&path, b"formatVersion: 9\r\nid: 1\r\ndescription: d\r\ntitle: x\r\n").unwrap();
+        std::fs::write(&path, b"formatVersion: 10\r\nid: 1\r\ndescription: d\r\ntitle: x\r\n").unwrap();
         assert_eq!(upgrade_on_disk(&path, false).unwrap(), None);
-        assert_eq!(upgrade_on_disk(&path, true).unwrap(), Some(9));
+        assert_eq!(upgrade_on_disk(&path, true).unwrap(), Some(10));
         assert_eq!(
             std::fs::read(&path).unwrap(),
-            b"formatVersion: 9\r\nid: 1\r\ntitle: x\r\ndescription: d\r\n"
+            b"formatVersion: 10\r\nid: 1\r\ntitle: x\r\ndescription: d\r\n"
         );
         assert_eq!(upgrade_on_disk(&path, true).unwrap(), None);
         std::fs::write(&path, b"id: 1\ndescription: d\ntitle: x\n").unwrap();
         assert_eq!(upgrade_on_disk(&path, true).unwrap(), Some(0));
         assert_eq!(
             std::fs::read(&path).unwrap(),
-            b"formatVersion: 9\nid: 1\ntitle: x\ndescription: d\n"
+            b"formatVersion: 10\nid: 1\ntitle: x\ndescription: d\n"
         );
         std::fs::remove_dir_all(&ws).unwrap();
     }
@@ -373,7 +405,7 @@ mod tests {
         let value = scope
             .exclusive(&project, || {
                 // Внутри — запись файла той же области: берёт ту же блокировку, не ждёт самого себя.
-                write(&dir.project(&project).task_file(&Uuid::nil(), Some("x")), b"formatVersion: 9\n")?;
+                write(&dir.project(&project).task_file(&Uuid::nil(), Some("x")), b"formatVersion: 10\n")?;
                 scope.exclusive(&project, || Ok(7))
             })
             .unwrap();

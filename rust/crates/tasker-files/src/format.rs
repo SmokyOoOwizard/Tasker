@@ -5,13 +5,14 @@
 //! История версий (все шаги — только замена номера, содержимое прежних файлов не меняется):
 //! 0 — файлы до введения версии; 1 — `formatVersion: 1`; 2 — имена файлов задач по заголовку; 3 — каталог полей и перечислений;
 //! 4 — поля у типов и задач; 5 — имена файлов остальных сущностей по названию; 6 — `fieldFilters` у колонок досок;
-//! 7 — `allowCycles` у типов связей; 8 — `description` у статусов и типов задач; 9 — `hierarchical` у типов связей.
+//! 7 — `allowCycles` у типов связей; 8 — `description` у статусов и типов задач; 9 — `hierarchical` у типов связей;
+//! 10 — папки проектов по названию проекта (`projects/<slug>-<id8>/`).
 use crate::error::{Error, Result};
 use regex::Regex;
 use std::path::Path;
 use std::sync::OnceLock;
 
-pub const CURRENT: u32 = 9;
+pub const CURRENT: u32 = 10;
 
 /// Строка версии на верхнем уровне (без отступа; строки внутри блоков с отступом не считаются). `\r?` — у файлов с окончаниями
 /// строк Windows перед концом строки стоит `\r`.
@@ -61,7 +62,7 @@ pub fn upgrade(text: &str, path: &Path) -> Result<String> {
     if version > CURRENT {
         return Err(newer(version, path));
     }
-    // Шаги 0→1 … 8→9 меняют только номер версии; применяются все шаги с номером больше версии файла.
+    // Шаги 0→1 … 9→10 меняют только номер версии; применяются все шаги с номером больше версии файла.
     Ok(if version < CURRENT {
         set_version(text, CURRENT)
     } else {
@@ -159,8 +160,8 @@ mod tests {
         assert_eq!(set_version("formatVersion: 1\nid: 1\n", 5), "formatVersion: 5\nid: 1\n");
         // Текущий формат, записанный иначе, не трогается.
         assert_eq!(
-            upgrade("formatVersion:  9 \nid: 1\n", p("x.yaml")).unwrap(),
-            "formatVersion:  9 \nid: 1\n"
+            upgrade("formatVersion:  10 \nid: 1\n", p("x.yaml")).unwrap(),
+            "formatVersion:  10 \nid: 1\n"
         );
     }
 

@@ -475,7 +475,7 @@ fn agent_header_and_workspace_argument_edge_cases() {
 #[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
 fn unreadable_files_answer_with_their_read_error() {
     const CONFLICT: &str = "Unresolved git merge conflict (line 3)";
-    const FUTURE: &str = "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (9): update Tasker";
+    const FUTURE: &str = "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker";
     let f = Fixture::start_with(|golden| {
         let project = golden.join(".tasker/projects").join(LEGACY_PROJECT);
         std::fs::write(

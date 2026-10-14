@@ -511,7 +511,7 @@ public sealed class FilesFieldCatalogTests : FieldCatalogContract
 
         var report = await _container.Resolve<Tasker.Core.Workspace.IFileMigration>().Run(new Tasker.Core.Workspace.MigrationOptions());
 
-        Assert.Equal(9, report.CurrentFormat);
+        Assert.Equal(10, report.CurrentFormat);
         Assert.Equal(2, report.Migrated.Length);
         Assert.Single(report.Newer);
         Assert.Contains($"formatVersion: {Tasker.Storage.Files.Storages.FormatVersions.Current}", await File.ReadAllTextAsync(FileFinder.In(Folder(project, "fields"), field)));

@@ -54,6 +54,14 @@ pub fn show(report: &MigrationReport, dry_run: bool, check: bool, json: bool) ->
         lines.push("Nothing is written (dry run):".into());
     }
 
+    for rename in &report.renamed_folders {
+        let verb = if read_only { "would rename" } else { "renamed" };
+        lines.push(format!("  {verb}  {}/  ->  {}/", rename.from, file_name(&rename.to)));
+    }
+    for merge in &report.merged_folders {
+        let verb = if read_only { "would merge" } else { "merged" };
+        lines.push(format!("  {verb}  {}/  into  {}/", merge.from, merge.to));
+    }
     for file in report.migrated.iter().take(SHOWN_FILES) {
         let verb = if read_only { "would migrate" } else { "migrated" };
         lines.push(format!("  {verb}  {}  (format {} -> {current})", file.path, file.version));
@@ -99,6 +107,29 @@ pub fn show(report: &MigrationReport, dry_run: bool, check: bool, json: bool) ->
             format!("Reordered keys in {} task file(s)", report.reordered.len())
         });
     }
+    if !report.renamed_folders.is_empty() {
+        lines.push(if read_only {
+            format!(
+                "{} project folder(s) would be renamed after the names of their projects",
+                report.renamed_folders.len()
+            )
+        } else {
+            format!(
+                "Renamed {} project folder(s) after the names of their projects",
+                report.renamed_folders.len()
+            )
+        });
+    }
+    if !report.merged_folders.is_empty() {
+        lines.push(if read_only {
+            format!(
+                "{} second project folder(s) would be merged into the main ones",
+                report.merged_folders.len()
+            )
+        } else {
+            format!("Merged {} second project folder(s) into the main ones", report.merged_folders.len())
+        });
+    }
     if !report.renamed.is_empty() {
         lines.push(if read_only {
             format!(
@@ -130,6 +161,14 @@ fn report_json(report: &MigrationReport, dry_run: bool, check: bool) -> Value {
                 .collect(),
         )
     };
+    let moves = |items: &[migration::MigrationRename]| {
+        Value::Array(
+            items
+                .iter()
+                .map(|r| object(vec![("from", Value::String(r.from.clone())), ("to", Value::String(r.to.clone()))]))
+                .collect(),
+        )
+    };
     object(vec![
         ("applicable", Value::Bool(true)),
         ("dryRun", Value::Bool(dry_run)),
@@ -143,16 +182,9 @@ fn report_json(report: &MigrationReport, dry_run: bool, check: bool) -> Value {
             "reordered",
             Value::Array(report.reordered.iter().map(|p| Value::String(p.clone())).collect()),
         ),
-        (
-            "renamed",
-            Value::Array(
-                report
-                    .renamed
-                    .iter()
-                    .map(|r| object(vec![("from", Value::String(r.from.clone())), ("to", Value::String(r.to.clone()))]))
-                    .collect(),
-            ),
-        ),
+        ("renamed", moves(&report.renamed)),
+        ("renamedFolders", moves(&report.renamed_folders)),
+        ("mergedFolders", moves(&report.merged_folders)),
         ("newer", files(&report.newer)),
         (
             "unreadable",
@@ -193,12 +225,25 @@ mod tests {
                 from: "projects/p/tasks/a.yaml".into(),
                 to: "projects/p/tasks/b-00000001.yaml".into(),
             }],
+            renamed_folders: vec![migration::MigrationRename {
+                from: "projects/00000000-0000-0000-0000-000000000001".into(),
+                to: "projects/p-00000000".into(),
+            }],
+            merged_folders: vec![migration::MigrationRename {
+                from: "projects/old-00000000".into(),
+                to: "projects/p-00000000".into(),
+            }],
             newer: vec![],
             unreadable: vec![],
         };
         let text = show(&report, false, false, false);
+        assert!(text.starts_with(
+            "  renamed  projects/00000000-0000-0000-0000-000000000001/  ->  p-00000000/\n  merged  projects/old-00000000/  into  projects/p-00000000/\n"
+        ));
         assert!(text.contains("  ... and 2 more\n  renamed  projects/p/tasks/a.yaml  ->  b-00000001.yaml\n"));
-        assert!(text.ends_with("Migrated 12 file(s) to format 9\nRenamed 1 file(s) after the names of their entities\n"));
+        assert!(text.ends_with(
+            "Migrated 12 file(s) to format 9\nRenamed 1 project folder(s) after the names of their projects\nMerged 1 second project folder(s) into the main ones\nRenamed 1 file(s) after the names of their entities\n"
+        ));
         assert_eq!(text.matches("migrated  ").count(), 10);
     }
 
@@ -211,6 +256,8 @@ mod tests {
             migrated: vec![],
             reordered: vec!["projects/p/tasks/a-00000001.yaml".into()],
             renamed: vec![],
+            renamed_folders: vec![],
+            merged_folders: vec![],
             newer: vec![],
             unreadable: vec![],
         };

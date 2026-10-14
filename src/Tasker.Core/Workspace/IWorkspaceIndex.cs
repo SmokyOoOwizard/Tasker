@@ -2,9 +2,12 @@ using Tasker.Core.Dto;
 
 namespace Tasker.Core.Workspace;
 
-/// <summary>Файл в .tasker, который не удалось прочитать; пока его не исправят, сущности нет в списках.</summary>
+/// <summary>
+/// Файл в .tasker, который не удалось прочитать (пока его не исправят, сущности нет в списках), или вторая папка проекта (её файлы в
+/// списках, но папки нужно слить: <c>tasker cleanup</c>).
+/// </summary>
 /// <param name="Path">Путь относительно .tasker, через «/».</param>
-/// <param name="Error">Что не так: конфликт слияния git, ошибка YAML, id не совпадает с именем файла.</param>
+/// <param name="Error">Что не так: конфликт слияния git, ошибка YAML, id не совпадает с именем файла, вторая папка проекта.</param>
 public record WorkspaceProblem(string Path, string Error);
 
 /// <summary>Файл, который изменился в индексе.</summary>
@@ -13,7 +16,11 @@ public record WorkspaceProblem(string Path, string Error);
 /// Id сущности — из содержимого файла, а не из его имени (файл называется по названию сущности). У удалённого файла — тот, что был
 /// в индексе; null — файл не читается или это не файл сущности (папка, весь .tasker).
 /// </param>
-public record WorkspaceFileChange(string Path, Guid? Id);
+/// <param name="ProjectId">
+/// Проект файла: папка проекта называется по его названию (<c>projects/&lt;название&gt;-&lt;id8&gt;</c>), и по пути id проекта не узнать.
+/// null — файл не в проекте (пользователь, весь .tasker) или проект уже не узнать (папку удалили).
+/// </param>
+public record WorkspaceFileChange(string Path, Guid? Id, Guid? ProjectId = null);
 
 /// <summary>
 /// Индекс рабочей папки — только в файловом режиме (в БД индекс не нужен, сервис не зарегистрирован).

@@ -6,7 +6,8 @@ use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::time::{Duration, Instant};
 use tasker_files::watch::{WatchEvent, WatchOptions, WatcherHandle, WorkspaceWatcher};
 
-const PROJECT: &str = "11111111-1111-4111-8111-111111111111";
+/// Папка проекта Golden в корпусе.
+const PROJECT: &str = "golden-11111111";
 const WAIT: Duration = Duration::from_secs(8);
 
 fn temp_dir() -> PathBuf {

@@ -33,6 +33,8 @@ public record MigrationProblem(string Path, string Reason);
 /// <param name="Renamed">Файлы сущностей проекта, имя которых не по названию (старое — Guid, или название изменили мимо Tasker): переименованы (при <c>DryRun</c> — были бы).</param>
 /// <param name="Newer">Файлы более нового формата: не тронуты, нужен более новый Tasker.</param>
 /// <param name="Unreadable">Файлы, которые не удалось проверить (конфликт слияния git, не читается): не тронуты.</param>
+/// <param name="RenamedFolders">Папки проектов, имя которых не по названию проекта (<c>projects/&lt;guid&gt;</c> или название изменили мимо Tasker): переименованы.</param>
+/// <param name="MergedFolders">Вторые папки проектов: их файлы перенесены в основную (файлы, которые там уже есть с другим содержимым, — в <c>Unreadable</c>).</param>
 public record MigrationReport(
     int CurrentFormat,
     int Scanned,
@@ -41,10 +43,13 @@ public record MigrationReport(
     string[] Reordered,
     MigrationRename[] Renamed,
     MigrationFile[] Newer,
-    MigrationProblem[] Unreadable)
+    MigrationProblem[] Unreadable,
+    MigrationRename[] RenamedFolders,
+    MigrationRename[] MergedFolders)
 {
-    /// <summary>Есть что мигрировать или о чём нужно знать: старые файлы, прежний порядок ключей, имена, файлы нового формата, нечитаемые.</summary>
-    public bool NeedsAttention => Migrated.Length > 0 || Reordered.Length > 0 || Renamed.Length > 0 || Newer.Length > 0 || Unreadable.Length > 0;
+    /// <summary>Есть что мигрировать или о чём нужно знать: старые файлы и папки, прежний порядок ключей, имена, файлы нового формата, нечитаемые.</summary>
+    public bool NeedsAttention => Migrated.Length > 0 || Reordered.Length > 0 || Renamed.Length > 0 || RenamedFolders.Length > 0
+                                  || MergedFolders.Length > 0 || Newer.Length > 0 || Unreadable.Length > 0;
 }
 
 /// <summary>

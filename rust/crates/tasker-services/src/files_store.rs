@@ -3,7 +3,8 @@
 //! совпадение id проверяется по содержимому), списки и подсчёты — из индекса. Запись — [`tasker_files::write`] под блокировкой
 //! записи, после неё индекс догоняет файлы (`written`). Смена названия переименовывает файл; файл с новым именем уже есть —
 //! запись отклоняется. Пользователи — `users/<id>.yaml`, блокировки правки — `.cache/edit-locks/*.json`, секция записи —
-//! `write.lock` со сверкой папки задач проекта.
+//! `write.lock` со сверкой папки задач проекта. Папка проекта — `projects/<slug имени>-<id8>/` (`project_folders`): смена названия
+//! проекта переносит папку; у проекта может быть и вторая папка (слияние git) — сущности ищутся во всех.
 use crate::error::{Error, Result};
 use crate::storage::{Entity, Storage};
 use std::collections::HashMap;
@@ -79,14 +80,22 @@ impl FileStore {
     fn resolve_path<T: Entity>(&self, project_id: &Uuid, id: &Uuid) -> Result<Option<(PathBuf, T)>> {
         for _ in 0..RESOLVE_ATTEMPTS {
             let indexed = self.index.entity_path(T::KIND, project_id, id)?;
-            if let Some(indexed) = &indexed
-                && let Candidate::Read(Some(entity)) = self.read_candidate::<T>(project_id, indexed)?
-                && entity.id() == *id
-            {
-                return Ok(Some((indexed.clone(), entity)));
-            }
+            // Файла, который знает индекс, нет: его переименовали, удалили или папку проекта перенесли — если и поиск по имени
+            // ничего не найдёт, ищем ещё раз.
             let mut vanished = false;
-            for path in self.directory.project(project_id).find_files(T::FOLDER, id) {
+            if let Some(indexed) = &indexed {
+                match self.read_candidate::<T>(project_id, indexed)? {
+                    Candidate::Read(Some(entity)) if entity.id() == *id => return Ok(Some((indexed.clone(), entity))),
+                    Candidate::Read(_) => {}
+                    Candidate::Missing => vanished = true,
+                }
+            }
+            let dirs = self.directory.project_dirs(project_id);
+            let candidates: Vec<PathBuf> = dirs.iter().flat_map(|project| project.find_files(T::FOLDER, id)).collect();
+            // Папку проекта перенесли между поиском папок и поиском файлов в ней (переименование проекта); во время переноса список
+            // папок может не увидеть её вовсе.
+            vanished |= dirs.is_empty() || dirs.iter().any(|project| !project.root().exists());
+            for path in candidates {
                 if indexed
                     .as_ref()
                     .is_some_and(|i| tasker_core::io::same_path(&path.to_string_lossy(), &i.to_string_lossy()))
@@ -158,7 +167,11 @@ impl Storage for FileStore {
 
     /// Сколько файлов этого вида в проекте не удалось прочитать (`CountUnreadable`).
     fn count_unreadable<T: Entity>(&self, project_id: &Uuid) -> Result<usize> {
-        Ok(self.index().count_problems(&self.directory.project(project_id).folder(T::FOLDER))?)
+        let mut count = 0;
+        for project in self.directory.project_dirs(project_id) {
+            count += self.index().count_problems(&project.folder(T::FOLDER))?;
+        }
+        Ok(count)
     }
 
     fn unreadable<T: Entity>(&self, project_id: &Uuid, key: &str) -> Result<()> {
@@ -183,64 +196,95 @@ impl Storage for FileStore {
     ///
     /// Проект удаляют под блокировкой записи, и запись файла сама создаёт недостающие папки: без проверки под той же блокировкой
     /// «поздний» писатель воскресил бы папку удалённого проекта с одним своим файлом (`EntityFiles.Add`).
+    ///
+    /// Папку проекта ищут под той же блокировкой: её переносит переименование проекта.
     fn add<T: Entity>(&self, entity: &T) -> Result<String> {
         let project_id = entity.project_id();
-        let project = self.directory.project(&project_id);
-        let path = project.entity_file(T::FOLDER, &entity.id(), Some(entity.file_name_source()));
         let bytes = entity.to_bytes();
-        let result: std::io::Result<Result<String>> = self.index.written(std::slice::from_ref(&path), || {
-            write::locked(project.root(), || {
-                if self.directory.project_accepts_writes(&project_id) {
-                    Ok(write::write(&path, &bytes).map_err(Error::from))
-                } else {
-                    Ok(Err(Error::validation(format!(
-                        "ProjectId: project not found: {}",
-                        guid_d(&project_id)
-                    ))))
-                }
-            })
+        let mut written: Option<PathBuf> = None;
+        let result: std::io::Result<Result<String>> = write::locked(&self.directory.projects(), || {
+            let path = self
+                .directory
+                .project(&project_id)
+                .entity_file(T::FOLDER, &entity.id(), Some(entity.file_name_source()));
+            written = Some(path.clone());
+            if self.directory.project_accepts_writes(&project_id) {
+                Ok(write::write(&path, &bytes).map_err(Error::from))
+            } else {
+                Ok(Err(Error::validation(format!(
+                    "ProjectId: project not found: {}",
+                    guid_d(&project_id)
+                ))))
+            }
         });
+        if let Some(path) = written {
+            self.index.refresh(&[path])?;
+        }
         result?
     }
 
     /// Перезапись по версии с переименованием, если название изменилось. None — файла нет или он изменён.
+    ///
+    /// Файл пишется в основную папку проекта (из второй — переносится). Файл пропал до записи, потому что проект переименовали и
+    /// папка переехала, — поиск повторяется.
     fn update<T: Entity>(&self, entity: &T, expected_version: &str) -> Result<Option<String>> {
         let project_id = entity.project_id();
-        let Some((current, _)) = self.resolve_path::<T>(&project_id, &entity.id())? else {
-            return Ok(None);
-        };
-        let renamed = self
-            .directory()
-            .project(&project_id)
-            .entity_file(T::FOLDER, &entity.id(), Some(entity.file_name_source()));
         let bytes = entity.to_bytes();
-        Ok(self.index.written(&[current.clone(), renamed.clone()], || {
-            write::write_if_match_renaming(&current, &renamed, &bytes, expected_version)
-        })?)
+        for _ in 0..RESOLVE_ATTEMPTS {
+            let Some((current, _)) = self.resolve_path::<T>(&project_id, &entity.id())? else {
+                return Ok(None);
+            };
+            let renamed = self
+                .directory()
+                .project(&project_id)
+                .entity_file(T::FOLDER, &entity.id(), Some(entity.file_name_source()));
+            let version = self.index.written(&[current.clone(), renamed.clone()], || {
+                write::write_if_match_renaming(&current, &renamed, &bytes, expected_version)
+            })?;
+            if version.is_some() || current.exists() {
+                return Ok(version);
+            }
+        }
+        Ok(None)
     }
 
     /// Удаление по версии; false — файла нет или он изменён.
     fn delete<T: Entity>(&self, project_id: &Uuid, id: &Uuid, expected_version: &str) -> Result<bool> {
-        let Some((path, _)) = self.resolve_path::<T>(project_id, id)? else {
-            return Ok(false);
-        };
-        Ok(self
-            .index()
-            .written(std::slice::from_ref(&path), || write::delete_if_match(&path, expected_version))?)
+        for _ in 0..RESOLVE_ATTEMPTS {
+            let Some((path, _)) = self.resolve_path::<T>(project_id, id)? else {
+                return Ok(false);
+            };
+            let deleted = self
+                .index()
+                .written(std::slice::from_ref(&path), || write::delete_if_match(&path, expected_version))?;
+            if deleted || path.exists() {
+                return Ok(deleted);
+            }
+        }
+        Ok(false)
     }
 
     // ---- проекты: project.yaml в папке проекта ----
 
+    /// `project.yaml` основной папки. Папка переехала между поиском и чтением (проект переименовали) — поиск повторяется.
     fn get_project(&self, id: &Uuid) -> Result<Option<Project>> {
-        let path = self.directory.project(id).project_file();
-        let Some(bytes) = write::read_bytes(&path)? else {
-            return Ok(None);
-        };
-        match files::project::parse(&bytes, &path) {
-            Ok(versioned) => Ok(Some(versioned.model)),
-            Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => Ok(None),
-            Err(e) => Err(e.into()),
+        for _ in 0..RESOLVE_ATTEMPTS {
+            let project = self.directory.project(id);
+            let path = project.project_file();
+            let Some(bytes) = write::read_bytes(&path)? else {
+                // Папка есть, а файла нет — проекта нет; папки нет — её могли перенести, пока шёл поиск.
+                if project.root().exists() {
+                    return Ok(None);
+                }
+                continue;
+            };
+            return match files::project::parse(&bytes, &path) {
+                Ok(versioned) => Ok(Some(versioned.model)),
+                Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => Ok(None),
+                Err(e) => Err(e.into()),
+            };
         }
+        Ok(None)
     }
 
     /// Страница проектов по имени; `ids` — только эти (None — все).
@@ -252,28 +296,34 @@ impl Storage for FileStore {
         Ok(self.index.range::<Project>(&query, page)?)
     }
 
+    /// Новый проект — в папке по названию: `projects/<slug>-<id8>/`.
     fn add_project(&self, project: &Project) -> Result<String> {
-        let path = self.directory.project(&project.id).project_file();
+        let path = self.directory.named_project(&project.name, &project.id).project_file();
         let bytes = files::project::serialize(project);
         Ok(self.index.written(std::slice::from_ref(&path), || write::write(&path, &bytes))?)
     }
 
+    /// Перезапись по версии; папка, имя которой не по названию (переименование, прежнее имя — Guid), переносится в
+    /// `projects/<slug>-<id8>/` той же операцией под блокировкой записи.
     fn update_project(&self, project: &Project, expected_version: &str) -> Result<Option<String>> {
-        let path = self.directory.project(&project.id).project_file();
+        let current = self.directory.project(&project.id);
+        let target = self.directory.named_project(&project.name, &project.id);
         let bytes = files::project::serialize(project);
-        Ok(self.index.written(std::slice::from_ref(&path), || {
-            write::write_if_match(&path, &bytes, expected_version)
+        let paths = [current.root().to_path_buf(), target.root().to_path_buf()];
+        Ok(self.index.written(&paths, || {
+            write::write_if_match_moving(&current.project_file(), current.root(), target.root(), &bytes, expected_version)
         })?)
     }
 
-    /// Папка проекта удаляется целиком, если `project.yaml` не изменился с ожидаемой версии; ставится метка удаления.
+    /// Все папки проекта удаляются целиком, если `project.yaml` не изменился с ожидаемой версии; ставится метка удаления.
     fn delete_project(&self, id: &Uuid, expected_version: &str) -> Result<bool> {
-        let project = self.directory.project(id);
-        let root = project.root().to_path_buf();
-        let file = project.project_file();
-        Ok(self.index.written(std::slice::from_ref(&root), || {
+        let roots: Vec<PathBuf> = self.directory.project_dirs(id).iter().map(|x| x.root().to_path_buf()).collect();
+        let file = self.directory.project(id).project_file();
+        Ok(self.index.written(&roots, || {
             write::delete_if_match_with(&file, expected_version, || {
-                std::fs::remove_dir_all(&root)?;
+                for root in &roots {
+                    std::fs::remove_dir_all(root)?;
+                }
                 self.directory.mark_project_deleted(id)
             })
         })?)

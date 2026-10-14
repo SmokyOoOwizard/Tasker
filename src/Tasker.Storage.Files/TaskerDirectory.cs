@@ -13,7 +13,8 @@ namespace Tasker.Storage.Files;
 ///   .gitignore            — исключает .cache и временные файлы записи
 ///   .cache/               — локальный индекс (см. Index.WorkspaceIndex) и блокировки, в git не попадает
 ///   users/&lt;id&gt;.yaml        — пользователи общие для всех проектов
-///   projects/&lt;projectId&gt;/
+///   projects/&lt;название&gt;-&lt;id8&gt;/       — папка проекта: название проекта и первые 8 знаков его id, как у файлов сущностей
+///                                     (см. <see cref="Storages.ProjectFolders"/>); старое имя — полный Guid: &lt;projectId&gt;/
 ///     project.yaml
 ///     tasks/&lt;заголовок&gt;-&lt;id8&gt;.yaml   — задачи; как и у всех сущностей проекта ниже, в имени файла — название (у задачи заголовок)
 ///                                       и первые 8 знаков id (см. <see cref="Storages.EntityFileNames"/>); старые имена — по полному Guid: &lt;id&gt;.yaml
@@ -56,7 +57,24 @@ public class TaskerDirectory(string workspacePath)
     /// </summary>
     public string DeletedProjectMarker(Guid projectId) => Path.Combine(Cache, "deleted-projects", projectId.ToString());
 
-    public ProjectDirectory Project(Guid projectId) => new(Path.Combine(Projects, projectId.ToString()));
+    /// <summary>
+    /// Основная папка проекта (см. <see cref="ProjectFolders"/>); папки нет — прежнее имя <c>projects/&lt;guid&gt;/</c> (такого проекта нет,
+    /// и путь никуда не ведёт, или его папку создаст запись).
+    /// </summary>
+    public ProjectDirectory Project(Guid projectId) => ProjectDirs(projectId).FirstOrDefault() ?? LegacyProject(projectId);
+
+    /// <summary>Все папки проекта, основная первой; пусто — папки нет.</summary>
+    public ProjectDirectory[] ProjectDirs(Guid projectId) =>
+        new ProjectFolders(this).FoldersOf(projectId).Select(ProjectNamed).ToArray();
+
+    /// <summary>Папка <c>projects/&lt;folder&gt;/</c>.</summary>
+    public ProjectDirectory ProjectNamed(string folder) => new(Path.Combine(Projects, folder));
+
+    /// <summary>Папка проекта с этим названием: <c>projects/&lt;slug&gt;-&lt;id8&gt;/</c>.</summary>
+    public ProjectDirectory NamedProject(string name, Guid projectId) => ProjectNamed(ProjectFolders.FolderName(name, projectId));
+
+    /// <summary>Прежнее имя папки проекта — полный Guid (формат до версии 10).</summary>
+    public ProjectDirectory LegacyProject(Guid projectId) => ProjectNamed(projectId.ToString());
 
     public string UserFile(Guid id) => Path.Combine(Users, $"{id}{YamlFile.Extension}");
 

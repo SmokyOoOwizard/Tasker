@@ -1,12 +1,13 @@
 {
+  "jsonrpc": "2.0",
+  "id": 1,
   "result": {
     "content": [
       {
         "type": "text",
         "text": "{\"workspaces\":[{\"name\":\"golden.db\",\"path\":\"<ROOT>/golden.db\",\"status\":\"open\",\"projects\":2,\"error\":null}]}"
       }
-    ]
-  },
-  "id": 1,
-  "jsonrpc": "2.0"
+    ],
+    "isError": false
+  }
 }

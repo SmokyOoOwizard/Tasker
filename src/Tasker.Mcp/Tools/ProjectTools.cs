@@ -59,6 +59,8 @@ public static class ProjectTools
         "Desktop app with file storage only: lists .tasker files that could not be read (unresolved git merge conflicts, " +
         "invalid YAML, id not matching the file name). Their entities are hidden from all lists until the file is fixed; " +
         "the files are plain YAML, and a fixed file shows up in lists again by itself. " +
+        "Also lists a second folder of a project (projects/<folder>, left by a git merge after the project was renamed): " +
+        "its entities are listed with the project, and `tasker cleanup` merges the folders. " +
         "Paged: offset/limit (limit 1-200, default 50); the result has totalCount.")]
     public static Task<ListDto<WorkspaceProblem>> ListWorkspaceProblems(
         IServiceProvider services, int offset = 0, int limit = Page.DefaultLimit, CancellationToken ct = default) =>

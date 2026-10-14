@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use tasker_core::ids::guid_d;
 use tasker_core::model::Project;
+use tasker_files::project_folders::{self, FolderReport, TidyOptions};
 use tasker_services::cleanup::{CleanupChange, CleanupOptions, CleanupReport};
 use tasker_services::health::label;
 use uuid::Uuid;
@@ -78,8 +79,22 @@ pub fn run(ctx: &mut Context<'_>, dry_run: bool, check: bool, resolve: bool) -> 
         )));
     }
 
+    let only = ctx.optional_project()?;
     let ws = ctx.session().workspace();
-    let projects = match ctx.optional_project()? {
+    // Вторые папки проектов (слияние веток git) — сначала: чистка ниже видит сущности уже в одной папке.
+    let folders = match ws.files() {
+        Some(files) => project_folders::tidy(
+            files.directory(),
+            files.index(),
+            TidyOptions {
+                dry_run: read_only,
+                rename: false,
+                project: only.as_ref().map(|x| x.id),
+            },
+        )?,
+        None => FolderReport::default(),
+    };
+    let projects = match only {
         Some(project) => vec![project],
         None => ctx.session().all_projects()?,
     };
@@ -97,13 +112,17 @@ pub fn run(ctx: &mut Context<'_>, dry_run: bool, check: bool, resolve: bool) -> 
         results.push(ProjectCleanup { project, report, prefixes });
     }
 
-    let attention = results.iter().any(ProjectCleanup::needs_attention);
+    let attention = !folders.is_empty() || results.iter().any(ProjectCleanup::needs_attention);
     let json = ctx.json;
-    show(&results, dry_run, check, resolve, attention, json, ctx.out());
+    show(&results, &folders, dry_run, check, resolve, attention, json, ctx.out());
 
     if check {
         ctx.exit_code = if attention { NEEDS_CLEANUP } else { 0 };
         return Ok(());
+    }
+    if !read_only && !folders.problems.is_empty() {
+        let _ = writeln!(ctx.err(), "Error: some files of second project folders were not merged (see above)");
+        ctx.exit_code = 1;
     }
     if !read_only && results.iter().any(|x| x.report.skipped) {
         let _ = writeln!(ctx.err(), "Error: the cleanup was skipped, nothing was changed");
@@ -120,7 +139,17 @@ pub fn run(ctx: &mut Context<'_>, dry_run: bool, check: bool, resolve: bool) -> 
     Ok(())
 }
 
-fn show(results: &[ProjectCleanup], dry_run: bool, check: bool, resolve: bool, attention: bool, json: bool, out: &mut dyn Write) {
+#[allow(clippy::too_many_arguments)]
+fn show(
+    results: &[ProjectCleanup],
+    folders: &FolderReport,
+    dry_run: bool,
+    check: bool,
+    resolve: bool,
+    attention: bool,
+    json: bool,
+    out: &mut dyn Write,
+) {
     let read_only = dry_run || check;
     let changes: usize = results.iter().map(|x| x.report.changes.len()).sum();
 
@@ -131,6 +160,7 @@ fn show(results: &[ProjectCleanup], dry_run: bool, check: bool, resolve: bool, a
             ("resolveConflicts", Value::Bool(resolve)),
             ("needsAttention", Value::Bool(attention)),
             ("changeCount", Value::from(changes)),
+            ("projectFolders", folders_json(folders)),
             ("projects", Value::Array(results.iter().map(project_json).collect())),
         ]);
         let _ = writeln!(out, "{}", tasker_core::json::to_string(&value));
@@ -140,6 +170,20 @@ fn show(results: &[ProjectCleanup], dry_run: bool, check: bool, resolve: bool, a
     let mut lines: Vec<String> = Vec::new();
     if read_only {
         lines.push("Nothing is written (dry run):".into());
+    }
+    if !folders.is_empty() {
+        lines.push("Project folders:".into());
+        for rename in &folders.renamed {
+            let verb = if read_only { "would rename" } else { "renamed" };
+            lines.push(format!("  {verb}  {}/  ->  {}/", rename.from, rename.to));
+        }
+        for merge in &folders.merged {
+            let verb = if read_only { "would merge" } else { "merged" };
+            lines.push(format!("  {verb}  {}/  into  {}/", merge.from, merge.to));
+        }
+        for problem in &folders.problems {
+            lines.push(format!("  not merged  {}  ({})", problem.path, problem.reason));
+        }
     }
     for result in results.iter().filter(|x| x.needs_attention()) {
         lines.push(format!("Project '{}':", result.project.name));
@@ -182,6 +226,36 @@ fn show(results: &[ProjectCleanup], dry_run: bool, check: bool, resolve: bool, a
         });
     }
     let _ = writeln!(out, "{}", lines.join("\n"));
+}
+
+fn folders_json(folders: &FolderReport) -> Value {
+    let moves = |items: &[tasker_files::migration::MigrationRename]| {
+        Value::Array(
+            items
+                .iter()
+                .map(|x| object(vec![("from", Value::String(x.from.clone())), ("to", Value::String(x.to.clone()))]))
+                .collect(),
+        )
+    };
+    object(vec![
+        ("renamed", moves(&folders.renamed)),
+        ("merged", moves(&folders.merged)),
+        (
+            "notMerged",
+            Value::Array(
+                folders
+                    .problems
+                    .iter()
+                    .map(|x| {
+                        object(vec![
+                            ("path", Value::String(x.path.clone())),
+                            ("reason", Value::String(x.reason.clone())),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+    ])
 }
 
 fn change_json(c: &CleanupChange) -> Value {

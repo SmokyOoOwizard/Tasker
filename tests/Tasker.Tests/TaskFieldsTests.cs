@@ -1665,7 +1665,7 @@ public sealed class FilesTaskFieldsTests : TaskFieldsContract
         Assert.StartsWith("formatVersion: 3", await File.ReadAllTextAsync(path));
 
         var report = await _container.Resolve<Tasker.Core.Workspace.IFileMigration>().Run(new Tasker.Core.Workspace.MigrationOptions());
-        Assert.Equal(9, report.CurrentFormat);
+        Assert.Equal(Tasker.Storage.Files.Storages.FormatVersions.Current, report.CurrentFormat);
         Assert.Single(report.Migrated);
         Assert.Equal($"formatVersion: {Tasker.Storage.Files.Storages.FormatVersions.Current}\nid: {type}\nname: Old\nstatusSetId: {set}\n", Normalized(await File.ReadAllTextAsync(FileFinder.In(Folder(project, "task-types"), type))));
     }

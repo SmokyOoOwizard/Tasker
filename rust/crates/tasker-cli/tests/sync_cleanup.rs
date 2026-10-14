@@ -34,7 +34,7 @@ fn after_migrate_sync_reports_only_the_two_known_unreadable_files() {
     assert_eq!(lines[0], format!("Synced {} (via direct)", workspace.display()));
     assert_eq!(lines[1], "2 file(s) cannot be read and are missing from the lists until fixed:");
     assert!(lines[2].ends_with("conflicted-title-ours-cccccccc.yaml: Unresolved git merge conflict (line 3)"));
-    assert!(lines[3].contains("from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (9): update Tasker"));
+    assert!(lines[3].contains("from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker"));
     assert_eq!(lines[4], "Link problems in project 'Legacy':");
     assert_eq!(lines.len(), 6);
 
@@ -207,5 +207,66 @@ fn after_a_merge_sync_reports_the_dangling_link_and_cleanup_removes_it() {
         real.stderr,
         "Error: the links between tasks were not checked, the rest was cleaned up (see above)\n"
     );
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn a_second_project_folder_is_reported_by_sync_and_merged_by_cleanup() {
+    use tasker_services::Workspace;
+    use tasker_services::project::CreateProject;
+    use tasker_services::status::CreateStatus;
+
+    let root = temp_root();
+    let folder = root.join("demo");
+    std::fs::create_dir_all(&folder).unwrap();
+    let ws = Workspace::open(&folder).unwrap();
+    let project = ws.projects().create(&CreateProject { name: "Demo".into() }).unwrap().id;
+    ws.statuses()
+        .create(
+            &project,
+            &CreateStatus {
+                name: "Todo".into(),
+                color: "#112233".into(),
+                description: None,
+            },
+        )
+        .unwrap();
+    // Слияние git: прежнее имя проекта, в папке только статус.
+    let id8 = tasker_files::names::id_prefix(&project);
+    let projects = folder.join(".tasker").join("projects");
+    let statuses = projects.join(format!("demo-{id8}")).join("statuses");
+    let file = std::fs::read_dir(&statuses).unwrap().flatten().next().unwrap().path();
+    let second = projects.join(format!("old-{id8}")).join("statuses");
+    std::fs::create_dir_all(&second).unwrap();
+    std::fs::rename(&file, second.join(file.file_name().unwrap())).unwrap();
+    let w = folder.to_str().unwrap();
+
+    let sync = tasker(&root, &["sync", "-w", w]);
+    assert!(
+        sync.stdout.contains(&format!(
+            "  projects/old-{id8}: Second folder of the project in projects/demo-{id8}: its files are listed with the project; run 'tasker cleanup' to merge the folders\n"
+        )),
+        "{}",
+        sync.stdout
+    );
+    let listed = tasker(&root, &["status", "list", "-w", w, "-p", "Demo"]);
+    assert!(listed.stdout.contains("Todo"), "{}", listed.stdout);
+
+    let check = tasker(&root, &["cleanup", "--check", "-w", w]);
+    assert_eq!(check.code, 2, "{}", check.stdout);
+    assert!(check.stdout.contains(&format!(
+        "Project folders:\n  would merge  projects/old-{id8}/  into  projects/demo-{id8}/\n"
+    )));
+    let cleanup = tasker(&root, &["cleanup", "-w", w]);
+    assert_eq!(cleanup.code, 0, "{}{}", cleanup.stdout, cleanup.stderr);
+    assert!(
+        cleanup
+            .stdout
+            .contains(&format!("  merged  projects/old-{id8}/  into  projects/demo-{id8}/\n"))
+    );
+    assert!(!projects.join(format!("old-{id8}")).exists());
+    assert!(statuses.join(file.file_name().unwrap()).is_file());
+    let sync = tasker(&root, &["sync", "-w", w]);
+    assert!(!sync.stdout.contains("Second folder"), "{}", sync.stdout);
     std::fs::remove_dir_all(&root).unwrap();
 }

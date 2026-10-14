@@ -525,7 +525,7 @@ public sealed class FilesLinkStorageTests : LinkStorageContract
         await fresh.Resolve<ILinkTypeStorage>().Update(custom with { AllowCycles = false }, custom.Version);
         var text = await File.ReadAllTextAsync(FileFinder.Find(_root, "link-types", customId));
         Assert.Contains("allowCycles: false", text);
-        Assert.Contains("formatVersion: 9", text);
+        Assert.Contains("formatVersion: 10", text);
         Assert.Contains("hierarchical: false", text);
         Assert.False((await fresh.Resolve<ILinkTypeStorage>().GetById(project, customId))!.AllowCycles);
     }

@@ -501,7 +501,7 @@ public class SeriesApiTests
         await DuplicateTaskFile(api, task, text => text.Replace(Id(tsk), missing));
 
         // Вторая серия с тем же префиксом — как после слияния веток: файл серии копируется под новым id.
-        var seriesFile = FileFinder.In(Path.Combine(api.Root, ".tasker", "projects", api.ProjectId.ToString("D"), "series"), Guid.Parse(Id(tsk)));
+        var seriesFile = FileFinder.In(Path.Combine(ProjectPaths.Folder(api.Root, api.ProjectId), "series"), Guid.Parse(Id(tsk)));
         var twin = Guid.NewGuid().ToString("D");
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(seriesFile)!, twin + ".yaml"), File.ReadAllText(seriesFile).Replace(Id(tsk), twin));
 

@@ -5,7 +5,7 @@ status:       Backlog (00000005-0000-4000-8000-000000000005)
 series:       GLD-54
 created:      2026-01-01 00:57:57 +00:00
 updated:      2026-01-01 01:01:00 +00:00
-version:      467479ea7b5d754c
+version:      8c2538ebc0f91342
 links:
   documents  BUG-4   007      Feature without values
   includes   GLD-55  Backlog  Child one

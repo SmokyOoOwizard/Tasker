@@ -47,7 +47,29 @@ public sealed class Area
     /// <summary>Папка <c>.tasker</c> (только files).</summary>
     public string TaskerDir => System.IO.Path.Combine(Path, ".tasker");
 
-    public string TasksDir => System.IO.Path.Combine(TaskerDir, "projects", ProjectId.ToString(), "tasks");
+    public string TasksDir => System.IO.Path.Combine(ProjectDir, "tasks");
+
+    /// <summary>
+    /// Папка проекта: <c>projects/&lt;slug имени&gt;-&lt;id8&gt;</c> (или прежнее имя по Guid) — первая папка, которая так называется; папки нет —
+    /// прежнее имя.
+    /// </summary>
+    public string ProjectDir => ProjectDirs.FirstOrDefault() ?? System.IO.Path.Combine(TaskerDir, "projects", ProjectId.ToString());
+
+    /// <summary>Все папки проекта (вторая может остаться после слияния веток git).</summary>
+    public string[] ProjectDirs
+    {
+        get
+        {
+            var projects = System.IO.Path.Combine(TaskerDir, "projects");
+            if (!Directory.Exists(projects))
+                return [];
+            var suffix = "-" + ProjectId.ToString("N")[..8];
+            return Directory.GetDirectories(projects)
+                .Where(x => System.IO.Path.GetFileName(x) is var name && (name == ProjectId.ToString() || name.EndsWith(suffix, StringComparison.Ordinal)))
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+        }
+    }
 }
 
 /// <summary>

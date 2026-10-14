@@ -35,6 +35,13 @@ fn find_entity<T: Entity>(
 ) -> Result<T> {
     let ws = ctx.session().workspace();
     let all = ws.get_all::<T>(project_id)?;
+    // По полному id — и из файла, если индекс его ещё не видит: другой процесс как раз переименовал файл (сущность или проект).
+    if let Some(guid) = tasker_core::ids::parse_guid(reference)
+        && !all.iter().any(|x| id(x) == guid)
+        && let Some(found) = ws.get_by_id::<T>(project_id, &guid)?
+    {
+        return Ok(found);
+    }
     refs::find_readable(&all, reference, id, name, kind, false, || {
         Ok(ws.unreadable_reference::<T>(project_id, reference)?)
     })

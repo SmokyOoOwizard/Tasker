@@ -5,6 +5,7 @@ use super::sort::{DEFAULT_ORDER, order_by};
 use super::sync::{field_type_code, field_type_of_code};
 use super::{WorkspaceIndex, db_error, kind_name};
 use crate::layout::EntityKind;
+use crate::project_folders;
 use rusqlite::types::{ToSql, Value};
 use rusqlite::{Connection, params};
 use std::collections::HashMap;
@@ -367,26 +368,33 @@ impl WorkspaceIndex {
         Ok(read_data(&connection, &select)?.into_iter().next())
     }
 
-    /// Файлы, которые не удалось прочитать, по пути; страница с общим числом.
+    /// Проблемы области по пути, страница с общим числом: файлы, которые не удалось прочитать, и вторые папки проектов
+    /// ([`project_folders::second_folder_problems`]: их файлы в списках, но папки нужно слить).
     pub fn problems(&self, page: Page) -> io::Result<ListPage<WorkspaceProblem>> {
         let connection = self.connect()?;
-        let total: i64 = connection
-            .query_row("SELECT count(*) FROM files WHERE error IS NOT NULL", [], |row| row.get(0))
-            .map_err(db_error)?;
         let mut statement = connection
-            .prepare("SELECT path, error FROM files WHERE error IS NOT NULL ORDER BY path LIMIT ?1 OFFSET ?2")
+            .prepare("SELECT path, error FROM files WHERE error IS NOT NULL ORDER BY path")
             .map_err(db_error)?;
         let rows = statement
-            .query_map(params![page.limit as i64, page.offset as i64], |row| {
+            .query_map([], |row| {
                 Ok(WorkspaceProblem {
                     path: row.get(0)?,
                     error: row.get(1)?,
                 })
             })
             .map_err(db_error)?;
-        let data = rows.collect::<Result<Vec<_>, _>>().map_err(db_error)?;
+        let mut all = rows.collect::<Result<Vec<_>, _>>().map_err(db_error)?;
+        all.extend(
+            project_folders::second_folder_problems(self.directory())
+                .into_iter()
+                .map(|(path, error)| WorkspaceProblem { path, error }),
+        );
+        // Как ORDER BY path в SQLite: побайтно.
+        all.sort_by(|a, b| a.path.cmp(&b.path));
+        let total_count = all.len();
+        let data = all.into_iter().skip(page.offset).take(page.limit).collect();
         Ok(ListPage {
-            total_count: total.max(0) as usize,
+            total_count,
             offset: page.offset,
             limit: page.limit,
             data,
@@ -421,9 +429,10 @@ impl WorkspaceIndex {
             .query_map(params![kind_name(kind), project_id.map(guid_d)], |row| row.get::<_, String>(0))
             .map_err(db_error)?;
         let mut found = Vec::new();
+        let folders = self.directory().folders();
         for relative in rows {
             let relative = relative.map_err(db_error)?;
-            let Some(layout) = crate::layout::classify(&relative) else {
+            let Some(layout) = crate::layout::classify(&relative, &folders) else {
                 continue;
             };
             let matches = match (&layout.id, &layout.id_prefix) {

@@ -29,7 +29,7 @@ fn tasks_by_full_and_short_id_report_the_read_error() {
     let (root, workspace) = fresh_copy();
     let ws = workspace.to_str().unwrap();
     let future =
-        "Unsupported format: from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (9): update Tasker\n";
+        "Unsupported format: from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker\n";
     for reference in ["cccccccc-0000-4000-8000-cccccccccccc", "cccccccc", "CCCCCCCC0000"] {
         assert_error(&root, &["task", "get", reference, "-w", ws, "-p", "Legacy"], CONFLICT);
         assert_error(&root, &["task", "get", reference, "--json", "-w", ws, "-p", "Legacy"], CONFLICT);

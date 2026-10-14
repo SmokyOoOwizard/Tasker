@@ -100,7 +100,11 @@ impl ParsedName {
 
 /// `EntityFileNames.TryParse`: None — имя не похоже на имя файла сущности.
 pub fn try_parse(file_name: &str) -> Option<ParsedName> {
-    let stem = file_name.strip_suffix(EXTENSION)?;
+    try_parse_stem(file_name.strip_suffix(EXTENSION)?)
+}
+
+/// То же для имени без расширения — так называются папки проектов: `<slug>-<id8>` или прежнее `<guid>`.
+pub fn try_parse_stem(stem: &str) -> Option<ParsedName> {
     if let Some(id) = parse_guid(stem) {
         return Some(ParsedName::FullId(id));
     }

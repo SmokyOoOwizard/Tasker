@@ -309,10 +309,10 @@ public class CliChangeTests
         var id = (await Ok(ws.Run("project", "create", "Demo"))).Id;
         await Ok(ws.Run("project", "update", "Demo", "--name", "Changed"));
 
-        var yaml = File.ReadAllText(Path.Combine(ws.Root, ".tasker", "projects", id.ToString(), "project.yaml"));
+        var yaml = File.ReadAllText(Path.Combine(ProjectPaths.Folder(ws.Root, id), "project.yaml"));
         Assert.Contains("Changed", yaml);
 
         await Ok(ws.Run("project", "delete", "Changed", "--yes"));
-        Assert.False(File.Exists(Path.Combine(ws.Root, ".tasker", "projects", id.ToString(), "project.yaml")));
+        Assert.False(ProjectPaths.Exists(ws.Root, id));
     }
 }
