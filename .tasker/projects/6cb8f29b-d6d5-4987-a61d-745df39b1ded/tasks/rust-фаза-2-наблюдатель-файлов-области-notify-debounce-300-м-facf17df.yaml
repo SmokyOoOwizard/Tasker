@@ -1,7 +1,6 @@
 formatVersion: 9
 id: facf17df-4c20-4ad9-a777-7fc0cc216dcc
 title: 'Rust, фаза 2: наблюдатель файлов области (notify, debounce 300 мс / потолок 2 с, порог 500 путей)'
-description: 'Фаза 2 плана docs/rust-migration-plan.md, п. 4. notify + notify-debouncer-full с теми же окнами, что сейчас: 300 мс, потолок 2 с, при более 500 путей — полный Sync. Нужен только демону, но живёт в tasker-files. Тест: пачка правок файлов → одно обновление индекса.'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-09T11:34:28.7068260+00:00
@@ -12,3 +11,4 @@ series:
 links:
 - typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
   taskId: a10596a5-05b4-4144-8a5c-9cf9ab1ea977
+description: 'Фаза 2 плана docs/rust-migration-plan.md, п. 4. notify + notify-debouncer-full с теми же окнами, что сейчас: 300 мс, потолок 2 с, при более 500 путей — полный Sync. Нужен только демону, но живёт в tasker-files. Тест: пачка правок файлов → одно обновление индекса.'

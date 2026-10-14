@@ -1,6 +1,16 @@
 formatVersion: 9
 id: 3a989b35-c29a-4428-9738-7021cd62247c
 title: 'Rust, фаза 3: автодополнение ([suggest], источники, встроенные скрипты), PerfTrace, размер и скорость бинарника'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-09T11:34:29.5141990+00:00
+updatedAt: 2026-10-10T19:10:30.5333570+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 136
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 18ecf266-3362-49b8-bb5d-22dd39374c58
 description: |-
   Фаза 3 плана docs/rust-migration-plan.md, п. 3–4. Директива [suggest] и источники подсказок (как Sources.cs: проекты, задачи по префиксу, статусы, типы, поля…), существующие скрипты tasker.bash/zsh/ps1/fish встраиваются как есть через include_str! и печатаются tasker completion <shell> байт в байт. PerfTrace (TASKER_PROFILE=1), чтобы scripts/perf/bench.py работал без изменений.
 
@@ -13,13 +23,3 @@ description: |-
   - Исправлено: CanonicalPath перебирал каталоги пути (в системном temp 43 мс на вызов) → getattrlist; PerfTrace без запуска ps.
   - Автодополнение: порт логики System.CommandLine, scripts/completion-diff.py — 0 расхождений с .NET на ~18 тыс. строк в 3 режимах; сценарии CompletionTests/ManualCompletionTests/PerformanceGuardTests в Rust.
   - Бэклог: TSK-150 (.NET CanonicalPath, +130 мс в temp), TSK-151 ([suggest] теряет начальный -p), TSK-152 (дешевле сверка индекса).
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-09T11:34:29.5141990+00:00
-updatedAt: 2026-10-10T19:10:30.5333570+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 136
-links:
-- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
-  taskId: 18ecf266-3362-49b8-bb5d-22dd39374c58

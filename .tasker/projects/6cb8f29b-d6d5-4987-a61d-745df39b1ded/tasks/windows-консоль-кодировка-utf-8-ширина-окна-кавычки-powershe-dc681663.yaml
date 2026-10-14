@@ -1,6 +1,13 @@
 formatVersion: 9
 id: dc681663-94c0-4150-8207-e12fea0ef823
 title: 'Windows: консоль — кодировка UTF-8, ширина окна, кавычки PowerShell, пути, автодополнение PowerShell'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T18:51:19.1196020+00:00
+updatedAt: 2026-10-07T20:39:42.9035090+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 119
 description: |
   Консоль `tasker` (кириллица в заголовках, выровненные колонки, обрезка по ширине, итог Found, дерево задач, автодополнение) должна выглядеть и работать на Windows (Windows Terminal, PowerShell 5.1 и 7, cmd.exe, Git Bash) так же, как на macOS и Linux.
 
@@ -28,10 +35,3 @@ description: |
   13. cmd.exe: Tab не дополняет `tasker` команды (ожидаемо; в мануале и README это сказано).
   14. Git Bash: `tasker task list` — кириллица цела, `tasker completion bash` работает.
   15. Прогнать `dotnet test` на Windows: `WindowsConsoleTests` проходят (проверка с настоящим pwsh там пропускается).
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-07T18:51:19.1196020+00:00
-updatedAt: 2026-10-07T20:39:42.9035090+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 119

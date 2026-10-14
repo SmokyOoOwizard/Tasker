@@ -1,6 +1,13 @@
 formatVersion: 9
 id: 2ab528d4-2186-46e5-8f75-9a13de009b2a
 title: 'Файл задачи: описание последним ключом — после заголовка идут служебные поля'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-13T14:31:14.3255690+00:00
+updatedAt: 2026-10-14T02:36:27.1779400+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 168
 description: |-
   Проблема
   В файле задачи (.tasker/projects/<id>/tasks/*.yaml) ключи идут в порядке полей модели: formatVersion, id, title, description, typeId, statusId, createdAt, updatedAt, series, links, fields. Описание часто длинное, и служебные поля оказываются после экрана текста.
@@ -20,10 +27,3 @@ description: |-
   - Переформатировать .tasker репозитория одним коммитом (tasker migrate) вместе с изменением.
   - Вики «Хранение-и-git»: текущий порядок ключей; версия задачи при переформатировании меняется (агент со старой версией один раз получит «Modified»).
   - Проверка: cargo test, golden --verify, .NET-тесты (запись TaskFile, чтение обоих порядков), CI на трёх ОС.
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-13T14:31:14.3255690+00:00
-updatedAt: 2026-10-14T02:36:27.1779400+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 168
