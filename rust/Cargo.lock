@@ -1540,9 +1540,11 @@ dependencies = [
 name = "tasker-files"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "notify",
  "regex",
  "rusqlite",
+ "rustix",
  "saphyr-parser",
  "serde",
  "serde_json",

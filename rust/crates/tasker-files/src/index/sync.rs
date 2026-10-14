@@ -1,6 +1,7 @@
 //! Сверка индекса с диском (`WorkspaceIndex.Sync` в .NET): внутри указанных путей удаляются записи о пропавших файлах и
 //! перечитываются новые и изменившиеся (по размеру и времени изменения). Одна транзакция.
 use super::data::IndexEntity;
+use super::scan::{self, NET_TICKS_AT_UNIX_EPOCH, PathKind, Stamp};
 use super::{db_error, is_busy, kind_name};
 use crate::error::Error;
 use crate::files;
@@ -33,14 +34,6 @@ pub struct SyncReport {
     pub updated: usize,
     pub removed: usize,
     pub changed: Vec<FileChange>,
-}
-
-/// Отпечаток файла: размер и время изменения в тиках .NET (`FileInfo.LastWriteTimeUtc.Ticks`) — как у .NET, иначе каждая сборка
-/// считала бы файлы, записанные другой, изменившимися.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Stamp {
-    size: i64,
-    mtime: i64,
 }
 
 struct DiskFile {
@@ -177,30 +170,6 @@ fn indexed_stamps(transaction: &Transaction<'_>, scopes: &[String]) -> io::Resul
     Ok(result)
 }
 
-/// Тики .NET (100 нс от 0001-01-01T00:00:00Z) в момент эпохи Unix.
-pub(super) const NET_TICKS_AT_UNIX_EPOCH: i64 = 621_355_968_000_000_000;
-
-/// Время изменения в тиках .NET: секунды и наносекунды stat (FILETIME на Windows), наносекунды — вниз до 100 нс, как
-/// `File.GetLastWriteTimeUtc` (.NET на Unix берёт `st_mtim` и делит наносекунды на 100).
-pub(super) fn net_ticks(time: std::time::SystemTime) -> Option<i64> {
-    let ticks = match time.duration_since(std::time::UNIX_EPOCH) {
-        Ok(d) => i64::try_from(d.as_secs()).ok()? * 10_000_000 + (d.subsec_nanos() / 100) as i64,
-        Err(e) => {
-            let d = e.duration();
-            -(i64::try_from(d.as_secs()).ok()? * 10_000_000 + d.subsec_nanos().div_ceil(100) as i64)
-        }
-    };
-    Some(ticks + NET_TICKS_AT_UNIX_EPOCH)
-}
-
-fn stamp_of(metadata: &std::fs::Metadata) -> Stamp {
-    let mtime = metadata.modified().ok().and_then(net_ticks).unwrap_or(0);
-    Stamp {
-        size: metadata.len() as i64,
-        mtime,
-    }
-}
-
 fn scan_disk(directory: &TaskerDirectory, folders: &ProjectFolders, scopes: &[String]) -> HashMap<String, DiskFile> {
     let mut result = HashMap::new();
     for scope in scopes {
@@ -211,65 +180,35 @@ fn scan_disk(directory: &TaskerDirectory, folders: &ProjectFolders, scopes: &[St
             path.extend(scope.split('/'));
             path
         };
-        let mut files = Vec::new();
-        if full.is_file() {
-            files.push(full);
-        } else if full.is_dir() {
-            // Папку могут удалить посреди обхода (git checkout) — тогда берём, что успели: её события придут следом.
-            walk(&full, &mut files);
-        } else {
-            continue;
-        }
-        for file in files {
-            let Some(relative) = relative_to(directory.root(), &file) else {
-                continue;
-            };
-            let Some(layout) = layout::classify(&relative, folders) else {
-                continue;
-            };
-            if let Ok(metadata) = std::fs::metadata(&file)
-                && metadata.is_file()
-            {
-                result.insert(
-                    relative,
-                    DiskFile {
-                        full_path: file,
-                        layout,
-                        stamp: stamp_of(&metadata),
-                    },
-                );
+        match scan::path_kind(&full) {
+            PathKind::File(stamp) => {
+                if let Some(layout) = layout::classify(scope, folders) {
+                    result.insert(
+                        scope.clone(),
+                        DiskFile {
+                            full_path: full,
+                            layout,
+                            stamp,
+                        },
+                    );
+                }
             }
+            PathKind::Dir => {
+                for found in scan::tree(&full, scope, &mut |relative| layout::classify(relative, folders)) {
+                    result.insert(
+                        found.relative,
+                        DiskFile {
+                            full_path: found.full_path,
+                            layout: found.value,
+                            stamp: found.stamp,
+                        },
+                    );
+                }
+            }
+            PathKind::None => {}
         }
     }
     result
-}
-
-// Все *.yaml в папке и её подпапках; недоступные папки пропускаются (IgnoreInaccessible).
-fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let Ok(file_type) = entry.file_type() else {
-            continue;
-        };
-        if file_type.is_dir() {
-            walk(&path, out);
-        } else if path.extension().is_some_and(|e| e == &names::EXTENSION[1..]) {
-            out.push(path);
-        }
-    }
-}
-
-fn relative_to(root: &Path, file: &Path) -> Option<String> {
-    let rest = file.strip_prefix(root).ok()?;
-    Some(
-        rest.components()
-            .map(|c| c.as_os_str().to_string_lossy().into_owned())
-            .collect::<Vec<_>>()
-            .join("/"),
-    )
 }
 
 /// Строка `files` и строки таблиц задачи.
