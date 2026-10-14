@@ -69,7 +69,8 @@ public static class McpRegistration
                 var tool = McpServerTool.Create(method, target: null, new McpServerToolCreateOptions
                 {
                     Services = new ToolServices(sp),
-                    SerializerOptions = TaskerJson.Options
+                    SerializerOptions = TaskerJson.Options,
+                    SchemaCreateOptions = NestedRequired.SchemaOptions
                 });
                 DefaultProject.MakeOptional(tool.ProtocolTool);
                 if (workspaceArgument)
