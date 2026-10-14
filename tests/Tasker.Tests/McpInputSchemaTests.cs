@@ -1,53 +1,74 @@
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
+using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
-using Tasker.Storage.Files.Workspaces;
 using Tasker.Web;
-using Tasker.Web.Workspaces;
 using Xunit;
 
 namespace Tasker.Tests;
 
 /// <summary>
-/// <c>inputSchema</c> инструментов MCP .NET (десктоп, в процессе теста): совпадает с эталоном <c>rust/tests/golden/expected/mcp/tools-list.json</c>,
-/// по которому сверяется и Rust-демон (<c>tasker-mcpd/tests/mcp.rs</c>), а во вложенных объектах (<c>columns[]</c>, <c>fields[]</c>…) в <c>required</c>
-/// только то, без чего не обойтись: вызов без необязательных вложенных свойств проходит.
+/// <c>inputSchema</c> инструментов MCP .NET (сервер, вход по токену агента, в процессе теста): совпадает с эталоном
+/// <c>rust/tests/golden/expected/mcp/tools-list.json</c>, по которому сверяется и Rust-демон (<c>tasker-mcpd/tests/mcp.rs</c>), с поправкой на то,
+/// что у сервера одна область — нет <c>list_workspaces</c> и аргумента <c>workspace</c>; во вложенных объектах (<c>columns[]</c>, <c>fields[]</c>…)
+/// в <c>required</c> только то, без чего не обойтись: вызов без необязательных вложенных свойств проходит.
 /// </summary>
 public class McpInputSchemaTests : IAsyncLifetime
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));
-    private readonly IsolatedHome _home = new();
+    private sealed class EmptyModule : Module;
+
     private WebApplication _app = null!;
-    private string _address = null!;
+    private HttpClient _http = null!;
+    private string _agentToken = null!;
+    private string _ownerToken = null!;
+    private string _agentId = null!;
 
     public async Task InitializeAsync()
     {
-        Directory.CreateDirectory(_root);
-        var builder = TaskerWebApp.CreateBuilder<WebTestModule>([], TaskerMode.Local);
+        var builder = TaskerWebApp.CreateBuilder<EmptyModule>([], TaskerMode.Server);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         _app = builder.Build();
         _app.MapTasker();
         await _app.StartAsync();
-        _address = _app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
+        var address = _app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
+        _http = new HttpClient { BaseAddress = new Uri(address) };
+
+        _ownerToken = (await Rest(HttpMethod.Post, "/api/auth/register", null,
+            new { username = "owner", email = "owner@example.com", password = "Passw0rd!123" }))["accessToken"]!.GetValue<string>();
+        var agent = await Rest(HttpMethod.Post, "/api/agents", _ownerToken, new { username = "bot" });
+        _agentId = agent["id"]!.GetValue<string>();
+        _agentToken = (await Rest(HttpMethod.Post, $"/api/agents/{_agentId}/tokens", _ownerToken, new { name = "t" }))["token"]!.GetValue<string>();
     }
 
     public async Task DisposeAsync()
     {
+        _http.Dispose();
         await _app.StopAsync();
         await _app.DisposeAsync();
-        _home.Dispose();
-        Directory.Delete(_root, recursive: true);
+    }
+
+    private async Task<JsonNode> Rest(HttpMethod method, string path, string? token, object? body = null)
+    {
+        using var request = new HttpRequestMessage(method, path);
+        if (token != null)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (body != null)
+            request.Content = JsonContent.Create(body);
+        using var response = await _http.SendAsync(request);
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, $"{method} {path}: {(int)response.StatusCode} {text}");
+        return text.Length == 0 ? new JsonObject() : JsonNode.Parse(text)!;
     }
 
     private async Task<JsonNode> Rpc(string method, JsonObject? parameters = null)
     {
-        using var http = new HttpClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_address}/mcp")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
             Content = new StringContent(
                 new JsonObject { ["jsonrpc"] = "2.0", ["id"] = 1, ["method"] = method, ["params"] = parameters ?? new JsonObject() }.ToJsonString(),
@@ -55,7 +76,8 @@ public class McpInputSchemaTests : IAsyncLifetime
         };
         request.Headers.Accept.ParseAdd("application/json");
         request.Headers.Accept.ParseAdd("text/event-stream");
-        using var response = await http.SendAsync(request);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _agentToken);
+        using var response = await _http.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.IsSuccessStatusCode, body);
         var data = body.Split('\n').First(x => x.StartsWith("data:"))["data:".Length..].Trim();
@@ -104,15 +126,25 @@ public class McpInputSchemaTests : IAsyncLifetime
         schema["required"]?.AsArray().Select(x => x!.GetValue<string>()).ToArray() ?? [];
 
     [Fact]
-    public async Task Tools_list_matches_the_golden_snapshot_shared_with_the_rust_daemon()
+    public async Task Tools_list_matches_the_golden_snapshot_shared_with_the_rust_daemon_except_the_workspace_argument()
     {
-        await using var _ = await _app.Services.GetRequiredService<WorkspaceRegistry>().Open(WorkspaceLocation.Files(Directory.CreateDirectory(Path.Combine(_root, "golden")).FullName));
         var actual = ByName((await Rpc("tools/list"))["tools"]!);
         var expected = ByName(JsonNode.Parse(await File.ReadAllTextAsync(GoldenToolsList()))!["result"]!["tools"]!);
 
-        Assert.Equal(expected.Keys.Order(), actual.Keys.Order());
-        foreach (var (name, tool) in expected)
-            Assert.Equal(tool.ToJsonString(), actual[name].ToJsonString());
+        // Эталон снят с демона, где область — аргумент вызова; у сервера область одна: list_workspaces нет, остальные инструменты те же.
+        Assert.Equal(["list_workspaces"], expected.Keys.Except(actual.Keys));
+        Assert.Empty(actual.Keys.Except(expected.Keys));
+
+        // У общих инструментов отличие одно — аргумент workspace (необязательный, последний); без него схема та же байт в байт.
+        foreach (var (name, tool) in actual)
+        {
+            var golden = expected[name].DeepClone();
+            var properties = golden["inputSchema"]!["properties"]!.AsObject();
+            Assert.Equal("workspace", properties.Last().Key);
+            properties.Remove("workspace");
+            Assert.DoesNotContain("workspace", golden["inputSchema"]!["required"]?.ToJsonString() ?? "");
+            Assert.Equal(golden.ToJsonString(), tool.ToJsonString());
+        }
     }
 
     [Fact]
@@ -147,8 +179,8 @@ public class McpInputSchemaTests : IAsyncLifetime
     [Fact]
     public async Task Calls_without_optional_nested_properties_work()
     {
-        await using var workspace = await _app.Services.GetRequiredService<WorkspaceRegistry>().Open(WorkspaceLocation.Files(Directory.CreateDirectory(Path.Combine(_root, "w")).FullName));
-        var projectId = (await Call("create_project", new { name = "Alpha" }))["id"]!.GetValue<string>();
+        var projectId = (await Rest(HttpMethod.Post, "/api/projects", _ownerToken, new { name = "Alpha" }))["id"]!.GetValue<string>();
+        await Rest(HttpMethod.Post, $"/api/projects/{projectId}/members", _ownerToken, new { userId = _agentId });
         var todo = (await Call("create_status", new { projectId, name = "Todo", color = "#112233" }))["id"]!.GetValue<string>();
         var set = (await Call("create_status_set", new { projectId, name = "Set", statusIds = new[] { todo } }))["id"]!.GetValue<string>();
         var level = await Call("create_enum", new { projectId, name = "Level", values = new[] { "Low" } });
