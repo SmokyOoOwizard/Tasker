@@ -218,12 +218,13 @@ impl From<Error> for UpgradeError {
     }
 }
 
-/// Переписывает файл в текущий формат на диске, не меняя в нём ничего другого (текст приводится шагами [`format::upgrade`]). Под
-/// той же блокировкой, что и обычная запись, — не потеряет чужую правку. Текст читается как UTF-8 без BOM, поэтому BOM при
-/// переписи уходит; окончания строк остаются.
+/// Переписывает файл в текущий формат на диске, не меняя в нём ничего другого (текст приводится шагами [`format::upgrade`]), а
+/// файл задачи (`task`) — ещё и в текущий порядок ключей ([`crate::files::task::reorder_keys`]). Под той же блокировкой, что и
+/// обычная запись, — не потеряет чужую правку. Текст читается как UTF-8 без BOM, поэтому BOM при переписи уходит; окончания строк
+/// остаются.
 ///
-/// Возвращает версию, из которой переписан файл; None — файл уже в текущем формате или его нет.
-pub fn upgrade_on_disk(path: &Path) -> Result<Option<u32>, UpgradeError> {
+/// Возвращает версию, из которой переписан файл; None — файл уже в текущем формате и порядке ключей или его нет.
+pub fn upgrade_on_disk(path: &Path, task: bool) -> Result<Option<u32>, UpgradeError> {
     let result: io::Result<Result<Option<u32>, UpgradeError>> = with_lock(path, || {
         let Some(bytes) = read_bytes(path)? else {
             return Ok(Ok(None));
@@ -234,13 +235,16 @@ pub fn upgrade_on_disk(path: &Path) -> Result<Option<u32>, UpgradeError> {
             Ok(v) => v,
             Err(e) => return Ok(Err(e.into())),
         };
-        if version == format::CURRENT {
-            return Ok(Ok(None));
-        }
-        let upgraded = match format::upgrade(text, path) {
+        let mut upgraded = match format::upgrade(text, path) {
             Ok(t) => t,
             Err(e) => return Ok(Err(e.into())),
         };
+        if task && let Some(reordered) = crate::files::task::reorder_keys(&upgraded) {
+            upgraded = reordered;
+        }
+        if version == format::CURRENT && upgraded == text {
+            return Ok(Ok(None));
+        }
         atomic::write_all_bytes(path, upgraded.as_bytes())?;
         Ok(Ok(Some(version)))
     });
@@ -316,24 +320,39 @@ mod tests {
     }
 
     #[test]
-    fn upgrade_on_disk_rewrites_only_the_version_line() {
+    fn upgrade_on_disk_rewrites_only_the_version_line_and_the_task_key_order() {
         let ws = temp_dir();
         let path = tasker_file(&ws, "a-00000001.yaml");
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, b"\xEF\xBB\xBFformatVersion: 3\r\nid: 1\r\ntitle: x\r\n").unwrap();
-        assert_eq!(upgrade_on_disk(&path).unwrap(), Some(3));
+        assert_eq!(upgrade_on_disk(&path, false).unwrap(), Some(3));
         assert_eq!(std::fs::read(&path).unwrap(), b"formatVersion: 9\r\nid: 1\r\ntitle: x\r\n");
-        assert_eq!(upgrade_on_disk(&path).unwrap(), None);
+        assert_eq!(upgrade_on_disk(&path, false).unwrap(), None);
         std::fs::write(&path, b"id: 1\n").unwrap();
-        assert_eq!(upgrade_on_disk(&path).unwrap(), Some(0));
+        assert_eq!(upgrade_on_disk(&path, false).unwrap(), Some(0));
         assert_eq!(std::fs::read(&path).unwrap(), b"formatVersion: 9\nid: 1\n");
         std::fs::write(&path, b"formatVersion: 99\nid: 1\n").unwrap();
-        let error = upgrade_on_disk(&path).unwrap_err();
+        let error = upgrade_on_disk(&path, false).unwrap_err();
         assert_eq!(
             error.to_string(),
             "a-00000001.yaml: format version 99 is newer than this Tasker supports (9): update Tasker"
         );
-        assert_eq!(upgrade_on_disk(&tasker_file(&ws, "missing.yaml")).unwrap(), None);
+        assert_eq!(upgrade_on_disk(&tasker_file(&ws, "missing.yaml"), false).unwrap(), None);
+        // Файл задачи текущего формата в прежнем порядке ключей: описание уходит в конец.
+        std::fs::write(&path, b"formatVersion: 9\r\nid: 1\r\ndescription: d\r\ntitle: x\r\n").unwrap();
+        assert_eq!(upgrade_on_disk(&path, false).unwrap(), None);
+        assert_eq!(upgrade_on_disk(&path, true).unwrap(), Some(9));
+        assert_eq!(
+            std::fs::read(&path).unwrap(),
+            b"formatVersion: 9\r\nid: 1\r\ntitle: x\r\ndescription: d\r\n"
+        );
+        assert_eq!(upgrade_on_disk(&path, true).unwrap(), None);
+        std::fs::write(&path, b"id: 1\ndescription: d\ntitle: x\n").unwrap();
+        assert_eq!(upgrade_on_disk(&path, true).unwrap(), Some(0));
+        assert_eq!(
+            std::fs::read(&path).unwrap(),
+            b"formatVersion: 9\nid: 1\ntitle: x\ndescription: d\n"
+        );
         std::fs::remove_dir_all(&ws).unwrap();
     }
 

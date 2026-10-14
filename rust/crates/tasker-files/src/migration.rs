@@ -1,9 +1,11 @@
 //! `tasker migrate` (`FileMigration` в .NET): приводит файлы сущностей `.tasker` к текущему формату на диске — добавляет или
-//! обновляет `formatVersion`, остальной текст не трогает — и называет файлы сущностей проекта по их названию
+//! обновляет `formatVersion`, остальной текст не трогает, у файлов задач переносит `description` в конец (текущий порядок
+//! ключей, [`crate::files::task::reorder_keys`]) — и называет файлы сущностей проекта по их названию
 //! (`<slug>-<id8>.yaml`). Файлы более нового формата и файлы с конфликтом слияния git не меняются, а попадают в отчёт. Каждый файл
 //! переписывается под блокировкой записи, индекс обновляется после ([`IndexRefresh`]).
+use crate::files::task as tasks;
 use crate::format;
-use crate::layout::{EntityFolder, EntityHead, LayoutEntry, TaskerDirectory, classify, folder_of};
+use crate::layout::{EntityFolder, EntityHead, EntityKind, LayoutEntry, TaskerDirectory, classify, folder_of};
 use crate::names;
 use crate::write::{self, IndexRefresh};
 use std::io;
@@ -44,10 +46,13 @@ pub struct MigrationReport {
     pub current_format: u32,
     /// Сколько файлов сущностей проверено.
     pub scanned: usize,
-    /// Сколько уже в текущем формате.
+    /// Сколько уже в текущем формате и порядке ключей.
     pub up_to_date: usize,
-    /// Файлы старого формата: переписаны в текущий (при `dry_run` — были бы переписаны).
+    /// Файлы старого формата: переписаны в текущий (при `dry_run` — были бы переписаны); у файлов задач заодно и порядок ключей.
     pub migrated: Vec<MigrationFile>,
+    /// Файлы задач текущего формата в прежнем порядке ключей (описание не последним): переписаны в текущий порядок (при `dry_run`
+    /// — были бы). Пути относительно `.tasker` через `/`.
+    pub reordered: Vec<String>,
     /// Файлы сущностей проекта, имя которых не по названию: переименованы (при `dry_run` — были бы).
     pub renamed: Vec<MigrationRename>,
     /// Файлы более нового формата: не тронуты, нужен более новый Tasker.
@@ -59,7 +64,11 @@ pub struct MigrationReport {
 impl MigrationReport {
     /// Есть что мигрировать или о чём нужно знать: старые файлы, файлы нового формата, нечитаемые.
     pub fn needs_attention(&self) -> bool {
-        !self.migrated.is_empty() || !self.renamed.is_empty() || !self.newer.is_empty() || !self.unreadable.is_empty()
+        !self.migrated.is_empty()
+            || !self.reordered.is_empty()
+            || !self.renamed.is_empty()
+            || !self.newer.is_empty()
+            || !self.unreadable.is_empty()
     }
 }
 
@@ -80,6 +89,7 @@ pub fn run(directory: &TaskerDirectory, index: &dyn IndexRefresh, options: Migra
     let mut scanned = 0;
     let mut up_to_date = 0;
     let mut migrated = Vec::new();
+    let mut reordered = Vec::new();
     let mut newer = Vec::new();
     let mut state = Migration {
         directory,
@@ -134,15 +144,21 @@ pub fn run(directory: &TaskerDirectory, index: &dyn IndexRefresh, options: Migra
                 }
             }
 
-            if version == format::CURRENT {
+            let task = layout.kind == EntityKind::Task;
+            let out_of_order = task && tasks::reorder_keys(&text).is_some();
+            if version == format::CURRENT && !out_of_order {
                 up_to_date += 1;
             } else {
-                migrated.push(MigrationFile {
-                    path: relative.clone(),
-                    version,
-                });
+                if version == format::CURRENT {
+                    reordered.push(relative.clone());
+                } else {
+                    migrated.push(MigrationFile {
+                        path: relative.clone(),
+                        version,
+                    });
+                }
                 if !options.dry_run {
-                    write::upgrade_on_disk(&full).map_err(|e| match e {
+                    write::upgrade_on_disk(&full, task).map_err(|e| match e {
                         write::UpgradeError::Io(e) => e,
                         write::UpgradeError::Format(e) => io::Error::other(e.message()),
                     })?;
@@ -165,6 +181,7 @@ pub fn run(directory: &TaskerDirectory, index: &dyn IndexRefresh, options: Migra
         scanned,
         up_to_date,
         migrated,
+        reordered,
         renamed: state.renamed,
         newer,
         unreadable: state.unreadable,
@@ -425,6 +442,50 @@ mod tests {
         let again = run(&dir, &NoIndex, MigrationOptions::default()).unwrap();
         assert!(!again.needs_attention());
         assert_eq!((again.scanned, again.up_to_date), (1, 1));
+        std::fs::remove_dir_all(&ws).unwrap();
+    }
+
+    #[test]
+    fn task_files_in_the_old_key_order_are_reordered_and_reported() {
+        let ws = temp_dir();
+        let dir = TaskerDirectory::new(&ws);
+        let project = Uuid::parse_str("22222222-2222-4222-8222-222222222222").unwrap();
+        let tasks = dir.project(&project).tasks();
+        std::fs::create_dir_all(&tasks).unwrap();
+        let (head, rest) = TASK.split_at(TASK.find("typeId").unwrap());
+        let description = "description: |-\n  One\n  Two\n";
+        // Текущий формат, прежний порядок: только перестановка; старый формат: номер версии и перестановка, в списке migrated.
+        let current = tasks.join("legacy-one-0000007d.yaml");
+        std::fs::write(&current, format!("formatVersion: 9\n{head}{description}{rest}")).unwrap();
+        let old = tasks.join("legacy-one-0000007e.yaml");
+        let old_text = format!("formatVersion: 8\n{head}{description}{rest}").replace("0000007d-", "0000007e-");
+        std::fs::write(&old, &old_text).unwrap();
+
+        let dry = run(&dir, &NoIndex, MigrationOptions { dry_run: true }).unwrap();
+        let p = "projects/22222222-2222-4222-8222-222222222222/tasks";
+        assert_eq!(dry.reordered, vec![format!("{p}/legacy-one-0000007d.yaml")]);
+        assert_eq!(dry.migrated.iter().map(|f| f.version).collect::<Vec<_>>(), vec![8]);
+        assert_eq!((dry.scanned, dry.up_to_date), (2, 0));
+        assert!(dry.needs_attention());
+        assert_eq!(
+            std::fs::read_to_string(&current).unwrap(),
+            format!("formatVersion: 9\n{head}{description}{rest}")
+        );
+
+        let real = run(&dir, &NoIndex, MigrationOptions::default()).unwrap();
+        assert_eq!(real.reordered, dry.reordered);
+        assert_eq!(
+            std::fs::read_to_string(&current).unwrap(),
+            format!("formatVersion: 9\n{head}{rest}{description}")
+        );
+        assert_eq!(
+            std::fs::read_to_string(&old).unwrap(),
+            format!("formatVersion: 9\n{head}{rest}{description}").replace("0000007d-", "0000007e-")
+        );
+
+        let again = run(&dir, &NoIndex, MigrationOptions { dry_run: true }).unwrap();
+        assert!(!again.needs_attention());
+        assert_eq!((again.scanned, again.up_to_date), (2, 2));
         std::fs::remove_dir_all(&ws).unwrap();
     }
 }

@@ -195,10 +195,16 @@ fn every_workspace_file_round_trips_byte_for_byte() {
             }
             continue;
         }
-        // Старый формат, CRLF или BOM: tasker migrate меняет только номер версии (и убирает BOM), сохраняя окончания строк.
+        // Старый формат, CRLF или BOM: tasker migrate меняет только номер версии (и убирает BOM), сохраняя окончания строк, а у
+        // файла задачи ещё переносит описание в конец.
         via_migrate += 1;
         let (migrated_path, migrated_bytes) = migrated_file(&rel, &id);
-        let upgraded = format::upgrade(&text, &file).unwrap();
+        let mut upgraded = format::upgrade(&text, &file).unwrap();
+        if kind == Kind::Task
+            && let Some(reordered) = files::task::reorder_keys(&upgraded)
+        {
+            upgraded = reordered;
+        }
         assert_eq!(
             upgraded.as_bytes(),
             migrated_bytes.as_slice(),

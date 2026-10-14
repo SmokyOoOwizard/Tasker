@@ -1,9 +1,6 @@
 formatVersion: 9
 id: 00000035-0000-4000-8000-000000000035
 title: Bug with all fields (renamed)
-description: |-
-  Bug with all fields.
-  Estimate given as 007: stored canonically.
 typeId: 0000002a-0000-4000-8000-00000000002a
 statusId: 00000006-0000-4000-8000-000000000006
 createdAt: 2026-01-01T00:51:51.1235010+00:00
@@ -36,3 +33,6 @@ fields:
 - id: 00000022-0000-4000-8000-000000000022
   values:
   - "13"
+description: |-
+  Bug with all fields.
+  Estimate given as 007: stored canonically.

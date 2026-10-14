@@ -1,5 +1,5 @@
 Description:
-  Brings the files of the workspace to the current file format version (formatVersion) and names the files of project entities after their names (titles of tasks)
+  Brings the files of the workspace to the current file format (formatVersion, order of keys in task files) and names the files of project entities after their names (titles of tasks)
 
 Usage:
   tasker migrate [options]

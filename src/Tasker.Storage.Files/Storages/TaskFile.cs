@@ -1,3 +1,4 @@
+using System.Text;
 using Tasker.Core.Fields;
 using Tasker.Core.TaskSeries;
 using Tasker.Core.Tasks;
@@ -10,9 +11,6 @@ namespace Tasker.Storage.Files.Storages;
 /// <code>
 /// id: 0b6f5f9e-5c1a-4d7e-9a4b-2f1d3c4e5a6b
 /// title: Настроить CI
-/// description: |
-///   Первая строка описания.
-///   Вторая строка.
 /// typeId: 9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
 /// statusId: 5d2c1a3b-7e4f-4a6b-8c9d-0e1f2a3b4c5d
 /// createdAt: 2026-09-25T10:00:00.0000000+00:00
@@ -35,7 +33,12 @@ namespace Tasker.Storage.Files.Storages;
 ///   values:
 ///   - '3'
 ///   - '8'
+/// description: |
+///   Первая строка описания.
+///   Вторая строка.
 /// </code>
+/// Описание — последний ключ: длинный текст не отодвигает служебные поля. Читаются ключи в любом порядке; <see cref="ReorderKeys"/>
+/// переставляет описание в конец файла, записанного в прежнем порядке (<c>tasker migrate</c>).
 /// Списки есть, только если они не пусты: <c>series</c> — номера в сериях (порядок как в <see cref="TaskItem.SeriesNumbers"/>),
 /// <c>links</c> — исходящие связи с другими задачами проекта (<see cref="TaskItem.Links"/>): тип связи и задача-цель,
 /// <c>fields</c> — значения полей и дополнительные поля (<see cref="TaskItem.Fields"/>): <c>id</c> — поле каталога, а если есть
@@ -56,11 +59,55 @@ internal static class TaskFile
     public static Task<string?> Update(string path, string newPath, TaskItem task, string expectedVersion, CancellationToken ct) =>
         YamlFile.WriteIfMatch(path, newPath, ToFile(task), expectedVersion, ct);
 
+    /// <summary>
+    /// Текст файла задачи с <c>description</c> последним ключом: блок описания — строка ключа и все строки значения до следующей строки
+    /// без отступа — переносится в конец файла, остальной текст (порядок прочих ключей, кавычки, окончания строк) не меняется.
+    /// </summary>
+    /// <returns>null — описания нет или после него нет других ключей.</returns>
+    public static string? ReorderKeys(string text)
+    {
+        var lines = SplitLines(text);
+        // Строка верхнего уровня: без отступа и не пустая (пустые строки и строки с отступом — продолжение значения).
+        static bool TopLevel(string line) => line.Length > 0 && !char.IsWhiteSpace(line[0]);
+
+        var start = lines.FindIndex(x => x.StartsWith("description:", StringComparison.Ordinal)
+            && (x.Length == "description:".Length || char.IsWhiteSpace(x["description:".Length])));
+        if (start < 0)
+            return null;
+        var next = lines.FindIndex(start + 1, TopLevel);
+        var end = next < 0 ? lines.Count : next;
+        if (!lines.Skip(end).Any(x => TopLevel(x) && !x.StartsWith('#')))
+            return null;
+
+        var result = new StringBuilder(text.Length + 2);
+        foreach (var line in lines.Take(start).Concat(lines.Skip(end)))
+            result.Append(line);
+        if (result.Length == 0 || result[^1] != '\n')
+            result.Append(text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n");
+        foreach (var line in lines.Skip(start).Take(end - start))
+            result.Append(line);
+        return result.ToString();
+    }
+
+    // Строки вместе с их окончаниями (последняя — возможно, без).
+    private static List<string> SplitLines(string text)
+    {
+        var lines = new List<string>();
+        var from = 0;
+        while (from < text.Length)
+        {
+            var newline = text.IndexOf('\n', from);
+            var to = newline < 0 ? text.Length : newline + 1;
+            lines.Add(text[from..to]);
+            from = to;
+        }
+        return lines;
+    }
+
     private static TaskFileModel ToFile(TaskItem task) => new()
     {
         Id = task.Id,
         Title = task.Title,
-        Description = task.Description,
         TypeId = task.TypeId,
         StatusId = task.StatusId,
         CreatedAt = task.CreatedAt,
@@ -82,7 +129,8 @@ internal static class TaskFile
                 Required = x.Own is { Required: true } ? true : null,
                 Multiple = x.Own is { Multiple: true } ? true : null,
                 Values = x.Values.Count == 0 ? null : x.Values.Select(v => (string?)v).ToList()
-            }).ToList()
+            }).ToList(),
+        Description = task.Description
     };
 
     private static TaskItem Map(Guid projectId, Versioned<TaskFileModel> file, string path) => new()
@@ -116,12 +164,11 @@ internal static class TaskFile
                 field.Multiple ?? false,
                 field.Enum));
 
-    // Отдельная модель под формат файла, чтобы TaskItem мог меняться, не ломая файлы на диске.
+    // Отдельная модель под формат файла, чтобы TaskItem мог меняться, не ломая файлы на диске. Порядок свойств — порядок ключей в файле.
     private class TaskFileModel : FileModel
     {
         public Guid Id { get; set; }
         public string? Title { get; set; }
-        public string? Description { get; set; }
         public Guid TypeId { get; set; }
         public Guid StatusId { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
@@ -129,6 +176,7 @@ internal static class TaskFile
         public List<TaskSeriesFileModel>? Series { get; set; }
         public List<TaskLinkFileModel>? Links { get; set; }
         public List<TaskFieldFileModel>? Fields { get; set; }
+        public string? Description { get; set; }
     }
 
     private class TaskFieldFileModel
