@@ -71,7 +71,7 @@ fn errors_use_the_dotnet_texts() {
     let run = tasker(&root, &["migrate", "--check", "--json", "-w", empty.to_str().unwrap()]);
     assert_eq!(
         run.stdout,
-        "{\"applicable\":true,\"dryRun\":false,\"check\":true,\"currentFormat\":9,\"scanned\":0,\"upToDate\":0,\"needsAttention\":false,\"migrated\":[],\"renamed\":[],\"newer\":[],\"unreadable\":[]}\n"
+        "{\"applicable\":true,\"dryRun\":false,\"check\":true,\"currentFormat\":9,\"scanned\":0,\"upToDate\":0,\"needsAttention\":false,\"migrated\":[],\"reordered\":[],\"renamed\":[],\"newer\":[],\"unreadable\":[]}\n"
     );
     assert_eq!(run.code, 0);
 

@@ -1,7 +1,9 @@
-//! `tasks/<заголовок>-<id8>.yaml` (`TaskFile.cs`): `id`, `title`, `description` (если есть), `typeId`, `statusId`, `createdAt`,
-//! `updatedAt`, затем списки только когда не пусты: `series` (`seriesId`, `number`), `links` (`typeId`, `taskId`; одна и та же
-//! связь, записанная дважды, — одна связь), `fields` (`id` — поле каталога, а с `name` — собственное поле задачи: `name`, `type`,
-//! `enum`, `required` и `multiple` только когда true; `values` — канонические строки, только когда есть).
+//! `tasks/<заголовок>-<id8>.yaml` (`TaskFile.cs`): `id`, `title`, `typeId`, `statusId`, `createdAt`, `updatedAt`, затем списки
+//! только когда не пусты: `series` (`seriesId`, `number`), `links` (`typeId`, `taskId`; одна и та же связь, записанная дважды, —
+//! одна связь), `fields` (`id` — поле каталога, а с `name` — собственное поле задачи: `name`, `type`, `enum`, `required` и
+//! `multiple` только когда true; `values` — канонические строки, только когда есть), и последним — `description` (если есть):
+//! длинный текст не отодвигает служебные поля. Читаются ключи в любом порядке; [`reorder_keys`] переставляет описание в конец
+//! файла, записанного в прежнем порядке (`tasker migrate`).
 use super::{Entries, Versioned, or_empty, read_document, text_or_empty, write_document};
 use crate::error::Result;
 use crate::yaml::Node;
@@ -123,7 +125,6 @@ pub fn serialize(task: &TaskItem) -> Vec<u8> {
         Entries::new()
             .guid("id", &task.id)
             .str("title", &task.title)
-            .str_opt("description", task.description.as_deref())
             .guid("typeId", &task.type_id)
             .guid("statusId", &task.status_id)
             .timestamp("createdAt", &task.created_at)
@@ -131,6 +132,56 @@ pub fn serialize(task: &TaskItem) -> Vec<u8> {
             .maps_if_any("series", series)
             .maps_if_any("links", links)
             .maps_if_any("fields", fields)
+            .str_opt("description", task.description.as_deref())
             .into_vec(),
     )
+}
+
+/// Текст файла задачи с `description` последним ключом (`TaskFile.ReorderKeys` в .NET): блок описания — строка ключа и все строки
+/// значения до следующей строки без отступа — переносится в конец файла, остальной текст (порядок прочих ключей, кавычки,
+/// окончания строк) не меняется. None — описания нет или после него нет других ключей.
+pub fn reorder_keys(text: &str) -> Option<String> {
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    // Строка верхнего уровня: без отступа и не пустая (пустые строки и строки с отступом — продолжение значения).
+    let top_level = |line: &&str| line.starts_with(|c: char| !c.is_whitespace());
+    let start = lines.iter().position(|line| {
+        line.strip_prefix("description:")
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(|c: char| c.is_whitespace()))
+    })?;
+    let end = lines[start + 1..].iter().position(top_level).map_or(lines.len(), |i| start + 1 + i);
+    if !lines[end..].iter().any(|line| top_level(line) && !line.starts_with('#')) {
+        return None;
+    }
+    let mut out = String::with_capacity(text.len() + 2);
+    lines[..start].iter().chain(&lines[end..]).for_each(|line| out.push_str(line));
+    if !out.ends_with('\n') {
+        out.push_str(if text.contains("\r\n") { "\r\n" } else { "\n" });
+    }
+    lines[start..end].iter().for_each(|line| out.push_str(line));
+    Some(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reorder_keys_moves_the_description_block_to_the_end() {
+        let old = "formatVersion: 9\nid: 1\ntitle: x\ndescription: |-\n  a\n\n  b\ntypeId: 2\nfields:\n- id: 3\n";
+        assert_eq!(
+            reorder_keys(old).as_deref(),
+            Some("formatVersion: 9\nid: 1\ntitle: x\ntypeId: 2\nfields:\n- id: 3\ndescription: |-\n  a\n\n  b\n")
+        );
+        let crlf = "id: 1\r\ndescription: 'a:\r\n  b'\r\ntypeId: 2";
+        assert_eq!(
+            reorder_keys(crlf).as_deref(),
+            Some("id: 1\r\ntypeId: 2\r\ndescription: 'a:\r\n  b'\r\n")
+        );
+        // Уже последним, нет описания, после описания только комментарий, `description` внутри значения — не трогаем.
+        assert_eq!(reorder_keys("id: 1\ndescription: |+\n  a\n\n"), None);
+        assert_eq!(reorder_keys("id: 1\ntitle: description: x\n"), None);
+        assert_eq!(reorder_keys("id: 1\ndescription: a\n# note\n"), None);
+        assert_eq!(reorder_keys("id: 1\ndescriptionX: a\ntitle: b\n"), None);
+        assert_eq!(reorder_keys("title: |\n  description: a\nid: 1\n"), None);
+    }
 }

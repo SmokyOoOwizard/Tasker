@@ -1029,7 +1029,7 @@ fn cleanup() -> CommandSpec {
     ])
 }
 
-pub const MIGRATE_DESCRIPTION: &str = "Brings the files of the workspace to the current file format version (formatVersion) and names the files of project entities after their names (titles of tasks)";
+pub const MIGRATE_DESCRIPTION: &str = "Brings the files of the workspace to the current file format (formatVersion, order of keys in task files) and names the files of project entities after their names (titles of tasks)";
 
 fn migrate() -> CommandSpec {
     CommandSpec::new("migrate", MIGRATE_DESCRIPTION).opts([

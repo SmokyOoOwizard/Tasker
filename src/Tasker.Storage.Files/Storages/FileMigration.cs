@@ -7,7 +7,8 @@ namespace Tasker.Storage.Files.Storages;
 
 /// <summary>
 /// Приводит файлы сущностей .tasker к текущему формату на диске (<see cref="FormatVersions"/>): добавляет или обновляет
-/// <c>formatVersion</c> и применяет шаги миграции, остальной текст не трогает. Файлы более нового формата и файлы с конфликтом
+/// <c>formatVersion</c> и применяет шаги миграции, у файлов задач переносит <c>description</c> в конец (текущий порядок ключей,
+/// <see cref="TaskFile.ReorderKeys"/>), остальной текст не трогает. Файлы более нового формата и файлы с конфликтом
 /// слияния git не меняются, а попадают в отчёт. Каждый файл переписывается под блокировкой записи, индекс обновляется после.
 /// </summary>
 internal sealed partial class FileMigration(TaskerDirectory directory, WorkspaceIndex index) : IFileMigration
@@ -23,6 +24,7 @@ internal sealed partial class FileMigration(TaskerDirectory directory, Workspace
         var scanned = 0;
         var upToDate = 0;
         var migrated = new List<MigrationFile>();
+        var reordered = new List<string>();
         var renamed = new List<MigrationRename>();
         var newer = new List<MigrationFile>();
         var unreadable = new List<MigrationProblem>();
@@ -91,14 +93,19 @@ internal sealed partial class FileMigration(TaskerDirectory directory, Workspace
                     head = inspected;
                 }
 
-                if (version == FormatVersions.Current)
+                var task = layout.Kind == IndexKind.Task;
+                var outOfOrder = task && TaskFile.ReorderKeys(text) != null;
+                if (version == FormatVersions.Current && !outOfOrder)
                     upToDate++;
                 else
                 {
-                    migrated.Add(new MigrationFile(relative, version));
+                    if (version == FormatVersions.Current)
+                        reordered.Add(relative);
+                    else
+                        migrated.Add(new MigrationFile(relative, version));
                     if (!options.DryRun)
                     {
-                        await YamlFile.UpgradeOnDisk(full, ct);
+                        await YamlFile.UpgradeOnDisk(full, task, ct);
                         changed.Add(full);
                     }
                 }
@@ -111,7 +118,7 @@ internal sealed partial class FileMigration(TaskerDirectory directory, Workspace
         if (changed.Count > 0)
             await index.Refresh(changed, ct);
 
-        return new MigrationReport(FormatVersions.Current, scanned, upToDate, migrated.ToArray(), renamed.ToArray(), newer.ToArray(), unreadable.ToArray());
+        return new MigrationReport(FormatVersions.Current, scanned, upToDate, migrated.ToArray(), reordered.ToArray(), renamed.ToArray(), newer.ToArray(), unreadable.ToArray());
     }
 
     /// <summary>
