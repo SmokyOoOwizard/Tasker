@@ -27,19 +27,18 @@ pub const OTHER_VARIABLES: [&str; 14] = [
     "TASKER_MCP_HANDOFF",
 ];
 
-/// Полные ключи групп настроек (`ConfigKeys.For`): AuthConfigs, McpConfigs, FilesConfigs, DbConfigs.
-pub const FULL_KEYS: [&str; 7] = [
+/// Полные ключи групп настроек (`ConfigKeys.For`): AuthConfigs, FilesConfigs, DbConfigs.
+pub const FULL_KEYS: [&str; 6] = [
     "TASKER_AUTH_CONFIGS_SIGNING_KEY",
     "TASKER_AUTH_CONFIGS_ACCESS_TOKEN_LIFETIME",
     "TASKER_AUTH_CONFIGS_REFRESH_TOKEN_LIFETIME",
-    "TASKER_MCP_CONFIGS_PORT",
     "TASKER_FILES_CONFIGS_PATH",
     "TASKER_DB_CONFIGS_POSTGRES_CONNECTION_STRING",
     "TASKER_DB_CONFIGS_SQLITE_FILE",
 ];
 
 /// Короткие алиасы аргументов (`[ConfigAlias]`).
-pub const ALIASES: [&str; 6] = ["jwtkey", "mcpport", "files", "postgres", "db", "sqlite"];
+pub const ALIASES: [&str; 5] = ["jwtkey", "files", "postgres", "db", "sqlite"];
 
 // Аргументы самого ASP.NET Core и хоста: они не настройки Tasker, но и не опечатки.
 const FRAMEWORK_ARGUMENTS: [&str; 17] = [
@@ -196,8 +195,8 @@ mod tests {
     #[test]
     fn swapped_letters_count_as_one_typo() {
         assert_eq!(
-            args(&["--mcpprot", "6000"]),
-            ["Unknown argument --mcpprot is ignored. Did you mean --mcpport?"]
+            args(&["--jwtkye", "k"]),
+            ["Unknown argument --jwtkye is ignored. Did you mean --jwtkey?"]
         );
     }
 
@@ -210,21 +209,9 @@ mod tests {
 
     #[test]
     fn known_arguments_are_silent_in_any_form_and_case() {
-        assert!(
-            args(&[
-                "--sqlite=a.db",
-                "--files",
-                "data",
-                "--postgres=Host=a",
-                "--db=b",
-                "--mcpport",
-                "5719",
-                "--jwtkey=k"
-            ])
-            .is_empty()
-        );
-        assert!(args(&["-sqlite=a.db", "--SQLITE", "a.db", "---Files=data", "--MCPPORT=1"]).is_empty());
-        assert!(args(&["--TASKER_DB_CONFIGS_SQLITE_FILE=a.db", "--tasker_mcp_configs_port=5719"]).is_empty());
+        assert!(args(&["--sqlite=a.db", "--files", "data", "--postgres=Host=a", "--db=b", "--jwtkey", "k"]).is_empty());
+        assert!(args(&["-sqlite=a.db", "--SQLITE", "a.db", "---Files=data", "--JWTKEY=1"]).is_empty());
+        assert!(args(&["--TASKER_DB_CONFIGS_SQLITE_FILE=a.db", "--tasker_auth_configs_signing_key=k"]).is_empty());
     }
 
     #[test]
@@ -271,10 +258,10 @@ mod tests {
 
     #[test]
     fn several_typos_give_several_warnings_in_order() {
-        let warnings = args(&["--sqllite=a.db", "--files=data", "--mcpprot=1"]);
+        let warnings = args(&["--sqllite=a.db", "--files=data", "--jwtkye=1"]);
         assert_eq!(warnings.len(), 2);
         assert!(warnings[0].contains("--sqllite"));
-        assert!(warnings[1].contains("--mcpprot"));
+        assert!(warnings[1].contains("--jwtkye"));
     }
 
     #[test]
@@ -307,7 +294,7 @@ mod tests {
         let mut known: Vec<&str> = OTHER_VARIABLES.to_vec();
         known.extend([
             "TASKER_DB_CONFIGS_SQLITE_FILE",
-            "TASKER_MCP_CONFIGS_PORT",
+            "TASKER_AUTH_CONFIGS_SIGNING_KEY",
             "PATH",
             "SQLITE",
             "MY_TASKER_THING",
