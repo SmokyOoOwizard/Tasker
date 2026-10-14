@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -15,8 +13,6 @@ using Serilog.Events;
 using Tasker.Configs;
 using Tasker.Daemon;
 using Tasker.Global;
-using Tasker.Mcp;
-using Tasker.Mcp.Configs.Tasker;
 using Tasker.Web;
 
 namespace Tasker.Desktop;
@@ -84,33 +80,15 @@ internal static class Program
         }
     }
 
-    // Локальный in-process хост того же веб-слоя, что и у Tasker.Server.
-    // Слушает только loopback на свободном порту и живёт вместе с приложением.
+    // Локальный in-process хост того же веб-слоя, что и у Tasker.Server: только интерфейс и REST вкладок, без MCP.
+    // Слушает только loopback на свободном порту (с Vite — на постоянном, см. DevApiPort) и живёт вместе с приложением.
     private static WebApplication StartLocalHost(string[] args)
     {
-        int? explicitMcpPort = null;
-        var builder = TaskerWebApp.CreateBuilder<DesktopModule>(args, TaskerMode.Local, configs =>
-            explicitMcpPort = configs.Get<McpConfigs>().Port);
+        var builder = TaskerWebApp.CreateBuilder<DesktopModule>(args, TaskerMode.Local);
+        builder.WebHost.UseUrls($"http://127.0.0.1:{(DesktopModule.FrontendDevUrl == null ? 0 : DesktopModule.DevApiPort)}");
 
-        // Интерфейс — на случайном порту; MCP — ещё и на постоянном, чтобы адрес можно было прописать агенту.
-        // Порт — из --mcpport или из глобальных настроек (общих с командной строкой и демоном MCP).
-        // Демон MCP уже работает — он держит MCP всех разрешённых областей, и десктоп свой не поднимает.
-        // Порт занят (например, запущен второй Tasker) — приложение работает, но без MCP.
-        var daemon = Task.Run(() => DaemonClient.GetStatus()).GetAwaiter().GetResult();
-        var plan = DesktopMcpPlan.Decide(explicitMcpPort, LoadMcpSettings(), daemon, IsPortFree);
-        if (plan.Error)
-            Log.Error(plan.Message);
-        else
-            Log.Information(plan.Message);
-
-        if (plan.Port is { } mcpPort)
-            Log.Information("MCP: {Url} (no token; the open tabs are the workspaces, chosen by the 'workspace' argument; agent from the {Header} header or the local agent)", McpRegistration.LocalUrl(mcpPort), McpRegistration.AgentHeader);
-
-        // Адреса — настройкой Kestrel из памяти: порт MCP можно отпустить на лету, когда стартует демон.
-        var address = new LocalMcpAddress(plan.Port);
-        var endpoints = LocalEndpoints.Add(builder, plan.Port, address);
-        builder.Services.AddSingleton(address);
-        builder.Services.AddSingleton<IExternalMcp, DaemonMcpLocator>();
+        // MCP обслуживает демон tasker-mcpd: десктоп запускает его, если он не работает, и показывает его состояние.
+        builder.Services.AddSingleton<IDaemonMcp, DaemonMcpLocator>();
         // Не ждём 30 с по умолчанию, пока WebView закроет keep-alive соединения.
         builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(2));
 
@@ -118,37 +96,32 @@ internal static class Program
         app.MapTasker();
         app.StartAsync().GetAwaiter().GetResult();
 
-        // Демон может стартовать позже десктопа: тогда порт MCP отпускаем, иначе демон не запустится.
-        if (plan.Port != null)
-            _ = endpoints.YieldToDaemon(app.Lifetime.ApplicationStopping);
+        // Интерфейс не ждёт демона: окно открывается сразу, состояние демона видно в трее и во вкладке «Агенты».
+        var daemon = app.Services.GetRequiredService<DesktopDaemon>();
+        _ = Task.Run(() => StartDaemon(daemon, app.Lifetime.ApplicationStopping));
         return app;
     }
 
-    private static McpSettings LoadMcpSettings()
+    /// <summary>Демон MCP не работает — запускаем его (как <c>tasker mcp start</c>) и ждём готовности. Закрытие десктопа его не остановит.</summary>
+    private static async Task StartDaemon(DesktopDaemon daemon, CancellationToken ct)
     {
         try
         {
-            return new SettingsStore().Load().Mcp;
+            var result = await daemon.Start(ct);
+            if (result.Status is { } status)
+            {
+                Log.Information(result.Started
+                        ? "MCP: started the MCP server (tasker-mcpd), pid {Pid}: {Url}"
+                        : "MCP: served by the running MCP server (tasker-mcpd), pid {Pid}: {Url}",
+                    status.Pid, status.McpUrl);
+            }
+            else
+            {
+                Log.Error("MCP is unavailable: {Error}", result.Error);
+            }
         }
-        catch (SettingsException e)
+        catch (OperationCanceledException)
         {
-            Log.Warning("{Message}: using the default MCP settings", e.Message);
-            return new McpSettings();
-        }
-    }
-
-    private static bool IsPortFree(int port)
-    {
-        try
-        {
-            var listener = new TcpListener(IPAddress.Loopback, port);
-            listener.Start();
-            listener.Stop();
-            return true;
-        }
-        catch (SocketException)
-        {
-            return false;
         }
     }
 

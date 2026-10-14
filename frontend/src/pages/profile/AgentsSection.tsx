@@ -10,10 +10,34 @@ import type { AgentToken } from '../../types'
 import { isDesktop } from '../../workspace'
 
 /**
- * Десктоп: общий адрес MCP (null — порт MCP был занят), имя этой папки для агента (аргумент workspace инструментов)
- * и заголовок, которым выбирается агент.
+ * Десктоп: MCP обслуживает демон tasker-mcpd. Его состояние, общий адрес MCP (null — демон не работает или ещё не открыл эту папку),
+ * имя этой папки для агента (аргумент workspace инструментов) и заголовок, которым выбирается агент.
  */
-type LocalMcp = { url: string | null; workspace: string | null; agentHeader: string }
+type LocalMcp = {
+  daemon: 'running' | 'starting' | 'stopped' | 'failed'
+  port: number | null
+  url: string | null
+  workspace: string | null
+  workspaceState: 'open' | 'opening' | 'failed' | null
+  error: string | null
+  agentHeader: string
+}
+
+/** Что с демоном MCP и этой папкой у него: текст и ошибка ли это. */
+function daemonState(mcp: LocalMcp): { text: string; error: boolean } {
+  switch (mcp.daemon) {
+    case 'starting':
+      return { text: 'Демон MCP запускается…', error: false }
+    case 'failed':
+      return { text: `Демон MCP не запустился: ${mcp.error ?? 'причина в журнале'}. Запустить снова — пункт «MCP» в меню трея или tasker mcp start.`, error: true }
+    case 'stopped':
+      return { text: 'Демон MCP не работает. Запустить — пункт «MCP» в меню трея или tasker mcp start.', error: true }
+  }
+  if (mcp.workspaceState === 'open') return { text: `MCP обслуживает демон tasker-mcpd на порту ${mcp.port}.`, error: false }
+  if (mcp.workspaceState === 'opening') return { text: 'Демон MCP открывает эту папку…', error: false }
+  if (mcp.workspaceState === 'failed') return { text: `Демон MCP не смог открыть эту папку: ${mcp.error ?? 'причина в журнале'}.`, error: true }
+  return { text: 'Демон MCP работает, но этой папки нет в его списке (tasker mcp workspace add).', error: true }
+}
 
 /**
  * Агенты — пользователи для MCP (например, Claude Code). Сервер: свои агенты (админу — все) и их токены.
@@ -58,8 +82,8 @@ function AgentsSection() {
         </p>
       </div>
 
-      {data.mcp && !data.mcp.url && (
-        <div className="error-message">MCP недоступен: его порт был занят при запуске Tasker (другой порт — параметр --mcpport).</div>
+      {data.mcp && (
+        <div className={daemonState(data.mcp).error ? 'error-message' : 'card muted'}>{daemonState(data.mcp).text}</div>
       )}
 
       {data.agents.map((agent) => (
@@ -282,18 +306,19 @@ function LocalConnect({ agent, mcp, onClose }: { agent: User; mcp: { url: string
       </p>
       <CopyField value={command} />
       <p className="muted">
-        Адрес MCP <code>{mcp.url}</code> один на все папки, открытые в Tasker. Папку агент указывает аргументом{' '}
+        Адрес MCP <code>{mcp.url}</code> у демона tasker-mcpd один на все его папки; открытая в Tasker папка добавляется в них сама
+        (список — <code>tasker mcp workspace list</code>). Папку агент указывает аргументом{' '}
         <code>workspace</code> инструментов{mcp.workspace && (
           <>
             : для этой — <code>{mcp.workspace}</code>
           </>
         )}
-        ; если открыта одна папка, аргумент можно опустить. Список папок — инструмент <code>list_workspaces</code>. Агент в заголовке{' '}
+        ; если папка у демона одна, аргумент можно опустить. Список папок — инструмент <code>list_workspaces</code>. Агент в заголовке{' '}
         <code>{mcp.agentHeader}</code> действует только в этой папке; чтобы работать с несколькими папками, подключите агента без заголовка
         (в каждой папке он работает от имени её агента «agent»):
       </p>
       <CopyField value={commonCommand} />
-      <p className="muted">MCP работает, пока открыт Tasker.</p>
+      <p className="muted">Демон работает и после закрытия Tasker.</p>
       <button type="button" className="button button-secondary" onClick={onClose}>
         Готово
       </button>

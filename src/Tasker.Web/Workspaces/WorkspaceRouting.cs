@@ -5,18 +5,17 @@ using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Tasker.Mcp;
 
 namespace Tasker.Web.Workspaces;
 
 /// <summary>
 /// Десктоп: запрос к <c>/w/{key}/…</c> выполняется в рабочей области <c>key</c> — это имя папки
 /// (у одновременно открытых папок с одинаковым именем — с суффиксом, «Tasker-2»). Префикс уходит в PathBase,
-/// дальше всё как на сервере: <c>/w/{key}/api/…</c> — REST, <c>/w/{key}/mcp</c> — MCP, остальное — фронтенд.
+/// дальше всё как на сервере: <c>/w/{key}/api/…</c> — REST, остальное — фронтенд. MCP у десктопа нет: его обслуживает демон.
 /// Сервисы запроса берутся из контейнера области — так API видит хранилище именно этой папки.
 /// <para>
 /// Без префикса хранилища нет: отвечают только <c>/api/health</c> и статика фронтенда,
-/// остальное API и MCP — 404 с подсказкой.
+/// остальное API — 404 с подсказкой.
 /// </para>
 /// </summary>
 internal static class WorkspaceRouting
@@ -43,13 +42,6 @@ internal static class WorkspaceRouting
                 }
 
                 await next(context);
-                return;
-            }
-
-            if (rest.StartsWithSegments(McpRegistration.Path))
-            {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                await context.Response.WriteAsJsonAsync(new { error = $"MCP has no per-workspace address: use {McpRegistration.Path} and pass the folder in the 'workspace' argument of the tool" });
                 return;
             }
 
@@ -104,6 +96,6 @@ internal static class WorkspaceRouting
 }
 
 /// <summary>Рабочая область текущего запроса.</summary>
-/// <param name="Key">Имя области (ключ адреса <c>/w/{key}</c> и аргумент <c>workspace</c> MCP).</param>
+/// <param name="Key">Имя области (ключ адреса <c>/w/{key}</c>).</param>
 /// <param name="Closing">Отменяется, когда область закрывают, — для долгих запросов.</param>
 public sealed record WorkspaceFeature(WorkspaceLocation Location, string Key, CancellationToken Closing);
