@@ -60,8 +60,20 @@ pub fn find_task_type(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> 
     find_entity::<TaskType>(ctx, project_id, reference, |x| x.id, |x| &x.name, "task type")
 }
 
+/// Типы связей — через сервис: он добавляет стандартные типы, которые ещё не сохранены в файлы.
 pub fn find_link_type(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<LinkType> {
-    find_entity::<LinkType>(ctx, project_id, reference, |x| x.id, |x| &x.name, "link type")
+    let ws = ctx.session().workspace();
+    let all = ws.link_types().get_all(project_id)?;
+    refs::find_readable(
+        &all,
+        reference,
+        |x| x.id,
+        |x| &x.name,
+        "link type",
+        false,
+        || Ok(ws.unreadable_reference::<LinkType>(project_id, reference)?),
+    )
+    .cloned()
 }
 
 pub fn find_field(ctx: &Context<'_>, project_id: &Uuid, reference: &str) -> Result<FieldDefinition> {

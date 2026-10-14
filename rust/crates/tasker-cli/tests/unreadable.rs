@@ -101,3 +101,29 @@ fn other_entities_by_full_and_short_id_report_the_read_error() {
     }
     std::fs::remove_dir_all(&root).unwrap();
 }
+
+/// Стандартные типы связей, ещё не сохранённые в файлы, находятся по имени и по id: проверка нечитаемых файлов их не прячет.
+#[test]
+fn default_link_types_without_files_are_found() {
+    let root = temp_root();
+    let ok = |args: &[&str]| {
+        let run = tasker(&root, args);
+        assert_eq!((run.stderr.as_str(), run.code), ("", 0), "{args:?}");
+        run.stdout
+    };
+    ok(&["project", "create", "P"]);
+    assert!(
+        !root
+            .join(".tasker/projects")
+            .read_dir()
+            .unwrap()
+            .any(|project| { project.unwrap().path().join("link-types").exists() })
+    );
+    let id = ok(&["link-type", "get", "Blocks", "--json"]);
+    let id = serde_json::from_str::<serde_json::Value>(&id).unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    ok(&["link-type", "get", &id]);
+    ok(&["link-type", "get", &id[..8]]);
+}
