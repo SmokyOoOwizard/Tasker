@@ -261,8 +261,7 @@
                   }
                 },
                 "required": [
-                  "fieldId",
-                  "values"
+                  "fieldId"
                 ]
               }
             },
@@ -720,12 +719,12 @@
                 "format": "uuid"
               },
               "required": {
-                "type": "boolean"
+                "type": "boolean",
+                "default": false
               }
             },
             "required": [
-              "fieldId",
-              "required"
+              "fieldId"
             ]
           },
           "default": null
@@ -1022,10 +1021,8 @@
               }
             },
             "required": [
-              "id",
               "name",
-              "statusIds",
-              "dropStatuses"
+              "statusIds"
             ]
           },
           "default": null
@@ -1584,7 +1581,6 @@
               }
             },
             "required": [
-              "id",
               "name"
             ]
           },
@@ -2279,12 +2275,12 @@
                 "format": "uuid"
               },
               "required": {
-                "type": "boolean"
+                "type": "boolean",
+                "default": false
               }
             },
             "required": [
-              "fieldId",
-              "required"
+              "fieldId"
             ]
           },
           "default": null
@@ -2516,10 +2512,8 @@
               }
             },
             "required": [
-              "id",
               "name",
-              "statusIds",
-              "dropStatuses"
+              "statusIds"
             ]
           }
         },
@@ -2670,8 +2664,7 @@
                   }
                 },
                 "required": [
-                  "fieldId",
-                  "values"
+                  "fieldId"
                 ]
               }
             },

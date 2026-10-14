@@ -4,7 +4,8 @@
 //! `format: uuid` (форма D, как `Utf8JsonReader.GetGuid`), `enum` (без учёта регистра, как `JsonStringEnumConverter`), `items`,
 //! вложенные `properties` и `additionalProperties`. Лишние свойства не мешают — SDK их игнорирует. `required` проверяется только у
 //! самих аргументов: вложенные объекты (`columns[]`, `fields`) — записи C#, которые `JsonSerializer` собирает и без части свойств
-//! (пропущенное — null/значение по умолчанию), хотя схема .NET и перечисляет их в `required`.
+//! (пропущенное — null/значение по умолчанию). Схема во вложенном `required` перечисляет только то, без чего вызов не имеет смысла
+//! (`name` колонки, `fieldId`), но и без него запись собирается — ошибку тогда даёт сам инструмент.
 use serde_json::{Map, Value};
 use tasker_core::ids::parse_guid;
 

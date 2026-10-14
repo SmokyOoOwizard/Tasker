@@ -463,6 +463,88 @@ fn agent_header_and_workspace_argument_edge_cases() {
     );
 }
 
+/// Вложенные объекты (`columns[]`, `fields[]`, `values[]`) без необязательных свойств: аргументы проходят проверку настоящим валидатором
+/// JSON Schema по `inputSchema` из `tools/list` (вложенный `required` не требует `id`, `dropStatuses`, `required`, `values`), и сам вызов
+/// проходит. Без обязательного вложенного свойства (`name` колонки) валидатор аргументы отвергает.
+#[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
+fn nested_objects_without_optional_properties_pass_the_schema_and_the_call() {
+    let f = Fixture::start();
+    let tools = f.rpc("tools/list", json!({}), &[]);
+    let schema = |tool: &str| -> Value {
+        tools["result"]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["name"] == tool)
+            .unwrap_or_else(|| panic!("no tool {tool}"))["inputSchema"]
+            .clone()
+    };
+    let valid = |tool: &str, arguments: &Value| -> bool {
+        jsonschema::options()
+            .should_validate_formats(true)
+            .build(&schema(tool))
+            .unwrap()
+            .is_valid(arguments)
+    };
+    let call = |tool: &str, arguments: Value| -> Value {
+        assert!(valid(tool, &arguments), "{tool}: {arguments} does not match its inputSchema");
+        let result = f.call(tool, arguments);
+        assert_eq!(result["result"].get("isError"), Some(&Value::Bool(false)), "{tool}: {result}");
+        serde_json::from_str(result["result"]["content"][0]["text"].as_str().unwrap()).unwrap()
+    };
+
+    let project = call("create_project", json!({"workspace": "golden", "name": "Nested"}));
+    let w = |mut arguments: Value| -> Value {
+        arguments["workspace"] = json!("golden");
+        arguments["projectId"] = project["id"].clone();
+        arguments
+    };
+    let todo = call("create_status", w(json!({"name": "Todo", "color": "#112233"})));
+    let set = call("create_status_set", w(json!({"name": "Set", "statusIds": [todo["id"]]})));
+    let field = call("create_field", w(json!({"name": "Estimate", "type": "int"})));
+    let level = call("create_enum", w(json!({"name": "Level", "values": ["Low"]})));
+
+    // columns[] без id и dropStatuses.
+    let board = call(
+        "create_board",
+        w(json!({"name": "Main", "statusSetIds": [set["id"]], "columns": [{"name": "Todo", "statusIds": [todo["id"]]}]})),
+    );
+    assert_eq!(board["columns"][0]["name"], "Todo");
+    let updated = call(
+        "update_board",
+        w(json!({"boardId": board["id"], "version": board["version"], "columns": [{"name": "All", "statusIds": [todo["id"]]}]})),
+    );
+    assert_eq!(updated["columns"][0]["name"], "All");
+    let no_name = w(json!({"name": "Bad", "statusSetIds": [set["id"]], "columns": [{"statusIds": [todo["id"]]}]}));
+    assert!(!valid("create_board", &no_name), "a column without name must not match the schema");
+
+    // fields[] без required: поле подключается необязательным.
+    let task_type = call(
+        "create_task_type",
+        w(json!({"name": "Task", "statusSetId": set["id"], "fields": [{"fieldId": field["id"]}]})),
+    );
+    assert_eq!(task_type["fields"][0]["required"], false);
+    let task_type = call(
+        "update_task_type",
+        w(json!({"taskTypeId": task_type["id"], "version": task_type["version"], "fields": [{"fieldId": field["id"]}]})),
+    );
+    assert_eq!(task_type["fields"][0]["required"], false);
+
+    // values[] перечисления без id — новое значение; fields.values[] задачи без values — значения нет.
+    let levels = call(
+        "update_enum",
+        w(json!({"enumId": level["id"], "version": level["version"],
+                 "values": [{"id": level["values"][0]["id"], "name": "Low"}, {"name": "High"}]})),
+    );
+    assert_eq!(levels["values"][1]["name"], "High");
+    let task = call(
+        "create_task",
+        w(json!({"title": "t", "typeId": task_type["id"], "fields": {"values": [{"fieldId": field["id"]}]}})),
+    );
+    assert_eq!(task["fields"], json!([]));
+}
+
 /// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.
 fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
     let path = std::fs::canonicalize(path).unwrap();

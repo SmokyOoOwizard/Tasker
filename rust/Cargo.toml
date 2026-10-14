@@ -13,6 +13,8 @@ uuid = { version = "1", features = ["v4", "serde"] }
 sha2 = "0.11"
 md-5 = "0.11"
 regex = "1"
+# Только тесты: проверка аргументов вызова по inputSchema из tools/list настоящим валидатором JSON Schema.
+jsonschema = { version = "0.58", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 unicode-general-category = "1"
