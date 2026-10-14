@@ -1,0 +1,11 @@
+formatVersion: 10
+id: 603a9c63-f604-429e-84c7-7610e4abee2a
+title: 'Rust, фаза 6: снос C#-кода консоли и демона'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-09T11:34:31.4040620+00:00
+updatedAt: 2026-10-11T10:20:48.6997690+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 143
+description: Фаза 6 плана docs/rust-migration-plan.md. Удалить Tasker.Cli, Tasker.Daemon.Host; из Tasker.Daemon оставить только то, что использует десктоп (DaemonClient, DesktopMcpPlan, DaemonFiles); Tasker.Mcp остаётся для десктопа и сервера. Тесты на CliApp.Run либо переведены в Rust в фазах 2–3, либо удаляются. tools/Tasker.Stress остаётся на .NET как независимый клиент. Обновить Tasker.slnx, скрипты, wiki.
