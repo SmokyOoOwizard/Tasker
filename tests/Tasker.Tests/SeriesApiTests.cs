@@ -556,13 +556,15 @@ public class SeriesApiTests
 
         var series = await api.NewSeries("TSK");
 
-        var change = await events.Next(x => x["entity"]!.GetValue<string>() == "series");
+        // Событие о папке серий целиком (id: null) тоже законно — например, когда наблюдатель склеил изменения под нагрузкой;
+        // ждём событие именно этой серии.
+        bool OfSeries(JsonNode x) => x["entity"]!.GetValue<string>() == "series" && x["id"]?.GetValue<string>() == Id(series);
+        var change = await events.Next(OfSeries);
         Assert.Equal(api.ProjectId.ToString("D"), change["projectId"]!.GetValue<string>());
-        Assert.Equal(Id(series), change["id"]!.GetValue<string>());
 
-        // Правка и удаление серии — тоже события серии.
+        // Правка серии (файл переименовывается по новому названию) — тоже событие этой серии.
         await api.Patch(api.P($"/series/{Id(series)}"), new { name = "Renamed", version = Version(series) });
-        Assert.Equal(Id(series), (await events.Next(x => x["entity"]!.GetValue<string>() == "series"))["id"]!.GetValue<string>());
+        await events.Next(OfSeries);
         events.Dispose();
     }
 

@@ -25,6 +25,9 @@ fn find(ctx: &Context<'_>, reference: &str, kind: UserKind) -> Result<User> {
         let all = users.get_all(Some(kind))?;
         user = refs::by_id_prefix(&all, reference, |x| x.id, what)?.cloned();
     }
+    if user.is_none() {
+        ctx.session().workspace().unreadable_user_reference(reference)?;
+    }
     match user {
         Some(found) if found.kind == kind => Ok(found),
         _ => Err(CliError::new(format!("No {what} '{reference}'"))),

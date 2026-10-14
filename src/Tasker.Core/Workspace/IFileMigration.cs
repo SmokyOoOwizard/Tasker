@@ -26,8 +26,10 @@ public record MigrationProblem(string Path, string Reason);
 /// </summary>
 /// <param name="CurrentFormat">Версия формата, которую пишет этот Tasker.</param>
 /// <param name="Scanned">Сколько файлов сущностей проверено.</param>
-/// <param name="UpToDate">Сколько уже в текущем формате.</param>
-/// <param name="Migrated">Файлы старого формата: переписаны в текущий (при <c>DryRun</c> — были бы переписаны).</param>
+/// <param name="UpToDate">Сколько уже в текущем формате и порядке ключей.</param>
+/// <param name="Migrated">Файлы старого формата: переписаны в текущий (при <c>DryRun</c> — были бы переписаны); у файлов задач заодно и порядок ключей.</param>
+/// <param name="Reordered">Файлы задач текущего формата в прежнем порядке ключей (описание не последним): переписаны в текущий порядок
+/// (при <c>DryRun</c> — были бы). Пути относительно .tasker, через «/».</param>
 /// <param name="Renamed">Файлы сущностей проекта, имя которых не по названию (старое — Guid, или название изменили мимо Tasker): переименованы (при <c>DryRun</c> — были бы).</param>
 /// <param name="Newer">Файлы более нового формата: не тронуты, нужен более новый Tasker.</param>
 /// <param name="Unreadable">Файлы, которые не удалось проверить (конфликт слияния git, не читается): не тронуты.</param>
@@ -38,15 +40,16 @@ public record MigrationReport(
     int Scanned,
     int UpToDate,
     MigrationFile[] Migrated,
+    string[] Reordered,
     MigrationRename[] Renamed,
     MigrationFile[] Newer,
     MigrationProblem[] Unreadable,
     MigrationRename[] RenamedFolders,
     MigrationRename[] MergedFolders)
 {
-    /// <summary>Есть что мигрировать или о чём нужно знать: старые файлы и папки, файлы нового формата, нечитаемые.</summary>
-    public bool NeedsAttention => Migrated.Length > 0 || Renamed.Length > 0 || RenamedFolders.Length > 0 || MergedFolders.Length > 0
-                                  || Newer.Length > 0 || Unreadable.Length > 0;
+    /// <summary>Есть что мигрировать или о чём нужно знать: старые файлы и папки, прежний порядок ключей, имена, файлы нового формата, нечитаемые.</summary>
+    public bool NeedsAttention => Migrated.Length > 0 || Reordered.Length > 0 || Renamed.Length > 0 || RenamedFolders.Length > 0
+                                  || MergedFolders.Length > 0 || Newer.Length > 0 || Unreadable.Length > 0;
 }
 
 /// <summary>

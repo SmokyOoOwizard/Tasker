@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <!-- Что десктопу нужно знать о демоне MCP (tasker-mcpd, Rust: rust/crates/tasker-mcpd): файлы состояния (daemon.lock, daemon.json),
-       статус по /daemon/status и решение, поднимать ли свой MCP. Сам демон и консоль, которая им управляет, — Rust-программы. -->
+       статус по /daemon/status, запуск демона, если он не работает, и области демона в settings.json. Свой MCP десктоп не поднимает. -->
   <ItemGroup>
     <ProjectReference Include="..\Tasker.Core\Tasker.Core.csproj" />
     <ProjectReference Include="..\Tasker.Global\Tasker.Global.csproj" />

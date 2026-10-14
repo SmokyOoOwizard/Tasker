@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -7,13 +8,17 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Microsoft.Extensions.Hosting;
+using Tasker.Daemon;
 
 namespace Tasker.Desktop;
 
-public partial class App(WindowManager? windows, IHostApplicationLifetime? hostLifetime) : Application
+public partial class App(WindowManager? windows, IHostApplicationLifetime? hostLifetime, DesktopDaemon? daemon) : Application
 {
+    // Как часто трей перечитывает состояние демона MCP.
+    private static readonly TimeSpan DaemonPoll = TimeSpan.FromSeconds(3);
+
     // Для превьюера XAML в IDE.
-    public App() : this(null, null)
+    public App() : this(null, null, null)
     {
     }
 
@@ -69,6 +74,14 @@ public partial class App(WindowManager? windows, IHostApplicationLifetime? hostL
         var exit = new NativeMenuItem("Выход");
         exit.Click += (_, _) => desktop.Shutdown();
 
+        // Состояние демона MCP; не работает — пункт запускает его.
+        var mcp = new NativeMenuItem("MCP: …") { IsEnabled = false };
+        mcp.Click += (_, _) =>
+        {
+            if (daemon != null)
+                _ = Task.Run(() => daemon.Start());
+        };
+
         // Иконку и подсказку задаём сразу: на macOS трей падает на пустом ToolTipText.
         var trayIcon = new TrayIcon
         {
@@ -76,7 +89,7 @@ public partial class App(WindowManager? windows, IHostApplicationLifetime? hostL
             ToolTipText = "Tasker",
             Menu = new NativeMenu
             {
-                Items = { open, newWindow, new NativeMenuItemSeparator(), exit }
+                Items = { open, newWindow, new NativeMenuItemSeparator(), mcp, new NativeMenuItemSeparator(), exit }
             }
         };
         // Монохромная иконка: macOS сама перекрашивает её под светлую/тёмную строку меню.
@@ -84,7 +97,53 @@ public partial class App(WindowManager? windows, IHostApplicationLifetime? hostL
         trayIcon.Clicked += (_, _) => ShowWindow();
 
         TrayIcon.SetIcons(this, new TrayIcons { trayIcon });
+        WatchDaemon(trayIcon, mcp);
     }
+
+    /// <summary>Показывает в трее, что с демоном MCP: работает ли, на каком порту, почему не запустился.</summary>
+    private void WatchDaemon(TrayIcon trayIcon, NativeMenuItem item)
+    {
+        if (daemon == null)
+            return;
+
+        var busy = false;
+        async void Refresh()
+        {
+            if (busy)
+                return;
+            busy = true;
+            try
+            {
+                var view = await Task.Run(() => daemon.GetView());
+                var (text, canStart) = Describe(view);
+                item.Header = text;
+                item.IsEnabled = canStart;
+                trayIcon.ToolTipText = "Tasker — " + text;
+            }
+            catch (Exception)
+            {
+                // Состояние покажем при следующем опросе.
+            }
+            finally
+            {
+                busy = false;
+            }
+        }
+
+        var timer = new DispatcherTimer { Interval = DaemonPoll };
+        timer.Tick += (_, _) => Refresh();
+        timer.Start();
+        Refresh();
+    }
+
+    /// <summary>Текст пункта трея и можно ли по нему запустить демон.</summary>
+    internal static (string Text, bool CanStart) Describe(DaemonView view) => view.State switch
+    {
+        DaemonState.Running => ($"MCP: работает, {view.Status!.McpUrl}", false),
+        DaemonState.Starting => ("MCP: запускается…", false),
+        DaemonState.Failed => ($"MCP: не запустился ({view.Error}) — запустить снова", true),
+        _ => ("MCP: демон не работает — запустить", true)
+    };
 
     // Меню приложения в строке меню macOS. Без своего меню Avalonia подставляет
     // стандартное с «About Avalonia» — причём ещё до OnFrameworkInitializationCompleted

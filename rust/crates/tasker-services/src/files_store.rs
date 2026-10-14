@@ -115,6 +115,29 @@ impl FileStore {
         Ok(None)
     }
 
+    /// Ошибка чтения нечитаемого файла вида `kind`, который по имени может быть сущностью с id по ключу
+    /// ([`WorkspaceIndex::unreadable_paths`]): файл читается заново, `parse` даёт ту же ошибку, что чтение по полному id. Файл
+    /// пропал, пуст или теперь читается — не ошибка.
+    fn read_error(
+        &self,
+        kind: EntityKind,
+        project_id: Option<&Uuid>,
+        key: &str,
+        parse: impl Fn(&[u8], &Path) -> tasker_files::Result<()>,
+    ) -> Result<()> {
+        for path in self.index.unreadable_paths(kind, project_id, key)? {
+            let Some(bytes) = write::read_bytes(&path)? else {
+                continue;
+            };
+            match parse(&bytes, &path) {
+                Ok(()) => {}
+                Err(tasker_files::Error::Yaml(message)) if message.ends_with(": the file is empty") => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+        Ok(())
+    }
+
     /// Имя уже занято другим пользователем — `Username '…' is already taken` (проверка файлового хранилища под блокировкой).
     fn ensure_unique(&self, user: &User) -> Result<()> {
         if let Some(taken) = self.user_by_username(&user.username)?
@@ -149,6 +172,24 @@ impl Storage for FileStore {
             count += self.index().count_problems(&project.folder(T::FOLDER))?;
         }
         Ok(count)
+    }
+
+    fn unreadable<T: Entity>(&self, project_id: &Uuid, key: &str) -> Result<()> {
+        self.read_error(T::KIND, Some(project_id), key, |bytes, path| {
+            T::parse(*project_id, bytes, path).map(|_| ())
+        })
+    }
+
+    fn unreadable_project(&self, key: &str) -> Result<()> {
+        self.read_error(EntityKind::Project, None, key, |bytes, path| {
+            files::project::parse(bytes, path).map(|_| ())
+        })
+    }
+
+    fn unreadable_user(&self, key: &str) -> Result<()> {
+        self.read_error(EntityKind::User, None, key, |bytes, path| {
+            files::user::parse(bytes, path).map(|_| ())
+        })
     }
 
     /// Новый файл под именем по названию. Возвращает версию.

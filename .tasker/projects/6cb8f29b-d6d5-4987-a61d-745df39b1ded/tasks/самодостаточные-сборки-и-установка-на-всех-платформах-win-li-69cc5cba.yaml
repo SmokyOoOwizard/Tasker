@@ -1,6 +1,13 @@
 formatVersion: 9
 id: 69cc5cba-4e01-42af-802d-2b7cc4308874
 title: Самодостаточные сборки и установка на всех платформах (win/linux/osx, x64/arm64)
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T18:51:19.3967420+00:00
+updatedAt: 2026-10-07T21:43:51.3216250+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 120
 description: |
   Сейчас устанавливается только на macOS: scripts/install-macos.sh публикует сборку в ~/.local (dotnet publish, нужен SDK), ставит launchd-агент и подключение автодополнения. Нужна поставка на Windows, Linux и macOS без установленного .NET.
 
@@ -37,10 +44,3 @@ description: |
   12. Архив: `tasker --version` = версия из `VERSION`; `tasker-mcpd.exe --help`; холодный старт `tasker --version` порядка десятых долей секунды (ReadyToRun); Defender не удаляет exe.
   13. `irm <адрес>/install.ps1 | iex` не поддерживается (нет `$PSScriptRoot`): проверить, что сообщение понятное; рабочий вариант — скачать файл и запустить с `-Url`.
   14. `dotnet test` на Windows: `InstallPowerShellTests` (с `pwsh`) проходят; `InstallScriptTests` пропускаются.
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-07T18:51:19.3967420+00:00
-updatedAt: 2026-10-07T21:43:51.3216250+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 120

@@ -178,12 +178,13 @@ internal static class YamlFile
     private static Task WriteBytes(string path, byte[] bytes, CancellationToken ct) => AtomicFile.WriteAllBytes(path, bytes, ct);
 
     /// <summary>
-    /// Переписывает файл в текущий формат на диске, не меняя в нём ничего другого (текст приводится шагами <see cref="FormatVersions"/>).
+    /// Переписывает файл в текущий формат на диске, не меняя в нём ничего другого (текст приводится шагами <see cref="FormatVersions"/>),
+    /// а файл задачи (<paramref name="task"/>) — ещё и в текущий порядок ключей (<see cref="TaskFile.ReorderKeys"/>).
     /// Под той же блокировкой, что и обычная запись, — не потеряет чужую правку.
     /// </summary>
-    /// <returns>Версия, из которой переписан файл; null — файл уже в текущем формате или его нет.</returns>
+    /// <returns>Версия, из которой переписан файл; null — файл уже в текущем формате и порядке ключей или его нет.</returns>
     /// <exception cref="UnsupportedFormatException">Файл более нового формата.</exception>
-    public static Task<int?> UpgradeOnDisk(string path, CancellationToken ct) =>
+    public static Task<int?> UpgradeOnDisk(string path, bool task, CancellationToken ct) =>
         WithLock(path, ct, async () =>
         {
             if (await ReadBytes(path, ct) is not { } bytes)
@@ -191,10 +192,13 @@ internal static class YamlFile
 
             var text = Decode(bytes);
             var version = FormatVersions.Of(text, path);
-            if (version == FormatVersions.Current)
+            var upgraded = FormatVersions.Upgrade(text, path);
+            if (task && TaskFile.ReorderKeys(upgraded) is { } reordered)
+                upgraded = reordered;
+            if (version == FormatVersions.Current && upgraded == text)
                 return null;
 
-            await WriteBytes(path, Utf8.GetBytes(FormatVersions.Upgrade(text, path)), ct);
+            await WriteBytes(path, Utf8.GetBytes(upgraded), ct);
             return version;
         });
 

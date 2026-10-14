@@ -1,6 +1,13 @@
 formatVersion: 9
 id: 2d0b2477-5b90-40a5-bf9c-82647c1eaa0f
 title: 'Windows: демон — слушающий сокет между процессами, остановка, фоновый запуск'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T18:51:18.5795100+00:00
+updatedAt: 2026-10-07T20:28:54.7180600+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 117
 description: |-
   TSK-103 даёт бесшовное обновление демона на macOS и Linux (супервизор владеет слушающим сокетом, рабочие процессы наследуют его через Kestrel ListenHandle). На Windows демон остаётся однопроцессным (режим --single), `tasker mcp upgrade` работает как перезапуск: порт закрывается на несколько секунд. Нужен тот же уровень на Windows.
 
@@ -25,10 +32,3 @@ description: |-
   11. Без TASKER_MCP_SUPERVISOR — один процесс, upgrade = перезапуск с пояснением.
   12. dotnet test tests/Tasker.Tests --filter "FullyQualifiedName~Daemon" — проходят DaemonWindowsTests.Windows_* и DaemonUpgradeTests.
   Полный текст чек-листа — README, «ПРОВЕРИТЬ НА WINDOWS».
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-07T18:51:18.5795100+00:00
-updatedAt: 2026-10-07T20:28:54.7180600+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 117

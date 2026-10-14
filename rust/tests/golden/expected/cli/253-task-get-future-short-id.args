@@ -1,0 +1,7 @@
+task
+get
+ffffffff
+-w
+<ROOT>/golden
+-p
+Legacy

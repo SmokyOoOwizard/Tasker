@@ -1,6 +1,13 @@
 formatVersion: 9
 id: b538efc5-ebff-48e2-8a7e-56cbe0b529a4
 title: 'Windows: автозапуск демона через Планировщик задач (для пользователя)'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-07T18:51:18.8552860+00:00
+updatedAt: 2026-10-07T20:59:42.2738560+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 118
 description: |-
   Автозапуск демона на macOS — launchd-агент, на Linux — пользовательская служба systemd (ServiceManager, LaunchdService, SystemdService). На Windows нужен аналог.
 
@@ -29,10 +36,3 @@ description: |-
   13. Совместимость с supervisor-ом TSK-103 на Windows (когда появится): одна задача держит tasker-mcpd (супервизор), рабочие процессы внутри; `schtasks /end` останавливает их все.
 
   РЕШЕНИЯ ПОЛЬЗОВАТЕЛЯ ПО ВОПРОСАМ АГЕНТА (после реализации): (1) запуск без окна через `conhost.exe --headless tasker-mcpd.exe --detached` ПРИНЯТ: минимальная версия Windows — 10 версии 1809 (октябрь 2018) и новее, более старые не поддерживаем; запасной вариант (собрать tasker-mcpd.exe как приложение без консоли) не делаем, пока не понадобятся старые системы; (2) состояние задачи Планировщика читается через PowerShell `Get-ScheduledTask` (встроен в Windows 10/11, ответ не зависит от языка системы) — ПРИНЯТО. Остальные вопросы (поднимется ли демон после принудительного завершения, кодировка вывода schtasks на русской Windows, `mcp start` без автозапуска — Launcher.SpawnDaemon реализован в TSK-117) проверяются по чек-листу «ПРОВЕРИТЬ НА WINDOWS».
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-07T18:51:18.8552860+00:00
-updatedAt: 2026-10-07T20:59:42.2738560+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 118

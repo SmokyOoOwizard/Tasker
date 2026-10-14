@@ -6,12 +6,15 @@ namespace Tasker.Daemon;
 
 /// <summary>
 /// Обращения к запущенному демону MCP (<c>tasker-mcpd</c>): статус и готовность. Секрет управления берётся из <c>daemon.json</c>.
-/// Десктоп по статусу решает, поднимать ли свой MCP, и находит MCP открытой области у демона.
+/// Десктоп по статусу видит, работает ли демон, и находит у него MCP открытой области.
 /// </summary>
 public static class DaemonClient
 {
     /// <summary>Заголовок с секретом управления демоном (из <c>daemon.json</c>).</summary>
     public const string ControlHeader = "X-Tasker-Control";
+
+    /// <summary>Заголовок вызова MCP демона: id агента области; без него вызов идёт от локального агента области.</summary>
+    public const string AgentHeader = "X-Tasker-Agent";
 
     /// <returns>null — демон не работает или не отвечает.</returns>
     public static async Task<DaemonStatus?> GetStatus(CancellationToken ct = default)

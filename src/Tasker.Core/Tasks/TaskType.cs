@@ -2,8 +2,8 @@ namespace Tasker.Core.Tasks;
 
 /// <summary>Поле каталога, подключённое к типу задачи.</summary>
 /// <param name="FieldId">Ссылка на <see cref="Fields.FieldDefinition"/>.</param>
-/// <param name="Required">У задачи этого типа должно быть значение: проверяется при создании и правке задачи.</param>
-public record TaskTypeField(Guid FieldId, bool Required);
+/// <param name="Required">У задачи этого типа должно быть значение: проверяется при создании и правке задачи. По умолчанию — нет.</param>
+public record TaskTypeField(Guid FieldId, bool Required = false);
 
 /// <summary>
 /// Тип задачи (например «Баг», «Фича»). Определяет, какие статусы доступны задачам этого типа:

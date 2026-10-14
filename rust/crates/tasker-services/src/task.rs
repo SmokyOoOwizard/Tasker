@@ -691,8 +691,13 @@ impl<'a> TaskService<'a> {
         }
     }
 
+    /// Задачи, id которых начинается с ключа. Среди прочитанных нет, а префиксу подходит файл задачи, который не удалось
+    /// прочитать, — ошибка его чтения, как по полному id.
     fn find_by_id_prefix(&self, project_id: &Uuid, key: &str) -> Result<Vec<TaskItem>> {
         let found: Vec<TaskItem> = self.ws.tasks_by_id_prefix(project_id, key)?;
+        if found.is_empty() {
+            self.ws.unreadable::<TaskItem>(project_id, key)?;
+        }
         if found.len() > 1 {
             return Err(Error::validation(format!(
                 "Several tasks start with '{}', use a longer prefix or the full id: {}",

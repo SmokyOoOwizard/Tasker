@@ -43,4 +43,7 @@ public sealed record DaemonStatus(int Pid, int Port, int SettingsPort, DateTimeO
 
     /// <summary>Адрес MCP: один на все области (область — аргумент вызова).</summary>
     public string McpUrl => $"http://127.0.0.1:{Port}/mcp";
+
+    /// <summary>Все области из настроек уже открыты или не открылись: ни одна не в <see cref="WorkspaceState.Opening"/>.</summary>
+    public bool Settled => Workspaces.All(x => x.State != WorkspaceState.Opening);
 }

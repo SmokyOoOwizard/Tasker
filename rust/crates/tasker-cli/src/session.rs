@@ -88,7 +88,16 @@ impl Session {
     /// Проект по id или имени.
     pub fn find_project(&self, reference: &str) -> Result<Project> {
         let projects = self.all_projects()?;
-        refs::find_item(&projects, reference, |p| p.id, |p| &p.name, "project", false).cloned()
+        refs::find_readable(
+            &projects,
+            reference,
+            |p| p.id,
+            |p| &p.name,
+            "project",
+            false,
+            || Ok(self.workspace.unreadable_project_reference(reference)?),
+        )
+        .cloned()
     }
 
     /// Проект из `--project` (id или имя). Параметр можно не указывать, если в рабочей области ровно один проект.
@@ -146,6 +155,20 @@ pub mod refs {
         kind: &str,
         list_available: bool,
     ) -> Result<&'a T> {
+        find_readable(items, reference, id, name, kind, list_available, || Ok(()))
+    }
+
+    /// Как [`find_item`] над прочитанными сущностями хранилища: прежде чем ответить «нет такой», `unreadable` проверяет, не
+    /// указывает ли ссылка (id или короткий id) на файл, который не удалось прочитать, — тогда ошибка его чтения.
+    pub fn find_readable<'a, T>(
+        items: &'a [T],
+        reference: &str,
+        id: impl Fn(&T) -> Uuid,
+        name: impl Fn(&T) -> &str,
+        kind: &str,
+        list_available: bool,
+        unreadable: impl FnOnce() -> Result<()>,
+    ) -> Result<&'a T> {
         if let Some(guid) = parse_guid(reference)
             && let Some(by_id) = items.iter().find(|x| id(x) == guid)
         {
@@ -167,6 +190,7 @@ pub mod refs {
         if let Some(found) = by_id_prefix(items, reference, &id, kind)? {
             return Ok(found);
         }
+        unreadable()?;
         let available = if list_available {
             let mut names: Vec<&str> = items.iter().map(name).collect();
             names.sort_by_key(|n| to_upper_invariant(n));

@@ -35,7 +35,7 @@ public partial class ConfigDiagnosticsTests
     [Fact]
     public void Swapped_letters_count_as_one_typo()
     {
-        Assert.Equal("Unknown argument --mcpprot is ignored. Did you mean --mcpport?", Assert.Single(Args("--mcpprot", "6000")));
+        Assert.Equal("Unknown argument --jwtkye is ignored. Did you mean --jwtkey?", Assert.Single(Args("--jwtkye", "k")));
     }
 
     [Fact]
@@ -49,9 +49,9 @@ public partial class ConfigDiagnosticsTests
     [Fact]
     public void Known_arguments_are_silent_in_any_form_and_case()
     {
-        Assert.Empty(Args("--sqlite=a.db", "--files", "data", "--postgres=Host=a", "--db=b", "--mcpport", "5719", "--jwtkey=k"));
-        Assert.Empty(Args("-sqlite=a.db", "--SQLITE", "a.db", "---Files=data", "--MCPPORT=1"));
-        Assert.Empty(Args("--TASKER_DB_CONFIGS_SQLITE_FILE=a.db", "--tasker_mcp_configs_port=5719"));
+        Assert.Empty(Args("--sqlite=a.db", "--files", "data", "--postgres=Host=a", "--db=b", "--jwtkey", "k"));
+        Assert.Empty(Args("-sqlite=a.db", "--SQLITE", "a.db", "---Files=data", "--JWTKEY=1"));
+        Assert.Empty(Args("--TASKER_DB_CONFIGS_SQLITE_FILE=a.db", "--tasker_auth_configs_signing_key=k"));
     }
 
     [Fact]
@@ -88,11 +88,11 @@ public partial class ConfigDiagnosticsTests
     [Fact]
     public void Several_typos_give_several_warnings_in_order()
     {
-        var warnings = Args("--sqllite=a.db", "--files=data", "--mcpprot=1");
+        var warnings = Args("--sqllite=a.db", "--files=data", "--jwtkye=1");
 
         Assert.Equal(2, warnings.Count);
         Assert.Contains("--sqllite", warnings[0]);
-        Assert.Contains("--mcpprot", warnings[1]);
+        Assert.Contains("--jwtkye", warnings[1]);
     }
 
     // ---- переменные окружения ----
@@ -128,7 +128,7 @@ public partial class ConfigDiagnosticsTests
     {
         var known = ConfigDiagnostics.OtherVariables.Select(x => (x, "v")).ToList();
         known.Add(("TASKER_DB_CONFIGS_SQLITE_FILE", "a.db"));
-        known.Add(("TASKER_MCP_CONFIGS_PORT", "5719"));
+        known.Add(("TASKER_AUTH_CONFIGS_SIGNING_KEY", "k"));
         known.Add(("PATH", "/bin"));
         known.Add(("SQLITE", "x"));
         known.Add(("MY_TASKER_THING", "x"));
@@ -278,7 +278,7 @@ public partial class ConfigDiagnosticsTests
     {
         var sink = new ListSink();
 
-        TaskerWebApp.CreateBuilder<WebTestModule>(["--urls", "http://127.0.0.1:0", "--mcpport=6001"], TaskerMode.Local, log: Logger(sink));
+        TaskerWebApp.CreateBuilder<WebTestModule>(["--urls", "http://127.0.0.1:0", "--jwtkey=k"], TaskerMode.Local, log: Logger(sink));
 
         Assert.Empty(sink.Warnings);
     }

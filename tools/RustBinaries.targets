@@ -1,34 +1,48 @@
 <Project>
 
   <!-- Консоль tasker и демон tasker-mcpd — Rust-программы (rust/). Тесты (tests/Tasker.Tests) и стенд (tools/Tasker.Stress) запускают их
-       отдельными процессами из своего выходного каталога: после сборки проекта `cargo build` собирает оба бинарника (профиль dev,
-       rust/target/debug; повторная сборка без изменений — доли секунды), и они копируются рядом с программой.
-       -p:TaskerRustBin=<каталог> — взять готовые tasker и tasker-mcpd оттуда (например, rust/target/release) без cargo. -->
+       отдельными процессами из своего выходного каталога, десктоп (src/Tasker.Desktop) запускает демон, если тот не работает: после сборки
+       проекта `cargo build` собирает нужные бинарники (профиль dev, rust/target/debug; повторная сборка без изменений — доли секунды), и
+       они копируются рядом с программой, а при `dotnet publish` — и в каталог публикации.
+       TaskerRustPrograms — какие программы нужны проекту (по умолчанию обе; десктопу — только tasker-mcpd).
+       -p:TaskerRustBin=<каталог> — взять готовые бинарники оттуда (например, rust/target/release или сборку под другую платформу) без cargo. -->
   <PropertyGroup>
     <TaskerRustDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..', 'rust'))</TaskerRustDir>
     <TaskerExeSuffix Condition="'$(OS)' == 'Windows_NT'">.exe</TaskerExeSuffix>
+    <TaskerRustPrograms Condition="'$(TaskerRustPrograms)' == ''">tasker;tasker-mcpd</TaskerRustPrograms>
   </PropertyGroup>
 
+  <ItemGroup>
+    <_TaskerRustProgram Include="$(TaskerRustPrograms)" />
+  </ItemGroup>
+
   <Target Name="BuildTaskerRustBinaries" AfterTargets="Build" Condition="'$(TaskerRustBin)' == ''">
-    <Exec Command="cargo build --locked --quiet --bin tasker --bin tasker-mcpd" WorkingDirectory="$(TaskerRustDir)" ContinueOnError="true">
+    <Exec Command="cargo build --locked --quiet @(_TaskerRustProgram->'--bin %(Identity)', ' ')" WorkingDirectory="$(TaskerRustDir)" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="_TaskerCargoExit" />
     </Exec>
     <Error Condition="'$(_TaskerCargoExit)' != '0'"
-           Text="cargo build of tasker and tasker-mcpd failed (exit code $(_TaskerCargoExit)) in $(TaskerRustDir). Install Rust (https://rustup.rs) or pass -p:TaskerRustBin=&lt;directory with built tasker and tasker-mcpd&gt;." />
+           Text="cargo build of $(TaskerRustPrograms) failed (exit code $(_TaskerCargoExit)) in $(TaskerRustDir). Install Rust (https://rustup.rs) or pass -p:TaskerRustBin=&lt;directory with built $(TaskerRustPrograms)&gt;." />
     <PropertyGroup>
       <_TaskerRustOutput>$(TaskerRustDir)target$([System.IO.Path]::DirectorySeparatorChar)debug$([System.IO.Path]::DirectorySeparatorChar)</_TaskerRustOutput>
     </PropertyGroup>
   </Target>
 
-  <Target Name="CopyTaskerRustBinaries" AfterTargets="Build" DependsOnTargets="BuildTaskerRustBinaries">
+  <Target Name="ResolveTaskerRustBinaries" DependsOnTargets="BuildTaskerRustBinaries">
     <PropertyGroup>
       <_TaskerRustOutput Condition="'$(TaskerRustBin)' != ''">$([MSBuild]::EnsureTrailingSlash('$(TaskerRustBin)'))</_TaskerRustOutput>
     </PropertyGroup>
     <ItemGroup>
-      <_TaskerRustBinary Include="$(_TaskerRustOutput)tasker$(TaskerExeSuffix);$(_TaskerRustOutput)tasker-mcpd$(TaskerExeSuffix)" />
+      <_TaskerRustBinary Include="@(_TaskerRustProgram->'$(_TaskerRustOutput)%(Identity)$(TaskerExeSuffix)')" />
     </ItemGroup>
     <Error Condition="!Exists('%(_TaskerRustBinary.FullPath)')" Text="Not found: %(_TaskerRustBinary.FullPath)" />
+  </Target>
+
+  <Target Name="CopyTaskerRustBinaries" AfterTargets="Build" DependsOnTargets="ResolveTaskerRustBinaries">
     <Copy SourceFiles="@(_TaskerRustBinary)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="PublishTaskerRustBinaries" AfterTargets="Publish" DependsOnTargets="ResolveTaskerRustBinaries">
+    <Copy SourceFiles="@(_TaskerRustBinary)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

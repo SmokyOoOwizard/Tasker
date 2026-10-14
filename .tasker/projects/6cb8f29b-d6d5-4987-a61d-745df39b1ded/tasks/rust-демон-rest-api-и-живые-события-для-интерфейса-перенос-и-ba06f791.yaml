@@ -1,6 +1,16 @@
 formatVersion: 9
 id: ba06f791-4d0f-4358-a000-607986df09bd
 title: 'Rust-демон: REST API и живые события для интерфейса (перенос из Tasker.Web)'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-10-13T15:50:15.9213130+00:00
+updatedAt: 2026-10-13T15:52:13.1063480+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 171
+links:
+- typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
+  taskId: 3a39f602-a962-4b6b-ae39-3bccb6751bc6
 description: |-
   Сейчас REST API и живые события интерфейса есть только в .NET: src/Tasker.Web (TaskerApi.cs — около 90 маршрутов, Workspaces/WorkspaceEvents.cs — события по SSE, text/event-stream; маршрутизация /w/<key>, реестр областей, LoopbackOnly, режимы desktop/server в Auth/ModeRegistration). Их обслуживает .NET-процесс внутри десктопа поверх .NET-хранилища. Rust-демон tasker-mcpd отдаёт только MCP и /daemon/*.
 
@@ -14,13 +24,3 @@ description: |-
   - статику фронтенда демон не отдаёт: демон обслуживает только API (REST, события, MCP, /daemon/*); фронтенд остаётся в оболочке десктопа;
   - проверка паритета: те же .NET-тесты REST (FieldsApiTests, SeriesApiTests, LinkInterfaceTests, EditLockInterfaceTests и др. в режиме desktop) против демона, снимки ответов в golden-корпусе; фронтенд вручную против демона;
   - вики: «Демон-MCP» и «Интерфейс» — текущее поведение.
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
-createdAt: 2026-10-13T15:50:15.9213130+00:00
-updatedAt: 2026-10-13T15:52:13.1063480+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 171
-links:
-- typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
-  taskId: 3a39f602-a962-4b6b-ae39-3bccb6751bc6

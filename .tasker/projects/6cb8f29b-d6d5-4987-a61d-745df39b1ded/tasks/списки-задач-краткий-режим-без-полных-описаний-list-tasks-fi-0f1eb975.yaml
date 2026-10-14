@@ -1,6 +1,13 @@
 formatVersion: 9
 id: 0f1eb975-4456-478a-9d99-b3f0d1d5c0b0
 title: 'Списки задач: краткий режим без полных описаний (list_tasks, find_tasks_by_reference, task list --json)'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-02T16:03:39.9816440+00:00
+updatedAt: 2026-10-02T16:37:31.1115080+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 89
 description: |-
   Списки всегда отдают полные описания. У `list_tasks` и `find_tasks_by_reference` нет краткого режима; при описаниях до 2,7 тыс. символов страница в 50 задач агенту практически недоступна (десятки тысяч токенов ради поиска нужной задачи).
 
@@ -12,10 +19,3 @@ description: |-
   2. Значения по умолчанию: MCP-списки — 200 символов превью; REST и консольный `--json` — полный текст, как сейчас (совместимость; параметр тот же: REST `?descriptionLength=`, консоль `--description-length`).
   3. В записи списка: описание усечено до N символов (резать по символам Unicode, суррогатные пары и комбинируемые знаки не разрывать; «…» в текст НЕ добавлять), плюс поля `descriptionTruncated` (true/false) и `descriptionLength` — полная длина описания в символах; плюс `linksCount` (число связей, см. TSK-90: исходящие и входящие). Для задач без описания — пустая строка/отсутствие, truncated=false, length=0.
   Охват: MCP list_tasks, find_tasks_by_reference, get_board (tasksPerColumn) и задачи колонок; REST GET /tasks и задачи колонок доски; консоль task list --json, board tasks --json, board show --json. get_task и прочие получения одной задачи отдают полный текст всегда. Схема инструмента объясняет, как получить полный текст (get_task или descriptionLength=-1). totalCount и пагинация не меняются. Фронтенд: проверить, что интерфейс не ломается (REST по умолчанию полный).
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-02T16:03:39.9816440+00:00
-updatedAt: 2026-10-02T16:37:31.1115080+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 89

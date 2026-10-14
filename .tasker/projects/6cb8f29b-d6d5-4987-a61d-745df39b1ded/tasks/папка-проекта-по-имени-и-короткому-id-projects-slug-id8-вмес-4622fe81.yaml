@@ -1,6 +1,16 @@
 formatVersion: 10
 id: 4622fe81-2698-42d1-ad3e-ab771f5b0ca8
 title: 'Папка проекта по имени и короткому id: projects/<slug>-<id8>/ вместо projects/<guid>/'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
+createdAt: 2026-10-13T14:33:13.6594180+00:00
+updatedAt: 2026-10-14T10:18:31.2970350+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 169
+links:
+- typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
+  taskId: 2ab528d4-2186-46e5-8f75-9a13de009b2a
 description: |-
   Проблема
   Папка проекта — полный Guid (.tasker/projects/6cb8f29b-d6d5-4987-a61d-745df39b1ded/), а файлы сущностей внутри уже называются по имени и короткому id (<slug>-<id8>.yaml). По папке не видно, какой это проект.
@@ -21,13 +31,3 @@ description: |-
   - Golden: раскладка, migrate, снимки с путями; .tasker репозитория переносится одним коммитом через tasker migrate.
   - Вики «Хранение-и-git».
   - Проверка: cargo test, golden --verify, .NET-тесты (раскладка, migrate, параллельная работа), CI на трёх ОС.
-typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 30300951-beb2-495f-a290-2b36ae0f4920
-createdAt: 2026-10-13T14:33:13.6594180+00:00
-updatedAt: 2026-10-14T03:19:44.6021680+00:00
-series:
-- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
-  number: 169
-links:
-- typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
-  taskId: 2ab528d4-2186-46e5-8f75-9a13de009b2a

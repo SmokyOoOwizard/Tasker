@@ -49,12 +49,18 @@ struct Fixture {
 
 impl Fixture {
     fn start() -> Fixture {
+        Fixture::start_with(|_| {})
+    }
+
+    /// `prepare` — правка копии корпуса (папка `golden/`) до запуска демона.
+    fn start_with(prepare: impl FnOnce(&Path)) -> Fixture {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/tmp")
             .join(uuid::Uuid::new_v4().simple().to_string());
         std::fs::create_dir_all(root.join("home")).unwrap();
         let root = canonical(&root);
         copy_dir(&golden().join("workspace"), &root.join("golden"));
+        prepare(&root.join("golden"));
         let port = free_port();
         let settings = format!(
             "{{\"mcp\":{{\"port\":{port},\"workspaces\":[{{\"kind\":\"files\",\"path\":\"{}\"}},{{\"kind\":\"files\",\"path\":\"{}\"}}]}}}}\n",
@@ -461,6 +467,160 @@ fn agent_header_and_workspace_argument_edge_cases() {
             .starts_with("[not_found] Status "),
         "{removed}"
     );
+}
+
+/// Файл, который не удалось прочитать (конфликт слияния, формат новее), по полному id и по короткому id даёт ошибку его чтения,
+/// а не «не найдено»: `get_task` (и `get_task_links`) — оба вида ссылки, `get_field` и `get_enum` — полный id.
+#[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
+fn unreadable_files_answer_with_their_read_error() {
+    const CONFLICT: &str = "Unresolved git merge conflict (line 3)";
+    const FUTURE: &str = "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker";
+    let f = Fixture::start_with(|golden| {
+        let project = golden.join(".tasker/projects").join(LEGACY_PROJECT);
+        std::fs::write(
+            project.join("fields/broken-dddddddd.yaml"),
+            "formatVersion: 4\nid: dddddddd-0000-4000-8000-dddddddddddd\n<<<<<<< HEAD\nname: A\n=======\nname: B\n>>>>>>> x\ntype: string\n",
+        )
+        .unwrap();
+        std::fs::write(
+            project.join("enums/later-eeeeeeee.yaml"),
+            "formatVersion: 99\nid: eeeeeeee-0000-4000-8000-eeeeeeeeeeee\nname: Later\nvalues: []\n",
+        )
+        .unwrap();
+    });
+    let legacy = |extra: Value| -> Value {
+        let mut map: Map<String, Value> = json!({"workspace": "golden", "projectId": LEGACY_PROJECT})
+            .as_object()
+            .unwrap()
+            .clone();
+        map.extend(extra.as_object().unwrap().clone());
+        Value::Object(map)
+    };
+    let text = |answer: Value| -> String {
+        assert_eq!(answer["result"]["isError"], Value::Bool(true), "{answer}");
+        answer["result"]["content"][0]["text"].as_str().unwrap().to_string()
+    };
+
+    for task in ["cccccccc-0000-4000-8000-cccccccccccc", "cccccccc", "CCCCCCCC0000"] {
+        assert_eq!(
+            text(f.call("get_task", legacy(json!({"taskId": task})))),
+            format!("[invalid] {CONFLICT}"),
+            "{task}"
+        );
+        assert_eq!(
+            text(f.call("get_task_links", legacy(json!({"taskId": task})))),
+            format!("[invalid] {CONFLICT}"),
+            "{task}"
+        );
+    }
+    for task in ["ffffffff-0000-4000-8000-ffffffffffff", "ffffffff"] {
+        assert_eq!(
+            text(f.call("get_task", legacy(json!({"taskId": task})))),
+            format!("[unsupported_format] {FUTURE}"),
+            "{task}"
+        );
+    }
+    // Префикс, которому не подходит ни один файл, — по-прежнему «не найдено».
+    assert_eq!(
+        text(f.call("get_task", legacy(json!({"taskId": "abcdef12"})))),
+        "[not_found] Task abcdef12 not found"
+    );
+
+    assert_eq!(
+        text(f.call("get_field", legacy(json!({"field": "dddddddd-0000-4000-8000-dddddddddddd"})))),
+        "[invalid] Unresolved git merge conflict (line 3)"
+    );
+    assert!(
+        text(f.call("get_enum", legacy(json!({"enumeration": "eeeeeeee-0000-4000-8000-eeeeeeeeeeee"}))))
+            .starts_with("[unsupported_format] later-eeeeeeee.yaml: format version 99 is newer"),
+    );
+    assert_eq!(
+        text(f.call("get_field", legacy(json!({"field": "Nope"})))),
+        "[not_found] Field 'Nope' not found"
+    );
+}
+
+/// Вложенные объекты (`columns[]`, `fields[]`, `values[]`) без необязательных свойств: аргументы проходят проверку настоящим валидатором
+/// JSON Schema по `inputSchema` из `tools/list` (вложенный `required` не требует `id`, `dropStatuses`, `required`, `values`), и сам вызов
+/// проходит. Без обязательного вложенного свойства (`name` колонки) валидатор аргументы отвергает.
+#[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
+fn nested_objects_without_optional_properties_pass_the_schema_and_the_call() {
+    let f = Fixture::start();
+    let tools = f.rpc("tools/list", json!({}), &[]);
+    let schema = |tool: &str| -> Value {
+        tools["result"]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["name"] == tool)
+            .unwrap_or_else(|| panic!("no tool {tool}"))["inputSchema"]
+            .clone()
+    };
+    let valid = |tool: &str, arguments: &Value| -> bool {
+        jsonschema::options()
+            .should_validate_formats(true)
+            .build(&schema(tool))
+            .unwrap()
+            .is_valid(arguments)
+    };
+    let call = |tool: &str, arguments: Value| -> Value {
+        assert!(valid(tool, &arguments), "{tool}: {arguments} does not match its inputSchema");
+        let result = f.call(tool, arguments);
+        assert_eq!(result["result"].get("isError"), Some(&Value::Bool(false)), "{tool}: {result}");
+        serde_json::from_str(result["result"]["content"][0]["text"].as_str().unwrap()).unwrap()
+    };
+
+    let project = call("create_project", json!({"workspace": "golden", "name": "Nested"}));
+    let w = |mut arguments: Value| -> Value {
+        arguments["workspace"] = json!("golden");
+        arguments["projectId"] = project["id"].clone();
+        arguments
+    };
+    let todo = call("create_status", w(json!({"name": "Todo", "color": "#112233"})));
+    let set = call("create_status_set", w(json!({"name": "Set", "statusIds": [todo["id"]]})));
+    let field = call("create_field", w(json!({"name": "Estimate", "type": "int"})));
+    let level = call("create_enum", w(json!({"name": "Level", "values": ["Low"]})));
+
+    // columns[] без id и dropStatuses.
+    let board = call(
+        "create_board",
+        w(json!({"name": "Main", "statusSetIds": [set["id"]], "columns": [{"name": "Todo", "statusIds": [todo["id"]]}]})),
+    );
+    assert_eq!(board["columns"][0]["name"], "Todo");
+    let updated = call(
+        "update_board",
+        w(json!({"boardId": board["id"], "version": board["version"], "columns": [{"name": "All", "statusIds": [todo["id"]]}]})),
+    );
+    assert_eq!(updated["columns"][0]["name"], "All");
+    let no_name = w(json!({"name": "Bad", "statusSetIds": [set["id"]], "columns": [{"statusIds": [todo["id"]]}]}));
+    assert!(!valid("create_board", &no_name), "a column without name must not match the schema");
+
+    // fields[] без required: поле подключается необязательным.
+    let task_type = call(
+        "create_task_type",
+        w(json!({"name": "Task", "statusSetId": set["id"], "fields": [{"fieldId": field["id"]}]})),
+    );
+    assert_eq!(task_type["fields"][0]["required"], false);
+    let task_type = call(
+        "update_task_type",
+        w(json!({"taskTypeId": task_type["id"], "version": task_type["version"], "fields": [{"fieldId": field["id"]}]})),
+    );
+    assert_eq!(task_type["fields"][0]["required"], false);
+
+    // values[] перечисления без id — новое значение; fields.values[] задачи без values — значения нет.
+    let levels = call(
+        "update_enum",
+        w(json!({"enumId": level["id"], "version": level["version"],
+                 "values": [{"id": level["values"][0]["id"], "name": "Low"}, {"name": "High"}]})),
+    );
+    assert_eq!(levels["values"][1]["name"], "High");
+    let task = call(
+        "create_task",
+        w(json!({"title": "t", "typeId": task_type["id"], "fields": {"values": [{"fieldId": field["id"]}]}})),
+    );
+    assert_eq!(task["fields"], json!([]));
 }
 
 /// `canonicalize` без префикса `\\?\` на Windows: программы печатают пути в обычном виде (`D:\…`), и сравнение идёт с ними.

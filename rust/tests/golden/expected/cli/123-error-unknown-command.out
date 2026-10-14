@@ -33,7 +33,7 @@ Commands:
   task                                   Tasks
   series                                 Task series: numbered references like TSK-5
   cleanup                                Removes references to missing series and links to missing tasks or link types after a git merge (with --resolve-conflicts also renumbers duplicate numbers); link cycles are only reported, remove one link with 'task unlink'
-  migrate                                Brings the files of the workspace to the current file format version (formatVersion) and names the files of project entities after their names (titles of tasks)
+  migrate                                Brings the files of the workspace to the current file format (formatVersion, order of keys in task files) and names the files of project entities after their names (titles of tasks)
   user                                   Users (only a name, as in the desktop app)
   agent                                  Agents (users for LLMs working through MCP)
   lock                                   Locks an entity while you edit it, so nobody else changes or deletes it (expires after 2 minutes)

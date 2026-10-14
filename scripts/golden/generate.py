@@ -676,7 +676,6 @@ def snapshot_cli(t: Tasker, run_ws, out_dir, legacy_ids, sqlite=False):
     s.take("task-get-legacy-one-json", "task", "get", "OLD-1", "--json", **L)
     s.take("task-get-legacy-bom-json", "task", "get", "Legacy four", "--json", **L)
     s.take("task-get-future", "task", "get", legacy_ids["future"], **L)
-    # task get по id файла с конфликтом слияния падает с необработанным исключением YamlDotNet (баг, заведён задачей) — не снимаем.
     s.take("lock-show", "lock", "show", "task", "GLD-1", **G)
     s.take("lock-acquire", "lock", "acquire", "task", "GLD-1", scrub_times=True, **G)
     s.take("lock-show-held", "lock", "show", "task", "GLD-1", scrub_times=True, **G)
@@ -713,6 +712,11 @@ def snapshot_cli(t: Tasker, run_ws, out_dir, legacy_ids, sqlite=False):
         s.take(f"suggest-{name}", f"[suggest:{len(line)}]", line, cwd=run_ws)
     s.take("manual", "manual")
     s.take("manual-topic-tasks", "manual", "tasks")
+    # Нечитаемый файл задачи (конфликт слияния, формат новее) по полному и по короткому id — ошибка его чтения. Сняты последними,
+    # чтобы не сдвигать номера остальных снапшотов; в БД таких файлов нет.
+    s.take("task-get-conflict", "task", "get", legacy_ids["conflict"], **L)
+    s.take("task-get-conflict-short-id", "task", "get", legacy_ids["conflict"][:8], **L)
+    s.take("task-get-future-short-id", "task", "get", legacy_ids["future"][:8], **L)
     return by_title
 
 

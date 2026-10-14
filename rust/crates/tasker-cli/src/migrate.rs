@@ -5,7 +5,8 @@ use crate::errors::Result;
 use serde_json::{Map, Value};
 use tasker_files::migration::{self, MigrationOptions, MigrationReport};
 
-/// Код выхода `migrate --check`: есть файлы старого или нового формата либо нечитаемые.
+/// Код выхода `migrate --check`: есть файлы старого или нового формата, файлы задач в прежнем порядке ключей, файлы не по
+/// названию либо нечитаемые.
 pub const NEEDS_MIGRATION: i32 = 2;
 
 /// Сколько файлов каждого рода показывать в тексте; дальше — `... and N more`.
@@ -68,6 +69,13 @@ pub fn show(report: &MigrationReport, dry_run: bool, check: bool, json: bool) ->
     if report.migrated.len() > SHOWN_FILES {
         lines.push(format!("  ... and {} more", report.migrated.len() - SHOWN_FILES));
     }
+    for path in report.reordered.iter().take(SHOWN_FILES) {
+        let verb = if read_only { "would reorder" } else { "reordered" };
+        lines.push(format!("  {verb}  {path}  (description last)"));
+    }
+    if report.reordered.len() > SHOWN_FILES {
+        lines.push(format!("  ... and {} more", report.reordered.len() - SHOWN_FILES));
+    }
     for rename in report.renamed.iter().take(SHOWN_FILES) {
         let verb = if read_only { "would rename" } else { "renamed" };
         lines.push(format!("  {verb}  {}  ->  {}", rename.from, file_name(&rename.to)));
@@ -90,6 +98,13 @@ pub fn show(report: &MigrationReport, dry_run: bool, check: bool, json: bool) ->
             format!("{} file(s) would be migrated to format {current}", report.migrated.len())
         } else {
             format!("Migrated {} file(s) to format {current}", report.migrated.len())
+        });
+    }
+    if !report.reordered.is_empty() {
+        lines.push(if read_only {
+            format!("{} task file(s) would get the current key order", report.reordered.len())
+        } else {
+            format!("Reordered keys in {} task file(s)", report.reordered.len())
         });
     }
     if !report.renamed_folders.is_empty() {
@@ -163,6 +178,10 @@ fn report_json(report: &MigrationReport, dry_run: bool, check: bool) -> Value {
         ("upToDate", Value::from(report.up_to_date)),
         ("needsAttention", Value::Bool(report.needs_attention())),
         ("migrated", files(&report.migrated)),
+        (
+            "reordered",
+            Value::Array(report.reordered.iter().map(|p| Value::String(p.clone())).collect()),
+        ),
         ("renamed", moves(&report.renamed)),
         ("renamedFolders", moves(&report.renamed_folders)),
         ("mergedFolders", moves(&report.merged_folders)),
@@ -201,6 +220,7 @@ mod tests {
                     version: 1,
                 })
                 .collect(),
+            reordered: vec![],
             renamed: vec![migration::MigrationRename {
                 from: "projects/p/tasks/a.yaml".into(),
                 to: "projects/p/tasks/b-00000001.yaml".into(),
@@ -225,5 +245,33 @@ mod tests {
             "Migrated 12 file(s) to format 9\nRenamed 1 project folder(s) after the names of their projects\nMerged 1 second project folder(s) into the main ones\nRenamed 1 file(s) after the names of their entities\n"
         ));
         assert_eq!(text.matches("migrated  ").count(), 10);
+    }
+
+    #[test]
+    fn reordered_task_files_are_listed_in_text_and_json() {
+        let report = MigrationReport {
+            current_format: 9,
+            scanned: 2,
+            up_to_date: 1,
+            migrated: vec![],
+            reordered: vec!["projects/p/tasks/a-00000001.yaml".into()],
+            renamed: vec![],
+            renamed_folders: vec![],
+            merged_folders: vec![],
+            newer: vec![],
+            unreadable: vec![],
+        };
+        assert_eq!(
+            show(&report, false, true, false),
+            "Nothing is written (dry run):\n  would reorder  projects/p/tasks/a-00000001.yaml  (description last)\n\
+             1 task file(s) would get the current key order\n"
+        );
+        assert_eq!(
+            show(&report, false, false, false),
+            "  reordered  projects/p/tasks/a-00000001.yaml  (description last)\nReordered keys in 1 task file(s)\n"
+        );
+        assert!(
+            show(&report, false, true, true).contains(r#""migrated":[],"reordered":["projects/p/tasks/a-00000001.yaml"],"renamed":[]"#)
+        );
     }
 }
