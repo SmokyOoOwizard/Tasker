@@ -49,12 +49,18 @@ struct Fixture {
 
 impl Fixture {
     fn start() -> Fixture {
+        Fixture::start_with(|_| {})
+    }
+
+    /// `prepare` — правка копии корпуса (папка `golden/`) до запуска демона.
+    fn start_with(prepare: impl FnOnce(&Path)) -> Fixture {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/tmp")
             .join(uuid::Uuid::new_v4().simple().to_string());
         std::fs::create_dir_all(root.join("home")).unwrap();
         let root = canonical(&root);
         copy_dir(&golden().join("workspace"), &root.join("golden"));
+        prepare(&root.join("golden"));
         let port = free_port();
         let settings = format!(
             "{{\"mcp\":{{\"port\":{port},\"workspaces\":[{{\"kind\":\"files\",\"path\":\"{}\"}},{{\"kind\":\"files\",\"path\":\"{}\"}}]}}}}\n",
@@ -460,6 +466,78 @@ fn agent_header_and_workspace_argument_edge_cases() {
             .unwrap()
             .starts_with("[not_found] Status "),
         "{removed}"
+    );
+}
+
+/// Файл, который не удалось прочитать (конфликт слияния, формат новее), по полному id и по короткому id даёт ошибку его чтения,
+/// а не «не найдено»: `get_task` (и `get_task_links`) — оба вида ссылки, `get_field` и `get_enum` — полный id.
+#[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
+fn unreadable_files_answer_with_their_read_error() {
+    const CONFLICT: &str = "Unresolved git merge conflict (line 3)";
+    const FUTURE: &str = "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (9): update Tasker";
+    let f = Fixture::start_with(|golden| {
+        let project = golden.join(".tasker/projects").join(LEGACY_PROJECT);
+        std::fs::write(
+            project.join("fields/broken-dddddddd.yaml"),
+            "formatVersion: 4\nid: dddddddd-0000-4000-8000-dddddddddddd\n<<<<<<< HEAD\nname: A\n=======\nname: B\n>>>>>>> x\ntype: string\n",
+        )
+        .unwrap();
+        std::fs::write(
+            project.join("enums/later-eeeeeeee.yaml"),
+            "formatVersion: 99\nid: eeeeeeee-0000-4000-8000-eeeeeeeeeeee\nname: Later\nvalues: []\n",
+        )
+        .unwrap();
+    });
+    let legacy = |extra: Value| -> Value {
+        let mut map: Map<String, Value> = json!({"workspace": "golden", "projectId": LEGACY_PROJECT})
+            .as_object()
+            .unwrap()
+            .clone();
+        map.extend(extra.as_object().unwrap().clone());
+        Value::Object(map)
+    };
+    let text = |answer: Value| -> String {
+        assert_eq!(answer["result"]["isError"], Value::Bool(true), "{answer}");
+        answer["result"]["content"][0]["text"].as_str().unwrap().to_string()
+    };
+
+    for task in ["cccccccc-0000-4000-8000-cccccccccccc", "cccccccc", "CCCCCCCC0000"] {
+        assert_eq!(
+            text(f.call("get_task", legacy(json!({"taskId": task})))),
+            format!("[invalid] {CONFLICT}"),
+            "{task}"
+        );
+        assert_eq!(
+            text(f.call("get_task_links", legacy(json!({"taskId": task})))),
+            format!("[invalid] {CONFLICT}"),
+            "{task}"
+        );
+    }
+    for task in ["ffffffff-0000-4000-8000-ffffffffffff", "ffffffff"] {
+        assert_eq!(
+            text(f.call("get_task", legacy(json!({"taskId": task})))),
+            format!("[unsupported_format] {FUTURE}"),
+            "{task}"
+        );
+    }
+    // Префикс, которому не подходит ни один файл, — по-прежнему «не найдено».
+    assert_eq!(
+        text(f.call("get_task", legacy(json!({"taskId": "abcdef12"})))),
+        "[not_found] Task abcdef12 not found"
+    );
+
+    assert_eq!(
+        text(f.call("get_field", legacy(json!({"field": "dddddddd-0000-4000-8000-dddddddddddd"})))),
+        "[invalid] Unresolved git merge conflict (line 3)"
+    );
+    assert!(
+        text(f.call("get_enum", legacy(json!({"enumeration": "eeeeeeee-0000-4000-8000-eeeeeeeeeeee"}))))
+            .starts_with("[unsupported_format] later-eeeeeeee.yaml: format version 99 is newer"),
+    );
+    assert_eq!(
+        text(f.call("get_field", legacy(json!({"field": "Nope"})))),
+        "[not_found] Field 'Nope' not found"
     );
 }
 

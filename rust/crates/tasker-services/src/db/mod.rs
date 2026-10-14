@@ -479,6 +479,18 @@ impl Storage for DbStore {
         Ok(0)
     }
 
+    fn unreadable<T: Entity>(&self, _project_id: &Uuid, _key: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn unreadable_project(&self, _key: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn unreadable_user(&self, _key: &str) -> Result<()> {
+        Ok(())
+    }
+
     fn add<T: Entity>(&self, entity: &T) -> Result<String> {
         self.write(|c| entity.db_insert(c).map_err(db_error))?;
         Ok(values::INITIAL_VERSION.to_string())

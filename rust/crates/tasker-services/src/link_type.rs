@@ -196,7 +196,11 @@ impl<'a> LinkTypeService<'a> {
         }
         let by_name: Vec<&LinkType> = all.iter().filter(|x| eq_ignore_case(&x.name, text)).collect();
         match by_name.len() {
-            0 => Ok(None),
+            // Id файла, который не удалось прочитать, — ошибка его чтения.
+            0 => match parse_guid(text) {
+                Some(id) => self.ws.unreadable::<LinkType>(project_id, &guid_d(&id)).map(|()| None),
+                None => Ok(None),
+            },
             1 => Ok(Some(by_name[0].clone())),
             _ => Err(Error::validation(format!(
                 "Several link types are named '{text}', use the id: {}",
