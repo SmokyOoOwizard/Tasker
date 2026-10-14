@@ -23,6 +23,15 @@ use uuid::Uuid;
 pub trait IndexRefresh {
     /// `paths` — файлы или папки, которые изменились (или могли измениться: `git pull`).
     fn refresh(&self, paths: &[PathBuf]) -> io::Result<()>;
+
+    /// Индекс только что целиком сверен с диском при открытии ([`crate::index::WorkspaceIndex::open`]): `true` — один раз, первой
+    /// секции записи, и только вскоре после сверки. Секция, которой `write.lock` достался без ожидания, тогда не сверяет папку задач
+    /// ещё раз. Номера серий в Tasker меняют только секции записи, а они обновляют общий индекс до того, как отпустить
+    /// `write.lock` (и Rust, и .NET), — такую запись после сверки при открытии индекс уже знает. Файлы, которые `git pull` принёс
+    /// между сверкой и записью, не видны ни так, ни сверкой под блокировкой, если пришли после неё: окно — те же миллисекунды.
+    fn take_fresh(&self) -> bool {
+        false
+    }
 }
 
 /// Индекса нет: ничего не делает.
@@ -48,7 +57,11 @@ impl<'a> WriteScope<'a> {
     }
 
     pub fn exclusive<T>(&self, project_id: &Uuid, action: impl FnOnce() -> io::Result<T>) -> io::Result<T> {
-        FileLock::run(&self.directory.write_lock(), None, || {
+        FileLock::run_noting_wait(&self.directory.write_lock(), None, |waited| {
+            // Сверка при открытии была только что, и блокировка досталась сразу (см. IndexRefresh::take_fresh).
+            if self.index.take_fresh() && !waited {
+                return action();
+            }
             // Задачи всех папок проекта (вторая папка после слияния git — тоже задачи проекта).
             let mut tasks: Vec<PathBuf> = self.directory.project_dirs(project_id).iter().map(|x| x.tasks()).collect();
             if tasks.is_empty() {
@@ -385,6 +398,78 @@ mod tests {
             std::fs::read(&path).unwrap(),
             b"formatVersion: 10\nid: 1\ntitle: x\ndescription: d\n"
         );
+        std::fs::remove_dir_all(&ws).unwrap();
+    }
+
+    // Индекс, который «только что сверен при открытии» (take_fresh), и запись сверок.
+    struct Fresh {
+        fresh: Mutex<bool>,
+        refreshed: Mutex<Vec<PathBuf>>,
+    }
+
+    impl IndexRefresh for Fresh {
+        fn refresh(&self, paths: &[PathBuf]) -> io::Result<()> {
+            self.refreshed.lock().unwrap().extend_from_slice(paths);
+            Ok(())
+        }
+
+        fn take_fresh(&self) -> bool {
+            std::mem::take(&mut *self.fresh.lock().unwrap())
+        }
+    }
+
+    impl Fresh {
+        fn new() -> Fresh {
+            Fresh {
+                fresh: Mutex::new(true),
+                refreshed: Mutex::new(Vec::new()),
+            }
+        }
+
+        fn refreshes(&self) -> usize {
+            self.refreshed.lock().unwrap().len()
+        }
+    }
+
+    #[test]
+    fn right_after_a_fresh_open_the_first_free_write_scope_does_not_refresh_again() {
+        let ws = temp_dir();
+        let dir = TaskerDirectory::new(&ws);
+        let project = Uuid::new_v4();
+
+        // Блокировка свободна: первая секция после открытия не сверяет, следующая — сверяет.
+        let index = Fresh::new();
+        let scope = WriteScope::new(&dir, &index);
+        assert_eq!(scope.exclusive(&project, || Ok(1)).unwrap(), 1);
+        assert_eq!(index.refreshes(), 0);
+        scope.exclusive(&project, || Ok(())).unwrap();
+        assert_eq!(index.refreshes(), 1);
+
+        // Вложенная секция внутри первой — сверяет (блокировку держали до неё).
+        let index = Fresh::new();
+        let scope = WriteScope::new(&dir, &index);
+        scope.exclusive(&project, || scope.exclusive(&project, || Ok(()))).unwrap();
+        assert_eq!(*index.refreshed.lock().unwrap(), vec![dir.project(&project).tasks()]);
+
+        // Блокировку держит другой поток (как другой процесс, который пишет), — секция её ждёт и затем сверяет. Пока ждущий не
+        // дошёл до блокировки, её могут отпустить раньше — тогда он её не ждал; такой прогон повторяется.
+        let mut waited_and_refreshed = false;
+        for _ in 0..50 {
+            let index = Fresh::new();
+            let held = FileLock::acquire(&dir.write_lock(), None).unwrap();
+            std::thread::scope(|threads| {
+                let waiter = threads.spawn(|| WriteScope::new(&dir, &index).exclusive(&project, || Ok(())).unwrap());
+                std::thread::sleep(std::time::Duration::from_millis(30));
+                drop(held);
+                waiter.join().unwrap();
+            });
+            assert!(!*index.fresh.lock().unwrap(), "the first section takes the mark either way");
+            if index.refreshes() == 1 {
+                waited_and_refreshed = true;
+                break;
+            }
+        }
+        assert!(waited_and_refreshed);
         std::fs::remove_dir_all(&ws).unwrap();
     }
 

@@ -11,17 +11,20 @@
 //! повреждённый файл удаляется и строится заново (как в .NET): это кэш. Старый `index-rs.db` (с `-wal`, `-shm`) и `index-rs.lock`
 //! прежних Rust-сборок удаляются при открытии области.
 //!
-//! Обновление ([`WorkspaceIndex::sync`], [`WorkspaceIndex::refresh`]): обход `.tasker` по [`layout::classify`], сравнение
+//! Обновление ([`WorkspaceIndex::sync`], [`WorkspaceIndex::refresh`]): обход `.tasker` по [`layout::classify`] (отпечаток каждого
+//! файла — пачками `getattrlistbulk` на macOS, `fstatat` от дескриптора папки на остальных Unix: модуль `scan`), сравнение
 //! `(size, mtime)` с записанным, перечитывание изменившихся, удаление пропавших — одной транзакцией под короткой блокировкой
 //! `index.lock`. Чтение без блокировки: в режиме WAL читатель видит согласованный снимок и не мешает записи. Файл, который не
 //! читается (конфликт слияния git, формат новее поддерживаемого, битый YAML, несовпадение id с именем), остаётся в `files` с
 //! текстом ошибки в `error` и не попадает в списки — это проблемы области ([`WorkspaceIndex::problems`]), которые показывает
 //! `tasker sync`.
 //!
-//! Инвариант нумерации серий: `max(number)` считается после `Refresh(tasks/)` под `write.lock` — [`WorkspaceIndex::exclusive`]
-//! ([`WriteScope`] с этим индексом как [`IndexRefresh`]).
+//! Инвариант нумерации серий: `max(number)` считается под `write.lock` по индексу, сверенному с папкой задач, — [`WorkspaceIndex::exclusive`]
+//! ([`WriteScope`] с этим индексом как [`IndexRefresh`]): `Refresh(tasks/)` под блокировкой или, если блокировка досталась сразу
+//! после полной сверки при открытии, — она ([`IndexRefresh::take_fresh`]).
 pub mod data;
 mod query;
+mod scan;
 mod sort;
 mod sync;
 
@@ -35,6 +38,8 @@ use rusqlite::functions::FunctionFlags;
 use rusqlite::{Connection, OpenFlags};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tasker_core::io::{FileLock, full_path};
 use tasker_core::validate::to_lower_invariant;
 use uuid::Uuid;
@@ -55,7 +60,13 @@ const LEGACY_LOCK_NAME: &str = "index-rs.lock";
 #[derive(Debug, Clone)]
 pub struct WorkspaceIndex {
     directory: TaskerDirectory,
+    /// Когда закончилась полная сверка при открытии, если её ещё не учла секция записи ([`IndexRefresh::take_fresh`]); общее у копий.
+    fresh: Arc<Mutex<Option<Instant>>>,
 }
+
+/// Сколько после сверки при открытии секция записи может её не повторять: консоль доходит до записи за миллисекунды, а долго
+/// живущий процесс (демон) пишет позже — тогда сверка под блокировкой, как обычно.
+const FRESH_FOR: Duration = Duration::from_secs(1);
 
 impl WorkspaceIndex {
     /// Открывает индекс (создаёт схему, пересобирает повреждённый) и сверяет его со всеми файлами области.
@@ -63,6 +74,7 @@ impl WorkspaceIndex {
         let index = Self::attach(directory)?;
         tasker_core::perf::mark("index-schema");
         index.sync()?;
+        *index.fresh.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
         tasker_core::perf::mark("index-sync");
         Ok(index)
     }
@@ -72,6 +84,7 @@ impl WorkspaceIndex {
     pub fn attach(directory: &TaskerDirectory) -> io::Result<WorkspaceIndex> {
         let index = WorkspaceIndex {
             directory: directory.clone(),
+            fresh: Arc::default(),
         };
         FileLock::run(&index.lock_file(), None, || index.ensure_schema())??;
         Ok(index)
@@ -113,7 +126,9 @@ impl WorkspaceIndex {
     }
 
     /// Блокировка записи между процессами (`write.lock`) плюс сверка папки задач проекта перед действием: номер серии
-    /// (`max_number`) внутри действия учитывает и файлы, принесённые `git pull`. Вложенный вызов не ждёт самого себя.
+    /// (`max_number`) внутри действия учитывает и файлы, принесённые `git pull`. Первая секция вскоре после открытия, которой
+    /// блокировка досталась сразу, папку не сверяет — её только что сверило открытие ([`IndexRefresh::take_fresh`]). Вложенный
+    /// вызов не ждёт самого себя.
     pub fn exclusive<T>(&self, project_id: &Uuid, action: impl FnOnce() -> io::Result<T>) -> io::Result<T> {
         WriteScope::new(&self.directory, self).exclusive(project_id, action)
     }
@@ -230,6 +245,14 @@ impl WorkspaceIndex {
 impl IndexRefresh for WorkspaceIndex {
     fn refresh(&self, paths: &[PathBuf]) -> io::Result<()> {
         WorkspaceIndex::refresh(self, paths).map(|_| ())
+    }
+
+    fn take_fresh(&self) -> bool {
+        self.fresh
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take()
+            .is_some_and(|synced| synced.elapsed() < FRESH_FOR)
     }
 }
 
@@ -386,10 +409,95 @@ mod tests {
     use crate::test_support::temp_dir;
 
     #[test]
+    fn only_a_recent_open_marks_the_index_fresh_and_only_once() {
+        let ws = temp_dir();
+        let dir = TaskerDirectory::new(&ws);
+        dir.ensure_created().unwrap();
+        let index = WorkspaceIndex::open(&dir).unwrap();
+        let copy = index.clone();
+        assert!(copy.take_fresh(), "copies share the mark");
+        assert!(!index.take_fresh());
+
+        assert!(!WorkspaceIndex::attach(&dir).unwrap().take_fresh(), "attach does not sync");
+        index.sync().unwrap();
+        assert!(!index.take_fresh(), "only the sync of open marks the index");
+
+        let index = WorkspaceIndex::open(&dir).unwrap();
+        *index.fresh.lock().unwrap() = Instant::now().checked_sub(FRESH_FOR);
+        assert!(
+            !index.take_fresh(),
+            "a long-lived process writes later: the write section syncs again"
+        );
+        std::fs::remove_dir_all(&ws).unwrap();
+    }
+
+    fn copy_dir(from: &Path, to: &Path) {
+        std::fs::create_dir_all(to).unwrap();
+        for entry in std::fs::read_dir(from).unwrap() {
+            let entry = entry.unwrap();
+            if entry.file_type().unwrap().is_dir() {
+                copy_dir(&entry.path(), &to.join(entry.file_name()));
+            } else {
+                std::fs::copy(entry.path(), to.join(entry.file_name())).unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn the_first_free_write_section_after_open_knows_the_numbers_written_by_other_sections() {
+        use tasker_core::model::{TaskItem, TaskSeriesNumber};
+        let ws = temp_dir();
+        copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/workspace"), &ws);
+        let dir = TaskerDirectory::new(&ws);
+        let index = WorkspaceIndex::open(&dir).unwrap();
+        let task = index
+            .all::<TaskItem>(&IndexQuery::default())
+            .unwrap()
+            .into_iter()
+            .find(|t| !t.series_numbers.is_empty())
+            .unwrap();
+        let (project, series) = (task.project_id, task.series_numbers[0].series_id);
+        let max = index.max_number(&project, &series).unwrap();
+        let numbered = |number: i32, title: &str| {
+            let item = TaskItem {
+                id: Uuid::new_v4(),
+                title: title.to_string(),
+                series_numbers: vec![TaskSeriesNumber { series_id: series, number }],
+                ..task.clone()
+            };
+            let path = dir.project(&project).task_file(&item.id, Some(title));
+            (path, crate::files::task::serialize(&item))
+        };
+
+        // Секция записи другого процесса (свой индекс, без отметки открытия): номер выбран и файл записан под write.lock, общий
+        // индекс обновлён до того, как блокировка отпущена.
+        let other = WorkspaceIndex::attach(&dir).unwrap();
+        let (path, bytes) = numbered(max + 1, "From another process");
+        other
+            .exclusive(&project, || {
+                other.written(std::slice::from_ref(&path), || std::fs::write(&path, &bytes))
+            })
+            .unwrap();
+
+        // Сверка при открытии «только что», блокировка свободна: первая секция папку не сверяет, но номер другой секции знает.
+        *index.fresh.lock().unwrap() = Some(Instant::now());
+        assert_eq!(index.exclusive(&project, || index.max_number(&project, &series)).unwrap(), max + 1);
+
+        // Файл, который появился мимо Tasker (git pull), видит следующая секция: она сверяет папку задач под блокировкой.
+        let (path, bytes) = numbered(max + 2, "Pulled");
+        std::fs::write(&path, bytes).unwrap();
+        assert_eq!(index.exclusive(&project, || index.max_number(&project, &series)).unwrap(), max + 2);
+        std::fs::remove_dir_all(&ws).unwrap();
+    }
+
+    #[test]
     fn relative_paths_are_slash_separated_and_outside_is_none() {
         let ws = temp_dir();
         let dir = TaskerDirectory::new(&ws);
-        let index = WorkspaceIndex { directory: dir.clone() };
+        let index = WorkspaceIndex {
+            directory: dir.clone(),
+            fresh: Arc::default(),
+        };
         assert_eq!(index.relative(dir.root()).as_deref(), Some(""));
         assert_eq!(
             index.relative(&dir.project(&Uuid::nil()).tasks()).as_deref(),

@@ -1025,3 +1025,132 @@ fn the_old_rust_only_index_is_removed_on_open() {
     assert!(cache.join("index.db").exists());
     std::fs::remove_dir_all(&workspace).unwrap();
 }
+
+/// Индекс, сверенный при открытии, равен построенному с нуля по тем же файлам (строки, данные, отпечатки).
+fn assert_index_is_fresh(workspace: &Path, step: &str) {
+    let dir = TaskerDirectory::new(workspace);
+    WorkspaceIndex::open(&dir).unwrap();
+    let synced = dump_index(workspace);
+    let cache = dir.cache();
+    for name in ["index.db", "index.db-wal", "index.db-shm"] {
+        let _ = std::fs::remove_file(cache.join(name));
+    }
+    WorkspaceIndex::open(&dir).unwrap();
+    assert_eq!(synced, dump_index(workspace), "{step}: the synced index differs from a rebuilt one");
+}
+
+fn git(workspace: &Path, args: &[&str]) {
+    // Без пользовательских и системных настроек git (хуки, autocrlf, подпись).
+    let config = workspace.parent().unwrap().join("gitconfig");
+    std::fs::write(&config, "").unwrap();
+    let status = std::process::Command::new("git")
+        .args([
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "commit.gpgsign=false",
+        ])
+        .args(args)
+        .current_dir(workspace)
+        .env("GIT_CONFIG_GLOBAL", &config)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .unwrap();
+    assert!(status.success(), "git {}", args.join(" "));
+}
+
+/// Переписывает файл на месте (тот же файл, без усечения): папка при этом не меняется.
+fn rewrite_in_place(path: &Path, from: &str, to: &str) {
+    use std::io::Write;
+    assert_eq!(from.len(), to.len());
+    let text = std::fs::read_to_string(path).unwrap();
+    assert!(text.contains(from), "{from} in {}", path.display());
+    let mut file = std::fs::File::options().write(true).open(path).unwrap();
+    file.write_all(text.replacen(from, to, 1).as_bytes()).unwrap();
+}
+
+#[test]
+fn external_changes_reach_the_index_on_the_next_open() {
+    let corpus = Corpus::open();
+    let workspace = corpus.workspace.clone();
+    let dir = TaskerDirectory::new(&workspace);
+    let golden = corpus.project("Golden").id;
+    drop(corpus);
+    let tasks = dir.project(&golden).tasks();
+    let title_of = |id: u32| -> Option<String> {
+        let index = WorkspaceIndex::open(&dir).unwrap();
+        index
+            .all::<TaskItem>(&IndexQuery::project(&golden))
+            .unwrap()
+            .into_iter()
+            .find(|t| t.id == Uuid::parse_str(&format!("{id:08x}-0000-4000-8000-{id:012x}")).unwrap())
+            .map(|t| t.title)
+    };
+    assert_index_is_fresh(&workspace, "start");
+
+    // Правка на месте с тем же размером: время папки не меняется, время файла — да.
+    let file = tasks.join("007-0000002d.yaml");
+    rewrite_in_place(&file, "title: \"007\"", "title: \"008\"");
+    assert_eq!(title_of(0x2d).as_deref(), Some("008"));
+    assert_index_is_fresh(&workspace, "in-place edit of the same size");
+
+    // Время изменения в прошлое (как у файлов, которые распаковали или скопировали с сохранением времени), размер тот же.
+    rewrite_in_place(&file, "number: 2", "number: 9");
+    std::fs::File::options()
+        .write(true)
+        .open(&file)
+        .unwrap()
+        .set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000_000))
+        .unwrap();
+    assert_index_is_fresh(&workspace, "mtime in the past");
+
+    // Переименование без правки, удаление, новый файл.
+    std::fs::rename(&file, tasks.join("renamed-0000002d.yaml")).unwrap();
+    assert_index_is_fresh(&workspace, "rename");
+    std::fs::remove_file(tasks.join("1e3-00000030.yaml")).unwrap();
+    assert_eq!(title_of(0x30), None);
+    assert_index_is_fresh(&workspace, "delete");
+    let added = std::fs::read_to_string(tasks.join("renamed-0000002d.yaml"))
+        .unwrap()
+        .replace("0000002d-0000-4000-8000-00000000002d", "000000fe-0000-4000-8000-0000000000fe")
+        .replace("title: \"008\"", "title: Added");
+    std::fs::write(tasks.join("added-000000fe.yaml"), added).unwrap();
+    assert_eq!(title_of(0xfe).as_deref(), Some("Added"));
+    assert_index_is_fresh(&workspace, "new file");
+
+    // git: две ветки с разными файлами задач и справочников, переключение туда и обратно, затем удаление папки задач целиком и
+    // её восстановление.
+    std::fs::write(workspace.join(".gitignore"), ".tasker/.cache/\n").unwrap();
+    git(&workspace, &["init", "-q", "-b", "main"]);
+    git(&workspace, &["add", "-A"]);
+    git(&workspace, &["commit", "-q", "-m", "main"]);
+    git(&workspace, &["checkout", "-q", "-b", "other"]);
+    let long = tasks.join("a-very-long-title-that-goes-on-and-on-past-sixty-characters-00000031.yaml");
+    let text = std::fs::read_to_string(&long).unwrap();
+    std::fs::write(&long, text.replacen("title: ", "title: Edited on the branch ", 1)).unwrap();
+    std::fs::remove_file(tasks.join("added-000000fe.yaml")).unwrap();
+    let (from, to) = (tasks.join("renamed-0000002d.yaml"), tasks.join("moved-0000002d.yaml"));
+    git(&workspace, &["mv", &from.to_string_lossy(), &to.to_string_lossy()]);
+    let status = dir.project(&golden).root().join("statuses").join("backlog-00000005.yaml");
+    let text = std::fs::read_to_string(&status).unwrap();
+    std::fs::write(&status, text.replacen("name: Backlog", "name: Backlog on the branch", 1)).unwrap();
+    git(&workspace, &["add", "-A"]);
+    git(&workspace, &["commit", "-q", "-m", "other"]);
+    assert_index_is_fresh(&workspace, "commit on the branch");
+    git(&workspace, &["checkout", "-q", "main"]);
+    assert_eq!(title_of(0xfe).as_deref(), Some("Added"));
+    assert_index_is_fresh(&workspace, "checkout main");
+    git(&workspace, &["checkout", "-q", "other"]);
+    assert_eq!(title_of(0xfe), None);
+    assert!(title_of(0x31).unwrap().starts_with("Edited on the branch "));
+    assert_index_is_fresh(&workspace, "checkout other");
+    std::fs::remove_dir_all(&tasks).unwrap();
+    assert_index_is_fresh(&workspace, "tasks folder removed");
+    git(&workspace, &["checkout", "-q", "--", "."]);
+    assert_index_is_fresh(&workspace, "tasks folder restored");
+    std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
+}

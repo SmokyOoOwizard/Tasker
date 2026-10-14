@@ -42,6 +42,12 @@ impl FileLock {
     ///
     /// Ошибка `TimedOut`: блокировка не освободилась за `timeout` (`Lock {path} is busy: another Tasker process keeps it for more than {N} s`).
     pub fn acquire(path: &Path, timeout: Option<Duration>) -> io::Result<FileLock> {
+        Self::acquire_noting_wait(path, timeout).map(|(lock, _)| lock)
+    }
+
+    /// То же, что [`FileLock::acquire`], плюс ждали ли: `true` — блокировку держал другой поток или процесс, и она досталась не с
+    /// первой попытки.
+    fn acquire_noting_wait(path: &Path, timeout: Option<Duration>) -> io::Result<(FileLock, bool)> {
         let full = full_path(path);
         let wait = timeout.unwrap_or(DEFAULT_TIMEOUT);
         let deadline = Instant::now() + wait;
@@ -57,9 +63,13 @@ impl FileLock {
                 })
             })
             .clone();
+        let mut waited = false;
         {
             let mut busy = gate.busy.lock().unwrap_or_else(|e| e.into_inner());
             while *busy {
+                waited = true;
+                #[cfg(test)]
+                tests::saw_busy(&full);
                 let left = deadline.saturating_duration_since(Instant::now());
                 if left.is_zero() {
                     return Err(busy_error(&full, wait));
@@ -70,7 +80,7 @@ impl FileLock {
         }
 
         match Self::open(&full, deadline, wait) {
-            Ok(file) => Ok(FileLock { _file: file, gate }),
+            Ok((file, retried)) => Ok((FileLock { _file: file, gate }, waited || retried)),
             Err(e) => {
                 release(&gate);
                 Err(e)
@@ -78,17 +88,22 @@ impl FileLock {
         }
     }
 
-    fn open(full: &Path, deadline: Instant, wait: Duration) -> io::Result<File> {
+    // Файл блокировки и была ли нужна повторная попытка (держал другой процесс).
+    fn open(full: &Path, deadline: Instant, wait: Duration) -> io::Result<(File, bool)> {
         if let Some(parent) = full.parent() {
             std::fs::create_dir_all(parent)?;
         }
         // Держат блокировки доли миллисекунды, а ждущий спит между попытками: короткий шаг (1→2→4→5 мс) — те же попытки,
         // но очередь движется со скоростью самой работы.
         let mut delay = 1;
+        let mut retried = false;
         loop {
             match try_open(full) {
-                Ok(file) => return Ok(file),
-                Err(e) if is_busy(&e) => {}
+                Ok(file) => return Ok((file, retried)),
+                Err(e) if is_busy(&e) => {
+                    #[cfg(test)]
+                    tests::saw_busy(full);
+                }
                 Err(e) => return Err(e),
             }
             if Instant::now() >= deadline {
@@ -96,19 +111,26 @@ impl FileLock {
             }
             std::thread::sleep(Duration::from_millis(delay));
             delay = (delay * 2).min(MAX_POLL);
+            retried = true;
         }
     }
 
     /// Выполняет `action` под блокировкой. Если этот поток уже держит её (вложенный вызов), берёт не заново, а продолжает под той же.
     pub fn run<T>(path: &Path, timeout: Option<Duration>, action: impl FnOnce() -> T) -> io::Result<T> {
+        Self::run_noting_wait(path, timeout, |_| action())
+    }
+
+    /// То же, что [`FileLock::run`], но `action` узнаёт, досталась ли блокировка сразу: `false` — с первой попытки, никто её не
+    /// держал; `true` — ждали другой поток или процесс, или это вложенный вызов внутри уже удерживаемой блокировки.
+    pub fn run_noting_wait<T>(path: &Path, timeout: Option<Duration>, action: impl FnOnce(bool) -> T) -> io::Result<T> {
         let full = full_path(path);
         let key = path_key(&full.to_string_lossy());
         if HELD.with(|held| held.borrow().contains(&key)) {
-            return Ok(action());
+            return Ok(action(true));
         }
-        let lock = Self::acquire(&full, timeout)?;
+        let (lock, waited) = Self::acquire_noting_wait(&full, timeout)?;
         HELD.with(|held| held.borrow_mut().insert(key.clone()));
-        let result = action();
+        let result = action(waited);
         HELD.with(|held| held.borrow_mut().remove(&key));
         drop(lock);
         Ok(result)
@@ -208,6 +230,52 @@ mod tests {
         );
         drop(lock);
         FileLock::acquire(&path, Some(Duration::from_millis(30))).unwrap();
+    }
+
+    #[test]
+    fn run_tells_whether_the_lock_was_free_at_once() {
+        let path = temp_lock("d.lock");
+        // Свободна — с первой попытки; вложенный вызов — «ждали» (блокировку держали до него).
+        let nested = FileLock::run_noting_wait(&path, None, |waited| {
+            assert!(!waited);
+            FileLock::run_noting_wait(&path, None, |waited| waited).unwrap()
+        })
+        .unwrap();
+        assert!(nested);
+
+        // Держит другой поток — ждали. Блокировка отпускается, только когда ждущий упёрся в неё (без расчёта на тайминги).
+        let held = FileLock::acquire(&path, None).unwrap();
+        let p = path.clone();
+        let waiter = std::thread::spawn(move || FileLock::run_noting_wait(&p, None, |waited| waited).unwrap());
+        wait_until_busy_seen(&path);
+        drop(held);
+        assert!(waiter.join().unwrap());
+
+        // Держит другой процесс (здесь — другой открытый файл с flock / FileShare.None): ждали.
+        let other = try_open(&full_path(&path)).unwrap();
+        let p = path.clone();
+        let waiter = std::thread::spawn(move || FileLock::run_noting_wait(&p, None, |waited| waited).unwrap());
+        wait_until_busy_seen(&path);
+        drop(other);
+        assert!(waiter.join().unwrap());
+        assert!(!FileLock::run_noting_wait(&path, None, |waited| waited).unwrap());
+    }
+
+    // Пути, на которых кто-то застал блокировку занятой.
+    fn busy_seen() -> &'static Mutex<HashSet<std::path::PathBuf>> {
+        static SEEN: OnceLock<Mutex<HashSet<std::path::PathBuf>>> = OnceLock::new();
+        SEEN.get_or_init(|| Mutex::new(HashSet::new()))
+    }
+
+    pub(super) fn saw_busy(path: &Path) {
+        busy_seen().lock().unwrap().insert(path.to_path_buf());
+    }
+
+    fn wait_until_busy_seen(path: &Path) {
+        let full = full_path(path);
+        while !busy_seen().lock().unwrap().remove(&full) {
+            std::thread::yield_now();
+        }
     }
 
     #[test]

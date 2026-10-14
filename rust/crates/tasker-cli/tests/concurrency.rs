@@ -156,8 +156,8 @@ fn parallel_processes_all_write_and_the_series_numbers_stay_unique() {
     let folder = Folder::new();
     folder.demo();
 
-    const COUNT: usize = 8;
-    let titles: Vec<String> = (0..COUNT).map(|i| format!("Task {i}")).collect();
+    const COUNT: usize = 16;
+    let titles: Vec<String> = (0..COUNT).map(|i| format!("Task {i:02}")).collect();
     let children: Vec<Child> = titles
         .iter()
         .map(|t| folder.start(&["task", "create", t, "--type", "Bug", "--series", "D", "-p", "Demo"]))
@@ -173,7 +173,7 @@ fn parallel_processes_all_write_and_the_series_numbers_stay_unique() {
     got.sort_unstable();
     assert_eq!(got, titles.iter().map(String::as_str).collect::<Vec<_>>());
 
-    // Каждая задача получила свой номер: D-1 … D-8 без дублей и пропусков.
+    // Каждая задача получила свой номер: D-1 … D-16 без дублей и пропусков.
     let mut references: Vec<String> = (1..=COUNT)
         .map(|n| {
             let run = folder.run(&["task", "get", &format!("D-{n}"), "-p", "Demo", "--json"]);
