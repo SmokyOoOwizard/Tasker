@@ -33,7 +33,7 @@ description: |-
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-13T14:53:36.0705610+00:00
-updatedAt: 2026-10-13T15:50:17.3513140+00:00
+updatedAt: 2026-10-14T00:16:55.5505650+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 170
@@ -46,3 +46,5 @@ links:
   taskId: 4622fe81-2698-42d1-ad3e-ab771f5b0ca8
 - typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
   taskId: ba06f791-4d0f-4358-a000-607986df09bd
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: e8364d99-0adb-4c27-9410-7aaccc8b9b2e
