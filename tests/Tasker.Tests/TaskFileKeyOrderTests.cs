@@ -26,7 +26,7 @@ public class TaskFileKeyOrderTests : IDisposable
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
         {
-            var tasks = Path.Combine(directory.FullName, "rust", "tests", "golden", "workspace", ".tasker", "projects", GoldenProject.ToString(), "tasks");
+            var tasks = Path.Combine(directory.FullName, "rust", "tests", "golden", "workspace", ".tasker", "projects", "golden-11111111", "tasks");
             if (Directory.Exists(tasks))
                 return tasks;
         }
