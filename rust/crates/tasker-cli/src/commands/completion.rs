@@ -151,6 +151,31 @@ pub fn default_profiles(windows: bool, documents: &Path, home: &Path, config_hom
     vec![config.join("powershell").join(FILE)]
 }
 
+/// Папка «Документы» Windows, где PowerShell ищет `$PROFILE` (`[Environment]::GetFolderPath('MyDocuments')`): её можно перенести
+/// (на другой диск, в OneDrive), и тогда она не `%USERPROFILE%\Documents`. `None` — не удалось узнать или не Windows.
+#[cfg(windows)]
+fn documents_dir() -> Option<PathBuf> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::System::Com::CoTaskMemFree;
+    use windows_sys::Win32::UI::Shell::{FOLDERID_Documents, KF_FLAG_DEFAULT, SHGetKnownFolderPath};
+    let mut raw: windows_sys::core::PWSTR = std::ptr::null_mut();
+    // SAFETY: SHGetKnownFolderPath пишет в raw строку UTF-16 с нулём на конце (её освобождает CoTaskMemFree, даже при ошибке).
+    unsafe {
+        let hr = SHGetKnownFolderPath(&FOLDERID_Documents, KF_FLAG_DEFAULT as u32, std::ptr::null_mut(), &mut raw);
+        let path = (hr >= 0 && !raw.is_null()).then(|| {
+            let len = (0..).take_while(|&i| *raw.add(i) != 0).count();
+            PathBuf::from(std::ffi::OsString::from_wide(std::slice::from_raw_parts(raw, len)))
+        });
+        CoTaskMemFree(raw as *const _);
+        path.filter(|p| !p.as_os_str().is_empty())
+    }
+}
+
+#[cfg(not(windows))]
+fn documents_dir() -> Option<PathBuf> {
+    None
+}
+
 /// Правит один профиль: отчёт строками `  backup: …`, `  changed: …`, `  unchanged: …`, `  skipped: …`.
 pub fn apply(path: &Path, script_path: Option<&str>, newline_fallback: &str) -> Result<(ProfileChange, String)> {
     let exists = path.exists();
@@ -258,7 +283,7 @@ pub fn run(ctx: &mut Context<'_>, leaf: &ArgMatches) -> Result<()> {
         let home = PathBuf::from(tasker_core::settings::expand_user_path("~"));
         default_profiles(
             cfg!(windows),
-            &home.join("Documents"),
+            &documents_dir().unwrap_or_else(|| home.join("Documents")),
             &home,
             std::env::var("XDG_CONFIG_HOME").ok().as_deref(),
         )
@@ -406,6 +431,23 @@ mod tests {
             default_profiles(false, Path::new(""), Path::new("/home/u"), Some("/cfg")),
             [Path::new("/cfg").join("powershell").join(file)]
         );
+    }
+
+    /// Папка «Документы» — та же, что у PowerShell (`$PROFILE`), даже если её перенесли с `%USERPROFILE%\Documents`.
+    #[cfg(windows)]
+    #[test]
+    fn documents_are_the_folder_powershell_uses() {
+        let out = std::process::Command::new("powershell.exe")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[Environment]::GetFolderPath('MyDocuments')",
+            ])
+            .output()
+            .expect("powershell.exe");
+        let expected = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        assert_eq!(documents_dir(), Some(PathBuf::from(expected)));
     }
 
     fn folder() -> PathBuf {
