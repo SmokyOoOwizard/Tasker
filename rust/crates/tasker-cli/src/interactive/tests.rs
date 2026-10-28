@@ -480,6 +480,62 @@ fn the_list_settings_form_edits_each_section_in_a_popup_and_esc_in_a_popup_only_
 }
 
 #[test]
+fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
+    let workspace = golden_copy();
+    let mut app = open(&workspace);
+    choose(&mut app, "browse");
+    choose(&mut app, "task");
+    choose(&mut app, "card");
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
+    assert_eq!(snapshot(&app).items, ["type", "status", "series", "field", "sort"]);
+    open_section(&mut app, "status");
+    {
+        let layer = form(&mut app).popup.as_mut().unwrap().layer_mut();
+        let super::step::Inner::List(list) = &mut layer.inner else {
+            panic!()
+        };
+        list.cursor = list
+            .items
+            .iter()
+            .position(|i| i.label == "In Progress")
+            .expect("the In Progress status");
+    }
+    app.handle(Key::Char(' '));
+    app.handle(Key::Enter);
+    open_section(&mut app, "field");
+    pick_in_popup(&mut app, "add");
+    pick_in_popup(&mut app, "Priority");
+    pick_in_popup(&mut app, "=");
+    pick_in_popup(&mut app, "High");
+    pick_in_popup(&mut app, "done");
+    app.handle(Key::End);
+    app.handle(Key::Enter);
+    assert_eq!(
+        app.breadcrumb(),
+        "Browse › Task › Task",
+        "{:?}",
+        app.result.as_ref().map(|r| &r.text)
+    );
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    let labels: Vec<String> = list.items.iter().map(|i| format!("{}  {}", i.label, i.detail)).collect();
+    assert_eq!(labels, ["BUG-1  Bug with all fields (renamed)  In Progress"]);
+    let first = list.items[0].key.clone();
+    let effect = choose(&mut app, &first);
+    let Effect::Run(argv) = &effect else {
+        panic!("expected the card to open")
+    };
+    assert!(argv.contains(&"get".to_string()) && argv.contains(&first), "{argv:?}");
+    execute(&mut app, effect);
+    assert_eq!(app.result.as_ref().map(|r| r.kind), Some(super::app::ResultKind::View));
+    app.handle(Key::Esc);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    app.handle(Key::Esc);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
+    assert!(snapshot(&app).value.contains("field=Priority=High"));
+    std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
+}
+
+#[test]
 fn esc_from_a_view_shows_the_settings_again_with_their_values_and_f_reruns_with_one_change() {
     let workspace = golden_copy();
     let mut app = open(&workspace);

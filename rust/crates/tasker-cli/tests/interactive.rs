@@ -300,7 +300,7 @@ impl Tui {
     }
 
     fn open_section(&mut self, label: &str) {
-        let screen = self.wait_for("List settings");
+        let screen = self.wait_for("Enter open a setting");
         assert!(screen.contains(label), "no section {label:?}:\n{screen}");
         let rows = ["Task types", "Statuses", "Series", "Field conditions", "Sort", "Shape"];
         let at = rows.iter().position(|r| *r == label).unwrap();
@@ -313,7 +313,11 @@ impl Tui {
     }
 
     fn show_list(&mut self) {
-        self.wait_for("List settings");
+        self.submit_form("List settings");
+    }
+
+    fn submit_form(&mut self, title: &str) {
+        self.wait_for(title);
         self.send("\x1b[F");
         self.send(ENTER);
     }
@@ -1081,6 +1085,12 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "task", "Task");
     tui.pick("Tasks: what to show", "card", "Card of a task");
+    tui.open_section("Statuses");
+    tui.mark("done", "Done", 1);
+    tui.send(ENTER);
+    tui.submit_form("Task filters");
+    let screen = tui.wait_for("Type to filter");
+    assert!(screen.contains("  Done") && !screen.contains("Backlog"), "{screen}");
     tui.pick("Task", "plain task", "GLD-1  Plain task");
     let screen = tui.view("title:        Plain task");
     assert!(screen.contains("Updated description"), "{screen}");

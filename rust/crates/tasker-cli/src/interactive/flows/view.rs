@@ -1,9 +1,10 @@
 use super::super::app::Kind;
-use super::super::step::{Chain, Check, Item, Section, SectionKind, StepSpec};
+use super::super::step::{Chain, Check, FormValue, FormValues, Item, Section, SectionKind, StepSpec};
 use super::super::wizard::{Steps, Wizard, cmd};
 use crate::errors::CliError;
-use tasker_core::ids::guid_d;
-use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType};
+use tasker_core::ids::{guid_d, parse_guid};
+use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType, Status};
+use tasker_core::tasks::{Page, TaskFilter};
 use tasker_services::Storage;
 
 const BUILT_IN_SORT_KEYS: [(&str, &str); 6] = [
@@ -142,23 +143,43 @@ fn tasks(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<String>> {
         "Tasks: what to show",
         vec![
             Item::new("list", "List with filters").detail("tree by parents, or flat"),
-            Item::new("card", "Card of a task").detail("fields, links, description"),
-            Item::new("links", "Links of a task"),
+            Item::new("card", "Card of a task").detail("filters, then one task: fields, links, description"),
+            Item::new("links", "Links of a task").detail("filters, then one task"),
         ],
     )?;
     match what.key.as_str() {
         "card" => {
-            let task = w.select("Task", super::tasks(w, project)?)?;
+            let task = task_to_show(w, project)?;
             return Ok(cmd!["task", "get", task.key]);
         }
         "links" => {
-            let task = w.select("Task", super::tasks(w, project)?)?;
+            let task = task_to_show(w, project)?;
             return Ok(cmd!["task", "links", task.key]);
         }
         _ => {}
     }
+    let settings = task_settings(w, project, "List settings", "Show the list", true)?;
+    let mut argv = cmd!["task", "list", "--all"];
+    let mut sort: Vec<String> = Vec::new();
+    for setting in &settings {
+        for value in &setting.values {
+            match setting.key.as_str() {
+                key @ ("type" | "status" | "series" | "field") => argv.extend(cmd![format!("--{key}"), value]),
+                "sort" => sort.push(value.clone()),
+                "shape" if value == "flat" => argv.push("--flat".into()),
+                _ => {}
+            }
+        }
+    }
+    if !sort.is_empty() {
+        argv.extend(cmd!["--sort", sort.join(",")]);
+    }
+    Ok(argv)
+}
+
+pub fn task_settings(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, title: &str, submit: &str, shape: bool) -> Steps<FormValues> {
     let definitions = field_definitions(w, project)?;
-    let sections = vec![
+    let mut sections = vec![
         Section::new(
             "type",
             "Task types",
@@ -195,42 +216,83 @@ fn tasks(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<String>> {
         Section::new(
             "sort",
             "Sort",
-            "creation order",
+            if shape { "creation order" } else { "newest first" },
             SectionKind::List {
                 add: sort_chain(&definitions),
                 add_label: "Add a key".to_string(),
             },
         ),
-        Section::new(
-            "shape",
-            "Shape",
-            "tree",
-            SectionKind::Single {
-                items: vec![
-                    Item::new("tree", "Tree").detail("children under their parents"),
-                    Item::new("flat", "Flat").detail("in the order of the sort"),
-                ],
-            },
-        )
-        .values(vec!["tree".to_string()]),
     ];
-    let settings = w.form("List settings", sections, "Show the list")?;
-    let mut argv = cmd!["task", "list", "--all"];
-    let mut sort: Vec<String> = Vec::new();
-    for setting in &settings {
-        for value in &setting.values {
-            match setting.key.as_str() {
-                key @ ("type" | "status" | "series" | "field") => argv.extend(cmd![format!("--{key}"), value]),
-                "sort" => sort.push(value.clone()),
-                "shape" if value == "flat" => argv.push("--flat".into()),
-                _ => {}
-            }
+    if shape {
+        sections.push(
+            Section::new(
+                "shape",
+                "Shape",
+                "tree",
+                SectionKind::Single {
+                    items: vec![
+                        Item::new("tree", "Tree").detail("children under their parents"),
+                        Item::new("flat", "Flat").detail("in the order of the sort"),
+                    ],
+                },
+            )
+            .values(vec!["tree".to_string()]),
+        );
+    }
+    w.form(title, sections, submit)
+}
+
+pub fn filtered_tasks(w: &Wizard<'_, '_>, project: &uuid::Uuid, settings: &[FormValue]) -> Steps<Vec<Item>> {
+    let ids = |key: &str| -> Option<Vec<uuid::Uuid>> {
+        let values: Vec<uuid::Uuid> = settings
+            .iter()
+            .filter(|s| s.key == key)
+            .flat_map(|s| s.values.iter().filter_map(|v| parse_guid(v)))
+            .collect();
+        (!values.is_empty()).then_some(values)
+    };
+    let strings = |key: &str| -> Vec<String> {
+        settings
+            .iter()
+            .filter(|s| s.key == key)
+            .flat_map(|s| s.values.iter().cloned())
+            .collect()
+    };
+    let filter = TaskFilter {
+        type_ids: ids("type"),
+        status_ids: ids("status"),
+        series_ids: ids("series"),
+        ..TaskFilter::default()
+    };
+    let conditions = strings("field");
+    let sort = strings("sort");
+    let sort = if sort.is_empty() { "-created".to_string() } else { sort.join(",") };
+    let ws = w.ctx.session.workspace();
+    let prefixes = ws.series().prefixes(project)?;
+    let statuses: std::collections::HashMap<uuid::Uuid, String> =
+        ws.get_all::<Status>(project)?.into_iter().map(|s| (s.id, s.name)).collect();
+    let mut items: Vec<Item> = Vec::new();
+    loop {
+        let page = ws.tasks().list(
+            project,
+            Some(&filter),
+            (!conditions.is_empty()).then_some(conditions.as_slice()),
+            Page::new(items.len(), crate::kit::MAX_LIMIT),
+            0,
+            Some(&sort),
+        )?;
+        let got = page.data.len();
+        items.extend(page.data.iter().map(|x| super::task_item(&x.task, &prefixes, &statuses)));
+        if got == 0 || items.len() >= page.total_count {
+            return Ok(items);
         }
     }
-    if !sort.is_empty() {
-        argv.extend(cmd!["--sort", sort.join(",")]);
-    }
-    Ok(argv)
+}
+
+fn task_to_show(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Item> {
+    let settings = task_settings(w, project, "Task filters", "Choose a task", false)?;
+    let items = filtered_tasks(w, project, &settings)?;
+    w.select("Task", items)
 }
 
 fn boards(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<String>> {
