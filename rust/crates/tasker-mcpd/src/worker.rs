@@ -207,17 +207,17 @@ async fn serve(listen_fd: Option<i32>) -> i32 {
     sync.apply(settings.mcp.workspaces).await;
 
     // Области открыты (или не открылись): сообщаем, что можно принимать вызовы.
+    info!(
+        "MCP server worker is ready: {}, the workspace is the 'workspace' argument of a tool (pid {})",
+        mcp_url(port),
+        std::process::id()
+    );
     link.send(&WireMessage {
         version: Some(crate::version::version().into()),
         build: Some(crate::version::build_id().into()),
         workspaces: Some(state.workspaces()),
         ..WireMessage::new("ready")
     });
-    info!(
-        "MCP server worker is ready: {}, the workspace is the 'workspace' argument of a tool (pid {})",
-        mcp_url(port),
-        std::process::id()
-    );
 
     let _ = shutdown.wait(&daemon_dir()).await;
     info!("Stopping the MCP server worker");
