@@ -150,9 +150,17 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App) {
 fn draw_result(frame: &mut Frame<'_>, app: &mut App, body: Rect, footer: Rect) {
     let Some(result) = &app.result else { return };
     let (title, color) = match result.kind {
-        ResultKind::Done => (" Done ", Color::Green),
-        ResultKind::Failed => (" Error ", Color::Red),
-        ResultKind::Retryable => (" Conflict ", Color::Yellow),
+        ResultKind::Done => (" Done ".to_string(), Color::Green),
+        ResultKind::View => (
+            format!(
+                " View  updated {} s ago, refreshes every {} s ",
+                result.at.elapsed().as_secs(),
+                app.refresh.as_secs_f64().ceil() as u64
+            ),
+            Color::Blue,
+        ),
+        ResultKind::Failed => (" Error ".to_string(), Color::Red),
+        ResultKind::Retryable => (" Conflict ".to_string(), Color::Yellow),
     };
     let block = Block::default()
         .borders(Borders::ALL)
@@ -167,6 +175,7 @@ fn draw_result(frame: &mut Frame<'_>, app: &mut App, body: Rect, footer: Rect) {
     );
     let hint = match result.kind {
         ResultKind::Done => " Enter back to the menu   ↑↓ scroll",
+        ResultKind::View => " Esc previous step   f change a setting   r refresh now   q menu   ↑↓ scroll",
         ResultKind::Failed => " Enter back to the steps (Esc there returns to the previous step)   ↑↓ scroll",
         ResultKind::Retryable => " r retry with the current data   Enter back to the steps   ↑↓ scroll",
     };

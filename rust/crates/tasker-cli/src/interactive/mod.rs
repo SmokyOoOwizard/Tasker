@@ -9,7 +9,10 @@ use crate::session::Session;
 use app::{App, Effect};
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use std::io::Write;
+use std::time::Duration;
 use step::Key;
+
+pub const DEFAULT_REFRESH: Duration = Duration::from_secs(10);
 
 pub const NOT_A_TERMINAL: &str = "Interactive mode needs a terminal: run 'tasker -i' in a terminal, not with redirected input or output";
 
@@ -42,7 +45,16 @@ fn open(workspace: Option<&str>, sqlite: Option<&str>, project: Option<&str>) ->
             if projects.len() == 1 { projects.into_iter().next() } else { None }
         }
     };
-    Ok(App::new(session, chosen))
+    Ok(App::new(session, chosen, refresh_interval()))
+}
+
+fn refresh_interval() -> Duration {
+    std::env::var("TASKER_REFRESH_SECONDS")
+        .ok()
+        .and_then(|v| v.trim().parse::<f64>().ok())
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .map(Duration::from_secs_f64)
+        .unwrap_or(DEFAULT_REFRESH)
 }
 
 fn drive(mut app: App) -> std::io::Result<()> {
@@ -55,16 +67,25 @@ fn drive(mut app: App) -> std::io::Result<()> {
 fn event_loop(terminal: &mut ratatui::DefaultTerminal, app: &mut App) -> std::io::Result<()> {
     loop {
         terminal.draw(|frame| ui::draw(frame, app))?;
-        let event = crossterm::event::read()?;
+        let event = match app.refresh_due() {
+            Some(left) => {
+                if !crossterm::event::poll(left.min(Duration::from_secs(1)))? {
+                    if app.refresh_due().is_some_and(|left| left.is_zero())
+                        && let Some(argv) = app.refresh_argv()
+                    {
+                        execute(app, &argv);
+                    }
+                    continue;
+                }
+                crossterm::event::read()?
+            }
+            None => crossterm::event::read()?,
+        };
         let Some(key) = key_of(&event) else { continue };
         match app.handle(key) {
             Effect::None => {}
             Effect::Quit => return Ok(()),
-            Effect::Run(argv) => {
-                let (mut out, mut err) = (Vec::new(), Vec::new());
-                let code = crate::app::run(&argv, &mut out, &mut err);
-                app.set_result(&String::from_utf8_lossy(&out), &String::from_utf8_lossy(&err), code);
-            }
+            Effect::Run(argv) => execute(app, &argv),
             Effect::OpenEditor(text) => {
                 ratatui::try_restore()?;
                 let edited = edit_in_editor(&text);
@@ -74,6 +95,12 @@ fn event_loop(terminal: &mut ratatui::DefaultTerminal, app: &mut App) -> std::io
             }
         }
     }
+}
+
+fn execute(app: &mut App, argv: &[String]) {
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let code = crate::app::run(argv, &mut out, &mut err);
+    app.set_result(&String::from_utf8_lossy(&out), &String::from_utf8_lossy(&err), code);
 }
 
 fn key_of(event: &Event) -> Option<Key> {

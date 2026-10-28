@@ -326,6 +326,14 @@ impl Tui {
         screen
     }
 
+    fn view(&mut self, text: &str) -> String {
+        let screen = self.wait_for("┌ View ");
+        assert!(screen.contains(text), "expected {text:?} on the view screen:\n{screen}");
+        self.send("q");
+        self.wait_for("What to do");
+        screen
+    }
+
     fn quit(mut self) -> u32 {
         self.wait_for("What to do");
         self.send("q");
@@ -1039,7 +1047,7 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.type_text("Field conditions", "");
     tui.type_text("Sort (optional)", "-created");
     tui.pick("Shape of the list", "flat", "Flat");
-    let screen = tui.done("Found ");
+    let screen = tui.view("Found ");
     assert!(
         screen.contains("GLD-1") && screen.contains("Plain task") && !screen.contains("Backlog"),
         "{screen}"
@@ -1049,14 +1057,14 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.pick("Browse what", "task", "Task");
     tui.pick("Tasks: what to show", "card", "Card of a task");
     tui.pick("Task", "plain task", "GLD-1  Plain task");
-    let screen = tui.done("title:        Plain task");
+    let screen = tui.view("title:        Plain task");
     assert!(screen.contains("Updated description"), "{screen}");
 
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "board", "Board");
     tui.pick("Boards: what to show", "whole", "Whole board");
     tui.pick("Board", "main", "Main board");
-    let screen = tui.done("Todo");
+    let screen = tui.view("Todo");
     assert!(screen.contains("Doing") && screen.contains("Done"), "{screen}");
 
     tui.pick("What to do", "", "Browse");
@@ -1064,23 +1072,94 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.pick("Boards: what to show", "one col", "One column");
     tui.pick("Board", "main", "Main board");
     tui.pick("Column", "doing", "Doing");
-    tui.done("Found ");
+    tui.view("Found ");
 
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "series", "Series");
     tui.pick("Series: what to show", "list", "List");
-    let screen = tui.done("Found 2");
+    let screen = tui.view("Found 2");
     assert!(screen.contains("GLD") && screen.contains("BUG"), "{screen}");
 
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "status", "Status");
     tui.pick("Status: what to show", "card", "Card of one");
     tui.pick("Status", "backlog", "Backlog");
-    tui.done("name:         Backlog");
+    tui.view("name:         Backlog");
 
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "user", "User");
-    tui.done("Found ");
+    tui.view("Found ");
+    assert_eq!(tui.quit(), 0);
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn a_view_refreshes_itself_esc_returns_to_the_previous_step_and_f_changes_one_setting() {
+    let (root, workspace) = fresh_copy();
+    let mut tui = Tui::start(&root, &workspace, &["-p", "Golden"], &[("TASKER_REFRESH_SECONDS", "0.3")]);
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "task", "Task");
+    tui.pick("Tasks: what to show", "list", "List with filters");
+    tui.wait_for("Only these task types");
+    tui.send(ENTER);
+    tui.wait_for("Only these statuses");
+    tui.send(ENTER);
+    tui.wait_for("Only these series");
+    tui.send(ENTER);
+    tui.type_text("Field conditions", "");
+    tui.type_text("Sort (optional)", "-created");
+    tui.pick("Shape of the list", "flat", "Flat");
+    let screen = tui.wait_for("┌ View ");
+    assert!(
+        screen.contains("refreshes every 1 s") && !screen.contains("Fresh from outside"),
+        "{screen}"
+    );
+
+    let run = tasker(
+        &root,
+        &[
+            "task",
+            "create",
+            "Fresh from outside",
+            "--type",
+            "Bug",
+            "--field",
+            "Priority=High",
+            "-w",
+            &ws(&workspace),
+            "-p",
+            "Golden",
+        ],
+    );
+    assert_eq!(run.code, 0, "{}", run.stderr);
+    tui.wait_for("Fresh from outside");
+
+    tui.send(ESC);
+    let screen = tui.wait_for("Shape of the list");
+    assert!(screen.lines().any(|l| l.starts_with("│› ") && l.contains("Flat")), "{screen}");
+    tui.send(ESC);
+    let screen = tui.wait_for("Sort (optional)");
+    assert!(screen.contains("> -created"), "{screen}");
+    tui.send(",title");
+    tui.wait_for("> -created,title");
+    tui.send(ENTER);
+    let screen = tui.wait_for("┌ View ");
+    assert!(screen.contains("Found 62") && screen.contains("Fresh from outside"), "{screen}");
+
+    tui.send("f");
+    tui.pick("Which setting to change", "statuses", "Only these statuses");
+    tui.wait_for("Only these statuses");
+    tui.mark("done", "Done", 1);
+    tui.send(ENTER);
+    let screen = tui.wait_for("┌ View ");
+    assert!(screen.contains("GLD-1") && !screen.contains("Fresh from outside"), "{screen}");
+
+    tui.send("f");
+    tui.wait_for("Which setting to change");
+    let screen = tui.wait_for("Only these statuses");
+    assert!(screen.contains("Done") && screen.contains("-created,title"), "{screen}");
+    tui.send(ESC);
+    tui.view("GLD-1");
     assert_eq!(tui.quit(), 0);
     std::fs::remove_dir_all(&root).unwrap();
 }

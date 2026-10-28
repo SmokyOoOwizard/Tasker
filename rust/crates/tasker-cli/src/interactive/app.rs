@@ -3,6 +3,7 @@ use super::step::{Answer, Item, Key, Outcome, StepSpec, StepState};
 use super::wizard::{FlowContext, Pending, Wizard};
 use crate::errors::CliError;
 use crate::session::Session;
+use std::time::{Duration, Instant};
 use tasker_core::model::Project;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -101,6 +102,7 @@ pub enum Flow {
     Kinds(Action),
     Entity(Action, Kind),
     SwitchProject,
+    Pick,
 }
 
 impl Flow {
@@ -110,7 +112,7 @@ impl Flow {
 
     fn title(self) -> String {
         match self {
-            Flow::Menu => String::new(),
+            Flow::Menu | Flow::Pick => String::new(),
             Flow::Kinds(action) => action.label().to_string(),
             Flow::Entity(_, kind) => kind.label().to_string(),
             Flow::SwitchProject => "Project".to_string(),
@@ -123,6 +125,7 @@ pub enum Next {
     Enter(Flow),
     Run(Vec<String>),
     SwitchProject(Project),
+    JumpTo(usize),
     Quit,
 }
 
@@ -136,6 +139,9 @@ pub enum Effect {
 struct Frame {
     flow: Flow,
     answers: Vec<Answer>,
+    titles: Vec<String>,
+    tail: Vec<(String, Answer)>,
+    current: Option<(String, Answer)>,
     spec: StepSpec,
     state: StepState,
 }
@@ -143,6 +149,7 @@ struct Frame {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ResultKind {
     Done,
+    View,
     Failed,
     Retryable,
 }
@@ -151,6 +158,7 @@ pub struct ResultView {
     pub text: String,
     pub kind: ResultKind,
     pub scroll: u16,
+    pub at: Instant,
 }
 
 pub struct App {
@@ -160,10 +168,34 @@ pub struct App {
     pub result: Option<ResultView>,
     pub quit: bool,
     pub page: usize,
+    pub refresh: Duration,
+}
+
+fn answer_summary(answer: &Answer) -> String {
+    match answer {
+        Answer::Choice(item) => item.label.clone(),
+        Answer::Choices(items) if items.is_empty() => "(none)".to_string(),
+        Answer::Choices(items) => items.iter().map(|i| i.label.as_str()).collect::<Vec<_>>().join(", "),
+        Answer::Text(text) if text.is_empty() => "(empty)".to_string(),
+        Answer::Text(text) => text.lines().next().unwrap_or_default().to_string(),
+        Answer::Confirmed => "yes".to_string(),
+    }
+}
+
+fn fits(spec: &StepSpec, answer: &Answer) -> bool {
+    match (spec, answer) {
+        (StepSpec::Select { items, .. }, Answer::Choice(item)) => items.iter().any(|i| i.key == item.key),
+        (StepSpec::MultiSelect { items, allow_empty, .. }, Answer::Choices(chosen)) => {
+            (*allow_empty || !chosen.is_empty()) && chosen.iter().all(|c| items.iter().any(|i| i.key == c.key))
+        }
+        (StepSpec::Text { check, allow_empty, .. }, Answer::Text(text)) => check.error(text, *allow_empty).is_none(),
+        (StepSpec::Editor { .. }, Answer::Text(_)) => true,
+        _ => false,
+    }
 }
 
 impl App {
-    pub fn new(session: Session, project: Option<Project>) -> App {
+    pub fn new(session: Session, project: Option<Project>, refresh: Duration) -> App {
         let mut app = App {
             session,
             project,
@@ -171,6 +203,7 @@ impl App {
             result: None,
             quit: false,
             page: 10,
+            refresh,
         };
         let _ = app.enter(Flow::Menu);
         if app.project.is_none() && app.session.all_projects().map(|p| p.len() > 1).unwrap_or(false) {
@@ -271,6 +304,23 @@ impl App {
                 Ok(Next::SwitchProject(project))
             }
             Flow::Entity(action, kind) => Ok(Next::Run(flows::run(&mut wizard, action, kind)?)),
+            Flow::Pick => {
+                let parent = self
+                    .frames
+                    .iter()
+                    .rev()
+                    .find(|f| matches!(f.flow, Flow::Entity(..)))
+                    .ok_or_else(|| CliError::new("Nothing to change"))?;
+                let items = parent
+                    .titles
+                    .iter()
+                    .zip(&parent.answers)
+                    .enumerate()
+                    .map(|(index, (title, answer))| Item::new(index.to_string(), title).detail(answer_summary(answer)))
+                    .collect();
+                let choice = wizard.menu("Which setting to change", items)?;
+                Ok(Next::JumpTo(choice.key.parse().unwrap_or(0)))
+            }
         }
     }
 
@@ -280,6 +330,9 @@ impl App {
             app.frames.push(Frame {
                 flow,
                 answers: Vec::new(),
+                titles: Vec::new(),
+                tail: Vec::new(),
+                current: None,
                 spec,
                 state,
             });
@@ -312,43 +365,89 @@ impl App {
             text,
             kind: ResultKind::Failed,
             scroll: 0,
+            at: Instant::now(),
         });
     }
 
     fn advance(&mut self, answer: Answer) -> Effect {
-        let Some(frame) = self.frames.last() else {
+        let Some(frame) = self.frames.last_mut() else {
             return Effect::None;
         };
         let flow = frame.flow;
         let mut answers = frame.answers.clone();
+        let mut titles = frame.titles.clone();
+        let mut tail = std::mem::take(&mut frame.tail);
+        frame.current = None;
+        titles.push(frame.spec.title().to_string());
         answers.push(answer);
-        match self.next(flow, &answers, false) {
+        loop {
+            let next = self.next(flow, &answers, false);
+            if let Err(Pending::Step(spec)) | Ok(Next::Step(spec)) = &next
+                && let Some((title, old)) = tail.first()
+                && title == spec.title()
+                && fits(spec, old)
+            {
+                titles.push(title.clone());
+                answers.push(old.clone());
+                tail.remove(0);
+                continue;
+            }
+            let frame = self.frames.last_mut().expect("a frame");
+            frame.answers = answers;
+            frame.titles = titles;
+            return match next {
+                Err(Pending::Step(spec)) | Ok(Next::Step(spec)) => {
+                    frame.state = StepState::from_spec(&spec);
+                    frame.spec = spec;
+                    Effect::None
+                }
+                Ok(Next::Enter(next)) => self.enter(next),
+                Ok(Next::Run(argv)) => Effect::Run(self.with_globals(argv)),
+                Ok(Next::SwitchProject(project)) => {
+                    self.project = Some(project);
+                    self.frames.pop();
+                    self.refresh_menu();
+                    Effect::None
+                }
+                Ok(Next::JumpTo(index)) => {
+                    self.frames.pop();
+                    self.jump_to(index);
+                    Effect::None
+                }
+                Ok(Next::Quit) => Effect::Quit,
+                Err(Pending::Failed(error)) => {
+                    self.fail(error.text());
+                    Effect::None
+                }
+            };
+        }
+    }
+
+    fn jump_to(&mut self, index: usize) {
+        let Some(frame) = self.frames.last_mut() else { return };
+        if index >= frame.answers.len() {
+            return;
+        }
+        let answers = frame.answers.split_off(index);
+        let titles = frame.titles.split_off(index);
+        let mut rest: Vec<(String, Answer)> = titles.into_iter().zip(answers).collect();
+        let (title, last) = rest.remove(0);
+        frame.tail = rest;
+        self.show_step(title, last);
+    }
+
+    fn show_step(&mut self, title: String, last: Answer) {
+        let frame = self.frames.last().expect("a frame");
+        match self.next(frame.flow, &frame.answers, false) {
             Err(Pending::Step(spec)) | Ok(Next::Step(spec)) => {
+                let spec = spec.with_initial(&last);
                 let frame = self.frames.last_mut().expect("a frame");
-                frame.answers = answers;
                 frame.state = StepState::from_spec(&spec);
                 frame.spec = spec;
-                Effect::None
+                frame.current = Some((title, last));
             }
-            Ok(Next::Enter(next)) => {
-                self.frames.last_mut().expect("a frame").answers = answers;
-                self.enter(next)
-            }
-            Ok(Next::Run(argv)) => {
-                self.frames.last_mut().expect("a frame").answers = answers;
-                Effect::Run(self.with_globals(argv))
-            }
-            Ok(Next::SwitchProject(project)) => {
-                self.project = Some(project);
-                self.frames.pop();
-                self.refresh_menu();
-                Effect::None
-            }
-            Ok(Next::Quit) => Effect::Quit,
-            Err(Pending::Failed(error)) => {
-                self.fail(error.text());
-                Effect::None
-            }
+            Err(Pending::Failed(error)) => self.fail(error.text()),
+            Ok(_) => {}
         }
     }
 
@@ -373,7 +472,7 @@ impl App {
     }
 
     fn back(&mut self) {
-        let Some(frame) = self.frames.last() else { return };
+        let Some(frame) = self.frames.last_mut() else { return };
         if frame.answers.is_empty() {
             if self.frames.len() > 1 {
                 self.frames.pop();
@@ -381,20 +480,23 @@ impl App {
             }
             return;
         }
-        let flow = frame.flow;
-        let mut answers = frame.answers.clone();
-        let last = answers.pop().expect("an answer");
-        match self.next(flow, &answers, false) {
-            Err(Pending::Step(spec)) | Ok(Next::Step(spec)) => {
-                let spec = spec.with_initial(&last);
-                let frame = self.frames.last_mut().expect("a frame");
-                frame.answers = answers;
-                frame.state = StepState::from_spec(&spec);
-                frame.spec = spec;
-            }
-            Err(Pending::Failed(error)) => self.fail(error.text()),
-            Ok(_) => {}
+        if let Some(known) = frame.current.take() {
+            frame.tail.insert(0, known);
         }
+        let last = frame.answers.pop().expect("an answer");
+        let title = frame.titles.pop().unwrap_or_default();
+        self.show_step(title, last);
+    }
+
+    fn return_to_menu(&mut self) {
+        while self
+            .frames
+            .last()
+            .is_some_and(|f| matches!(f.flow, Flow::Entity(..) | Flow::Kinds(_) | Flow::Pick))
+        {
+            self.frames.pop();
+        }
+        self.refresh_menu();
     }
 
     fn with_globals(&self, mut argv: Vec<String>) -> Vec<String> {
@@ -415,11 +517,28 @@ impl App {
     }
 
     pub fn retry_argv(&self) -> Option<Vec<String>> {
+        self.rerun_argv(true)
+    }
+
+    pub fn refresh_argv(&self) -> Option<Vec<String>> {
+        self.rerun_argv(false)
+    }
+
+    fn rerun_argv(&self, fresh: bool) -> Option<Vec<String>> {
         let frame = self.frames.last()?;
-        match self.next(frame.flow, &frame.answers, true) {
+        match self.next(frame.flow, &frame.answers, fresh) {
             Ok(Next::Run(argv)) => Some(self.with_globals(argv)),
             _ => None,
         }
+    }
+
+    pub fn refresh_due(&self) -> Option<Duration> {
+        let result = self.result.as_ref()?;
+        (result.kind == ResultKind::View).then(|| self.refresh.saturating_sub(result.at.elapsed()))
+    }
+
+    fn viewing(&self) -> bool {
+        self.frames.last().is_some_and(|f| matches!(f.flow, Flow::Entity(Action::View, _)))
     }
 
     pub fn set_result(&mut self, stdout: &str, stderr: &str, code: i32) {
@@ -432,14 +551,25 @@ impl App {
             text.push_str(stderr);
         }
         let text = text.trim_end().to_string();
-        let kind = if code == 0 {
+        let kind = if code == 0 && self.viewing() {
+            ResultKind::View
+        } else if code == 0 {
             ResultKind::Done
         } else if stderr.starts_with("Modified by someone else:") || stderr.starts_with("Locked:") {
             ResultKind::Retryable
         } else {
             ResultKind::Failed
         };
-        self.result = Some(ResultView { text, kind, scroll: 0 });
+        let scroll = match &self.result {
+            Some(previous) if previous.kind == ResultKind::View && kind == ResultKind::View => previous.scroll,
+            _ => 0,
+        };
+        self.result = Some(ResultView {
+            text,
+            kind,
+            scroll,
+            at: Instant::now(),
+        });
     }
 
     pub fn editor_done(&mut self, text: Option<String>) {
@@ -454,18 +584,12 @@ impl App {
     fn close_result(&mut self) {
         let Some(result) = self.result.take() else { return };
         if result.kind == ResultKind::Done {
-            while self
+            self.return_to_menu();
+        } else if result.kind == ResultKind::View
+            || self
                 .frames
                 .last()
-                .is_some_and(|f| matches!(f.flow, Flow::Entity(..) | Flow::Kinds(_)))
-            {
-                self.frames.pop();
-            }
-            self.refresh_menu();
-        } else if self
-            .frames
-            .last()
-            .is_some_and(|f| !f.answers.is_empty() && matches!(f.flow, Flow::Entity(..)))
+                .is_some_and(|f| !f.answers.is_empty() && matches!(f.flow, Flow::Entity(..)))
         {
             self.back();
         }
@@ -487,6 +611,21 @@ impl App {
                         return Effect::Run(argv);
                     }
                 }
+                Key::Char('r') | Key::Char('R') | Key::Enter if result.kind == ResultKind::View => {
+                    if let Some(argv) = self.refresh_argv() {
+                        return Effect::Run(argv);
+                    }
+                }
+                Key::Char('f') | Key::Char('F')
+                    if result.kind == ResultKind::View && self.frames.last().is_some_and(|f| !f.answers.is_empty()) =>
+                {
+                    self.result = None;
+                    return self.enter(Flow::Pick);
+                }
+                Key::Char('q') | Key::Char('Q') if result.kind == ResultKind::View => {
+                    self.result = None;
+                    self.return_to_menu();
+                }
                 Key::Enter | Key::Esc | Key::Char('q') => self.close_result(),
                 _ => {}
             }
@@ -502,6 +641,10 @@ impl App {
         match state.handle(key, page) {
             Outcome::Nothing => Effect::None,
             Outcome::Back => {
+                if self.frames.last().is_some_and(|f| f.flow == Flow::Pick) {
+                    self.frames.pop();
+                    return self.refresh_argv().map(Effect::Run).unwrap_or(Effect::None);
+                }
                 self.back();
                 Effect::None
             }
