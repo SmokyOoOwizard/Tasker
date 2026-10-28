@@ -281,6 +281,7 @@ pub enum Key {
     Delete,
     Tab,
     CtrlC,
+    CtrlF,
 }
 
 pub enum Outcome {

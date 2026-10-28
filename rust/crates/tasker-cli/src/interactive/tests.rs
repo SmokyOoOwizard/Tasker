@@ -519,6 +519,22 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     let Some(StepState::List(list)) = app.state() else { panic!() };
     let labels: Vec<String> = list.items.iter().map(|i| format!("{}  {}", i.label, i.detail)).collect();
     assert_eq!(labels, ["BUG-1  Bug with all fields (renamed)  In Progress"]);
+    assert!(app.has_filters());
+    app.handle(Key::CtrlF);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
+    assert!(snapshot(&app).value.contains("field=Priority=High"));
+    assert!(!app.has_filters());
+    app.handle(Key::CtrlF);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
+    open_section(&mut app, "field");
+    pick_in_popup(&mut app, "drop0");
+    pick_in_popup(&mut app, "done");
+    app.handle(Key::End);
+    app.handle(Key::Enter);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    assert!(list.items.iter().all(|i| i.detail == "In Progress"), "{:?}", list.items);
+    assert!(!snapshot(&app).value.contains("Priority"));
     let first = list.items[0].key.clone();
     let effect = choose(&mut app, &first);
     let Effect::Run(argv) = &effect else {
@@ -531,7 +547,7 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     assert_eq!(app.breadcrumb(), "Browse › Task › Task");
     app.handle(Key::Esc);
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
-    assert!(snapshot(&app).value.contains("field=Priority=High"));
+    assert!(snapshot(&app).value.contains("status=0000") && snapshot(&app).value.contains("field=;"));
     std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
 }
 

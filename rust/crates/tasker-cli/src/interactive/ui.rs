@@ -37,13 +37,17 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App) {
         return;
     }
     let title = app.current_spec().map(|s| s.title().to_string()).unwrap_or_default();
+    let filters = app.has_filters();
     let Some(state) = app.state_mut() else { return };
     let block = Block::default().borders(Borders::ALL).title(format!(" {title} "));
     let inner = block.inner(body);
     frame.render_widget(block, body);
     match state {
         StepState::List(list) => {
-            let hint = draw_list(frame, list, inner);
+            let mut hint = draw_list(frame, list, inner);
+            if filters {
+                hint.push_str("   Ctrl+F filters");
+            }
             frame.render_widget(Paragraph::new(hint).style(Style::default().fg(HINT)), footer);
         }
         StepState::Text(text) => {

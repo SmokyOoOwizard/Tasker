@@ -1089,8 +1089,13 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.mark("done", "Done", 1);
     tui.send(ENTER);
     tui.submit_form("Task filters");
-    let screen = tui.wait_for("Type to filter");
+    let screen = tui.wait_for("Ctrl+F filters");
     assert!(screen.contains("  Done") && !screen.contains("Backlog"), "{screen}");
+    tui.send("\x06");
+    let screen = tui.wait_for("Task filters");
+    assert!(screen.contains("Statuses          Done"), "{screen}");
+    tui.submit_form("Task filters");
+    tui.wait_for("Ctrl+F filters");
     tui.pick("Task", "plain task", "GLD-1  Plain task");
     let screen = tui.view("title:        Plain task");
     assert!(screen.contains("Updated description"), "{screen}");

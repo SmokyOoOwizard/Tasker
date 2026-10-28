@@ -263,6 +263,29 @@ impl App {
         self.frames.last().map(|f| &f.spec)
     }
 
+    pub fn has_filters(&self) -> bool {
+        self.result.is_none()
+            && self
+                .frames
+                .last()
+                .is_some_and(|f| f.answers.iter().any(|a| matches!(a, Answer::Form(_))))
+    }
+
+    fn back_to_filters(&mut self) {
+        if !self.has_filters() {
+            return;
+        }
+        loop {
+            let Some(frame) = self.frames.last() else { return };
+            let Some(last) = frame.answers.last() else { return };
+            let form = matches!(last, Answer::Form(_));
+            self.back();
+            if form {
+                return;
+            }
+        }
+    }
+
     fn next(&self, flow: Flow, answers: &[Answer], fresh: bool) -> Result<Next, Pending> {
         let ctx = FlowContext {
             session: &self.session,
@@ -678,6 +701,10 @@ impl App {
         }
         if self.in_menu() && matches!(key, Key::Char('q') | Key::Char('Q')) {
             return Effect::Quit;
+        }
+        if key == Key::CtrlF {
+            self.back_to_filters();
+            return Effect::None;
         }
         let page = self.page;
         let Some(state) = self.state_mut() else {
