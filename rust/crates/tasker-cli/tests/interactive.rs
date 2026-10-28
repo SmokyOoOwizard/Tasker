@@ -79,7 +79,7 @@ impl Screen {
                         }
                         i = if chars[j] == '\x07' { j + 1 } else { j + 2 };
                     }
-                    Some('(') | Some(')') => i += 3,
+                    Some('(') | Some(')') => i = (i + 3).min(chars.len()),
                     Some(_) => i += 2,
                     None => break,
                 }
@@ -181,7 +181,7 @@ impl Screen {
 
 struct Tui {
     master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
+    writer: Arc<Mutex<Box<dyn Write + Send>>>,
     child: Box<dyn Child + Send + Sync>,
     screen: Arc<Mutex<Screen>>,
     log: Arc<Mutex<String>>,
@@ -218,18 +218,28 @@ impl Tui {
         let child = pair.slave.spawn_command(command).unwrap();
         drop(pair.slave);
         let mut reader = pair.master.try_clone_reader().unwrap();
-        let writer = pair.master.take_writer().unwrap();
+        let writer = Arc::new(Mutex::new(pair.master.take_writer().unwrap()));
         let screen = Arc::new(Mutex::new(Screen::new(30, 100)));
         let log = Arc::new(Mutex::new(String::new()));
-        let (screen_in_thread, log_in_thread) = (screen.clone(), log.clone());
+        let (screen_in_thread, log_in_thread, writer_in_thread) = (screen.clone(), log.clone(), writer.clone());
         std::thread::spawn(move || {
             let mut buffer = [0u8; 4096];
             loop {
                 match reader.read(&mut buffer) {
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
-                        log_in_thread.lock().unwrap().push_str(&String::from_utf8_lossy(&buffer[..n]));
-                        screen_in_thread.lock().unwrap().feed(&buffer[..n]);
+                        let chunk = String::from_utf8_lossy(&buffer[..n]).into_owned();
+                        log_in_thread.lock().unwrap().push_str(&chunk);
+                        let (row, col) = {
+                            let mut screen = screen_in_thread.lock().unwrap();
+                            screen.feed(&buffer[..n]);
+                            (screen.row, screen.col)
+                        };
+                        if chunk.contains("\x1b[6n") {
+                            let mut writer = writer_in_thread.lock().unwrap();
+                            let _ = writer.write_all(format!("\x1b[{};{}R", row + 1, col + 1).as_bytes());
+                            let _ = writer.flush();
+                        }
                     }
                 }
             }
@@ -254,18 +264,19 @@ impl Tui {
             if screen.contains(text) {
                 return screen;
             }
-            assert!(
-                started.elapsed() < Duration::from_secs(20),
-                "waited for {text:?}, the screen is:\n{screen}\n--- raw output:\n{}",
-                self.log.lock().unwrap()
-            );
+            if started.elapsed() >= Duration::from_secs(20) {
+                let raw = self.log.lock().unwrap().clone();
+                panic!("waited for {text:?}, the screen is:\n{screen}\n--- raw output:\n{raw}");
+            }
             std::thread::sleep(Duration::from_millis(30));
         }
     }
 
     fn send(&mut self, text: &str) {
-        self.writer.write_all(text.as_bytes()).unwrap();
-        self.writer.flush().unwrap();
+        let mut writer = self.writer.lock().unwrap();
+        writer.write_all(text.as_bytes()).unwrap();
+        writer.flush().unwrap();
+        drop(writer);
         std::thread::sleep(Duration::from_millis(40));
     }
 
