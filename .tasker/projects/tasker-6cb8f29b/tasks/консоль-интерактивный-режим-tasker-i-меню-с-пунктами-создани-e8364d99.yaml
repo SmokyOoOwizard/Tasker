@@ -2,9 +2,9 @@ formatVersion: 10
 id: e8364d99-0adb-4c27-9410-7aaccc8b9b2e
 title: 'Консоль: интерактивный режим tasker -i — меню с пунктами создания, изменения и удаления сущностей'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-10-14T00:16:53.7346160+00:00
-updatedAt: 2026-10-14T11:17:18.7988000+00:00
+updatedAt: 2026-10-28T01:15:01.0000000+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 172
