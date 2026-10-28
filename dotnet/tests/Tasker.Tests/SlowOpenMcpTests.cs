@@ -29,7 +29,9 @@ public class SlowOpenMcpTests : IDisposable
     {
         _env.Add(AppEnvironment.Override("TASKER_MCP_OPEN_DELAY_MS", delayMs.ToString()));
         _env.Add(AppEnvironment.Override("TASKER_MCP_OPEN_WAIT_MS", waitMs.ToString()));
-        _process = TaskerProcess.Start("mcp", "run", "--detached");
+        _process = TaskerProcess.StartWithoutInput("mcp", "run", "--detached");
+        var error = _process.StandardError.ReadToEndAsync();
+        _ = _process.StandardOutput.ReadToEndAsync();
 
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         var deadline = DateTime.UtcNow.AddSeconds(30);
@@ -44,6 +46,8 @@ public class SlowOpenMcpTests : IDisposable
             {
                 // Порт уже слушает супервизор: пока рабочий процесс не принял соединение, оно ждёт в очереди (таймаут), а не отклоняется.
             }
+            if (_process.HasExited)
+                throw new InvalidOperationException($"The daemon did not start: exit {_process.ExitCode}: {await error}");
             await Task.Delay(50);
         }
         throw new InvalidOperationException("The daemon did not start");

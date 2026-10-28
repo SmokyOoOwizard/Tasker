@@ -594,9 +594,13 @@ pub fn run_foreground(detached: bool) -> Result<i32> {
     if detached {
         command.arg("--detached");
     }
-    let mut child = command
-        .spawn()
-        .map_err(|e| CliError::new(format!("Cannot start the MCP server program: {e}")))?;
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(_) => command
+            .stdin(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| CliError::new(format!("Cannot start the MCP server program: {e}")))?,
+    };
     loop {
         if let Some(status) = child.try_wait()? {
             return Ok(process_exit_code(status));

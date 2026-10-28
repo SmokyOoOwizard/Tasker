@@ -114,6 +114,15 @@ public static class TaskerProcess
 
     public static Process Start(params string[] args) => StartIn(null, args);
 
+    public static Process StartWithoutInput(params string[] args)
+    {
+        var info = StartInfo(null, args);
+        info.RedirectStandardInput = true;
+        var process = Process.Start(info)!;
+        process.StandardInput.Close();
+        return process;
+    }
+
     /// <summary>Процесс <c>tasker</c>; <paramref name="workingDirectory"/> — его текущая папка (по умолчанию — как у теста).</summary>
     public static Process StartIn(string? workingDirectory, params string[] args) => Process.Start(StartInfo(workingDirectory, args))!;
 
@@ -187,7 +196,10 @@ public static class TaskerProcess
         child = subprocess.Popen(sys.argv[2:], stdin=slave)
         os.close(slave)
         typed = sys.argv[1].encode()
-        os.write(master, typed if typed.endswith(b"\n") else typed + b"\x04")
+        try:
+            os.write(master, typed if typed.endswith(b"\n") else typed + b"\x04")
+        except OSError:
+            pass
         code = child.wait()
         os.close(master)
         sys.exit(code)

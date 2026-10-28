@@ -263,7 +263,7 @@ public class DaemonUpgradeTests : IDisposable
         Assert.Contains("Demo", response);
 
         var result = await upgrade;
-        Assert.Equal(0, result.Code);
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
         await Eventually(() => Task.FromResult(!IsAlive(oldWorker.Pid)));
         Assert.Single((await StatusOf()).Workers);
     }
@@ -370,7 +370,7 @@ public class DaemonUpgradeTests : IDisposable
 
         var result = await _daemon.Mcp("upgrade");
 
-        Assert.Equal(0, result.Code);
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
         Assert.Contains("earlier build", result.Out);
         await single.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(20));
         var now = await StatusOf();
@@ -378,7 +378,7 @@ public class DaemonUpgradeTests : IDisposable
         var worker = Assert.Single(now.Workers);
 
         var again = await _daemon.Mcp("upgrade");
-        Assert.Equal(0, again.Code);
+        Assert.True(again.Code == 0, $"exit {again.Code}: {again.Err}");
         Assert.Contains("replaced without downtime", again.Out);
         Assert.NotEqual(worker.Pid, (await StatusOf()).Workers.Single().Pid);
     }
@@ -400,7 +400,7 @@ public class DaemonUpgradeTests : IDisposable
 
         var result = await _daemon.Mcp("upgrade", "--restart");
 
-        Assert.Equal(0, result.Code);
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
         var after = await StatusOf();
         Assert.NotEqual(before.Pid, after.Pid);
         Assert.NotEqual(before.Workers.Single().Pid, after.Workers.Single().Pid);
@@ -466,7 +466,7 @@ public class DaemonUpgradeTests : IDisposable
 
         var stopped = await _daemon.Mcp("stop");
 
-        Assert.Equal(0, stopped.Code);
+        Assert.True(stopped.Code == 0, $"exit {stopped.Code}: {stopped.Err}");
         await Eventually(() => Task.FromResult(!IsAlive(before.Pid) && !IsAlive(before.Workers.Single().Pid)));
         Assert.False(File.Exists(DaemonFiles.InfoFile));
     }

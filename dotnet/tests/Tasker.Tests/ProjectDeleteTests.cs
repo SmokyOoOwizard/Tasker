@@ -42,7 +42,7 @@ public class ProjectDeleteTests
         await Seed(ws);
 
         var result = await ws.RunWithInput("y\n", true, "project", "delete", "Demo");
-        Assert.Equal(0, result.Code);
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}{result.Out}");
         Assert.Contains("Project 'Demo' will be deleted with everything in it: 2 tasks, 1 board, 3 statuses, 1 status set, 1 task type, 1 series", result.Out);
         Assert.Contains("This cannot be undone.", result.Out);
         Assert.Contains("Delete project 'Demo'? [y/N]", result.Out);
@@ -116,7 +116,7 @@ public class ProjectDeleteTests
         await Seed(ws);
 
         var result = await ws.RunWithInput("n\n", true, "project", "delete", "Demo", "--yes");
-        Assert.Equal(0, result.Code);
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}{result.Out}");
         Assert.DoesNotContain("[y/N]", result.Out + result.Err);
         Assert.False(await DemoExists(ws));
     }
@@ -131,7 +131,7 @@ public class ProjectDeleteTests
         await Seed(ws);
 
         var result = await ws.RunWithInput("y\n", true, "project", "delete", "Demo", "--json");
-        Assert.Equal(0, result.Code);
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}{result.Out}");
         Assert.NotNull(result.Json["deleted"]);
         Assert.DoesNotContain("[y/N]", result.Out);
         Assert.Contains("[y/N]", result.Err);
