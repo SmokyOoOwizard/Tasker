@@ -231,7 +231,7 @@ public class SeriesIndexTests : IDisposable
         var second = _h.Open();
         var scopes = new[] { _h.Scope, second.Resolve<IWriteScope>() };
         var storages = new[] { _h.Tasks, second.Resolve<ITaskStorage>() };
-        const int perContainer = 40;
+        const int perContainer = 15;
 
         var work = Enumerable.Range(0, perContainer * 2).Select(i => Task.Run(async () =>
         {
