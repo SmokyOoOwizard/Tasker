@@ -319,7 +319,7 @@ impl Tui {
     }
 
     fn done(&mut self, text: &str) -> String {
-        let screen = self.wait_for(" Done ");
+        let screen = self.wait_for("┌ Done ");
         assert!(screen.contains(text), "expected {text:?} on the result screen:\n{screen}");
         self.send(ENTER);
         self.wait_for("What to do");
@@ -495,7 +495,7 @@ fn a_version_conflict_shows_the_same_text_as_the_command_and_r_retries_with_the_
     tui.send(" 2");
     tui.wait_for("> Backlog 2");
     tui.send(ENTER);
-    let screen = tui.wait_for(" Conflict ");
+    let screen = tui.wait_for("┌ Conflict ");
     assert!(screen.contains("Modified by someone else:"), "{screen}");
     tui.send("r");
     tui.done("Updated status 'Backlog 2'");
@@ -514,7 +514,7 @@ fn an_error_of_the_command_is_shown_and_the_steps_stay_to_fix_it() {
     tui.pick("Create what", "series", "Series");
     tui.type_text("Series name", "Second");
     tui.type_text("Prefix", "GLD");
-    let screen = tui.wait_for(" Error ");
+    let screen = tui.wait_for("┌ Error ");
     assert!(
         screen.contains("In use: Series prefix 'GLD' is already used in the project"),
         "{screen}"
