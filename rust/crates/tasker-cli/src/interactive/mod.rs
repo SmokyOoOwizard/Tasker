@@ -1,6 +1,8 @@
 pub mod app;
 pub mod flows;
 pub mod step;
+#[cfg(test)]
+mod tests;
 pub mod ui;
 pub mod wizard;
 

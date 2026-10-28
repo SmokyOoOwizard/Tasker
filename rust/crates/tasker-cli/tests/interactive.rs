@@ -1044,8 +1044,11 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.send(ENTER);
     tui.wait_for("Only these series");
     tui.send(ENTER);
-    tui.type_text("Field conditions", "");
-    tui.type_text("Sort (optional)", "-created");
+    tui.pick("+ Add a condition", "done", "Done");
+    tui.pick("+ Add a key", "add", "+ Add a key");
+    tui.pick("Sort key", "created", "created");
+    tui.pick("Direction for created", "desc", "Descending");
+    tui.pick("Enter removes this key", "done", "Done");
     tui.pick("Shape of the list", "flat", "Flat");
     let screen = tui.view("Found ");
     assert!(
@@ -1106,8 +1109,15 @@ fn a_view_refreshes_itself_esc_returns_to_the_previous_step_and_f_changes_one_se
     tui.send(ENTER);
     tui.wait_for("Only these series");
     tui.send(ENTER);
-    tui.type_text("Field conditions", "");
-    tui.type_text("Sort (optional)", "-created");
+    tui.pick("+ Add a condition", "add", "+ Add a condition");
+    tui.pick("Field", "prio", "Priority");
+    tui.pick("Comparison for Priority", "differs", "differs");
+    tui.pick("Value of Priority", "low", "Low");
+    tui.pick("Enter removes this condition", "done", "Done");
+    tui.pick("+ Add a key", "add", "+ Add a key");
+    tui.pick("Sort key", "created", "created");
+    tui.pick("Direction for created", "desc", "Descending");
+    tui.pick("Enter removes this key", "done", "Done");
     tui.pick("Shape of the list", "flat", "Flat");
     let screen = tui.wait_for("┌ View ");
     assert!(
@@ -1138,13 +1148,17 @@ fn a_view_refreshes_itself_esc_returns_to_the_previous_step_and_f_changes_one_se
     let screen = tui.wait_for("Shape of the list");
     assert!(screen.lines().any(|l| l.starts_with("│› ") && l.contains("Flat")), "{screen}");
     tui.send(ESC);
-    let screen = tui.wait_for("Sort (optional)");
-    assert!(screen.contains("> -created"), "{screen}");
-    tui.send(",title");
-    tui.wait_for("> -created,title");
+    let screen = tui.wait_for("Enter removes this key");
+    assert!(screen.lines().any(|l| l.starts_with("│› ") && l.contains("Done")), "{screen}");
+    tui.pick("Enter removes this key", "add", "+ Add a key");
+    tui.pick("Sort key", "title", "title");
+    tui.pick("Direction for title", "asc", "Ascending");
+    tui.pick("Enter removes this key", "done", "Done");
+    let screen = tui.wait_for("Shape of the list");
+    assert!(screen.lines().any(|l| l.starts_with("│› ") && l.contains("Flat")), "{screen}");
     tui.send(ENTER);
     let screen = tui.wait_for("┌ View ");
-    assert!(screen.contains("Found 62") && screen.contains("Fresh from outside"), "{screen}");
+    assert!(screen.contains("Found 61") && screen.contains("Fresh from outside"), "{screen}");
 
     tui.send("f");
     tui.pick("Which setting to change", "statuses", "Only these statuses");
@@ -1157,7 +1171,12 @@ fn a_view_refreshes_itself_esc_returns_to_the_previous_step_and_f_changes_one_se
     tui.send("f");
     tui.wait_for("Which setting to change");
     let screen = tui.wait_for("Only these statuses");
-    assert!(screen.contains("Done") && screen.contains("-created,title"), "{screen}");
+    assert!(
+        screen.contains("Comparison for Priority  differs")
+            && screen.contains("Value of Priority  Low")
+            && screen.contains("Sort key  title"),
+        "{screen}"
+    );
     tui.send(ESC);
     tui.view("GLD-1");
     assert_eq!(tui.quit(), 0);

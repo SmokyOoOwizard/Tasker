@@ -141,6 +141,7 @@ struct Frame {
     answers: Vec<Answer>,
     titles: Vec<String>,
     tail: Vec<(String, Answer)>,
+    replay: bool,
     current: Option<(String, Answer)>,
     spec: StepSpec,
     state: StepState,
@@ -332,6 +333,7 @@ impl App {
                 answers: Vec::new(),
                 titles: Vec::new(),
                 tail: Vec::new(),
+                replay: false,
                 current: None,
                 spec,
                 state,
@@ -374,6 +376,7 @@ impl App {
             return Effect::None;
         };
         let flow = frame.flow;
+        let replay = frame.replay;
         let mut answers = frame.answers.clone();
         let mut titles = frame.titles.clone();
         let mut tail = std::mem::take(&mut frame.tail);
@@ -383,20 +386,32 @@ impl App {
         loop {
             let next = self.next(flow, &answers, false);
             if let Err(Pending::Step(spec)) | Ok(Next::Step(spec)) = &next
-                && let Some((title, old)) = tail.first()
-                && title == spec.title()
-                && fits(spec, old)
+                && let Some(at) = tail.iter().position(|(title, old)| title == spec.title() && fits(spec, old))
             {
-                titles.push(title.clone());
-                answers.push(old.clone());
-                tail.remove(0);
-                continue;
+                tail.drain(..at);
+                let (title, old) = tail.remove(0);
+                if replay {
+                    titles.push(title);
+                    answers.push(old);
+                    continue;
+                }
+                let spec = spec.clone().with_initial(&old);
+                let frame = self.frames.last_mut().expect("a frame");
+                frame.answers = answers;
+                frame.titles = titles;
+                frame.tail = tail;
+                frame.state = StepState::from_spec(&spec);
+                frame.spec = spec;
+                frame.current = Some((title, old));
+                return Effect::None;
             }
             let frame = self.frames.last_mut().expect("a frame");
             frame.answers = answers;
             frame.titles = titles;
+            frame.replay = false;
             return match next {
                 Err(Pending::Step(spec)) | Ok(Next::Step(spec)) => {
+                    frame.tail = tail;
                     frame.state = StepState::from_spec(&spec);
                     frame.spec = spec;
                     Effect::None
@@ -433,6 +448,7 @@ impl App {
         let mut rest: Vec<(String, Answer)> = titles.into_iter().zip(answers).collect();
         let (title, last) = rest.remove(0);
         frame.tail = rest;
+        frame.replay = true;
         self.show_step(title, last);
     }
 
@@ -457,6 +473,9 @@ impl App {
             return;
         }
         frame.answers.clear();
+        frame.titles.clear();
+        frame.tail.clear();
+        frame.current = None;
         let cursor = match &frame.state {
             StepState::List(list) => list.cursor,
             _ => 0,
@@ -483,6 +502,7 @@ impl App {
         if let Some(known) = frame.current.take() {
             frame.tail.insert(0, known);
         }
+        frame.replay = false;
         let last = frame.answers.pop().expect("an answer");
         let title = frame.titles.pop().unwrap_or_default();
         self.show_step(title, last);
@@ -585,12 +605,7 @@ impl App {
         let Some(result) = self.result.take() else { return };
         if result.kind == ResultKind::Done {
             self.return_to_menu();
-        } else if result.kind == ResultKind::View
-            || self
-                .frames
-                .last()
-                .is_some_and(|f| !f.answers.is_empty() && matches!(f.flow, Flow::Entity(..)))
-        {
+        } else {
             self.back();
         }
     }
