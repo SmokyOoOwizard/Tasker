@@ -142,6 +142,7 @@ struct Frame {
     titles: Vec<String>,
     tail: Vec<(String, Answer)>,
     replay: bool,
+    jumped: bool,
     current: Option<(String, Answer)>,
     spec: StepSpec,
     state: StepState,
@@ -345,6 +346,7 @@ impl App {
                 titles: Vec::new(),
                 tail: Vec::new(),
                 replay: false,
+                jumped: false,
                 current: None,
                 spec,
                 state,
@@ -392,6 +394,7 @@ impl App {
         let mut titles = frame.titles.clone();
         let mut tail = std::mem::take(&mut frame.tail);
         frame.current = None;
+        frame.jumped = false;
         titles.push(frame.spec.title().to_string());
         answers.push(answer);
         loop {
@@ -460,7 +463,22 @@ impl App {
         let (title, last) = rest.remove(0);
         frame.tail = rest;
         frame.replay = true;
+        frame.jumped = true;
         self.show_step(title, last);
+    }
+
+    fn restore_after_jump(&mut self) {
+        let Some(frame) = self.frames.last_mut() else { return };
+        if let Some((title, answer)) = frame.current.take() {
+            frame.titles.push(title);
+            frame.answers.push(answer);
+        }
+        for (title, answer) in std::mem::take(&mut frame.tail) {
+            frame.titles.push(title);
+            frame.answers.push(answer);
+        }
+        frame.replay = false;
+        frame.jumped = false;
     }
 
     fn show_step(&mut self, title: String, last: Answer) {
@@ -514,6 +532,7 @@ impl App {
             frame.tail.insert(0, known);
         }
         frame.replay = false;
+        frame.jumped = false;
         let last = frame.answers.pop().expect("an answer");
         let title = frame.titles.pop().unwrap_or_default();
         self.show_step(title, last);
@@ -669,6 +688,10 @@ impl App {
             Outcome::Back => {
                 if self.frames.last().is_some_and(|f| f.flow == Flow::Pick) {
                     self.frames.pop();
+                    return self.refresh_argv().map(Effect::Run).unwrap_or(Effect::None);
+                }
+                if self.frames.last().is_some_and(|f| f.jumped) {
+                    self.restore_after_jump();
                     return self.refresh_argv().map(Effect::Run).unwrap_or(Effect::None);
                 }
                 self.back();
