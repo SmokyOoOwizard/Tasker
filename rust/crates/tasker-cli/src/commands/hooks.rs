@@ -1,4 +1,4 @@
-//! `tasker hooks …` (`HooksCommands`, `GitHooks` в .NET): git-хуки `post-merge`, `post-checkout`, `post-rewrite`, которые после
+//! `tasker hooks …`: git-хуки `post-merge`, `post-checkout`, `post-rewrite`, которые после
 //! `pull`, `checkout`, `merge` и `rebase` запускают `tasker sync` для рабочей папки. Блок Tasker помечен маркерами и вставляется
 //! в начало хука, чужие команды остаются; установка идемпотентна, удаление убирает только блок.
 use crate::context::Context;

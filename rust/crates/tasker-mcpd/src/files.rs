@@ -1,6 +1,6 @@
-//! `DaemonFiles` (.NET): файлы состояния демона в `<data>/mcp` — блокировка единственного экземпляра `daemon.lock` и
-//! `daemon.json` с адресом и секретом управления. Их читают консоль (`tasker mcp status|stop|sync`) и десктоп, в том числе
-//! .NET-сборки, поэтому форма и права файлов повторяются буквально.
+//! `DaemonFiles` (как `dotnet/src/Tasker.Daemon/DaemonFiles.cs`): файлы состояния демона в `<data>/mcp` — блокировка
+//! единственного экземпляра `daemon.lock` и `daemon.json` с адресом и секретом управления. Их читают консоль
+//! (`tasker mcp status|stop|sync`) и .NET-десктоп, поэтому форма и права файлов повторяются буквально.
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -116,7 +116,7 @@ fn serialize(info: &DaemonInfo) -> String {
     }))
 }
 
-/// Секрет управления: 32 случайных байта в base64url без `=` (как у .NET).
+/// Секрет управления: 32 случайных байта в base64url без `=`.
 pub fn new_token() -> String {
     use rand::RngCore as _;
     let mut bytes = [0u8; 32];

@@ -667,7 +667,7 @@ mod tests {
     }
 
     #[test]
-    fn folders_have_the_dotnet_names_and_empty_slugs() {
+    fn folders_have_fixed_names_and_empty_slugs() {
         let names: Vec<(&str, &str)> = ALL_FOLDERS.iter().map(|x| (x.name, x.empty_slug)).collect();
         assert_eq!(
             names,
@@ -777,7 +777,7 @@ mod tests {
     }
 
     #[test]
-    fn path_budget_matches_dotnet_numbers() {
+    fn path_budget_numbers() {
         // ".tasker/projects/<60>-<8>/status-sets/<60>-<8>.yaml.tmp"
         assert_eq!(
             path_budget::longest_relative_path(),

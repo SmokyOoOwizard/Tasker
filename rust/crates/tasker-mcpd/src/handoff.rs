@@ -1,4 +1,4 @@
-//! Как слушающий сокет супервизора попадает в рабочий процесс (.NET `ListenerHandoff.cs`, `UnixFd` в `WorkerProtocol.cs`).
+//! Как слушающий сокет супервизора попадает в рабочий процесс.
 //!
 //! На Unix — наследованием дескриптора: супервизор снимает с сокета `FD_CLOEXEC`, рабочий процесс получает его номер в
 //! `--listen-fd N` и сразу ставит `FD_CLOEXEC` на свою копию (процессы, которые запустит сам сервер, сокет не получают). На Windows
@@ -7,7 +7,7 @@
 //! (`WSASocketW`). Очередь соединений у всех копий общая. `TASKER_MCP_HANDOFF=message` заставляет супервизор Unix передавать номер
 //! дескриптора сообщением (`fd:N`), как на Windows, — для проверки этого пути на macOS и Linux.
 //!
-//! Windows-ветка написана по C# и не проверена.
+//! Windows-ветка не проверена.
 use std::io;
 use std::net::TcpListener;
 
@@ -54,7 +54,7 @@ pub fn format_wsa(protocol_info: &[u8]) -> io::Result<String> {
     Ok(format!("{WSA_PREFIX}{}", base64_encode(protocol_info)))
 }
 
-/// Способ передачи на этой системе (`ListenerHandoff.ForThisSystem`).
+/// Способ передачи на этой системе.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Handoff {
     /// Unix: наследуемый дескриптор, номер — в `--listen-fd`.
@@ -387,7 +387,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn descriptions_are_parsed_like_dotnet() {
+    fn descriptions_are_parsed() {
         assert_eq!(parse(Some("fd:7")), Some(Described::Fd(7)));
         assert_eq!(parse(Some("fd:-1")), None);
         assert_eq!(parse(Some("fd:x")), None);

@@ -1,7 +1,7 @@
-//! Автодополнение по Tab — сценарии `CompletionTests` и `ManualCompletionTests` (.NET) против бинарника: директива `[suggest]`
+//! Автодополнение по Tab — сценарии `CompletionTests` (.NET) против бинарника: директива `[suggest]`
 //! (команды, параметры, значения из области), тишина и неизменность данных, скрипты оболочек (bash и zsh с подставным `tasker`).
 //! Область SQLite этой сборкой не открывается, поэтому сценарии `Storages` идут только на папке; `--sqlite` проверяется как
-//! «пусто и ничего не создано». Полная сверка с .NET-консолью на ~18 тыс. строк — `scripts/completion-diff.py`.
+//! «пусто и ничего не создано».
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -27,6 +27,7 @@ impl Ws {
     fn command(&self, args: &[&str]) -> Command {
         let mut command = Command::new(env!("CARGO_BIN_EXE_tasker"));
         command
+            .env_remove("TASKER_GOLDEN_UPDATE")
             .args(args)
             .env("TASKER_HOME", &self.home)
             .env_remove("TASKER_PROJECT")
@@ -377,7 +378,7 @@ fn fields_columns_enums_and_hierarchy() {
         ws.values("task update TSK-1 --add-parent TSK-2 --parent-type "),
         v(&["Parent/Child"])
     );
-    // true/false у флагов предлагает сама библиотека разбора .NET — с её регистром.
+    // true/false у флагов предлагаются в регистре System.CommandLine.
     assert_eq!(ws.values("link-type create X --outward a --hierarchical "), v(&["False", "True"]));
     assert_eq!(ws.values("task list --all "), v(&["False", "True"]));
 }
@@ -395,7 +396,7 @@ fn the_project_comes_from_the_option_or_the_only_project() {
     );
     assert_eq!(ws.values("task list --project "), v(&["Второй", "Мой проект"]));
     assert_eq!(ws.values("project get Вт"), v(&["Второй"]));
-    // Строка, начатая с короткого параметра, теряет его, как у .NET (TSK-151): «-p Второй» не действует.
+    // Строка, начатая с короткого параметра, теряет его (TSK-151): «-p Второй» не действует.
     assert!(ws.suggest("-p Второй status get ").iter().all(|x| x.starts_with('-')));
 }
 

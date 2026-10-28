@@ -283,7 +283,7 @@ fn control_endpoints_need_the_secret_and_a_local_host() {
         .unwrap();
     assert_eq!(response.status().as_u16(), 200);
 
-    // Заменить на лету нельзя: демон в одном процессе (как .NET без супервизора).
+    // Заменить на лету нельзя: демон в одном процессе (без супервизора).
     let (code, body) = daemon
         .post(
             "/daemon/upgrade",

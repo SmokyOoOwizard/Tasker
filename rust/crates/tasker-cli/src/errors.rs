@@ -1,4 +1,4 @@
-//! Ошибки команд и их текст в stderr (`GlobalOptions.Guard` в .NET): ошибка пользователя (`CliException`) и ошибки домена
+//! Ошибки команд и их текст в stderr: ошибка пользователя и ошибки домена
 //! печатаются одной строкой без стека и дают код выхода 1 — `Not found:`, `In use:`, `Locked:`, `Unsupported format:`,
 //! `Modified by someone else:`, остальное — `Error:`.
 use tasker_core::settings::SettingsError;
@@ -9,11 +9,11 @@ pub const ERROR_EXIT_CODE: i32 = 1;
 
 #[derive(Debug)]
 pub enum CliError {
-    /// Ошибка пользователя команды (`CliException`): сообщение выводится как есть.
+    /// Ошибка пользователя команды: сообщение выводится как есть.
     Message(String),
     /// Ошибка домена: текст зависит от класса и кода.
     Domain(TaskerError),
-    /// Ошибка файловой системы: в .NET это необработанное исключение, здесь — строка `Error:` и код 1.
+    /// Ошибка файловой системы: строка `Error:` и код 1.
     Io(std::io::Error),
 }
 
@@ -86,7 +86,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn texts_match_the_dotnet_console() {
+    fn error_texts() {
         assert_eq!(CliError::new("No project 'Nope'").text(), "Error: No project 'Nope'");
         assert_eq!(CliError::from(TaskerError::not_found("Task x")).text(), "Not found: Task x");
         assert_eq!(CliError::from(TaskerError::validation("bad")).text(), "Error: bad");

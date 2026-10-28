@@ -1,4 +1,4 @@
-//! Состояние серий и связей проекта — только чтение (`SeriesHealthService`, `LinkHealthService`, `SeriesReports` в .NET): им пользуются
+//! Состояние серий и связей проекта — только чтение (`SeriesHealthService`, `LinkHealthService` в .NET): им пользуются
 //! `tasker sync` и `cleanup --check`.
 use crate::Workspace;
 use crate::error::Result;
@@ -347,7 +347,7 @@ pub fn cycle_line(cycle: &LinkCycleProblem) -> String {
     )
 }
 
-/// `ProjectSeriesHealth` в JSON (`--json` консоли, `/daemon/sync` демона): порядок полей — как у записи .NET.
+/// `ProjectSeriesHealth` в JSON (`--json` консоли, `/daemon/sync` демона): порядок полей — порядок объявления.
 pub fn to_json(h: &ProjectSeriesHealth) -> serde_json::Value {
     use serde_json::{Map, Value};
     let ids = |list: &[Uuid]| Value::Array(list.iter().map(|i| Value::String(guid_d(i))).collect());
@@ -424,7 +424,7 @@ pub fn prefix_conflicts_to_json(conflicts: &[PrefixConflict]) -> serde_json::Val
     )
 }
 
-/// `ProjectSeriesHealth` из JSON другой стороны (`/daemon/sync` демона .NET или Rust): имена свойств без учёта регистра, как читает
+/// `ProjectSeriesHealth` из JSON другой стороны (`/daemon/sync` демона): имена свойств без учёта регистра, как читает
 /// `System.Text.Json` с веб-настройками; пропущенные поля — пустые. None — форма не та (тогда консоль сверяет сама).
 pub fn from_json(value: &serde_json::Value) -> Option<ProjectSeriesHealth> {
     use serde_json::Value;
@@ -505,7 +505,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn json_round_trip_and_pascal_case_of_dotnet() {
+    fn json_round_trip_and_pascal_case_input() {
         let a = Uuid::from_u128(1);
         let b = Uuid::from_u128(2);
         let health = ProjectSeriesHealth {

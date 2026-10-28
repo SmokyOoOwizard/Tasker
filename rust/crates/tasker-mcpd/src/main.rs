@@ -1,4 +1,4 @@
-//! Точка входа `tasker-mcpd`. Аргументы и коды выхода — как у .NET `Program.cs`: `--help`; рабочий процесс супервизора
+//! Точка входа `tasker-mcpd`. Аргументы и коды выхода: `--help`; рабочий процесс супервизора
 //! `--worker --listen-fd N | --listen-handoff [--console]` (служебный запуск, остальные аргументы не проверяются); иначе
 //! `--detached`, `--single`, `--supervised` (неизвестный аргумент — код 2) и выбор режима ([`tasker_mcpd::use_supervisor`]).
 use tasker_mcpd::{daemon, handoff, supervisor, worker};

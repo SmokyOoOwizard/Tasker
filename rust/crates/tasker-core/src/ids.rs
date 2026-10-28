@@ -144,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn prefix_key_rules_match_dotnet() {
+    fn prefix_key_rules() {
         assert_eq!(ShortId::try_key(Some("70053344")).as_deref(), Some("70053344"));
         assert_eq!(ShortId::try_key(Some("  70053344 ")).as_deref(), Some("70053344"));
         assert_eq!(ShortId::try_key(Some("7005334429074F88")).as_deref(), Some("70053344-2907-4f88"));
@@ -161,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn guid_parsing_accepts_dotnet_forms() {
+    fn guid_parsing_accepts_d_n_and_b_forms() {
         let id = Uuid::parse_str("70053344-2907-4f88-b86c-40a39484c33d").unwrap();
         assert_eq!(parse_guid("7005334429074f88b86c40a39484c33d"), Some(id));
         assert_eq!(parse_guid("{70053344-2907-4f88-b86c-40a39484c33d}"), Some(id));

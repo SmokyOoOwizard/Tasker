@@ -6,7 +6,7 @@ pub const VERSION: &str = env!("TASKER_BUILD_VERSION");
 /// Коммит, из которого собрано (`f2a114d`, `f2a114d-dirty`); пусто, если при сборке не было git.
 pub const COMMIT: &str = env!("TASKER_BUILD_COMMIT");
 
-/// Версия без метаданных сборки (`+…`) — так её показывает демон (.NET `DaemonBuild.Version`): `0.1.0`.
+/// Версия без метаданных сборки (`+…`) — так её показывает демон: `0.1.0`.
 pub fn release() -> &'static str {
     VERSION.split('+').next().unwrap_or(VERSION)
 }

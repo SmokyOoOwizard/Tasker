@@ -1,11 +1,11 @@
-//! Windows: задача Планировщика заданий для текущего пользователя (`WindowsTaskService` и `WindowsTaskDefinition` в .NET) — не служба
+//! Windows: задача Планировщика заданий для текущего пользователя — не служба
 //! Windows, права администратора не нужны. Триггер — вход пользователя, перезапуск при падении, одна копия, без окна
 //! (`conhost.exe --headless`). Управление — `schtasks.exe` с XML-определением (UTF-16 LE с меткой порядка байтов). Определение лежит
 //! в `%LOCALAPPDATA%\Tasker\service\<имя>.xml`: оно же признак «автозапуск включён». `TASKER_SERVICE_DIR` и `TASKER_SERVICE_LABEL`
 //! переопределяют каталог и имя задачи.
 //!
-//! Ветки, которые исполняются только на Windows (`schtasks`, `powershell`, пользователь по умолчанию), написаны по C# и на
-//! Windows не проверены; чистые функции (XML, командная строка, разбор состояния) проверены тестами на любой системе.
+//! Ветки, которые исполняются только на Windows (`schtasks`, `powershell`, пользователь по умолчанию), на Windows
+//! не проверены; чистые функции (XML, командная строка, разбор состояния) проверены тестами на любой системе.
 use super::{
     AutostartContext, NOT_ENABLED, ProcessRunner, Result, SERVICE_DIR_VARIABLE, SERVICE_LABEL_VARIABLE, ServiceError, ServiceManager,
     check, env_override, xml_escape,
@@ -141,7 +141,7 @@ pub fn task_xml(name: &str, user_id: &str, command: &str, arguments: &str, worki
     text.replace('\n', "\r\n")
 }
 
-/// Байты файла определения задачи как пишет `WindowsTaskService.Enable`: UTF-16 LE с меткой порядка байтов `FF FE`.
+/// Байты файла определения задачи: UTF-16 LE с меткой порядка байтов `FF FE`.
 /// Рабочий каталог — каталог данных Tasker (создаётся при включении); пути демона абсолютные.
 pub fn render_windows_task(ctx: &AutostartContext) -> Result<Vec<u8>> {
     let (command, arguments) = action(&ctx.command, &ctx.environment)?;
@@ -363,9 +363,8 @@ mod tests {
         String::from_utf16(&units).unwrap()
     }
 
-    /// Эталон из `WindowsTaskServiceTests.Task_xml_matches_the_golden_sample` (.NET).
     #[test]
-    fn task_xml_matches_the_dotnet_golden_sample() {
+    fn task_xml_matches_the_golden_sample() {
         let xml = task_xml(
             "Tasker MCP",
             r"PC\Артём",

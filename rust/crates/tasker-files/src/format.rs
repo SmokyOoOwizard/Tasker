@@ -21,7 +21,7 @@ fn version_line() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r"(?m)^formatVersion:[ \t]*(?P<value>[^\r\n]*?)[ \t]*\r?$").expect("regex"))
 }
 
-/// Маркеры конфликта git в начале строки (регулярное выражение индекса и `tasker migrate` в .NET).
+/// Маркеры конфликта git в начале строки (регулярное выражение `WorkspaceIndex` и `FileMigration` в .NET).
 fn conflict_marker() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| Regex::new(r"(?m)^(<{7}|>{7})( |$)|^={7}$").expect("regex"))

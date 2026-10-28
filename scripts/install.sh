@@ -12,15 +12,13 @@
 #           [--no-daemon]   (только с --from-source)
 #
 # Раскладка (по умолчанию --prefix ~/.local):
-#   <prefix>/share/tasker/app/   tasker и tasker-mcpd (каталог заменяется целиком: от прежней .NET-установки в нём ничего не остаётся)
+#   <prefix>/share/tasker/app/   tasker и tasker-mcpd (каталог заменяется целиком: от прежней установки в нём ничего не остаётся)
 #   <prefix>/bin/tasker          ссылка на <prefix>/share/tasker/app/tasker (демон tasker запускает из своего каталога)
 #   <prefix>/share/tasker/completions/   скрипты автодополнения по Tab (zsh: _tasker, bash: tasker.bash), см. ниже
 # Автозапуск: `tasker mcp autostart enable` (launchd на macOS, служба systemd пользователя на Linux); --no-autostart его не включает.
 # Работавший демон MCP переходит на новую сборку без простоя (`tasker mcp upgrade`: новый процесс поднимается рядом, старый заканчивает
 # начатые вызовы); --restart вместо этого перезапускает его (вызовы в работе обрываются). Не получилось заменить — старый продолжает
 # работать, перезапуск молча НЕ делается: скрипт печатает причину и подсказку `tasker mcp upgrade --restart`.
-# Обновление поверх .NET-установки: рабочий процесс демона сразу Rust, а супервизор (держит порт, на лету не заменяется никогда)
-# остаётся .NET до `tasker mcp restart`, входа в систему или перезагрузки — скрипт так и пишет; это штатно.
 # Данные Tasker (настройки, журналы демона) лежат отдельно (macOS: ~/Library/Application Support/Tasker, Linux: ~/.local/share/Tasker)
 # и установкой, обновлением и удалением не затрагиваются.
 #
@@ -104,7 +102,6 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --from-source) FROM_SOURCE=true; shift ;;
-    --framework-dependent) bad_usage "--framework-dependent is gone: tasker is a Rust program now and needs no .NET (use --from-source alone)" ;;
     --no-daemon) WITH_DAEMON=false; DAEMON_FLAG_GIVEN=true; shift ;;
     --restart) RESTART_DAEMON=true; shift ;;
     --add-to-path) ADD_TO_PATH=true; shift ;;
@@ -528,13 +525,8 @@ if [ -n "$BUILD_SOURCE" ]; then
   check_release_platform "$BUILD_SOURCE"
   [ -f "$BUILD_SOURCE/tasker-mcpd" ] || fail "$BUILD_SOURCE has no tasker-mcpd: the MCP server is a part of every release"
   echo "Installing tasker from ${URL:-${FROM:-$BUILD_SOURCE}} ($RID)..."
-  if [ -f "$BUILD_SOURCE/tasker.dll" ]; then
-    # Сборка .NET (старый релиз): программа — весь каталог с библиотеками.
-    cp -pR "$BUILD_SOURCE/." "$STAGING/"
-  else
-    # Сборка Rust: только две программы — из каталога вроде rust/target/release не тянутся промежуточные файлы cargo.
-    cp -p "$BUILD_SOURCE/tasker" "$BUILD_SOURCE/tasker-mcpd" "$STAGING/"
-  fi
+  # Только две программы — из каталога вроде rust/target/release не тянутся промежуточные файлы cargo.
+  cp -p "$BUILD_SOURCE/tasker" "$BUILD_SOURCE/tasker-mcpd" "$STAGING/"
   chmod +x "$STAGING/tasker" "$STAGING/tasker-mcpd" 2>/dev/null || true
   # Архив, скачанный браузером, помечен «карантином» macOS: Gatekeeper не даст запустить программу без подписи разработчика.
   if [ "$OS" = osx ]; then
@@ -576,9 +568,6 @@ fi
 
 # ---- установка: подмена целиком, старая версия остаётся до успеха ----
 
-# Установка .NET (до перехода на Rust): работающий демон останется с .NET-супервизором до перезапуска — об этом скажем ниже.
-PREVIOUS_DOTNET=false
-[ -f "$APP_DIR/tasker.dll" ] && PREVIOUS_DOTNET=true
 
 if [ -e "$APP_DIR" ]; then
   rm -rf "$APP_DIR.old"
@@ -657,28 +646,11 @@ upgrade_daemon() {
     "$LINK" mcp upgrade --restart || echo "Warning: the restart failed: see 'tasker mcp status'" >&2
   else
     echo "The MCP server is running with the previous build: switching it to the new one without downtime..."
-    local supervisor_before supervisor_after
-    supervisor_before="$(supervisor_pid)"
     if ! "$LINK" mcp upgrade; then
       echo "Warning: the MCP server was not switched: it keeps running with the previous build." >&2
       echo "Fix the reason above and run 'tasker mcp upgrade', or 'tasker mcp upgrade --restart' to restart it (calls in progress are cut off)." >&2
-    elif [ "$PREVIOUS_DOTNET" = true ] && [ ! -f "$APP_DIR/tasker.dll" ]; then
-      # Супервизор держит порт и запускает рабочие процессы; на лету он не заменяется никогда (и между Rust-сборками тоже).
-      supervisor_after="$(supervisor_pid)"
-      if [ -n "$supervisor_before" ] && [ "$supervisor_before" = "$supervisor_after" ]; then
-        echo
-        echo "Note: the calls are served by the new build already; only the small supervisor process of the MCP server"
-        echo "(pid $supervisor_after: it holds the port and starts the workers) is still the previous .NET build."
-        echo "This is normal: it is never replaced on the fly and moves to the new build by itself with"
-        echo "'tasker mcp restart' or the next start of the server (after a reboot or a new login). Nothing else to do."
-      fi
     fi
   fi
-}
-
-# pid супервизора демона (первая строка `tasker mcp status`: «pid N, port P, up …»); пусто — демон не отвечает.
-supervisor_pid() {
-  "$LINK" mcp status 2>/dev/null | sed -n 's/^pid \([0-9]*\),.*/\1/p' | head -n 1
 }
 
 DAEMON_RUNNING=false

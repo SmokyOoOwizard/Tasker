@@ -1,4 +1,4 @@
-//! `tasker board …` (`BoardCommands` в .NET).
+//! `tasker board …`.
 use super::find_board;
 use super::task::LineFormat;
 use crate::context::Context;

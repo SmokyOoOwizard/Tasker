@@ -251,7 +251,7 @@ mod tests {
     }
 
     #[test]
-    fn acquire_release_and_listing_follow_dotnet() {
+    fn acquire_release_and_listing() {
         let ws = temp_dir();
         let dir = TaskerDirectory::new(&ws);
         let storage = EditLockStorage::new(&dir);

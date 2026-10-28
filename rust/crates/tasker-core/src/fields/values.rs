@@ -231,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn floats_use_dotnet_r_format() {
+    fn floats_use_shortest_round_trip_format() {
         assert_eq!(try_parse(FieldType::Float, "1.50").as_deref(), Some("1.5"));
         assert_eq!(try_parse(FieldType::Float, "0.50").as_deref(), Some("0.5"));
         assert_eq!(try_parse(FieldType::Float, "-0.25").as_deref(), Some("-0.25"));

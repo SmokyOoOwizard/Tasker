@@ -1,5 +1,5 @@
-//! Индекс `.cache/index.db` (общий с .NET, TSK-161) на golden-корпусе (`rust/tests/golden`): схема и строки байт в байт равны
-//! эталону .NET (`index/schema.sql`, `index/index.txt`), `data` читается и пишется обратно без изменений; порядок списков всех сущностей равен снапшотам `*-list-json`,
+//! Индекс `.cache/index.db` (общий с .NET `Tasker.Storage.Files`, TSK-161) на golden-корпусе (`tests/golden`): схема и строки байт
+//! в байт равны эталону (`index/schema.sql`, `index/index.txt`; `TASKER_GOLDEN_UPDATE=1` переснимает оба файла), `data` читается и пишется обратно без изменений; порядок списков всех сущностей равен снапшотам `*-list-json`,
 //! порядок, фильтры, сортировки и страницы `task list` — снапшотам `*task-list*` (параметры берутся из `.args`), проблемы
 //! области — блоку `tasker sync`; Sync без изменений ничего не перечитывает, изменение файла подхватывается, удаление убирает
 //! запись, повреждённая база пересобирается.
@@ -20,8 +20,12 @@ use tasker_files::index::{IndexQuery, WorkspaceIndex};
 use tasker_files::layout::{EntityKind, TaskerDirectory};
 use uuid::Uuid;
 
+fn golden_update() -> bool {
+    std::env::var("TASKER_GOLDEN_UPDATE").is_ok_and(|v| !v.is_empty() && v != "0")
+}
+
 fn golden() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden")
 }
 
 /// Копия области в `target/tmp` (без `.cache`: индекс строится заново).
@@ -110,7 +114,7 @@ impl Corpus {
     }
 }
 
-/// Параметры `task list` из `.args` (как их разбирает консоль .NET): проект, фильтры, порядок, страница, `--flat`, `--json`.
+/// Параметры `task list` из `.args` (как их разбирает консоль): проект, фильтры, порядок, страница, `--flat`, `--json`.
 #[derive(Debug, Default)]
 struct ListArgs {
     project: String,
@@ -860,8 +864,7 @@ fn canonical(path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
     }
 }
 
-/// `.schema` оболочки sqlite3 (как `dot_schema` в `scripts/golden/generate.py`): CREATE в порядке `sqlite_master`, у таблиц —
-/// `IF NOT EXISTS`.
+/// `.schema` оболочки sqlite3: CREATE в порядке `sqlite_master`, у таблиц — `IF NOT EXISTS`.
 fn dot_schema(connection: &rusqlite::Connection) -> String {
     let mut statement = connection
         .prepare("SELECT type, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid")
@@ -893,7 +896,8 @@ fn net_mtime(path: &Path) -> i64 {
     since.as_secs() as i64 * 10_000_000 + (since.subsec_nanos() / 100) as i64 + 621_355_968_000_000_000
 }
 
-/// Канонический дамп индекса — как `dump_index` в `scripts/golden/generate.py`.
+/// Канонический дамп индекса: `user_version`, режим журнала, строки таблиц через `quote()` (`mtime`, равный времени изменения файла,
+/// — `<MTIME>`) и содержимое `.cache`.
 fn dump_index(workspace: &Path) -> String {
     let root = workspace.join(".tasker");
     let cache = root.join(".cache");
@@ -955,19 +959,25 @@ fn dump_index(workspace: &Path) -> String {
 }
 
 #[test]
-fn the_cache_is_the_dotnet_index_byte_for_byte() {
+fn the_cache_is_the_corpus_index_byte_for_byte() {
     let corpus = Corpus::open();
     let expected = |name: &str| std::fs::read_to_string(golden().join("index").join(name)).unwrap();
     {
         let connection = rusqlite::Connection::open(corpus.index.file()).unwrap();
+        if golden_update() {
+            std::fs::write(golden().join("index/schema.sql"), dot_schema(&connection)).unwrap();
+        }
         assert_eq!(dot_schema(&connection), expected("schema.sql"));
+    }
+    if golden_update() {
+        std::fs::write(golden().join("index/index.txt"), dump_index(&corpus.workspace)).unwrap();
     }
     assert_eq!(dump_index(&corpus.workspace), expected("index.txt"));
     std::fs::remove_dir_all(&corpus.workspace).unwrap();
 }
 
 #[test]
-fn data_written_by_dotnet_reads_back_to_the_same_bytes() {
+fn index_data_of_the_corpus_reads_back_to_the_same_bytes() {
     use tasker_core::model::{Board, LinkType};
     use tasker_files::index::IndexEntity;
 
@@ -976,7 +986,7 @@ fn data_written_by_dotnet_reads_back_to_the_same_bytes() {
         assert_eq!(entity.to_data(), json);
     }
 
-    // Строки эталона .NET (index.txt — тот же индекс, что строит .NET: тест выше) — перечитать и записать обратно.
+    // Строки индекса корпуса (index.txt — тот же индекс: тест выше) — перечитать и записать обратно.
     let corpus = Corpus::open();
     let connection = rusqlite::Connection::open(corpus.index.file()).unwrap();
     let mut statement = connection

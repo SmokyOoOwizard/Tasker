@@ -1,12 +1,12 @@
-//! HTTP демона (.NET `McpDaemon.MapControl` + `TaskerWebExtensions.MapTaskerMcpHost`): MCP на `/mcp` (служба rmcp из `tasker-mcp`,
+//! HTTP демона: MCP на `/mcp` (служба rmcp из `tasker-mcp`,
 //! без сессий), управление `/daemon/*` с секретом в заголовке `X-Tasker-Control`, готовность `/ready`, живость `/health` и
 //! `/api/health`, фильтр «только с этой машины» по `Host`/`Origin` (`LoopbackOnly`) — он же закрывает и MCP, — ответы на адреса
 //! десктопа `/w/{key}/…` (`UseWorkspaces`).
 //!
-//! Коды и тела повторяют .NET: 401 без тела у управления без секрета, 403 `{"error":"Only local requests are allowed"}` у чужого
+//! Коды и тела: 401 без тела у управления без секрета, 403 `{"error":"Only local requests are allowed"}` у чужого
 //! Host/Origin, 409 на `/daemon/upgrade` у демона в одном процессе (заменить на лету нельзя), 503 у неготового `/ready`.
 //!
-//! Рабочий процесс под супервизором (`worker`) отличается крючками [`Control`] (`McpDaemon.ControlHooks`): `/daemon/upgrade` и
+//! Рабочий процесс под супервизором (`worker`) отличается крючками [`Control`]: `/daemon/upgrade` и
 //! `/daemon/stop` уходят супервизору, `/ready` учитывает завершение, а самый внешний слой — [`crate::gate::layer`].
 use crate::gate::DrainState;
 use crate::shutdown::Shutdown;
@@ -49,7 +49,7 @@ pub struct App {
 /// Замена рабочего процесса на лету: просьба супервизору и его ответ.
 pub type UpgradeHook = Arc<dyn Fn(UpgradeRequest) -> Pin<Box<dyn Future<Output = UpgradeResult> + Send>> + Send + Sync>;
 
-/// Что управление демоном делает иначе у рабочего процесса под супервизором (`McpDaemon.ControlHooks`); по умолчанию — демон в
+/// Что управление демоном делает иначе у рабочего процесса под супервизором; по умолчанию — демон в
 /// одном процессе.
 #[derive(Default, Clone)]
 pub struct Control {
@@ -278,7 +278,7 @@ async fn api_health() -> Response {
 }
 
 /// `UseWorkspaces` без REST и фронтенда: `/w/{key}/mcp` — подсказка про общий адрес, `/w/{key}/…` — область не открыта,
-/// `/api/…` — нет области в адресе; остальное — 404 без тела, как у маршрутизации ASP.NET.
+/// `/api/…` — нет области в адресе; остальное — 404 без тела.
 async fn fallback(State(app): State<Arc<App>>, uri: Uri) -> Response {
     let path = uri.path();
     if let Some((key, rest)) = split_workspace_path(path) {
@@ -339,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn workspace_paths_split_like_dotnet() {
+    fn workspace_paths_split_into_key_and_rest() {
         assert_eq!(split_workspace_path("/w/a/mcp"), Some(("a", "/mcp")));
         assert_eq!(split_workspace_path("/w/a"), Some(("a", "/")));
         assert_eq!(split_workspace_path("/w/a/api/tasks"), Some(("a", "/api/tasks")));

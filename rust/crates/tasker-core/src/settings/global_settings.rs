@@ -179,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn writes_in_dotnet_order() {
+    fn writes_properties_in_declaration_order() {
         let s = GlobalSettings {
             user_name: None,
             mcp: McpSettings {

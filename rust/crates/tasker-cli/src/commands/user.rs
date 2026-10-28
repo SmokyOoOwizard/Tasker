@@ -1,4 +1,4 @@
-//! `tasker user …` и `tasker agent …` (`UserCommands` в .NET): у пользователя только имя.
+//! `tasker user …` и `tasker agent …`: у пользователя только имя.
 use crate::context::Context;
 use crate::entities;
 use crate::errors::{CliError, Result};

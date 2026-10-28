@@ -1,7 +1,7 @@
-//! Фазы одного вызова для профилирования (`PerfTrace` в .NET, стенд `scripts/perf/bench.py`). Включается переменной
-//! `TASKER_PROFILE=1`; без неё [`mark`] и [`count`] — одна проверка флага. Метки печатаются в stderr после команды строками
-//! `[profile] имя миллисекунды_от_старта_процесса jit`, счётчики — `[count] имя число миллисекунды`; JIT в Rust нет — счётчик
-//! `jit.methods` и третье поле меток всегда 0. Модуль в `tasker-core`, чтобы метки ставили и консоль, и индекс области.
+//! Фазы одного вызова для профилирования (стенд `scripts/perf/bench.py`). Включается переменной `TASKER_PROFILE=1`; без неё
+//! [`mark`] и [`count`] — одна проверка флага. Метки печатаются в stderr после команды строками
+//! `[profile] имя миллисекунды_от_старта_процесса`, счётчики — `[count] имя число миллисекунды`. Модуль в `tasker-core`, чтобы
+//! метки ставили и консоль, и индекс области.
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
@@ -116,16 +116,15 @@ pub fn count(name: &str, started: Option<Instant>) {
     }
 }
 
-/// Печатает метки и счётчики (`PerfTrace.Dump`): JIT-методов в Rust нет, их число и время компиляции — 0.
+/// Печатает метки и счётчики.
 pub fn dump(writer: &mut dyn std::io::Write) {
     if !enabled() {
         return;
     }
     let state = state().lock().unwrap_or_else(|e| e.into_inner());
     for (name, ms) in &state.marks {
-        let _ = writeln!(writer, "[profile] {name} {ms:.1} 0");
+        let _ = writeln!(writer, "[profile] {name} {ms:.1}");
     }
-    let _ = writeln!(writer, "[count] jit.methods 0 0.0");
     for (name, count, ms) in &state.counters {
         let _ = writeln!(writer, "[count] {name} {count} {ms:.1}");
     }

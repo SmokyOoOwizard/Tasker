@@ -1,4 +1,4 @@
-//! Вывод результата одной команды (`Context` в .NET): текст или `--json` (компактный, `tasker_core::json`), таблицы с
+//! Вывод результата одной команды: текст или `--json` (компактный, `tasker_core::json`), таблицы с
 //! выравниванием и обрезкой по ширине ([`crate::table`]), первая строка списка `Found N` / `Found N, shown a-b (use
 //! --offset/--limit)` (нет с `-q`), списки деревом с отступами и пометкой `(+)`, код выхода команды.
 use crate::errors::Result;
@@ -67,7 +67,7 @@ impl<'a> Context<'a> {
         if self.json { self.err } else { self.out }
     }
 
-    /// Открытая область; у команды без области — ошибка программиста, как `InvalidOperationException` в .NET.
+    /// Открытая область; у команды без области — ошибка программиста.
     pub fn session(&self) -> &Session {
         self.session.as_ref().expect("The command has no workspace")
     }
@@ -211,7 +211,7 @@ mod tests {
     }
 
     #[test]
-    fn found_lines_match_dotnet() {
+    fn found_lines() {
         assert_eq!(found_line(3, 0, 3), "Found 3");
         assert_eq!(found_line(0, 0, 0), "Found 0");
         assert_eq!(found_line(5, 0, 2), "Found 5, shown 1-2 (use --offset/--limit)");

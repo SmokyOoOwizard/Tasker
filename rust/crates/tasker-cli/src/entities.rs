@@ -1,5 +1,5 @@
-//! JSON сущностей для `--json` — как `JsonSerializer.Serialize(x, TaskerJson.Options)` в .NET: camelCase, порядок полей как в
-//! записях C#, enum строками, даты как System.Text.Json (`Timestamp::format_json`).
+//! JSON сущностей для `--json` — по правилам `TaskerJson` (`dotnet/src/Tasker.Core/TaskerJson.cs`): camelCase, порядок полей
+//! как в записях `Tasker.Core`, enum строками, даты как System.Text.Json (`Timestamp::format_json`).
 use crate::json::{id, ids, object, opt_id, opt_str};
 use serde_json::Value;
 use tasker_core::Timestamp;

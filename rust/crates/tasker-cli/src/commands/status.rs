@@ -1,4 +1,4 @@
-//! `tasker status …` и `tasker status-set …` (`StatusCommands` в .NET).
+//! `tasker status …` и `tasker status-set …`.
 use super::{find_status, find_status_set};
 use crate::context::Context;
 use crate::entities;

@@ -1,4 +1,4 @@
-//! macOS: агент запуска пользователя `~/Library/LaunchAgents/com.tasker.mcp.plist` (`LaunchdService` в .NET). RunAtLoad — стартует при
+//! macOS: агент запуска пользователя `~/Library/LaunchAgents/com.tasker.mcp.plist`. RunAtLoad — стартует при
 //! входе в систему, KeepAlive — launchd перезапускает демон, если он упал. `TASKER_SERVICE_DIR` и `TASKER_SERVICE_LABEL`
 //! переопределяют каталог и имя (тесты, вторая установка).
 use super::{
@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 pub const DEFAULT_LABEL: &str = "com.tasker.mcp";
 
-/// Текст plist дословно как `LaunchdService.Plist()`: строки через `\n`, отступы 4 пробела, `<key>…</key><string>…</string>` в одну строку.
+/// Текст plist: строки через `\n`, отступы 4 пробела, `<key>…</key><string>…</string>` в одну строку.
 pub fn render_launchd(ctx: &AutostartContext) -> String {
     let mut text = String::new();
     text.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -358,7 +358,7 @@ mod tests {
         let _env = EnvGuard::set("TASKER_SERVICE_DIR", "");
         let _env2 = EnvGuard::remove("TASKER_SERVICE_LABEL");
         let d = LaunchdService::new(Box::new(FakeRunner::default()), None, Some("x".into()));
-        // Пустая TASKER_SERVICE_DIR в .NET — это «задано пустым», не «не задано».
+        // Пустая TASKER_SERVICE_DIR — это «задано пустым», не «не задано».
         assert_eq!(d.plist_path(), PathBuf::from("x.plist"));
         let _env3 = EnvGuard::remove("TASKER_SERVICE_DIR");
         let d = LaunchdService::new(Box::new(FakeRunner::default()), None, None);

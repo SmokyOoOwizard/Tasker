@@ -1,4 +1,4 @@
-//! `tasker cleanup [--resolve-conflicts] [--dry-run] [--check]` (`CleanupCommands` в .NET): единственная команда, которая правит
+//! `tasker cleanup [--resolve-conflicts] [--dry-run] [--check]`: единственная команда, которая правит
 //! данные серий и связей после слияния веток git. Работает напрямую с рабочей областью.
 use crate::context::Context;
 use crate::errors::{CliError, Result};
@@ -68,7 +68,7 @@ fn git_in_progress(folder: &str) -> Option<&'static str> {
 /// `read_only` (`--dry-run`/`--check`) не трогает файлы; иначе идущее слияние git — ошибка, чистка переждёт.
 pub fn run(ctx: &mut Context<'_>, dry_run: bool, check: bool, resolve: bool) -> Result<()> {
     let read_only = dry_run || check;
-    // Слияние git касается только папки: у файла SQLite его нет (`--sqlite` в .NET проверку пропускает).
+    // Слияние git касается только папки: у файла SQLite его нет (у `--sqlite` проверка пропускается).
     let folder = ctx.session().location().kind() == tasker_core::settings::WorkspaceKind::Files;
     if !read_only
         && folder

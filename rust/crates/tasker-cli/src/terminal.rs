@@ -1,4 +1,4 @@
-//! Терминал (`Terminal` и `ConsoleSetup` в .NET): идёт ли вывод в терминал, сколько в нём знаков в строке, предел ширины строк
+//! Терминал: идёт ли вывод в терминал, сколько в нём знаков в строке, предел ширины строк
 //! списков из `--truncate`/`--no-truncate`/`--width`/`TASKER_WIDTH`/`COLUMNS`+`LINES` (под `watch`); на Windows — консоль в UTF-8.
 use crate::errors::{CliError, Result};
 
@@ -167,7 +167,7 @@ pub fn window_width() -> usize {
     windows::window_width()
 }
 
-/// Кодировка консоли (`ConsoleSetup` в .NET). На macOS и Linux консоль и так UTF-8. На Windows cmd.exe и старый PowerShell
+/// Кодировка консоли. На macOS и Linux консоль и так UTF-8. На Windows cmd.exe и старый PowerShell
 /// работают в кодовой странице (866, 1251): пока хотя бы один из потоков в терминале, кодовая страница консоли переключается на
 /// UTF-8 и возвращается при выходе; перенаправленные потоки Rust и так пишет в UTF-8 без BOM. На Windows не проверялось.
 pub struct ConsoleSetup {
@@ -367,7 +367,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_int_is_like_dotnet() {
+    fn parse_int_trims_spaces_and_accepts_a_sign() {
         assert_eq!(parse_int(" 42 "), Some(42));
         assert_eq!(parse_int("-3"), Some(-3));
         assert_eq!(parse_int("+7"), Some(7));

@@ -1,8 +1,8 @@
-//! Клиент демона MCP (`DaemonFiles`, `DaemonClient`, `DaemonController`, `DaemonHost`, `Launcher` в .NET): те же `daemon.lock` и
+//! Клиент демона MCP (как `DaemonFiles` и `DaemonClient` десктопа в `dotnet/src/Tasker.Daemon`): те же `daemon.lock` и
 //! `daemon.json` в каталоге данных, те же запросы `/daemon/status`, `/daemon/stop`, `/daemon/upgrade` с секретом управления в
 //! заголовке `X-Tasker-Control`; демон запускается отсоединённым процессом `tasker-mcpd --detached` из каталога этой программы
-//! (`mcp run` — в этом терминале, [`run_foreground`]). Клиент блокирующий (ureq), без tokio. Управляет и .NET-демоном: файлы и API
-//! у них общие; демон под супервизором (`workers` в статусе) заменяется на лету ([`Controller::upgrade`]).
+//! (`mcp run` — в этом терминале, [`run_foreground`]). Клиент блокирующий (ureq), без tokio. Демон
+//! под супервизором (`workers` в статусе) заменяется на лету ([`Controller::upgrade`]).
 use crate::errors::{CliError, Result};
 use serde_json::Value;
 use std::path::PathBuf;
@@ -20,7 +20,7 @@ pub const RETRY_PAUSE: Duration = Duration::from_millis(300);
 
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const STOP_TIMEOUT: Duration = Duration::from_secs(15);
-/// Сколько `mcp run` ждёт штатной остановки демона после Ctrl+C (`DaemonHost.StopTimeout`).
+/// Сколько `mcp run` ждёт штатной остановки демона после Ctrl+C.
 const RUN_STOP_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// Сколько ждать, пока новый рабочий процесс откроет области и станет готов, по умолчанию (`DefaultUpgradeTimeoutSeconds`).
@@ -171,7 +171,7 @@ pub fn get_status() -> Option<DaemonStatus> {
     Some(DaemonStatus { value })
 }
 
-/// Итог сверки области демоном (`SyncResult` .NET, ответ `/daemon/sync`).
+/// Итог сверки области демоном (ответ `/daemon/sync`).
 pub struct SyncReply {
     pub path: String,
     pub problem_count: usize,
@@ -371,7 +371,7 @@ impl AutostartInfo {
     }
 }
 
-/// Управление демоном для `tasker mcp start | stop | restart | status | autostart` (`DaemonController`).
+/// Управление демоном для `tasker mcp start | stop | restart | status | autostart`.
 pub struct Controller {
     pub service: Box<dyn ServiceManager>,
 }
@@ -431,7 +431,7 @@ impl Controller {
         Ok(self.start()?.0)
     }
 
-    /// Заменяет работающий демон на новую сборку без простоя (`DaemonController.Upgrade`): рядом поднимается новый рабочий процесс,
+    /// Заменяет работающий демон на новую сборку без простоя: рядом поднимается новый рабочий процесс,
     /// он принимает вызовы, когда открыл все области, а старый заканчивает начатые. Демон, запущенный по-старому (одним процессом),
     /// заменить так нельзя — он перезапускается. `Ok(Err(сообщение))` — замена не удалась, старый процесс продолжает работать.
     /// `daemon` — своя программа демона вместо соседней с `tasker`: файл и начальные аргументы.
@@ -519,18 +519,18 @@ impl Controller {
     }
 }
 
-/// Команда запуска демона: `tasker-mcpd` из каталога этой программы (`Launcher.DaemonCommand`).
+/// Команда запуска демона: `tasker-mcpd` из каталога этой программы.
 pub fn daemon_program() -> Result<PathBuf> {
     let exe = std::env::current_exe().map_err(|_| CliError::new("Cannot find the path of the running program"))?;
     tasker_daemon::autostart::daemon_program(&exe).map_err(service_error)
 }
 
-/// Запускает демон в фоне и не ждёт его (`Launcher.SpawnDaemon`): stdio в /dev/null, новый сеанс он создаёт сам (`--detached`).
+/// Запускает демон в фоне и не ждёт его: stdio в /dev/null, новый сеанс он создаёт сам (`--detached`).
 pub fn spawn_daemon() -> Result<std::process::Child> {
     let program = daemon_program()?;
     #[cfg(windows)]
     {
-        // Как WindowsDetachedProcess (.NET): без окна, в своей группе процессов, по возможности вне задания родителя и без
+        // Без окна, в своей группе процессов, по возможности вне задания родителя и без
         // унаследованных дескрипторов — иначе канал вывода вызвавшей программы (`$x = tasker mcp start`, тест с перехваченным
         // выводом) не закрылся бы, пока жив демон. std наследует все наследуемые дескрипторы, поэтому свои stdin/stdout/stderr
         // перед запуском делаются ненаследуемыми (самой консоли они после этого не нужны для детей).
@@ -581,7 +581,7 @@ pub fn spawn_daemon() -> Result<std::process::Child> {
     }
 }
 
-/// `tasker mcp run` (`DaemonHost.Run`): запускает программу демона в этом терминале и ждёт её. Ввод и вывод — общие, код выхода —
+/// `tasker mcp run`: запускает программу демона в этом терминале и ждёт её. Ввод и вывод — общие, код выхода —
 /// её. Остановка (Ctrl+C, SIGTERM) передаётся демону, чтобы он закрыл области штатно; не вышел за [`RUN_STOP_TIMEOUT`] — снимается.
 pub fn run_foreground(detached: bool) -> Result<i32> {
     let program = daemon_program()?;
@@ -645,8 +645,8 @@ fn process_exit_code(status: std::process::ExitStatus) -> i32 {
     status.code().unwrap_or(1)
 }
 
-/// `--daemon <path>` команды `upgrade`: путь к `.dll` — запуск через `dotnet` (у .NET-консоли — её же `dotnet`, здесь — найденный в
-/// `PATH`), иначе — сама программа.
+/// `--daemon <path>` команды `upgrade`: путь к `.dll` — запуск через `dotnet`, найденный в `PATH`,
+/// иначе — сама программа.
 pub fn daemon_override(path: &str) -> (String, Vec<String>) {
     if path.to_ascii_lowercase().ends_with(".dll") {
         (find_in_path("dotnet").unwrap_or_else(|| "dotnet".into()), vec![path.to_string()])

@@ -1,4 +1,4 @@
-//! Инструменты по группам — как `Tasker.Mcp/Tools/*.cs`: имена, аргументы и тексты ответов те же.
+//! Инструменты по группам — как `dotnet/src/Tasker.Mcp/Tools/*.cs`: имена, аргументы и тексты ответов те же.
 use crate::call::{Call, Output};
 use crate::error::Result;
 

@@ -1,4 +1,4 @@
-//! `tasker task …` (`TaskCommands` в .NET): создание, списки (деревом и плоско), карточка, правка, удаление, связи.
+//! `tasker task …`: создание, списки (деревом и плоско), карточка, правка, удаление, связи.
 use super::series::{prefixes, references};
 use super::{find_status, find_task_type, task_fields};
 use crate::context::{Context, TreeRow};

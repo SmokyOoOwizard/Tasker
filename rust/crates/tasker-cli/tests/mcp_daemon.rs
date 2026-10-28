@@ -33,6 +33,7 @@ impl Home {
     fn command(&self, args: &[&str]) -> Command {
         let mut command = Command::new(BIN);
         command
+            .env_remove("TASKER_GOLDEN_UPDATE")
             .args(args)
             .env("TASKER_HOME", self.root.join("home"))
             .env("TASKER_SERVICE_DIR", self.root.join("service"))
@@ -71,7 +72,7 @@ fn daemon_is_built() -> bool {
 }
 
 #[test]
-fn upgrade_replaces_the_worker_and_reports_failures_like_dotnet() {
+fn upgrade_replaces_the_worker_and_reports_failures() {
     if !daemon_is_built() {
         return;
     }

@@ -1,4 +1,4 @@
-//! `tasker link-type …` (`LinkTypeCommands` в .NET).
+//! `tasker link-type …`.
 use super::find_link_type;
 use crate::context::Context;
 use crate::entities;

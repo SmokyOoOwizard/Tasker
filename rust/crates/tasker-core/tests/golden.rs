@@ -1,5 +1,6 @@
-//! Проверки `tasker-core` на golden-корпусе (`rust/tests/golden`, TSK-124): версии файлов, id типов связей по умолчанию,
+//! Проверки `tasker-core` на golden-корпусе (`tests/golden`, TSK-124): версии файлов, id типов связей по умолчанию,
 //! канонический вид значений полей, формат временных меток. YAML здесь читается построчно — парсер появится в `tasker-files`.
+//! `TASKER_GOLDEN_UPDATE=1` переснимает `versions.json` версиями файлов `workspace/`.
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -18,8 +19,12 @@ fn folder(project: &str) -> &str {
     if project == GOLDEN { "golden-11111111" } else { project }
 }
 
+fn golden_update() -> bool {
+    std::env::var("TASKER_GOLDEN_UPDATE").is_ok_and(|v| !v.is_empty() && v != "0")
+}
+
 fn golden() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden")
 }
 
 fn workspace() -> PathBuf {
@@ -115,6 +120,21 @@ fn section(text: &str, key: &str) -> Vec<(BTreeMap<String, String>, Vec<String>)
 
 #[test]
 fn versions_of_every_file_match_versions_json() {
+    if golden_update() {
+        let root = workspace();
+        let versions: BTreeMap<String, String> = all_yaml_files()
+            .iter()
+            .map(|file| {
+                let relative = file.strip_prefix(&root).unwrap().to_string_lossy().replace('\\', "/");
+                (relative, versioning::version_of(&std::fs::read(file).unwrap()))
+            })
+            .collect();
+        std::fs::write(
+            golden().join("versions.json"),
+            serde_json::to_string_pretty(&versions).unwrap() + "\n",
+        )
+        .unwrap();
+    }
     let expected: BTreeMap<String, String> =
         serde_json::from_str(&std::fs::read_to_string(golden().join("versions.json")).unwrap()).unwrap();
     let root = workspace();

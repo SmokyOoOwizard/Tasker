@@ -1,5 +1,5 @@
-//! Разбор строки и варианты дополнения ровно так, как их строит System.CommandLine 2.0 у .NET-консоли — директива `[suggest]`
-//! (`CompleteDirective`) опирается на `ParseResult.GetCompletions`, и все его особенности видны пользователю: после флага
+//! Разбор строки и варианты дополнения ровно так, как их строит System.CommandLine 2.0 — директива `[suggest]`
+//! опирается на `ParseResult.GetCompletions`, и все его особенности видны пользователю: после флага
 //! предлагаются `True`/`False`, имена команд и параметров сравниваются по вхождению, а не по началу, слово под курсором —
 //! кусок строки после последнего пробела, параметр, у которого набрано максимум значений, больше не предлагается.
 //!
@@ -26,7 +26,7 @@ const MAXIMUM_ARITY: usize = 100_000;
 /// Имя корневой команды (`RootCommand.ExecutableName`).
 const ROOT_NAME: &str = "tasker";
 
-/// Символ, к которому относится токен или результат (`Symbol`): сравнение — по адресу описания, как ссылки в .NET.
+/// Символ, к которому относится токен или результат (`Symbol`): сравнение — по адресу описания.
 #[derive(Clone, Copy, Debug)]
 pub enum Sym<'a> {
     None,
@@ -291,7 +291,7 @@ pub fn split_command_line(line: &str) -> Vec<String> {
     result
 }
 
-/// Ошибка, которую .NET не ловит внутри разбора (файл ответов — каталог или без доступа): директива тогда молчит.
+/// Ошибка, которую System.CommandLine не ловит внутри разбора (файл ответов — каталог или без доступа): директива тогда молчит.
 pub struct Abort;
 
 /// `TrySplitIntoSubtokens`: `--x=значение` и `--x:значение`.
@@ -756,7 +756,7 @@ fn parses_as_bool(value: &str) -> bool {
     value.eq_ignore_ascii_case("true") || value.eq_ignore_ascii_case("false")
 }
 
-/// `OrdinalIgnoreCase` .NET: посимвольно, простое соответствие верхнего регистра.
+/// `OrdinalIgnoreCase`: посимвольно, простое соответствие верхнего регистра.
 pub fn fold(text: &str) -> Vec<char> {
     text.chars().map(upper_char).collect()
 }

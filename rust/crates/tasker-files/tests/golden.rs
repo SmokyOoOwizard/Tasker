@@ -1,6 +1,7 @@
-//! Проверки `tasker-files` на golden-корпусе (`rust/tests/golden`, TSK-124): каждый файл области разбирается в модель своего
+//! Проверки `tasker-files` на golden-корпусе (`tests/golden`, TSK-124): каждый файл области разбирается в модель своего
 //! вида и записывается обратно байт в байт; файлы старых версий, с CRLF и BOM после апгрейда в памяти совпадают с результатом
 //! `tasker migrate`; файл с конфликтом слияния и файл формата 99 дают те же ошибки; стилевые пробы YamlDotNet.
+//! `TASKER_GOLDEN_UPDATE=1` переснимает поле `yaml` проб `yaml-style/*.json` записью текущей сборки.
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use tasker_core::ids::default_link_type_id;
@@ -11,8 +12,12 @@ use uuid::Uuid;
 
 const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
 
+fn golden_update() -> bool {
+    std::env::var("TASKER_GOLDEN_UPDATE").is_ok_and(|v| !v.is_empty() && v != "0")
+}
+
 fn golden() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden")
 }
 
 fn workspace() -> PathBuf {
@@ -243,7 +248,7 @@ fn every_workspace_file_round_trips_byte_for_byte() {
             "{migrated_rel}: version after migrate"
         );
         // Запись из модели: те же байты, что и у мигрированного файла в LF, — кроме типов связей до формата 9, где запись
-        // добавляет выведенные по умолчанию `allowCycles`/`hierarchical` (так же пишет и .NET при первой правке).
+        // добавляет выведенные по умолчанию `allowCycles`/`hierarchical` (так же их пишет и первая правка такого файла).
         let (_, _, from_migrated) = round_trip(kind, project, &migrated_bytes, &migrated_path).unwrap();
         assert_eq!(serialized, from_migrated, "{rel}: serialize(legacy) vs serialize(migrated)");
         if kind != Kind::LinkType {
@@ -287,7 +292,7 @@ fn migrated_workspace_files_round_trip() {
 
 /// Значения по умолчанию при чтении старых файлов и особые правила моделей.
 #[test]
-fn legacy_defaults_and_model_rules_match_dotnet() {
+fn legacy_defaults_and_model_rules_match_the_corpus() {
     let legacy = Uuid::parse_str("22222222-2222-4222-8222-222222222222").unwrap();
     let folder = workspace().join("projects/22222222-2222-4222-8222-222222222222");
     let read_link = |name: &str| {
@@ -403,7 +408,18 @@ fn scalars_match_yamldotnet_style_probes() {
     let mut failures = Vec::new();
     let mut checked = 0;
     for (name, key) in [("titles.json", "title"), ("descriptions.json", "description")] {
-        let probes: Vec<Probe> = serde_json::from_str(&std::fs::read_to_string(golden().join("yaml-style").join(name)).unwrap()).unwrap();
+        let path = golden().join("yaml-style").join(name);
+        if golden_update() {
+            let mut probes: Vec<serde_json::Value> = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            for probe in &mut probes {
+                let mut out = String::from(key);
+                out.push(':');
+                write_scalar(&mut out, probe["value"].as_str().unwrap(), 2);
+                probe["yaml"] = serde_json::Value::String(out.trim_end_matches('\n').to_string());
+            }
+            std::fs::write(&path, serde_json::to_string_pretty(&probes).unwrap() + "\n").unwrap();
+        }
+        let probes: Vec<Probe> = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         for probe in probes {
             let mut out = String::from(key);
             out.push(':');

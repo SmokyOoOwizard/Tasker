@@ -1,12 +1,26 @@
-//! Схема файла SQLite, который создаёт Rust, — та же, что у `EnsureCreated` .NET (TSK-159): эталон `.schema` снят с файла,
-//! созданного .NET-консолью (`rust/tests/golden/sqlite/schema.sql`, обновляет `scripts/golden/generate.py`).
+//! Схема файла SQLite, который создаёт Rust, — та же, что у `EnsureCreated` .NET `Tasker.Storage.Db` (TSK-159): эталон — `.schema`
+//! новой базы (`tests/golden/sqlite/schema.sql`). `TASKER_GOLDEN_UPDATE=1` переписывает эталон схемой новой базы, а сравнение идёт
+//! с записанным текстом.
 mod common;
 
 use common::temp_dir;
 use rusqlite::Connection;
 use tasker_services::Workspace;
 
-const GOLDEN: &str = include_str!("../../../tests/golden/sqlite/schema.sql");
+const GOLDEN: &str = include_str!("../../../../tests/golden/sqlite/schema.sql");
+
+fn golden_update() -> bool {
+    std::env::var("TASKER_GOLDEN_UPDATE").is_ok_and(|v| !v.is_empty() && v != "0")
+}
+
+fn expected(actual: &str) -> String {
+    if golden_update() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden/sqlite/schema.sql");
+        std::fs::write(path, actual).unwrap();
+        return actual.to_string();
+    }
+    GOLDEN.to_string()
+}
 
 /// Текст `.schema` оболочки sqlite3: строки `sqlite_master` по порядку создания, у таблиц — `CREATE TABLE IF NOT EXISTS`.
 fn dot_schema(file: &std::path::Path) -> String {
@@ -35,14 +49,14 @@ fn a_new_file_gets_the_ef_core_schema_in_wal_mode() {
     let dir = temp_dir();
     let file = dir.join("new.db");
     Workspace::open_sqlite(&file).unwrap();
-    assert_eq!(dot_schema(&file), GOLDEN);
+    assert_eq!(dot_schema(&file), expected(&dot_schema(&file)));
     let connection = Connection::open(&file).unwrap();
     let mode: String = connection.query_row("PRAGMA journal_mode", [], |row| row.get(0)).unwrap();
     assert_eq!(mode, "wal");
     // Повторное открытие ничего не меняет и не создаёт своих таблиц.
     drop(connection);
     Workspace::open_sqlite(&file).unwrap();
-    assert_eq!(dot_schema(&file), GOLDEN);
+    assert_eq!(dot_schema(&file), expected(&dot_schema(&file)));
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -52,7 +66,7 @@ fn an_empty_existing_file_gets_the_schema_and_keeps_its_journal() {
     let file = dir.join("empty.db");
     std::fs::write(&file, b"").unwrap();
     Workspace::open_sqlite(&file).unwrap();
-    assert_eq!(dot_schema(&file), GOLDEN);
+    assert_eq!(dot_schema(&file), expected(&dot_schema(&file)));
     let mode: String = Connection::open(&file)
         .unwrap()
         .query_row("PRAGMA journal_mode", [], |row| row.get(0))

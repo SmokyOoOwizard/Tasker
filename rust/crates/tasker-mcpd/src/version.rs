@@ -1,6 +1,6 @@
-//! Какая это сборка демона (.NET `DaemonBuild`): версия (`tasker-version`: файл `VERSION`, как `InformationalVersion` без `+…`) и
+//! Какая это сборка демона: версия (`tasker-version`: файл `VERSION`, без метаданных сборки `+…`) и
 //! короткий идентификатор сборки — он меняется с каждой сборкой, в отличие от версии: по нему в статусе видно, что рабочий процесс
-//! заменён на новую сборку. У .NET это первые 8 hex MVID модуля; здесь — первые 8 hex SHA-256 исполняемого файла (считается один раз).
+//! заменён на новую сборку. Это первые 8 hex SHA-256 исполняемого файла (считается один раз).
 use sha2::{Digest as _, Sha256};
 use std::sync::OnceLock;
 
@@ -26,7 +26,7 @@ pub fn build_id() -> &'static str {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn version_and_build_look_like_dotnet() {
+    fn version_and_build_format() {
         assert!(!super::version().is_empty());
         assert!(!super::version().contains('\n'));
         let id = super::build_id();

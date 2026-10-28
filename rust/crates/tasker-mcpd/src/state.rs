@@ -1,5 +1,5 @@
-//! `DaemonState` и записи `/daemon/*` (.NET `Tasker.Daemon/DaemonState.cs`): что сейчас делает демон — процесс, порт, рабочие
-//! области; итог сверки `/daemon/sync`. JSON — `TaskerJson`: camelCase, enum строками, порядок свойств как у записей .NET
+//! `DaemonState` и записи `/daemon/*` (их читает десктоп: `dotnet/src/Tasker.Daemon/DaemonStatus.cs`): что сейчас делает
+//! демон — процесс, порт, рабочие области; итог сверки `/daemon/sync`. JSON — `TaskerJson`: camelCase, enum строками, порядок свойств как у записей .NET
 //! (сначала параметры конструктора, затем свойства), null не пропускаются.
 use serde_json::{Value, json};
 use std::sync::Mutex;
@@ -310,9 +310,9 @@ impl DaemonState {
         *self.workers.lock().unwrap_or_else(|e| e.into_inner()) = workers;
     }
 
-    /// Этот рабочий процесс и его сборка. Отличие от .NET: до того, как супервизор узнает сборку из `ready` и разошлёт новый список
+    /// Этот рабочий процесс и его сборка. До того, как супервизор узнает сборку из `ready` и разошлёт новый список
     /// рабочих процессов, статус уже показывает сборку этого процесса — иначе `tasker mcp start`, вернувшийся сразу после открытия
-    /// областей, мог увидеть рабочий процесс с пустой сборкой (гонка есть и в .NET, там её прячет медленный запуск консоли).
+    /// областей, мог увидеть рабочий процесс с пустой сборкой.
     pub fn identify(&self, pid: u32, version: &str, build: &str) {
         *self.own.lock().unwrap_or_else(|e| e.into_inner()) = Some((i64::from(pid), version.to_string(), build.to_string()));
         let workers = self.workers();
@@ -367,7 +367,7 @@ pub fn mcp_url(port: i32) -> String {
     format!("http://127.0.0.1:{port}/mcp")
 }
 
-/// Сколько проблемных файлов показывается (`SyncResult.ProblemsShown`).
+/// Сколько проблемных файлов показывается.
 pub const PROBLEMS_SHOWN: usize = 10;
 
 /// Итог сверки области (`/daemon/sync`): файлы, которые не удалось прочитать, и состояние серий.
@@ -394,7 +394,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn status_json_has_the_shape_of_the_dotnet_record() {
+    fn status_json_has_the_shape_of_the_daemon_status_record() {
         let state = DaemonState::new(5719, 5719);
         state.set_workspaces(vec![
             WorkspaceStatus {

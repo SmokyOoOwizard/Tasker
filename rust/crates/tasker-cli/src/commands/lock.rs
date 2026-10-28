@@ -1,4 +1,4 @@
-//! `tasker lock …` и `tasker whoami` (`LockCommands` в .NET): блокировка на время правки (держатель — консоль) и имя,
+//! `tasker lock …` и `tasker whoami`: блокировка на время правки (держатель — консоль) и имя,
 //! которое другие видят в блокировках.
 use super::{find_board, find_enum, find_field, find_link_type, find_series, find_status, find_status_set, find_task_type};
 use crate::context::Context;

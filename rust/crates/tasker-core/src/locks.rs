@@ -121,7 +121,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn entity_names_round_trip_like_dotnet_enums() {
+    fn entity_names_round_trip_by_name_and_number() {
         for entity in LockedEntity::ALL {
             assert_eq!(LockedEntity::parse(entity.name()), Some(entity));
         }
@@ -133,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn locked_message_matches_dotnet() {
+    fn locked_message_text() {
         let held = EditLock {
             entity: LockedEntity::Task,
             id: Uuid::nil(),

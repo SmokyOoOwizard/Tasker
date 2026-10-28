@@ -5,7 +5,7 @@
 #   scripts/release.sh [--rid RID[,RID...]|local|all] [--version X.Y.Z] [--out DIR] [--builder auto|cargo|zigbuild|docker]
 #                      [--glibc X.Y] [--no-archive] [--keep-work]
 #
-# Платформы (RID, имена архивов те же, что у прежних .NET-релизов — на них опираются установщики) и цели Rust:
+# Платформы (RID — имя платформы в имени архива, на него опираются установщики) и цели Rust:
 #   osx-arm64 aarch64-apple-darwin          osx-x64 x86_64-apple-darwin
 #   linux-x64 x86_64-unknown-linux-gnu      linux-arm64 aarch64-unknown-linux-gnu        (glibc не новее --glibc, по умолчанию 2.28)
 #   linux-musl-x64 x86_64-unknown-linux-musl  linux-musl-arm64 aarch64-unknown-linux-musl  (статические: Alpine и любой Linux)
@@ -98,7 +98,6 @@ while [ $# -gt 0 ]; do
       GLIBC="$2"
       shift 2
       ;;
-    --no-r2r) echo "Warning: --no-r2r is ignored: ReadyToRun was a .NET option, the release is built with cargo now" >&2; shift ;;
     --no-archive) ARCHIVE=false; shift ;;
     --keep-work) KEEP_WORK=true; shift ;;
     -h|--help) usage; exit 0 ;;

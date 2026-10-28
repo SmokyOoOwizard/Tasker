@@ -1,4 +1,4 @@
-//! Параметры полей у `task create` и `task update` (`TaskFieldOptions` в .NET): значения (`--field Имя=значение`), поля из
+//! Параметры полей у `task create` и `task update`: значения (`--field Имя=значение`), поля из
 //! каталога без значений (`--add-field`), собственные поля задачи (`--custom-field`) и, при правке, снятие полей (`--remove-field`).
 use super::find_enum;
 use crate::context::Context;

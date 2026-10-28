@@ -1,9 +1,9 @@
-//! Декларативное дерево команд `tasker` — та же структура, что `CliApp.BuildRoot` и `Commands/*.cs` в .NET: имена, псевдонимы,
+//! Декларативное дерево команд `tasker`: имена, псевдонимы,
 //! описания, аргументы и параметры в порядке объявления. По нему строится дерево clap ([`CommandSpec::to_clap`]) и печатается
 //! справка в формате System.CommandLine ([`crate::help`]); подсказки значений в справке (`<R&D|Баг|Фича>`) — [`Hint`], они
 //! берутся из текущей области ([`crate::hints`]).
 //!
-//! Глобальные параметры (`GlobalOptions`) лежат у корня и принимаются в любом месте строки; у каждой команды в справке они идут
+//! Глобальные параметры лежат у корня и принимаются в любом месте строки; у каждой команды в справке они идут
 //! после её собственных параметров.
 use clap::{Arg, ArgAction, Command};
 
@@ -22,7 +22,7 @@ pub enum ValueKind {
     Int,
 }
 
-/// Откуда System.CommandLine берёт подсказку значения параметра в справке (`<a|b>`): источники автодополнения .NET (`Sources`).
+/// Откуда System.CommandLine берёт подсказку значения параметра в справке (`<a|b>`): источники автодополнения.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Hint {
     /// Источника нет: печатается имя параметра — `<name>`.
@@ -33,18 +33,18 @@ pub enum Hint {
     Fixed(&'static [&'static str]),
     /// Имена проектов области.
     Projects,
-    /// Статусы проекта; если в строке набран `--type`, — только статусы наборов этих типов (`Sources.TaskStatuses`).
+    /// Статусы проекта; если в строке набран `--type`, — только статусы наборов этих типов.
     Statuses,
     StatusSets,
     TaskTypes,
-    /// Префиксы серий (`Sources.Series`).
+    /// Префиксы серий.
     SeriesPrefixes,
     /// Ссылки на задачи: без набранного слова — префиксы серий с дефисом (`TSK-`).
     TaskRefs,
     HierarchicalLinkTypes,
-    /// Имена полей каталога с `=` (`Sources.FieldValues`).
+    /// Имена полей каталога с `=`.
     FieldEquals,
-    /// Имена полей каталога (`Sources.Fields`, `Sources.TypeFields`).
+    /// Имена полей каталога.
     FieldNames,
     Enums,
     /// Ключи `--sort`: встроенные и имена полей, каждый также с `-`.
@@ -185,7 +185,7 @@ impl OptSpec {
         spec
     }
 
-    /// `Kit.Many`: повторяемый параметр, принимающий несколько значений подряд.
+    /// Повторяемый параметр, принимающий несколько значений подряд.
     pub const fn many(name: &'static str, description: &'static str) -> OptSpec {
         let mut spec = Self::repeated(name, description);
         if let OptKind::Value { per_token, .. } = &mut spec.kind {
@@ -360,7 +360,7 @@ impl OptSpec {
     }
 }
 
-// ---- глобальные параметры (GlobalOptions) ----
+// ---- глобальные параметры ----
 
 pub const HELP_OPTION: OptSpec = OptSpec {
     name: "--help",
@@ -378,7 +378,7 @@ pub const VERSION_OPTION: OptSpec = OptSpec {
     hidden: false,
 };
 
-/// Общие параметры всех команд в порядке `GlobalOptions.AddTo`.
+/// Общие параметры всех команд в порядке справки.
 pub const GLOBAL_OPTIONS: [OptSpec; 8] = [
     OptSpec::value(
         "--workspace",
@@ -424,7 +424,7 @@ pub fn clap_root(spec: &CommandSpec) -> Command {
     command
 }
 
-// ---- дерево команд (Commands/*.cs) ----
+// ---- дерево команд ----
 
 const ID_OR_NAME: &str = "id-or-name";
 
@@ -486,7 +486,7 @@ fn entity_description_length(what: &'static str) -> OptSpec {
         .hint(Hint::None)
 }
 
-/// `Kit.Paging`: `--offset`, `--limit`, `--all`.
+/// Страницы списка: `--offset`, `--limit`, `--all`.
 fn paging() -> [OptSpec; 3] {
     [
         OptSpec::value("--offset", "How many to skip").int().default("0"),
@@ -1143,8 +1143,8 @@ fn manual() -> CommandSpec {
     .hint(Hint::Fixed(MANUAL_LANGUAGES))])
 }
 
-/// Оболочки `completion` (`Shells.AcceptedNames`).
-/// Порядок `Shells.AcceptedNames`: так их перечисляет ошибка «not recognized» (справка сортирует сама).
+/// Оболочки `completion`.
+/// Порядок важен: так их перечисляет ошибка «not recognized» (справка сортирует сама).
 pub const SHELLS: &[&str] = &["zsh", "bash", "pwsh", "powershell"];
 
 fn completion() -> CommandSpec {
@@ -1237,7 +1237,7 @@ fn mcp() -> CommandSpec {
     ])
 }
 
-/// Корень `tasker` со всеми командами в порядке `CliApp.BuildRoot`.
+/// Корень `tasker` со всеми командами в порядке справки.
 pub fn root() -> CommandSpec {
     CommandSpec::new("tasker", ROOT_DESCRIPTION).subs([
         project(),
