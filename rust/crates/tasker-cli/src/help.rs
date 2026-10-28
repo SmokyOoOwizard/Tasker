@@ -4,7 +4,7 @@
 //! в терминал (при перенаправлении — без переноса). Эталоны — `tests/golden/expected/cli/*help-*`.
 //!
 //! Здесь же — подсказки при опечатке (`TypoCorrection`: расстояние Левенштейна не больше трёх) и тексты ошибок разбора.
-use crate::spec::{ArgSpec, Arity, CommandSpec, GLOBAL_OPTIONS, HELP_OPTION, Hint, OptKind, OptSpec, VERSION_OPTION};
+use crate::spec::{ArgSpec, Arity, CommandSpec, GLOBAL_OPTIONS, HELP_OPTION, Hint, INTERACTIVE_OPTION, OptKind, OptSpec, VERSION_OPTION};
 
 const INDENT: &str = "  ";
 
@@ -53,6 +53,7 @@ pub fn options_of<'a>(path: &[&'a CommandSpec]) -> Vec<&'a OptSpec> {
     let mut options: Vec<&OptSpec> = Vec::new();
     if path.len() == 1 {
         options.extend(GLOBAL_OPTIONS.iter());
+        options.push(&INTERACTIVE_OPTION);
         options.push(&HELP_OPTION);
         options.push(&VERSION_OPTION);
     } else {

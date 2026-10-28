@@ -370,6 +370,14 @@ pub const HELP_OPTION: OptSpec = OptSpec {
     hidden: false,
 };
 
+pub const INTERACTIVE_OPTION: OptSpec = OptSpec {
+    name: "--interactive",
+    aliases: &["-i"],
+    description: "Interactive mode: a menu in the terminal to create, change and delete entities step by step (no command after it)",
+    kind: OptKind::Flag,
+    hidden: false,
+};
+
 pub const VERSION_OPTION: OptSpec = OptSpec {
     name: "--version",
     aliases: &[],
@@ -418,6 +426,7 @@ pub fn clap_root(spec: &CommandSpec) -> Command {
     let mut command = spec.to_clap().no_binary_name(false);
     command = command.arg(HELP_OPTION.clap_arg().global(true));
     command = command.arg(VERSION_OPTION.clap_arg());
+    command = command.arg(INTERACTIVE_OPTION.clap_arg());
     for option in GLOBAL_OPTIONS {
         command = command.arg(option.clap_arg().global(true));
     }
@@ -515,7 +524,7 @@ const CHANGED_DESCRIPTION: OptSpec = OptSpec::value("--description", "New descri
     .aliases(&["-d"])
     .hint(Hint::None);
 
-const FIELD_TYPES: &[&str] = &["bool", "date", "enum", "float", "int", "string"];
+pub const FIELD_TYPES: &[&str] = &["bool", "date", "enum", "float", "int", "string"];
 
 const TASK_REFERENCE: ArgSpec = ArgSpec::new("task", "Task: id or reference like TSK-5");
 

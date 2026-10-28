@@ -90,7 +90,7 @@ pub fn run(ctx: &mut Context<'_>, command: &str, leaf: &ArgMatches) -> Result<()
 }
 
 /// Что пропадёт вместе с проектом; нулевые количества не показываются.
-fn summary(name: &str, stats: &ProjectStats) -> String {
+pub fn summary(name: &str, stats: &ProjectStats) -> String {
     let parts: Vec<String> = [
         (stats.tasks, "task", "tasks"),
         (stats.boards, "board", "boards"),

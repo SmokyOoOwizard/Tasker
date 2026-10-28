@@ -14,6 +14,7 @@ pub mod entities;
 pub mod errors;
 pub mod help;
 pub mod hints;
+pub mod interactive;
 pub mod json;
 pub mod kit;
 pub mod migrate;
