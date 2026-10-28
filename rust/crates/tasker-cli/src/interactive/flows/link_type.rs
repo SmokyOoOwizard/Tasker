@@ -88,6 +88,7 @@ pub fn run(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
             argv.extend(w.expected_version(&chosen));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let link_type = w.select("Link type", super::link_type_items(w, &project)?)?;
             super::confirm_delete(w, "link type", &link_type.label)?;

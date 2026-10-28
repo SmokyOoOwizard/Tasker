@@ -17,6 +17,7 @@ pub fn run(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
             argv.extend(w.expected_version(&project));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let project = w.select("Project", projects(w)?)?;
             let id = tasker_core::ids::parse_guid(&project.key).ok_or_else(|| CliError::new("Bad project id"))?;

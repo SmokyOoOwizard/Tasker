@@ -166,6 +166,7 @@ pub fn run(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
     match action {
         Action::Create => create(w, &project),
         Action::Change => change(w, &project),
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let task = w.select("Task", super::tasks(w, &project)?)?;
             super::confirm_delete(w, "task", &task.label)?;

@@ -56,6 +56,7 @@ pub fn run_status(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> 
             argv.extend(w.expected_version(&chosen));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let status = w.select("Status", super::statuses(w, &project)?)?;
             super::confirm_delete(w, "status", &status.label)?;
@@ -110,6 +111,7 @@ pub fn run_status_set(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<Strin
             argv.extend(w.expected_version(&chosen));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let set = w.select("Status set", super::status_sets(w, &project)?)?;
             super::confirm_delete(w, "status set", &set.label)?;

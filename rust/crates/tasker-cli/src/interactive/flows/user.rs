@@ -1,6 +1,7 @@
 use super::super::app::Action;
 use super::super::step::{Check, Item};
 use super::super::wizard::{Steps, Wizard, cmd};
+use crate::errors::CliError;
 use tasker_core::ids::guid_d;
 use tasker_core::model::UserKind;
 
@@ -18,6 +19,7 @@ pub fn run(w: &mut Wizard<'_, '_>, action: Action, agent: bool) -> Steps<Vec<Str
             argv.extend(w.expected_version(&user));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let user = w.select(group, users(w, agent)?)?;
             super::confirm_delete(w, group, &user.label)?;

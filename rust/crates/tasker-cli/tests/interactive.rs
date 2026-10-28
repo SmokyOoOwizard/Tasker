@@ -385,13 +385,13 @@ fn the_menu_opens_and_q_or_ctrl_c_quits_with_code_0() {
     let mut tui = start(&root, &workspace);
     let screen = tui.wait_for("What to do");
     assert!(screen.contains("project: Golden"), "{screen}");
-    assert!(screen.contains("› Create"), "{screen}");
+    assert!(screen.contains("› Browse"), "{screen}");
     assert!(screen.contains("Switch project"), "{screen}");
     tui.send(DOWN);
-    tui.wait_for("› Change");
+    tui.wait_for("› Create");
     tui.send(ESC);
     std::thread::sleep(Duration::from_millis(100));
-    assert!(tui.screen().contains("› Change"), "Esc at the top menu does nothing");
+    assert!(tui.screen().contains("› Create"), "Esc at the top menu does nothing");
     assert_eq!(tui.quit(), 0);
 
     let mut tui = start(&root, &workspace);
@@ -419,7 +419,7 @@ fn with_several_projects_the_session_starts_by_choosing_one_and_the_menu_can_swi
     tui.send(ENTER);
     let screen = tui.wait_for("What to do");
     assert!(screen.contains("project: Legacy"), "{screen}");
-    tui.pick("What to do", &DOWN.repeat(3), "Switch project");
+    tui.pick("What to do", &DOWN.repeat(4), "Switch project");
     tui.pick("Choose a project", "gol", "Golden");
     let screen = tui.wait_for("project: Golden");
     assert!(screen.contains("now: Golden"), "{screen}");
@@ -432,7 +432,7 @@ fn esc_goes_one_step_back_keeping_the_typed_value_and_cancels_without_changes() 
     let (root, workspace) = fresh_copy();
     let before = files(&workspace.join(".tasker"));
     let mut tui = start(&root, &workspace);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "status", "Status");
     tui.type_text("Status name", "Draft");
     tui.wait_for("Color (#RRGGBB)");
@@ -443,7 +443,7 @@ fn esc_goes_one_step_back_keeping_the_typed_value_and_cancels_without_changes() 
     tui.wait_for("Create what");
     tui.send(ESC);
     tui.wait_for("What to do");
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "status", "Status");
     tui.pick("Status", "back", "Backlog");
     let screen = tui.wait_for("Delete status 'Backlog'?");
@@ -461,7 +461,7 @@ fn esc_goes_one_step_back_keeping_the_typed_value_and_cancels_without_changes() 
 fn a_version_conflict_shows_the_same_text_as_the_command_and_r_retries_with_the_current_data() {
     let (root, workspace) = fresh_copy();
     let mut tui = start(&root, &workspace);
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "status", "Status");
     tui.pick("Status", "back", "Backlog");
     tui.pick("What to change", "", "Name");
@@ -499,7 +499,7 @@ fn a_version_conflict_shows_the_same_text_as_the_command_and_r_retries_with_the_
 fn an_error_of_the_command_is_shown_and_the_steps_stay_to_fix_it() {
     let (root, workspace) = fresh_copy();
     let mut tui = start(&root, &workspace);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "series", "Series");
     tui.type_text("Series name", "Second");
     tui.type_text("Prefix", "GLD");
@@ -532,18 +532,18 @@ fn get(root: &Path, workspace: &Path, args: &[&str]) -> Run {
 fn project_user_and_agent_are_created_renamed_and_deleted() {
     let (root, workspace) = fresh_copy();
     let mut tui = start(&root, &workspace);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "proj", "Project");
     tui.type_text("Project name", "Sandbox");
     tui.done("Created project 'Sandbox'");
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "proj", "Project");
     tui.pick("Project", "sand", "Sandbox");
     tui.wait_for("> Sandbox");
     tui.send(" 2");
     tui.send(ENTER);
     tui.done("Updated project 'Sandbox 2'");
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "proj", "Project");
     tui.pick("Project", "sand", "Sandbox 2");
     let screen = tui.wait_for("Delete project 'Sandbox 2'?");
@@ -552,18 +552,18 @@ fn project_user_and_agent_are_created_renamed_and_deleted() {
     tui.done("Deleted project 'Sandbox 2'");
 
     for (kind, filter) in [("User", "user"), ("Agent", "agent")] {
-        tui.pick("What to do", "", "Create");
+        tui.pick("What to do", DOWN, "Create");
         tui.pick("Create what", filter, kind);
         tui.type_text(&format!("{kind} name"), "robot");
         tui.done(&format!("Created {filter} 'robot'"));
-        tui.pick("What to do", DOWN, "Change");
+        tui.pick("What to do", &DOWN.repeat(2), "Change");
         tui.pick("Change what", filter, kind);
         tui.pick(filter, "rob", "robot");
         tui.wait_for("> robot");
         tui.send("2");
         tui.send(ENTER);
         tui.done(&format!("Updated {filter} 'robot2'"));
-        tui.pick("What to do", &DOWN.repeat(2), "Delete");
+        tui.pick("What to do", &DOWN.repeat(3), "Delete");
         tui.pick("Delete what", filter, kind);
         tui.pick(filter, "rob", "robot2");
         tui.wait_for(&format!("Delete {filter} 'robot2'?"));
@@ -581,7 +581,7 @@ fn status_and_status_set_flows() {
     let (root, workspace) = fresh_copy();
     let editor = fake_editor(&root, "Needs a look\nsecond line\n");
     let mut tui = Tui::start(&root, &workspace, &["-p", "Golden"], &[("EDITOR", editor.to_str().unwrap())]);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "status", "Status");
     tui.type_text("Status name", "Review");
     tui.type_text("Color (#RRGGBB)", "#112233");
@@ -597,7 +597,7 @@ fn status_and_status_set_flows() {
         run.stdout
     );
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "status", "Status");
     tui.pick("Status", "rev", "Review");
     tui.pick("What to change", DOWN, "Color");
@@ -608,7 +608,7 @@ fn status_and_status_set_flows() {
     let run = get(&root, &workspace, &["status", "get", "Review"]);
     assert!(run.stdout.contains("color:        #445566\n"), "{}", run.stdout);
 
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "status set", "Status set");
     tui.type_text("Status set name", "Flow");
     tui.wait_for("Statuses of the set");
@@ -624,7 +624,7 @@ fn status_and_status_set_flows() {
         run.stdout
     );
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "status set", "Status set");
     tui.pick("Status set", "flow", "Flow");
     tui.pick("What to change", "", "Name");
@@ -633,13 +633,13 @@ fn status_and_status_set_flows() {
     tui.send(ENTER);
     tui.done("Updated status set 'Flow2'");
 
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "status set", "Status set");
     tui.pick("Status set", "flow", "Flow2");
     tui.wait_for("Delete status set 'Flow2'?");
     tui.send("y");
     tui.done("Deleted status set 'Flow2'");
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "status", "Status");
     tui.pick("Status", "rev", "Review");
     tui.wait_for("Delete status 'Review'?");
@@ -655,7 +655,7 @@ fn status_and_status_set_flows() {
 fn task_type_link_type_and_series_flows() {
     let (root, workspace) = fresh_copy();
     let mut tui = start(&root, &workspace);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "task type", "Task type");
     tui.type_text("Task type name", "Chore");
     tui.pick("Status set of the type", "main", "Main");
@@ -673,7 +673,7 @@ fn task_type_link_type_and_series_flows() {
         run.stdout
     );
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task type", "Task type");
     tui.pick("Task type", "chore", "Chore");
     tui.pick("What to change", "attach", "Attach a field");
@@ -683,7 +683,7 @@ fn task_type_link_type_and_series_flows() {
     let run = get(&root, &workspace, &["task-type", "get", "Chore"]);
     assert!(run.stdout.contains("  Tags (string[], required)\n"), "{}", run.stdout);
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task type", "Task type");
     tui.pick("Task type", "chore", "Chore");
     tui.pick("What to change", "detach", "Detach a field");
@@ -693,14 +693,14 @@ fn task_type_link_type_and_series_flows() {
     let run = get(&root, &workspace, &["task-type", "get", "Chore"]);
     assert!(!run.stdout.contains("Estimate"), "{}", run.stdout);
 
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "task type", "Task type");
     tui.pick("Task type", "chore", "Chore");
     tui.wait_for("Delete task type 'Chore'?");
     tui.send("y");
     tui.done("Deleted task type 'Chore'");
 
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "link type", "Link type");
     tui.type_text("Link type name", "Needs");
     tui.type_text("Outward name", "needs");
@@ -715,7 +715,7 @@ fn task_type_link_type_and_series_flows() {
         run.stdout
     );
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "link type", "Link type");
     tui.pick("Link type", "needs", "Needs");
     tui.pick("What to change", "cycles", "Cycles allowed");
@@ -724,19 +724,19 @@ fn task_type_link_type_and_series_flows() {
     let run = get(&root, &workspace, &["link-type", "get", "Needs"]);
     assert!(run.stdout.contains("allowCycles:  False\n"), "{}", run.stdout);
 
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "link type", "Link type");
     tui.pick("Link type", "needs", "Needs");
     tui.wait_for("Delete link type 'Needs'?");
     tui.send(ENTER);
     tui.done("Deleted link type 'Needs'");
 
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "series", "Series");
     tui.type_text("Series name", "Temp");
     tui.type_text("Prefix", "TMP");
     tui.done("Created series 'Temp' (TMP)");
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "series", "Series");
     tui.pick("Series", "tmp", "TMP");
     tui.pick("What to change", "", "Name");
@@ -744,7 +744,7 @@ fn task_type_link_type_and_series_flows() {
     tui.send("2");
     tui.send(ENTER);
     tui.done("Updated series 'Temp2' (TMP)");
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "series", "Series");
     tui.pick("Series", "tmp", "TMP");
     tui.wait_for("Delete series 'Temp2' (TMP)?");
@@ -761,7 +761,7 @@ fn field_enum_and_board_flows() {
     let (root, workspace) = fresh_copy();
     let editor = fake_editor(&root, "S\nM\nL\n");
     let mut tui = Tui::start(&root, &workspace, &["-p", "Golden"], &[("EDITOR", editor.to_str().unwrap())]);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "enum", "Enum");
     tui.type_text("Enum name", "Size");
     tui.wait_for("Values, one per line");
@@ -776,7 +776,7 @@ fn field_enum_and_board_flows() {
         run.stdout
     );
 
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "field", "Field");
     tui.type_text("Field name", "Shirt");
     tui.pick("Type of the value", "enum", "enum");
@@ -786,20 +786,20 @@ fn field_enum_and_board_flows() {
     let run = get(&root, &workspace, &["field", "list"]);
     assert!(run.stdout.contains("Shirt        enum Size"), "{}", run.stdout);
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "enum", "Enum");
     tui.pick("Enum", "size", "Size");
     tui.pick("What to change", "add", "Add a value");
     tui.type_text("New value", "XL");
     tui.done("Updated enum 'Size'");
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "enum", "Enum");
     tui.pick("Enum", "size", "Size");
     tui.pick("What to change", "rename", "Rename a value");
     tui.pick("Value to rename", "S", "S");
     tui.type_text("New name of the value", "Small");
     tui.done("Updated enum 'Size'");
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "enum", "Enum");
     tui.pick("Enum", "size", "Size");
     tui.pick("What to change", "remove", "Remove a value");
@@ -809,7 +809,7 @@ fn field_enum_and_board_flows() {
     let run = get(&root, &workspace, &["enum", "get", "Size"]);
     assert!(run.stdout.contains("  Small  ") && !run.stdout.contains("XL"), "{}", run.stdout);
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "field", "Field");
     tui.pick("Field", "shirt", "Shirt");
     tui.pick("What to change", "", "Name");
@@ -817,13 +817,13 @@ fn field_enum_and_board_flows() {
     tui.send("2");
     tui.send(ENTER);
     tui.done("Updated field 'Shirt2'");
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "field", "Field");
     tui.pick("Field", "shirt", "Shirt2");
     tui.wait_for("Delete field 'Shirt2'?");
     tui.send("y");
     tui.done("Deleted field 'Shirt2'");
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "enum", "Enum");
     tui.pick("Enum", "size", "Size");
     tui.wait_for("Delete enum 'Size'?");
@@ -833,7 +833,7 @@ fn field_enum_and_board_flows() {
     let columns = fake_editor(&root, "Todo=Backlog\nDoing=In Progress\nFinished=Done\n");
     assert_eq!(tui.quit(), 0);
     let mut tui = Tui::start(&root, &workspace, &["-p", "Golden"], &[("EDITOR", columns.to_str().unwrap())]);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "board", "Board");
     tui.type_text("Board name", "Kanban");
     tui.wait_for("Status sets whose tasks are on the board");
@@ -846,7 +846,7 @@ fn field_enum_and_board_flows() {
     tui.done("Created board 'Kanban'");
     let run = get(&root, &workspace, &["board", "get", "Kanban"]);
     assert!(run.stdout.contains("Finished") && run.stdout.contains("Doing"), "{}", run.stdout);
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "board", "Board");
     tui.pick("Board", "kanban", "Kanban");
     tui.pick("What to change", "", "Name");
@@ -854,7 +854,7 @@ fn field_enum_and_board_flows() {
     tui.send("2");
     tui.send(ENTER);
     tui.done("Updated board 'Kanban2'");
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "board", "Board");
     tui.pick("Board", "kanban", "Kanban2");
     tui.wait_for("Delete board 'Kanban2'?");
@@ -868,7 +868,7 @@ fn field_enum_and_board_flows() {
 fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     let (root, workspace) = fresh_copy();
     let mut tui = start(&root, &workspace);
-    tui.pick("What to do", "", "Create");
+    tui.pick("What to do", DOWN, "Create");
     tui.pick("Create what", "task", "Task");
     tui.type_text("Task title", "New bug");
     tui.pick("Task type", "bug", "Bug");
@@ -903,7 +903,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
         run.stdout
     );
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug");
     tui.pick("What to change", "", "Title");
@@ -912,14 +912,14 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     tui.send(ENTER);
     tui.done("Updated task 'New bug 2'");
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "status", "Status");
     tui.pick("New status", "progress", "In Progress");
     tui.done("Updated task 'New bug 2'");
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "field", "Value of a field");
@@ -935,7 +935,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
         run.stdout
     );
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "parents", "Parents");
@@ -945,7 +945,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     tui.done("Updated task 'New bug 2'");
     let run = get(&root, &workspace, &["task", "links", &reference]);
     assert!(run.stdout.contains("is part of  GLD-1"), "{}", run.stdout);
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "parents", "Parents");
@@ -955,7 +955,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     let run = get(&root, &workspace, &["task", "links", &reference]);
     assert!(!run.stdout.contains("GLD-1"), "{}", run.stdout);
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "links", "Links");
@@ -965,7 +965,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     tui.done("Linked:");
     let run = get(&root, &workspace, &["task", "links", &reference]);
     assert!(run.stdout.contains("blocks  GLD-2"), "{}", run.stdout);
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "links", "Links");
@@ -973,14 +973,14 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     tui.pick("Link to remove", "blocks", "blocks GLD-2");
     tui.done("Unlinked:");
 
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "series", "Series");
     tui.pick("Series", DOWN, "Remove from a series");
     tui.pick("Series to remove the task from", "bug", "BUG");
     tui.done("Removed");
-    tui.pick("What to do", DOWN, "Change");
+    tui.pick("What to do", &DOWN.repeat(2), "Change");
     tui.pick("Change what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "series", "Series");
@@ -999,7 +999,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
         .unwrap()
         .to_string();
 
-    tui.pick("What to do", &DOWN.repeat(2), "Delete");
+    tui.pick("What to do", &DOWN.repeat(3), "Delete");
     tui.pick("Delete what", "task", "Task");
     tui.pick("Task", "new bug", "New bug 2");
     tui.wait_for("Delete task '");
@@ -1008,5 +1008,68 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     assert_eq!(tui.quit(), 0);
     let run = tasker(&root, &["task", "get", &reference, "-w", &ws(&workspace), "-p", "Golden"]);
     assert_eq!(run.code, 1, "{}", run.stdout);
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
+    let (root, workspace) = fresh_copy();
+    let mut tui = start(&root, &workspace);
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "task", "Task");
+    tui.pick("Tasks: what to show", "list", "List with filters");
+    tui.wait_for("Only these task types");
+    tui.send(ENTER);
+    tui.wait_for("Only these statuses");
+    tui.mark("done", "Done", 1);
+    tui.send(ENTER);
+    tui.wait_for("Only these series");
+    tui.send(ENTER);
+    tui.type_text("Field conditions", "");
+    tui.type_text("Sort (optional)", "-created");
+    tui.pick("Shape of the list", "flat", "Flat");
+    let screen = tui.done("Found ");
+    assert!(
+        screen.contains("GLD-1") && screen.contains("Plain task") && !screen.contains("Backlog"),
+        "{screen}"
+    );
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "task", "Task");
+    tui.pick("Tasks: what to show", "card", "Card of a task");
+    tui.pick("Task", "plain task", "GLD-1  Plain task");
+    let screen = tui.done("title:        Plain task");
+    assert!(screen.contains("Updated description"), "{screen}");
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "board", "Board");
+    tui.pick("Boards: what to show", "whole", "Whole board");
+    tui.pick("Board", "main", "Main board");
+    let screen = tui.done("Todo");
+    assert!(screen.contains("Doing") && screen.contains("Done"), "{screen}");
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "board", "Board");
+    tui.pick("Boards: what to show", "one col", "One column");
+    tui.pick("Board", "main", "Main board");
+    tui.pick("Column", "doing", "Doing");
+    tui.done("Found ");
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "series", "Series");
+    tui.pick("Series: what to show", "list", "List");
+    let screen = tui.done("Found 2");
+    assert!(screen.contains("GLD") && screen.contains("BUG"), "{screen}");
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "status", "Status");
+    tui.pick("Status: what to show", "card", "Card of one");
+    tui.pick("Status", "backlog", "Backlog");
+    tui.done("name:         Backlog");
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "user", "User");
+    tui.done("Found ");
+    assert_eq!(tui.quit(), 0);
     std::fs::remove_dir_all(&root).unwrap();
 }

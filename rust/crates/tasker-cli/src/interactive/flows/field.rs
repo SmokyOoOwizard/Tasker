@@ -107,6 +107,7 @@ pub fn run_field(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
             argv.extend(w.expected_version(&chosen));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let field = w.select("Field", super::fields(w, &project)?)?;
             super::confirm_delete(w, "field", &field.label)?;
@@ -197,6 +198,7 @@ pub fn run_enum(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
             argv.extend(w.expected_version(&chosen));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let e = w.select("Enum", super::enums(w, &project)?)?;
             super::confirm_delete(w, "enum", &e.label)?;

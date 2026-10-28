@@ -97,6 +97,7 @@ pub fn run(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
             argv.extend(w.expected_version(&chosen));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let board = w.select("Board", super::boards(w, &project)?)?;
             super::confirm_delete(w, "board", &board.label)?;

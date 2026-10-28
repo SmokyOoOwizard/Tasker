@@ -7,6 +7,7 @@ use tasker_core::model::Project;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
+    View,
     Create,
     Change,
     Delete,
@@ -15,6 +16,7 @@ pub enum Action {
 impl Action {
     pub fn label(self) -> &'static str {
         match self {
+            Action::View => "Browse",
             Action::Create => "Create",
             Action::Change => "Change",
             Action::Delete => "Delete",
@@ -170,9 +172,9 @@ impl App {
             quit: false,
             page: 10,
         };
-        app.enter(Flow::Menu);
+        let _ = app.enter(Flow::Menu);
         if app.project.is_none() && app.session.all_projects().map(|p| p.len() > 1).unwrap_or(false) {
-            app.enter(Flow::SwitchProject);
+            let _ = app.enter(Flow::SwitchProject);
         }
         app
     }
@@ -227,6 +229,7 @@ impl App {
                 let choice = wizard.plain_menu(
                     "What to do",
                     vec![
+                        Item::new("browse", "Browse").detail("lists with filters, cards, boards"),
                         Item::new("create", "Create")
                             .detail("a project, task, status, set, type, series, field, enum, board, link type, user or agent"),
                         Item::new("change", "Change").detail("the same entities"),
@@ -241,6 +244,7 @@ impl App {
                     ],
                 )?;
                 Ok(match choice.key.as_str() {
+                    "browse" => Next::Enter(Flow::Kinds(Action::View)),
                     "create" => Next::Enter(Flow::Kinds(Action::Create)),
                     "change" => Next::Enter(Flow::Kinds(Action::Change)),
                     "delete" => Next::Enter(Flow::Kinds(Action::Delete)),
@@ -270,28 +274,36 @@ impl App {
         }
     }
 
-    fn enter(&mut self, flow: Flow) {
+    fn enter(&mut self, flow: Flow) -> Effect {
+        let push = |app: &mut App, spec: StepSpec| {
+            let state = StepState::from_spec(&spec);
+            app.frames.push(Frame {
+                flow,
+                answers: Vec::new(),
+                spec,
+                state,
+            });
+        };
         match self.next(flow, &[], false) {
-            Ok(Next::Step(spec)) => {
-                let state = StepState::from_spec(&spec);
-                self.frames.push(Frame {
-                    flow,
-                    answers: Vec::new(),
-                    spec,
-                    state,
-                });
+            Ok(Next::Step(spec)) | Err(Pending::Step(spec)) => {
+                push(self, spec);
+                Effect::None
             }
-            Ok(_) => {}
-            Err(Pending::Step(spec)) => {
-                let state = StepState::from_spec(&spec);
-                self.frames.push(Frame {
-                    flow,
-                    answers: Vec::new(),
-                    spec,
-                    state,
-                });
+            Ok(Next::Run(argv)) => {
+                push(
+                    self,
+                    StepSpec::Confirm {
+                        title: flow.title(),
+                        text: String::new(),
+                    },
+                );
+                Effect::Run(self.with_globals(argv))
             }
-            Err(Pending::Failed(error)) => self.fail(error.text()),
+            Ok(_) => Effect::None,
+            Err(Pending::Failed(error)) => {
+                self.fail(error.text());
+                Effect::None
+            }
         }
     }
 
@@ -320,8 +332,7 @@ impl App {
             }
             Ok(Next::Enter(next)) => {
                 self.frames.last_mut().expect("a frame").answers = answers;
-                self.enter(next);
-                Effect::None
+                self.enter(next)
             }
             Ok(Next::Run(argv)) => {
                 self.frames.last_mut().expect("a frame").answers = answers;

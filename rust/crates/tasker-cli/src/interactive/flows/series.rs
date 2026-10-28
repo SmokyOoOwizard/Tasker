@@ -1,6 +1,7 @@
 use super::super::app::Action;
 use super::super::step::Check;
 use super::super::wizard::{Steps, Wizard, cmd};
+use crate::errors::CliError;
 
 pub fn run(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
     let project = w.project_id()?;
@@ -37,6 +38,7 @@ pub fn run(w: &mut Wizard<'_, '_>, action: Action) -> Steps<Vec<String>> {
             argv.extend(w.expected_version(&series));
             Ok(argv)
         }
+        Action::View => Err(CliError::new("Nothing to do").into()),
         Action::Delete => {
             let series = w.select("Series", super::series(w, &project)?)?;
             w.confirm(

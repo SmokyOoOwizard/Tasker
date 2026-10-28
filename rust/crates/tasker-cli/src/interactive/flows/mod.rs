@@ -7,6 +7,7 @@ mod status;
 mod task;
 mod task_type;
 mod user;
+mod view;
 
 use super::app::{Action, Kind};
 use super::step::Item;
@@ -19,6 +20,9 @@ use tasker_services::storage::Entity;
 use uuid::Uuid;
 
 pub fn run(w: &mut Wizard<'_, '_>, action: Action, kind: Kind) -> Steps<Vec<String>> {
+    if action == Action::View {
+        return view::run(w, kind);
+    }
     match kind {
         Kind::Project => project::run(w, action),
         Kind::Task => task::run(w, action),
