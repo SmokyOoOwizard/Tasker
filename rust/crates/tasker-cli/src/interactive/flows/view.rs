@@ -1,5 +1,5 @@
 use super::super::app::Kind;
-use super::super::step::{Check, Item};
+use super::super::step::{Chain, Check, Item, Section, SectionKind, StepSpec};
 use super::super::wizard::{Steps, Wizard, cmd};
 use crate::errors::CliError;
 use tasker_core::ids::guid_d;
@@ -17,6 +17,15 @@ const BUILT_IN_SORT_KEYS: [(&str, &str); 6] = [
 
 fn field_definitions(w: &Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<FieldDefinition>> {
     Ok(w.ctx.session.workspace().get_all::<FieldDefinition>(project)?)
+}
+
+fn select(title: &str, items: Vec<Item>) -> StepSpec {
+    StepSpec::Select {
+        title: title.to_string(),
+        items,
+        initial: None,
+        filterable: true,
+    }
 }
 
 fn comparisons(field_type: FieldType) -> Vec<Item> {
@@ -41,9 +50,9 @@ fn comparisons(field_type: FieldType) -> Vec<Item> {
     items
 }
 
-fn condition_value(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, field: &FieldDefinition) -> Steps<String> {
+fn value_of(w: &Wizard<'_, '_>, project: &uuid::Uuid, field: &FieldDefinition) -> Steps<StepSpec> {
     let title = format!("Value of {}", field.name);
-    match field.field_type {
+    Ok(match field.field_type {
         FieldType::Enum => {
             let enum_id = field
                 .enum_id
@@ -54,12 +63,9 @@ fn condition_value(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, field: &FieldDe
                 .workspace()
                 .get_by_id::<FieldEnum>(project, &enum_id)?
                 .ok_or_else(|| CliError::new(format!("No enum '{}'", guid_d(&enum_id))))?;
-            let items = e.values.iter().map(|v| Item::new(&v.name, &v.name)).collect();
-            Ok(w.select(&title, items)?.key)
+            select(&title, e.values.iter().map(|v| Item::new(&v.name, &v.name)).collect())
         }
-        FieldType::Bool => Ok(w
-            .menu(&title, vec![Item::new("true", "Yes (true)"), Item::new("false", "No (false)")])?
-            .key),
+        FieldType::Bool => select(&title, vec![Item::new("true", "Yes (true)"), Item::new("false", "No (false)")]),
         _ => {
             let (check, hint) = match field.field_type {
                 FieldType::Int => (Check::Int, "A whole number"),
@@ -67,114 +73,56 @@ fn condition_value(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, field: &FieldDe
                 FieldType::Date => (Check::Date, "A date as yyyy-MM-dd"),
                 _ => (Check::Required, "Text, compared as a whole"),
             };
-            w.text_with(&title, "", check, false, hint)
+            StepSpec::Text {
+                title,
+                initial: String::new(),
+                hint: hint.to_string(),
+                check,
+                allow_empty: false,
+            }
         }
-    }
+    })
 }
 
-fn conditions(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<String>> {
-    let definitions = field_definitions(w, project)?;
+fn condition_chain(w: &Wizard<'_, '_>, project: &uuid::Uuid, definitions: &[FieldDefinition]) -> Steps<Chain> {
     let enums = crate::commands::enum_names_of(w.ctx.session, project)?;
-    let mut conditions: Vec<String> = Vec::new();
-    loop {
-        let mut items: Vec<Item> = conditions
-            .iter()
-            .enumerate()
-            .map(|(at, c)| Item::new(format!("drop{at}"), c).detail("Enter removes this condition"))
-            .collect();
-        items.push(Item::new("add", "+ Add a condition").detail("a field, a comparison and a value"));
-        items.push(Item::new("done", "Done").detail(if conditions.is_empty() {
-            "no conditions"
-        } else {
-            "all conditions must hold"
-        }));
-        let what = w.menu("Field conditions", items)?;
-        match what.key.as_str() {
-            "done" => return Ok(conditions),
-            "add" => {
-                let choices = definitions
-                    .iter()
-                    .map(|f| Item::new(guid_d(&f.id), &f.name).detail(crate::commands::field_type_text(f, &enums)))
-                    .collect();
-                let chosen = w.select("Field", choices)?;
-                let field = definitions
-                    .iter()
-                    .find(|f| guid_d(&f.id) == chosen.key)
-                    .ok_or_else(|| CliError::new("No such field"))?;
-                let comparison = w.menu(&format!("Comparison for {}", field.name), comparisons(field.field_type))?;
-                let condition = if comparison.key.starts_with(':') {
-                    format!("{}{}", field.name, comparison.key)
-                } else {
-                    let value = condition_value(w, project, field)?;
-                    format!("{}{}{}", field.name, comparison.key, value)
-                };
-                conditions.push(condition);
-            }
-            key => {
-                if let Some(at) = key.strip_prefix("drop").and_then(|n| n.parse::<usize>().ok())
-                    && at < conditions.len()
-                {
-                    conditions.remove(at);
-                }
+    let fields = definitions
+        .iter()
+        .map(|f| Item::new(&f.name, &f.name).detail(crate::commands::field_type_text(f, &enums)))
+        .collect();
+    let mut chain = Chain::new(select("Field", fields));
+    for field in definitions {
+        let mut comparison = Chain::new(select(&format!("Comparison for {}", field.name), comparisons(field.field_type)));
+        let value = value_of(w, project, field)?;
+        for op in comparisons(field.field_type) {
+            if !op.key.starts_with(':') {
+                comparison = comparison.then(op.key, Chain::new(value.clone()));
             }
         }
+        chain = chain.then(&field.name, comparison);
     }
+    Ok(chain)
 }
 
-fn sort_keys(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<String>> {
-    let definitions = field_definitions(w, project)?;
-    let mut keys: Vec<String> = Vec::new();
-    loop {
-        let mut items: Vec<Item> = keys
+fn sort_chain(definitions: &[FieldDefinition]) -> Chain {
+    let mut keys: Vec<Item> = BUILT_IN_SORT_KEYS
+        .iter()
+        .map(|(key, detail)| Item::new(*key, *key).detail(*detail))
+        .collect();
+    keys.extend(
+        definitions
             .iter()
-            .enumerate()
-            .map(|(at, k)| {
-                let (name, direction) = match k.strip_prefix('-') {
-                    Some(name) => (name, "descending"),
-                    None => (k.as_str(), "ascending"),
-                };
-                Item::new(format!("drop{at}"), name).detail(format!("{direction}; Enter removes this key"))
-            })
-            .collect();
-        items.push(Item::new("add", "+ Add a key").detail("a built-in key or a field, ascending or descending"));
-        items.push(Item::new("done", "Done").detail(if keys.is_empty() {
-            "creation order"
-        } else {
-            "by the keys in this order"
-        }));
-        let what = w.menu("Sort", items)?;
-        match what.key.as_str() {
-            "done" => return Ok(keys),
-            "add" => {
-                let mut choices: Vec<Item> = BUILT_IN_SORT_KEYS
-                    .iter()
-                    .map(|(key, detail)| Item::new(*key, *key).detail(*detail))
-                    .collect();
-                choices.extend(
-                    definitions
-                        .iter()
-                        .map(|f| Item::new(&f.name, &f.name).detail(format!("field, {}", f.field_type.name()))),
-                );
-                let key = w.select("Sort key", choices)?;
-                let direction = w.menu(
-                    &format!("Direction for {}", key.label),
-                    vec![Item::new("asc", "Ascending"), Item::new("desc", "Descending")],
-                )?;
-                keys.push(if direction.key == "desc" {
-                    format!("-{}", key.key)
-                } else {
-                    key.key
-                });
-            }
-            key => {
-                if let Some(at) = key.strip_prefix("drop").and_then(|n| n.parse::<usize>().ok())
-                    && at < keys.len()
-                {
-                    keys.remove(at);
-                }
-            }
-        }
+            .map(|f| Item::new(&f.name, &f.name).detail(format!("field, {}", f.field_type.name()))),
+    );
+    let mut chain = Chain::new(select("Sort key", keys.clone()));
+    for key in keys {
+        let direction = select(
+            &format!("Direction for {}", key.label),
+            vec![Item::new("", "Ascending"), Item::new("-", "Descending")],
+        );
+        chain = chain.then(key.key, Chain::new(direction).prefix());
     }
+    chain
 }
 
 fn list_or_card(w: &mut Wizard<'_, '_>, kind: Kind, items: Vec<Item>, group: &str) -> Steps<Vec<String>> {
@@ -209,36 +157,78 @@ fn tasks(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<String>> {
         }
         _ => {}
     }
-    let types = w.multi("Only these task types (optional)", super::task_types(w, project)?, true)?;
-    let statuses = w.multi("Only these statuses (optional)", super::statuses(w, project)?, true)?;
-    let series = w.multi("Only these series (optional)", super::series(w, project)?, true)?;
-    let fields = conditions(w, project)?;
-    let sort = sort_keys(w, project)?;
-    let shape = w.menu(
-        "Shape of the list",
-        vec![
-            Item::new("tree", "Tree").detail("children under their parents"),
-            Item::new("flat", "Flat").detail("in the order of the sort"),
-        ],
-    )?;
+    let definitions = field_definitions(w, project)?;
+    let sections = vec![
+        Section::new(
+            "type",
+            "Task types",
+            "any",
+            SectionKind::Multi {
+                items: super::task_types(w, project)?,
+            },
+        ),
+        Section::new(
+            "status",
+            "Statuses",
+            "any",
+            SectionKind::Multi {
+                items: super::statuses(w, project)?,
+            },
+        ),
+        Section::new(
+            "series",
+            "Series",
+            "any",
+            SectionKind::Multi {
+                items: super::series(w, project)?,
+            },
+        ),
+        Section::new(
+            "field",
+            "Field conditions",
+            "none",
+            SectionKind::List {
+                add: condition_chain(w, project, &definitions)?,
+                add_label: "Add a condition".to_string(),
+            },
+        ),
+        Section::new(
+            "sort",
+            "Sort",
+            "creation order",
+            SectionKind::List {
+                add: sort_chain(&definitions),
+                add_label: "Add a key".to_string(),
+            },
+        ),
+        Section::new(
+            "shape",
+            "Shape",
+            "tree",
+            SectionKind::Single {
+                items: vec![
+                    Item::new("tree", "Tree").detail("children under their parents"),
+                    Item::new("flat", "Flat").detail("in the order of the sort"),
+                ],
+            },
+        )
+        .values(vec!["tree".to_string()]),
+    ];
+    let settings = w.form("List settings", sections, "Show the list")?;
     let mut argv = cmd!["task", "list", "--all"];
-    for t in &types {
-        argv.extend(cmd!["--type", t.key]);
-    }
-    for s in &statuses {
-        argv.extend(cmd!["--status", s.key]);
-    }
-    for s in &series {
-        argv.extend(cmd!["--series", s.key]);
-    }
-    for condition in &fields {
-        argv.extend(cmd!["--field", condition]);
+    let mut sort: Vec<String> = Vec::new();
+    for setting in &settings {
+        for value in &setting.values {
+            match setting.key.as_str() {
+                key @ ("type" | "status" | "series" | "field") => argv.extend(cmd![format!("--{key}"), value]),
+                "sort" => sort.push(value.clone()),
+                "shape" if value == "flat" => argv.push("--flat".into()),
+                _ => {}
+            }
+        }
     }
     if !sort.is_empty() {
         argv.extend(cmd!["--sort", sort.join(",")]);
-    }
-    if shape.key == "flat" {
-        argv.push("--flat".into());
     }
     Ok(argv)
 }

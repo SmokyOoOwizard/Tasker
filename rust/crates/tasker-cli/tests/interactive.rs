@@ -287,7 +287,7 @@ impl Tui {
         let started = Instant::now();
         loop {
             let screen = self.screen();
-            if screen.lines().any(|l| l.starts_with("│› ") && l.contains(label)) {
+            if screen.lines().any(|l| l.contains("│› ") && l.contains(label)) {
                 break;
             }
             assert!(
@@ -296,6 +296,25 @@ impl Tui {
             );
             std::thread::sleep(Duration::from_millis(30));
         }
+        self.send(ENTER);
+    }
+
+    fn open_section(&mut self, label: &str) {
+        let screen = self.wait_for("List settings");
+        assert!(screen.contains(label), "no section {label:?}:\n{screen}");
+        let rows = ["Task types", "Statuses", "Series", "Field conditions", "Sort", "Shape"];
+        let at = rows.iter().position(|r| *r == label).unwrap();
+        self.send("\x1b[H");
+        for _ in 0..at {
+            self.send(DOWN);
+        }
+        self.send(ENTER);
+        self.wait_for(&format!("┌ {label} "));
+    }
+
+    fn show_list(&mut self) {
+        self.wait_for("List settings");
+        self.send("\x1b[F");
         self.send(ENTER);
     }
 
@@ -1037,19 +1056,22 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "task", "Task");
     tui.pick("Tasks: what to show", "list", "List with filters");
-    tui.wait_for("Only these task types");
-    tui.send(ENTER);
-    tui.wait_for("Only these statuses");
+    tui.open_section("Statuses");
     tui.mark("done", "Done", 1);
     tui.send(ENTER);
-    tui.wait_for("Only these series");
-    tui.send(ENTER);
-    tui.pick("+ Add a condition", "done", "Done");
+    tui.open_section("Sort");
     tui.pick("+ Add a key", "add", "+ Add a key");
     tui.pick("Sort key", "created", "created");
     tui.pick("Direction for created", "desc", "Descending");
-    tui.pick("Enter removes this key", "done", "Done");
-    tui.pick("Shape of the list", "flat", "Flat");
+    tui.pick("Enter removes it", "done", "Done");
+    tui.open_section("Shape");
+    tui.pick("┌ Shape ", "flat", "Flat");
+    let screen = tui.wait_for("-created");
+    assert!(
+        screen.contains("Statuses          Done") && screen.contains("Shape             Flat"),
+        "{screen}"
+    );
+    tui.show_list();
     let screen = tui.view("Found ");
     assert!(
         screen.contains("GLD-1") && screen.contains("Plain task") && !screen.contains("Backlog"),
@@ -1103,22 +1125,20 @@ fn a_view_refreshes_itself_esc_returns_to_the_previous_step_and_f_changes_one_se
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "task", "Task");
     tui.pick("Tasks: what to show", "list", "List with filters");
-    tui.wait_for("Only these task types");
-    tui.send(ENTER);
-    tui.wait_for("Only these statuses");
-    tui.send(ENTER);
-    tui.wait_for("Only these series");
-    tui.send(ENTER);
+    tui.open_section("Field conditions");
     tui.pick("+ Add a condition", "add", "+ Add a condition");
     tui.pick("Field", "prio", "Priority");
     tui.pick("Comparison for Priority", "differs", "differs");
     tui.pick("Value of Priority", "low", "Low");
-    tui.pick("Enter removes this condition", "done", "Done");
+    tui.pick("Enter removes it", "done", "Done");
+    tui.open_section("Sort");
     tui.pick("+ Add a key", "add", "+ Add a key");
     tui.pick("Sort key", "created", "created");
     tui.pick("Direction for created", "desc", "Descending");
-    tui.pick("Enter removes this key", "done", "Done");
-    tui.pick("Shape of the list", "flat", "Flat");
+    tui.pick("Enter removes it", "done", "Done");
+    tui.open_section("Shape");
+    tui.pick("┌ Shape ", "flat", "Flat");
+    tui.show_list();
     let screen = tui.wait_for("┌ View ");
     assert!(
         screen.contains("refreshes every 1 s") && !screen.contains("Fresh from outside"),
@@ -1145,36 +1165,34 @@ fn a_view_refreshes_itself_esc_returns_to_the_previous_step_and_f_changes_one_se
     tui.wait_for("Fresh from outside");
 
     tui.send(ESC);
-    let screen = tui.wait_for("Shape of the list");
-    assert!(screen.lines().any(|l| l.starts_with("│› ") && l.contains("Flat")), "{screen}");
-    tui.send(ESC);
-    let screen = tui.wait_for("Enter removes this key");
-    assert!(screen.lines().any(|l| l.starts_with("│› ") && l.contains("Done")), "{screen}");
-    tui.pick("Enter removes this key", "add", "+ Add a key");
+    let screen = tui.wait_for("List settings");
+    assert!(
+        screen.contains("Priority!=Low") && screen.contains("-created") && screen.contains("Flat") && !screen.contains("┌ Sort "),
+        "{screen}"
+    );
+    tui.open_section("Sort");
+    tui.pick("Enter removes it", "add", "+ Add a key");
     tui.pick("Sort key", "title", "title");
     tui.pick("Direction for title", "asc", "Ascending");
-    tui.pick("Enter removes this key", "done", "Done");
-    let screen = tui.wait_for("Shape of the list");
-    assert!(screen.lines().any(|l| l.starts_with("│› ") && l.contains("Flat")), "{screen}");
-    tui.send(ENTER);
+    tui.pick("Enter removes it", "done", "Done");
+    tui.wait_for("-created, title");
+    tui.show_list();
     let screen = tui.wait_for("┌ View ");
     assert!(screen.contains("Found 61") && screen.contains("Fresh from outside"), "{screen}");
 
     tui.send("f");
-    tui.pick("Which setting to change", "statuses", "Only these statuses");
-    tui.wait_for("Only these statuses");
+    tui.pick("Which setting to change", "list settings", "List settings");
+    tui.open_section("Statuses");
     tui.mark("done", "Done", 1);
     tui.send(ENTER);
+    tui.show_list();
     let screen = tui.wait_for("┌ View ");
     assert!(screen.contains("GLD-1") && !screen.contains("Fresh from outside"), "{screen}");
 
     tui.send("f");
-    tui.wait_for("Which setting to change");
-    let screen = tui.wait_for("Only these statuses");
+    let screen = tui.wait_for("Which setting to change");
     assert!(
-        screen.contains("Comparison for Priority  differs")
-            && screen.contains("Value of Priority  Low")
-            && screen.contains("Sort key  title"),
+        screen.contains("Statuses: Done; Field conditions: Priority!=Low; Sort: -created, title"),
         "{screen}"
     );
     tui.send(ESC);

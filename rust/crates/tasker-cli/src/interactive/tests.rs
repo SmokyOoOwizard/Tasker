@@ -55,6 +55,14 @@ fn snapshot(app: &App) -> Snapshot {
         ),
         Some(StepState::Text(text)) => (Vec::new(), text.value.clone()),
         Some(StepState::Editor(editor)) => (Vec::new(), editor.text.clone()),
+        Some(StepState::Form(form)) => (
+            form.sections.iter().map(|s| s.key.clone()).collect(),
+            form.sections
+                .iter()
+                .map(|s| format!("{}={}", s.key, s.values.join("|")))
+                .collect::<Vec<_>>()
+                .join(";"),
+        ),
         Some(StepState::Confirm(_)) | None => (Vec::new(), String::new()),
     };
     Snapshot { crumb, items, value }
@@ -93,6 +101,7 @@ fn prepare(app: &mut App, choice: usize) {
                 }
             }
         }
+        StepState::Form(form) => form.cursor = form.sections.len(),
         StepState::Editor(_) | StepState::Confirm(_) => {}
     }
 }
@@ -320,29 +329,173 @@ fn a_flow_that_cannot_start_returns_to_the_kind_list_once_not_twice() {
     std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
 }
 
+fn form(app: &mut App) -> &mut super::step::FormStep {
+    match app.state_mut() {
+        Some(StepState::Form(form)) => form,
+        _ => panic!("expected the settings form"),
+    }
+}
+
+fn open_section(app: &mut App, key: &str) {
+    let form = form(app);
+    form.cursor = form.sections.iter().position(|s| s.key == key).unwrap();
+    app.handle(Key::Enter);
+}
+
+fn popup(app: &mut App) -> (String, Vec<String>) {
+    let form = form(app);
+    let layer = form.popup.as_ref().expect("an open popup").layer();
+    let items = match &layer.inner {
+        super::step::Inner::List(list) => list.items.iter().map(|i| i.key.clone()).collect(),
+        super::step::Inner::Text(text) => vec![text.value.clone()],
+    };
+    (layer.title.clone(), items)
+}
+
+fn pick_in_popup(app: &mut App, key: &str) {
+    let form = form(app);
+    let layer = form.popup.as_mut().expect("an open popup").layer_mut();
+    let super::step::Inner::List(list) = &mut layer.inner else {
+        panic!("expected a list in the popup")
+    };
+    list.cursor = list
+        .items
+        .iter()
+        .position(|i| i.key == key)
+        .unwrap_or_else(|| panic!("no item {key} in {:?}", list.items.iter().map(|i| &i.key).collect::<Vec<_>>()));
+    app.handle(Key::Enter);
+}
+
+fn section_values(app: &mut App, key: &str) -> Vec<String> {
+    form(app).sections.iter().find(|s| s.key == key).unwrap().values.clone()
+}
+
 #[test]
-fn esc_from_a_view_shows_every_earlier_step_again_with_its_value_and_f_reruns_with_one_change() {
+fn the_list_settings_form_edits_each_section_in_a_popup_and_esc_in_a_popup_only_closes_it() {
     let workspace = golden_copy();
     let mut app = open(&workspace);
     choose(&mut app, "browse");
     choose(&mut app, "task");
     choose(&mut app, "list");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Only these task types (optional)");
+    assert_eq!(app.breadcrumb(), "Browse › Task › List settings");
+    assert_eq!(snapshot(&app).items, ["type", "status", "series", "field", "sort", "shape"]);
+    assert_eq!(snapshot(&app).value, "type=;status=;series=;field=;sort=;shape=tree");
+
+    open_section(&mut app, "status");
+    let (title, items) = popup(&mut app);
+    assert_eq!(title, "Statuses");
+    assert!(items.len() >= 4, "{items:?}");
+    app.handle(Key::Char(' '));
+    app.handle(Key::Esc);
+    assert!(form(&mut app).popup.is_none());
+    assert_eq!(section_values(&mut app, "status"), Vec::<String>::new());
+    open_section(&mut app, "status");
+    app.handle(Key::Char(' '));
     app.handle(Key::Enter);
+    assert_eq!(section_values(&mut app, "status").len(), 1);
+
+    open_section(&mut app, "field");
+    assert_eq!(
+        popup(&mut app),
+        ("Field conditions".to_string(), vec!["add".to_string(), "done".to_string()])
+    );
+    pick_in_popup(&mut app, "add");
+    let (title, items) = popup(&mut app);
+    assert_eq!(title, "Field");
+    assert!(
+        items.contains(&"Priority".to_string()) && items.contains(&"Estimate".to_string()),
+        "{items:?}"
+    );
+    pick_in_popup(&mut app, "Priority");
+    assert_eq!(
+        popup(&mut app),
+        (
+            "Comparison for Priority".to_string(),
+            ["=", "!=", ":set", ":unset", ":attached", ":detached"].map(String::from).to_vec()
+        )
+    );
+    pick_in_popup(&mut app, "=");
+    let (title, items) = popup(&mut app);
+    assert_eq!(title, "Value of Priority");
+    assert!(items.contains(&"High".to_string()), "{items:?}");
+    app.handle(Key::Esc);
+    assert_eq!(popup(&mut app).0, "Comparison for Priority");
+    pick_in_popup(&mut app, "!=");
+    pick_in_popup(&mut app, "High");
+    assert_eq!(popup(&mut app).1, ["drop0", "add", "done"]);
+    assert_eq!(section_values(&mut app, "field"), ["Priority!=High"]);
+    pick_in_popup(&mut app, "add");
+    pick_in_popup(&mut app, "Estimate");
+    let (_, items) = popup(&mut app);
+    assert!(items.contains(&">".to_string()), "{items:?}");
+    pick_in_popup(&mut app, ">");
+    assert_eq!(popup(&mut app), ("Value of Estimate".to_string(), vec![String::new()]));
+    type_in(&mut app, "x");
     app.handle(Key::Enter);
+    assert_eq!(popup(&mut app).0, "Value of Estimate");
+    app.handle(Key::Backspace);
+    type_in(&mut app, "3");
     app.handle(Key::Enter);
-    assert_eq!(app.breadcrumb(), "Browse › Task › Field conditions");
-    choose(&mut app, "done");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Sort");
-    choose(&mut app, "add");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Sort key");
-    choose(&mut app, "created");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Direction for created");
-    choose(&mut app, "desc");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Sort");
-    assert_eq!(snapshot(&app).items, ["drop0", "add", "done"]);
-    choose(&mut app, "done");
-    let effect = choose(&mut app, "flat");
+    assert_eq!(section_values(&mut app, "field"), ["Priority!=High", "Estimate>3"]);
+    pick_in_popup(&mut app, "drop0");
+    assert_eq!(section_values(&mut app, "field"), ["Estimate>3"]);
+    pick_in_popup(&mut app, "done");
+    assert!(form(&mut app).popup.is_none());
+
+    open_section(&mut app, "sort");
+    pick_in_popup(&mut app, "add");
+    pick_in_popup(&mut app, "created");
+    assert_eq!(
+        popup(&mut app),
+        ("Direction for created".to_string(), vec![String::new(), "-".to_string()])
+    );
+    pick_in_popup(&mut app, "-");
+    pick_in_popup(&mut app, "add");
+    pick_in_popup(&mut app, "title");
+    pick_in_popup(&mut app, "");
+    assert_eq!(section_values(&mut app, "sort"), ["-created", "title"]);
+    app.handle(Key::Esc);
+    assert!(form(&mut app).popup.is_none());
+
+    open_section(&mut app, "shape");
+    pick_in_popup(&mut app, "flat");
+    assert_eq!(section_values(&mut app, "shape"), ["flat"]);
+    form(&mut app).cursor = 5;
+    app.handle(Key::Backspace);
+    assert_eq!(section_values(&mut app, "shape"), Vec::<String>::new());
+    open_section(&mut app, "shape");
+    pick_in_popup(&mut app, "flat");
+
+    app.handle(Key::End);
+    let effect = app.handle(Key::Enter);
+    let Effect::Run(argv) = &effect else {
+        panic!("expected the list to run")
+    };
+    let tail: Vec<&str> = argv.iter().map(String::as_str).skip_while(|a| *a != "task").collect();
+    assert_eq!(tail[..5], ["task", "list", "--all", "--status", tail[4]],);
+    assert_eq!(tail[5..], ["--field", "Estimate>3", "--flat", "--sort", "-created,title"]);
+    execute(&mut app, effect);
+    assert_eq!(app.result.as_ref().map(|r| r.kind), Some(super::app::ResultKind::View));
+    std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
+}
+
+#[test]
+fn esc_from_a_view_shows_the_settings_again_with_their_values_and_f_reruns_with_one_change() {
+    let workspace = golden_copy();
+    let mut app = open(&workspace);
+    choose(&mut app, "browse");
+    choose(&mut app, "task");
+    choose(&mut app, "list");
+    assert_eq!(app.breadcrumb(), "Browse › Task › List settings");
+    open_section(&mut app, "sort");
+    pick_in_popup(&mut app, "add");
+    pick_in_popup(&mut app, "created");
+    pick_in_popup(&mut app, "-");
+    pick_in_popup(&mut app, "done");
+    open_section(&mut app, "shape");
+    pick_in_popup(&mut app, "flat");
+    app.handle(Key::End);
+    let effect = app.handle(Key::Enter);
     let Effect::Run(argv) = &effect else {
         panic!("expected the list to run")
     };
@@ -351,55 +504,16 @@ fn esc_from_a_view_shows_every_earlier_step_again_with_its_value_and_f_reruns_wi
     assert_eq!(app.result.as_ref().map(|r| r.kind), Some(super::app::ResultKind::View));
 
     app.handle(Key::Esc);
-    assert_eq!(app.breadcrumb(), "Browse › Task › Shape of the list");
-    assert_eq!(snapshot(&app).value, "flat");
-    let expected_back = [
-        ("Browse › Task › Sort", "done"),
-        ("Browse › Task › Direction for created", "desc"),
-        ("Browse › Task › Sort key", "created"),
-        ("Browse › Task › Sort", "add"),
-        ("Browse › Task › Field conditions", "done"),
-    ];
-    for (crumb, value) in expected_back {
-        app.handle(Key::Esc);
-        assert_eq!(app.breadcrumb(), crumb);
-        assert_eq!(snapshot(&app).value, value);
-    }
-    choose(&mut app, "add");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Field");
-    let Some(StepState::List(list)) = app.state() else { panic!() };
-    let priority = list
-        .items
-        .iter()
-        .find(|i| i.label == "Priority")
-        .expect("the Priority field")
-        .key
-        .clone();
-    assert!(list.items.iter().any(|i| i.detail.starts_with("enum")), "{:?}", list.items);
-    choose(&mut app, &priority);
-    assert_eq!(app.breadcrumb(), "Browse › Task › Comparison for Priority");
-    assert_eq!(snapshot(&app).items, ["=", "!=", ":set", ":unset", ":attached", ":detached"]);
-    choose(&mut app, "=");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Value of Priority");
-    choose(&mut app, "High");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Field conditions");
-    assert_eq!(snapshot(&app).items, ["drop0", "add", "done"]);
-    choose(&mut app, "done");
-    let expected_forward = [
-        ("Browse › Task › Sort", "add"),
-        ("Browse › Task › Sort key", "created"),
-        ("Browse › Task › Direction for created", "desc"),
-        ("Browse › Task › Sort", "done"),
-        ("Browse › Task › Shape of the list", "flat"),
-    ];
-    for (crumb, value) in expected_forward {
-        assert_eq!(app.breadcrumb(), crumb);
-        assert_eq!(snapshot(&app).value, value);
-        if crumb.ends_with("Shape of the list") {
-            break;
-        }
-        assert!(matches!(app.handle(Key::Enter), Effect::None));
-    }
+    assert_eq!(app.breadcrumb(), "Browse › Task › List settings");
+    assert_eq!(snapshot(&app).value, "type=;status=;series=;field=;sort=-created;shape=flat");
+    assert!(form(&mut app).popup.is_none());
+    open_section(&mut app, "field");
+    pick_in_popup(&mut app, "add");
+    pick_in_popup(&mut app, "Priority");
+    pick_in_popup(&mut app, "=");
+    pick_in_popup(&mut app, "High");
+    pick_in_popup(&mut app, "done");
+    app.handle(Key::End);
     let effect = app.handle(Key::Enter);
     let Effect::Run(argv) = &effect else {
         panic!("expected the list to run")
@@ -415,42 +529,30 @@ fn esc_from_a_view_shows_every_earlier_step_again_with_its_value_and_f_reruns_wi
         titles,
         [
             "Tasks: what to show: List with filters",
-            "Only these task types (optional): (none)",
-            "Only these statuses (optional): (none)",
-            "Only these series (optional): (none)",
-            "Field conditions: + Add a condition",
-            "Field: Priority",
-            "Comparison for Priority: equals",
-            "Value of Priority: High",
-            "Field conditions: Done",
-            "Sort: + Add a key",
-            "Sort key: created",
-            "Direction for created: Descending",
-            "Sort: Done",
-            "Shape of the list: Flat"
+            "List settings: Field conditions: Priority=High; Sort: -created; Shape: Flat",
         ]
     );
-    choose(&mut app, "13");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Shape of the list");
-    let effect = choose(&mut app, "tree");
+    choose(&mut app, "1");
+    assert_eq!(app.breadcrumb(), "Browse › Task › List settings");
+    assert_eq!(
+        snapshot(&app).value,
+        "type=;status=;series=;field=Priority=High;sort=-created;shape=flat"
+    );
+    open_section(&mut app, "shape");
+    pick_in_popup(&mut app, "tree");
+    app.handle(Key::End);
+    let effect = app.handle(Key::Enter);
     let Effect::Run(argv) = &effect else {
         panic!("expected the list to run again")
     };
     assert!(!argv.contains(&"--flat".to_string()) && argv.contains(&"Priority=High".to_string()));
     execute(&mut app, effect);
 
-    app.handle(Key::Char('f'));
-    choose(&mut app, "2");
-    assert_eq!(app.breadcrumb(), "Browse › Task › Only these statuses (optional)");
-    app.handle(Key::Char(' '));
-    let effect = app.handle(Key::Enter);
-    let Effect::Run(argv) = &effect else {
-        panic!("the later steps must be replayed after f")
-    };
-    assert!(argv.contains(&"--status".to_string()) && argv.contains(&"-created".to_string()));
-    execute(&mut app, effect);
-
-    app.handle(Key::Char('q'));
-    assert_eq!(app.breadcrumb(), "What to do");
+    app.handle(Key::Esc);
+    assert_eq!(app.breadcrumb(), "Browse › Task › List settings");
+    assert_eq!(
+        crumbs_back_to_menu(&mut app),
+        ["Browse › Task › Tasks: what to show", "Browse › Browse what", "What to do"]
+    );
     std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
 }

@@ -1,4 +1,4 @@
-use super::step::{Answer, Check, Item, StepSpec};
+use super::step::{Answer, Check, FormValues, Item, Section, StepSpec};
 use crate::errors::{CliError, Result};
 use crate::session::Session;
 use tasker_core::model::Project;
@@ -143,6 +143,17 @@ impl<'a, 'b> Wizard<'a, 'b> {
             hint: hint.to_string(),
         })? {
             Answer::Text(text) => Ok(text.clone()),
+            _ => Err(Pending::Failed(CliError::new("Unexpected answer"))),
+        }
+    }
+
+    pub fn form(&mut self, title: &str, sections: Vec<Section>, submit: &str) -> Steps<FormValues> {
+        match self.take(StepSpec::Form {
+            title: title.to_string(),
+            sections,
+            submit: submit.to_string(),
+        })? {
+            Answer::Form(values) => Ok(values.clone()),
             _ => Err(Pending::Failed(CliError::new("Unexpected answer"))),
         }
     }

@@ -180,6 +180,14 @@ fn answer_summary(answer: &Answer) -> String {
         Answer::Text(text) if text.is_empty() => "(empty)".to_string(),
         Answer::Text(text) => text.lines().next().unwrap_or_default().to_string(),
         Answer::Confirmed => "yes".to_string(),
+        Answer::Form(values) => {
+            let set: Vec<String> = values
+                .iter()
+                .filter(|v| !v.values.is_empty())
+                .map(|v| format!("{}: {}", v.label, v.summary))
+                .collect();
+            if set.is_empty() { "(defaults)".to_string() } else { set.join("; ") }
+        }
     }
 }
 
@@ -191,6 +199,9 @@ fn fits(spec: &StepSpec, answer: &Answer) -> bool {
         }
         (StepSpec::Text { check, allow_empty, .. }, Answer::Text(text)) => check.error(text, *allow_empty).is_none(),
         (StepSpec::Editor { .. }, Answer::Text(_)) => true,
+        (StepSpec::Form { sections, .. }, Answer::Form(values)) => {
+            sections.len() == values.len() && sections.iter().zip(values).all(|(s, v)| s.key == v.key)
+        }
         _ => false,
     }
 }
