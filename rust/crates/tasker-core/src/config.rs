@@ -10,11 +10,12 @@
 use crate::validate::to_upper_invariant;
 
 /// Переменные `TASKER_*`, которые Tasker читает не как группы настроек, а напрямую.
-pub const OTHER_VARIABLES: [&str; 15] = [
+pub const OTHER_VARIABLES: [&str; 16] = [
     "TASKER_HOME",
     "TASKER_PROJECT",
     "TASKER_LANG",
     "TASKER_WIDTH",
+    "TASKER_REFRESH_SECONDS",
     "TASKER_SERVICE_DIR",
     "TASKER_SERVICE_LABEL",
     "TASKER_FRONTEND_DEV_URL",

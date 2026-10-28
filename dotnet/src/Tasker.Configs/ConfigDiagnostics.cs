@@ -23,6 +23,7 @@ public static class ConfigDiagnostics
         "TASKER_PROJECT",
         "TASKER_LANG",
         "TASKER_WIDTH",
+        "TASKER_REFRESH_SECONDS",
         "TASKER_SERVICE_DIR",
         "TASKER_SERVICE_LABEL",
         "TASKER_FRONTEND_DEV_URL",

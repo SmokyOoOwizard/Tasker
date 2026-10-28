@@ -137,6 +137,15 @@ fn invoke(
         return 0;
     }
 
+    if matches.get_flag("interactive") {
+        if path.len() > 1 {
+            let _ = writeln!(err, "--interactive option cannot be combined with a command.\n");
+            return ERROR_EXIT_CODE;
+        }
+        let project = globals.project.clone().or_else(|| std::env::var("TASKER_PROJECT").ok());
+        return crate::interactive::run(globals.workspace.as_deref(), globals.sqlite.as_deref(), project.as_deref(), err);
+    }
+
     if matches.get_flag("version") {
         if args.len() > 1 {
             let _ = writeln!(err, "--version option cannot be combined with other arguments.\n");

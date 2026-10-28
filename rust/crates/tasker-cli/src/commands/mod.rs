@@ -145,6 +145,16 @@ pub fn enum_names(ctx: &Context<'_>, project_id: &Uuid) -> Result<std::collectio
         .collect())
 }
 
+pub fn enum_names_of(session: &crate::session::Session, project_id: &Uuid) -> Result<std::collections::HashMap<Uuid, String>> {
+    Ok(session
+        .workspace()
+        .enums()
+        .get_all(project_id)?
+        .into_iter()
+        .map(|x| (x.id, x.name))
+        .collect())
+}
+
 /// Тип поля одной строкой: `string`, `int[]` (несколько значений), `enum Priority`.
 pub fn type_text(field_type: tasker_core::model::FieldType, multiple: bool, enum_name: Option<&str>) -> String {
     format!(

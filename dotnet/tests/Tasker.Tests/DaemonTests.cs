@@ -183,10 +183,10 @@ public class DaemonTests : IDisposable
     {
         await _daemon.Start();
 
-        var second = await TaskerProcess.Run("mcp", "run");
+        var second = await TaskerProcess.RunWithInput(null, "mcp", "run");
 
-        Assert.Equal(1, second.Code);
-        Assert.Contains("already running", second.Err);
+        Assert.True(second.Code == 1, $"exit {second.Code}: {second.Err}");
+        Assert.True(second.Err.Contains("already running"), second.Err);
     }
 
     [Fact]

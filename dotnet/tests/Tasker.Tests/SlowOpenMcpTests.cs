@@ -25,11 +25,18 @@ public class SlowOpenMcpTests : IDisposable
     }
 
     /// <summary>Запускает демон напрямую (не <c>mcp start</c>, который ждёт открытия) и ждёт, пока он начнёт отвечать.</summary>
+    private Stopwatch _sinceStart = new();
+    private TimeSpan _openDelay;
+
     private async Task StartSlow(int delayMs, int waitMs)
     {
         _env.Add(AppEnvironment.Override("TASKER_MCP_OPEN_DELAY_MS", delayMs.ToString()));
         _env.Add(AppEnvironment.Override("TASKER_MCP_OPEN_WAIT_MS", waitMs.ToString()));
-        _process = TaskerProcess.Start("mcp", "run", "--detached");
+        _openDelay = TimeSpan.FromMilliseconds(delayMs);
+        _sinceStart = Stopwatch.StartNew();
+        _process = TaskerProcess.StartWithoutInput("mcp", "run", "--detached");
+        var error = _process.StandardError.ReadToEndAsync();
+        _ = _process.StandardOutput.ReadToEndAsync();
 
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         var deadline = DateTime.UtcNow.AddSeconds(30);
@@ -44,6 +51,8 @@ public class SlowOpenMcpTests : IDisposable
             {
                 // Порт уже слушает супервизор: пока рабочий процесс не принял соединение, оно ждёт в очереди (таймаут), а не отклоняется.
             }
+            if (_process.HasExited)
+                throw new InvalidOperationException($"The daemon did not start: exit {_process.ExitCode}: {await error}");
             await Task.Delay(50);
         }
         throw new InvalidOperationException("The daemon did not start");
@@ -56,18 +65,20 @@ public class SlowOpenMcpTests : IDisposable
     public async Task A_call_during_the_opening_waits_for_the_workspace_and_succeeds_with_or_without_the_argument()
     {
         await _daemon.Workspace("a", "Alpha");
-        await StartSlow(delayMs: 1500, waitMs: 20000);
+        await StartSlow(delayMs: 5000, waitMs: 20000);
 
         // list_workspaces видит область открывающейся, а вызов без аргумента (область одна) ждёт её и проходит.
         var (listError, listText) = await _daemon.CallToolResult(null, "list_workspaces");
         Assert.False(listError, listText);
         Assert.Equal("opening", StatusOf(listText, "a"));
 
+        var stillOpening = _openDelay - _sinceStart.Elapsed;
         var clock = Stopwatch.StartNew();
         var (isError, text) = await _daemon.CallToolResult(null, "list_projects");
         Assert.False(isError, text);
         Assert.Equal(["Alpha"], DaemonFixture.ProjectNames(text));
-        Assert.True(clock.Elapsed > TimeSpan.FromMilliseconds(200), "the call must have waited for the opening");
+        Assert.True(clock.Elapsed > stillOpening - TimeSpan.FromMilliseconds(500),
+            $"the call must have waited for the opening: {clock.Elapsed} of {stillOpening}");
 
         // Область открыта — то же с аргументом.
         Assert.Equal(["Alpha"], DaemonFixture.ProjectNames((await _daemon.CallToolResult("a", "list_projects")).Text));
