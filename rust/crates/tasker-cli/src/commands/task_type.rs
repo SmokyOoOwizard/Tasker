@@ -1,4 +1,4 @@
-//! `tasker task-type …` (`TaskTypeCommands` в .NET).
+//! `tasker task-type …`.
 use super::{enum_names, field_type_text, find_status_set, find_task_type};
 use crate::context::Context;
 use crate::entities;

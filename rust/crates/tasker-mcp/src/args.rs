@@ -134,7 +134,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn page_clamps_like_dotnet() {
+    fn page_clamps_offset_and_limit() {
         assert_eq!(page(None, None), tasker_core::tasks::Page::new(0, 50));
         assert_eq!(page(Some(-5), Some(0)), tasker_core::tasks::Page::new(0, 1));
         assert_eq!(page(Some(3), Some(999)), tasker_core::tasks::Page::new(3, 200));

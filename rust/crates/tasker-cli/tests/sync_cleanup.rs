@@ -1,4 +1,4 @@
-//! `tasker sync` и `tasker cleanup` на копии golden-корпуса: вывод, коды выхода и JSON — как у .NET (`expected/cli/001-006`;
+//! `tasker sync` и `tasker cleanup` на копии golden-корпуса: вывод, коды выхода и JSON — как в снапшотах (`expected/cli/001-006`;
 //! справка `194-help-cleanup`, `213-help-sync` — в `tests/help.rs`); после `migrate` сверка показывает только два известных
 //! нечитаемых файла.
 mod common;

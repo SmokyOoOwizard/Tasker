@@ -1,4 +1,4 @@
-//! `tasker project …` (`ProjectCommands` в .NET).
+//! `tasker project …`.
 use crate::context::Context;
 use crate::entities;
 use crate::errors::{CliError, Result};

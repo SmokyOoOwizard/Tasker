@@ -1,5 +1,5 @@
-//! Вызов инструмента: фильтры .NET в том же порядке — ошибки без префикса SDK (`ErrorText`), область из аргумента `workspace` и агент
-//! из заголовка `X-Tasker-Agent` (`WorkspaceArgument`), проект по умолчанию (`DefaultProject`), затем связывание аргументов по схеме
+//! Вызов инструмента: фильтры в том же порядке, что у `dotnet/src/Tasker.Mcp`, — ошибки без префикса SDK (`ErrorText`), область из аргумента `workspace` и агент
+//! из заголовка `X-Tasker-Agent`, проект по умолчанию (`DefaultProject`), затем связывание аргументов по схеме
 //! (у .NET — SDK) и сам инструмент (`McpCall`). Домен синхронный: инструмент выполняется в `spawn_blocking`.
 use crate::args::Args;
 use crate::catalog::{Catalog, LIST_WORKSPACES, PROJECT_ARGUMENT, ToolDef, WORKSPACE_ARGUMENT};
@@ -22,12 +22,12 @@ pub const AGENT_HEADER: &str = "X-Tasker-Agent";
 /// Переменная окружения: сколько вызов ждёт открытия области (мс); по умолчанию 5 с.
 pub const OPEN_WAIT_VARIABLE: &str = "TASKER_MCP_OPEN_WAIT_MS";
 
-/// Через сколько секунд стоит повторить вызов, когда область ещё открывается (`WorkspaceArgument.RetryAfterSeconds`).
+/// Через сколько секунд стоит повторить вызов, когда область ещё открывается.
 pub const RETRY_AFTER_SECONDS: u32 = 2;
 
 const OPEN_POLL: Duration = Duration::from_millis(50);
 
-/// `WorkspaceArgument.OpenWait`: из окружения один раз.
+/// Сколько ждать открытия области: из окружения один раз.
 pub fn open_wait() -> Duration {
     std::env::var(OPEN_WAIT_VARIABLE)
         .ok()
@@ -181,7 +181,7 @@ impl Server {
         output?
     }
 
-    /// `WorkspaceArgument.Choose`: область по аргументу или (аргумента нет) единственная разрешённая; иначе — ошибка для агента.
+    /// Область по аргументу или (аргумента нет) единственная разрешённая; иначе — ошибка для агента.
     /// Область, которая ещё открывается, вызов ждёт до [`Server::open_wait`].
     async fn choose(&self, requested: Option<String>) -> Result<McpWorkspaceScope> {
         let all = self.workspaces.list();
@@ -268,7 +268,7 @@ impl Server {
     }
 }
 
-/// `WorkspaceArgument.TryTake`: забирает `workspace` из аргументов; null или пусто — не указан; не строка — `[invalid]`.
+/// Забирает `workspace` из аргументов; null или пусто — не указан; не строка — `[invalid]`.
 fn take_workspace(args: &mut Map<String, Value>) -> Result<Option<String>> {
     match args.remove(WORKSPACE_ARGUMENT) {
         None | Some(Value::Null) => Ok(None),

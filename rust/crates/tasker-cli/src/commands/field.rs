@@ -1,4 +1,4 @@
-//! `tasker field …` и `tasker enum …` (`FieldCommands` в .NET): каталог полей проекта и перечисления.
+//! `tasker field …` и `tasker enum …`: каталог полей проекта и перечисления.
 use super::{enum_names, field_type_text, find_enum, find_field};
 use crate::context::Context;
 use crate::entities;

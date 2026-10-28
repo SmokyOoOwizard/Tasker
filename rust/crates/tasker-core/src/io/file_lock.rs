@@ -213,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn another_thread_waits_and_times_out_with_the_dotnet_message() {
+    fn another_thread_waits_and_times_out_with_a_message() {
         let path = temp_lock("b.lock");
         let lock = FileLock::acquire(&path, None).unwrap();
         let p = path.clone();

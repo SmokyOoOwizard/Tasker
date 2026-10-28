@@ -1,5 +1,6 @@
-//! Эталоны `rust/tests/golden/autostart` (сняты с .NET-генераторов, см. README там): Rust-генераторы дают байт-идентичные файлы
-//! для тех же входов, службы вызывают те же команды.
+//! Эталоны `tests/golden/autostart` (см. README там): генераторы дают байт-идентичные файлы для тех же входов, службы вызывают
+//! те же команды. `TASKER_GOLDEN_UPDATE=1` переснимает файлы служб и вызовы с обратной заменой на плейсхолдеры (XML — UTF-16 LE с
+//! BOM); на Windows замена путей неточна — эталоны переснимаются на macOS/Linux.
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -15,13 +16,30 @@ const BIN: &str = "/opt/tasker-bin";
 const DOTNET: &str = "/usr/local/share/dotnet/dotnet";
 const HOME: &str = "/Users/golden";
 
+fn golden_update() -> bool {
+    std::env::var("TASKER_GOLDEN_UPDATE").is_ok_and(|v| !v.is_empty() && v != "0")
+}
+
 fn golden_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/autostart")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden/autostart")
 }
 
 /// Файл эталона с подставленными плейсхолдерами (`<ROOT>`, `<BIN>`, `<DOTNET>`, `<HOME>`).
 fn golden_text(case: &str, file: &str) -> String {
     substitute(&std::fs::read_to_string(golden_dir().join(case).join(file)).unwrap())
+}
+
+fn placeholders(text: &str) -> String {
+    text.replace(ROOT, "<ROOT>")
+        .replace(BIN, "<BIN>")
+        .replace(DOTNET, "<DOTNET>")
+        .replace(HOME, "<HOME>")
+}
+
+fn update_text(case: &str, file: &str, actual: &str) {
+    if golden_update() {
+        std::fs::write(golden_dir().join(case).join(file), placeholders(actual)).unwrap();
+    }
 }
 
 fn substitute(text: &str) -> String {
@@ -66,7 +84,7 @@ const WINDOWS_TASK: &str = "Tasker MCP Golden";
 
 #[test]
 #[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
-fn launchd_plist_matches_dotnet_byte_for_byte() {
+fn launchd_plist_matches_the_corpus_byte_for_byte() {
     let home = format!("{ROOT}/home/data");
     let special = format!("{ROOT}/tasker home/a&b <c>");
     let cli_home = format!("{ROOT}/home");
@@ -77,6 +95,7 @@ fn launchd_plist_matches_dotnet_byte_for_byte() {
         ("launchd-cli", ctx(LAUNCHD_LABEL, "", Some(&cli_home), &cli_home)),
     ];
     for (case, ctx) in cases {
+        update_text(case, "com.tasker.golden-autostart.plist", &render_launchd(&ctx));
         assert_eq!(
             render_launchd(&ctx),
             golden_text(case, "com.tasker.golden-autostart.plist"),
@@ -86,7 +105,7 @@ fn launchd_plist_matches_dotnet_byte_for_byte() {
 }
 
 #[test]
-fn systemd_unit_matches_dotnet_byte_for_byte() {
+fn systemd_unit_matches_the_corpus_byte_for_byte() {
     let home = format!("{ROOT}/home/data");
     let space = format!("{ROOT}/tasker home");
     let cases = [
@@ -95,12 +114,13 @@ fn systemd_unit_matches_dotnet_byte_for_byte() {
         ("systemd-space", ctx(SYSTEMD_UNIT, "", Some(&space), &space)),
     ];
     for (case, ctx) in cases {
+        update_text(case, "tasker-golden.service", &render_systemd(&ctx));
         assert_eq!(render_systemd(&ctx), golden_text(case, "tasker-golden.service"), "{case}");
     }
 }
 
 #[test]
-fn windows_task_xml_matches_dotnet_byte_for_byte() {
+fn windows_task_xml_matches_the_corpus_byte_for_byte() {
     let home = format!("{ROOT}/home/data");
     let cases = [
         ("windows", ctx(WINDOWS_TASK, r"PC\Артём", Some(&home), &home)),
@@ -108,13 +128,23 @@ fn windows_task_xml_matches_dotnet_byte_for_byte() {
     ];
     for (case, ctx) in cases {
         let actual = render_windows_task(&ctx).unwrap();
+        if golden_update() {
+            let units = actual[2..].chunks(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>();
+            let mut bytes = vec![0xFF, 0xFE];
+            bytes.extend(
+                placeholders(&String::from_utf16(&units).unwrap())
+                    .encode_utf16()
+                    .flat_map(u16::to_le_bytes),
+            );
+            std::fs::write(golden_dir().join(case).join("Tasker MCP Golden.xml"), bytes).unwrap();
+        }
         let expected = golden_utf16(case, "Tasker MCP Golden.xml");
         assert_eq!(&actual[..2], &[0xFF, 0xFE]);
         assert!(actual == expected, "{case}: байты XML отличаются");
     }
 }
 
-// ---- команды служб: как в calls.txt (поддельный IProcessRunner .NET) и launchctl-calls.txt (настоящий `tasker mcp autostart enable`) ----
+// ---- команды служб: как в calls.txt (поддельный исполнитель команд) и launchctl-calls.txt (настоящий `tasker mcp autostart enable`) ----
 
 #[derive(Default)]
 struct Recorder(RefCell<Vec<String>>);
@@ -154,6 +184,21 @@ fn tasker_daemon_full_path(path: &Path) -> PathBuf {
     tasker_core::io::full_path(path)
 }
 
+fn update_calls(case: &str, file: &str, calls: &[String], dir: &Path, uid: u32) {
+    if golden_update() {
+        let root = dir.parent().unwrap().parent().unwrap();
+        let text: String = calls
+            .iter()
+            .map(|l| {
+                l.replace(&*root.to_string_lossy(), "<ROOT>")
+                    .replace(&format!("gui/{uid}"), "gui/<UID>")
+                    + "\n"
+            })
+            .collect();
+        std::fs::write(golden_dir().join(case).join(file), text).unwrap();
+    }
+}
+
 /// `calls.txt` эталона с `<ROOT>/out/<case>` → настоящий каталог теста и `gui/<UID>` → uid теста.
 fn expected_calls(case: &str, file: &str, dir: &Path, uid: u32) -> Vec<String> {
     let root = dir.parent().unwrap().parent().unwrap();
@@ -183,7 +228,7 @@ fn with_root(line: &str, root: &str) -> String {
 
 #[test]
 #[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
-fn launchd_commands_match_dotnet() {
+fn launchd_commands_match_the_corpus() {
     for case in ["launchd", "launchd-nohome", "launchd-special"] {
         let (calls, dir) = calls_of(case, |runner, dir| {
             Box::new(
@@ -192,13 +237,14 @@ fn launchd_commands_match_dotnet() {
                     .with_daemon_command(dotnet_command()),
             )
         });
+        update_calls(case, "calls.txt", &calls, &dir, 502);
         assert_eq!(calls, expected_calls(case, "calls.txt", &dir, 502), "{case}");
     }
 }
 
 #[test]
 #[cfg_attr(windows, ignore = "launchd is macOS only: the plist is checked with Unix paths")]
-fn launchd_cli_enable_and_status_match_the_real_dotnet_console() {
+fn launchd_cli_enable_and_status_match_the_recorded_console_run() {
     // Эталон снят настоящим `tasker mcp autostart enable` + `tasker mcp autostart status` с TASKER_SERVICE_DIR=<ROOT>/service.
     let _lock = ENV.lock().unwrap_or_else(|e| e.into_inner());
     let root = tasker_daemon_full_path(
@@ -226,9 +272,23 @@ fn launchd_cli_enable_and_status_match_the_real_dotnet_console() {
         .map(|l| l.replace("<ROOT>", &root.to_string_lossy()).replace("gui/<UID>", "gui/502"))
         .collect::<Vec<_>>();
     let actual = recorder.0.borrow().iter().map(|l| l.replace('\t', " ")).collect::<Vec<_>>();
+    if golden_update() {
+        let text: String = actual
+            .iter()
+            .map(|l| l.replace(&*root.to_string_lossy(), "<ROOT>").replace("gui/502", "gui/<UID>") + "\n")
+            .collect();
+        std::fs::write(golden_dir().join("launchd-cli/launchctl-calls.txt"), text).unwrap();
+    }
     assert_eq!(actual, expected);
 
     let plist = std::fs::read_to_string(root.join("service").join("com.tasker.golden-autostart.plist")).unwrap();
+    if golden_update() {
+        let text = plist
+            .replace(&*root.to_string_lossy(), "<ROOT>")
+            .replace(BIN, "<BIN>")
+            .replace(DOTNET, "<DOTNET>");
+        std::fs::write(golden_dir().join("launchd-cli/com.tasker.golden-autostart.plist"), text).unwrap();
+    }
     let expected_plist = std::fs::read_to_string(golden_dir().join("launchd-cli/com.tasker.golden-autostart.plist"))
         .unwrap()
         .replace("<ROOT>", &root.to_string_lossy())
@@ -238,17 +298,18 @@ fn launchd_cli_enable_and_status_match_the_real_dotnet_console() {
 }
 
 #[test]
-fn systemd_commands_match_dotnet() {
+fn systemd_commands_match_the_corpus() {
     for case in ["systemd", "systemd-nohome", "systemd-space"] {
         let (calls, dir) = calls_of(case, |runner, dir| {
             Box::new(SystemdService::new(runner, Some(dir), Some(SYSTEMD_UNIT.to_string())).with_daemon_command(dotnet_command()))
         });
+        update_calls(case, "calls.txt", &calls, &dir, 0);
         assert_eq!(calls, expected_calls(case, "calls.txt", &dir, 0), "{case}");
     }
 }
 
 #[test]
-fn windows_commands_match_dotnet() {
+fn windows_commands_match_the_corpus() {
     for case in ["windows", "windows-nohome"] {
         let (calls, dir) = calls_of(case, |runner, dir| {
             Box::new(
@@ -256,6 +317,7 @@ fn windows_commands_match_dotnet() {
                     .with_daemon_command(dotnet_command()),
             )
         });
+        update_calls(case, "calls.txt", &calls, &dir, 0);
         assert_eq!(calls, expected_calls(case, "calls.txt", &dir, 0), "{case}");
     }
 }

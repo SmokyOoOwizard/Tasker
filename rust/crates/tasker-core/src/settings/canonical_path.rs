@@ -3,7 +3,7 @@
 //! совпадают, как бы ни открыли папку. Windows: буква диска заглавная, префикс `\\?\` снимается, junction раскрываются, UNC-путь
 //! остаётся UNC.
 //!
-//! TODO (Windows, фаза 3): раскрытие коротких имён 8.3 (`RUNNER~1`, `GetLongPathNameW`) не перенесено.
+//! TODO (Windows): раскрытие коротких имён 8.3 (`RUNNER~1`, `GetLongPathNameW`) не сделано.
 use crate::io::{full_path, full_path_in};
 use crate::validate::eq_ignore_case;
 use std::collections::VecDeque;

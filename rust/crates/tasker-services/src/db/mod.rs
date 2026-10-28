@@ -2,7 +2,7 @@
 //! — один файл одновременно открывают .NET-десктоп, .NET-сервер, Rust-консоль и Rust-демон.
 //!
 //! Схема — ровно та, что создаёт `EnsureCreated` (`schema.sql` снят с файла, созданного .NET; эталон `.schema` —
-//! `rust/tests/golden/sqlite/schema.sql`). Своих таблиц нет, схему не меняем, миграций нет (TSK-1): как `DbInitializer`, только
+//! `tests/golden/sqlite/schema.sql`). Своих таблиц нет, схему не меняем, миграций нет (TSK-1): как `DbInitializer`, только
 //! создаём схему в пустом файле и дописываем два столбца `link_types`, если их нет.
 //!
 //! Значения — как их пишет EF Core SQLite: `Guid` — TEXT в форме D **заглавными** (`'1C5289E1-1AF3-…'`), `DateTime` (UTC) — TEXT

@@ -129,7 +129,7 @@ mod tests {
     use tasker_core::tasks::IdRank;
 
     #[test]
-    fn order_by_matches_dotnet_shape() {
+    fn order_by_has_the_expected_shape() {
         assert_eq!(order_by(None), " ORDER BY sort_num, id");
         let mut key = TaskSortKey::new(SortTarget::Type, true, "type");
         key.type_ranks = Some(vec![IdRank { id: Uuid::nil(), rank: 0 }]);

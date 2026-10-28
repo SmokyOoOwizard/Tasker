@@ -2,14 +2,14 @@
 # Прогон тестов Tasker на Linux в контейнере Docker (TSK-111) — например, с macOS. Репозиторий монтируется только для чтения,
 # исходники копируются внутрь контейнера (без bin, obj, node_modules, каталога VCS), поэтому каталоги bin/obj хоста не затрагиваются.
 # Кэши NuGet и cargo лежат в именованных томах, чтобы не качать пакеты каждый раз. Консоль и демон (Rust) собирает сама сборка тестов
-# (cargo build, tools/RustBinaries.targets): в образе есть Rust (rustup, профиль minimal).
+# (cargo build, dotnet/tools/RustBinaries.targets): в образе есть Rust (rustup, профиль minimal).
 #
 #   scripts/test-linux.sh                            # все тесты, нативная архитектура Docker
 #   scripts/test-linux.sh --filter "FullyQualifiedName~DaemonUpgradeTests"
 #   scripts/test-linux.sh --platform linux/amd64     # другая архитектура (под эмуляцией; может падать)
 #   scripts/test-linux.sh --log out.log              # журнал прогона (по умолчанию test-linux.log в текущем каталоге)
 #   scripts/test-linux.sh --shell                    # интерактивная оболочка в той же среде (исходники в /work)
-#   scripts/test-linux.sh --stress "upgrade"         # вместо тестов — стенд tools/Tasker.Stress с этими аргументами
+#   scripts/test-linux.sh --stress "upgrade"         # вместо тестов — стенд dotnet/tools/Tasker.Stress с этими аргументами
 # Остальные аргументы после `--` передаются в `dotnet test`.
 set -euo pipefail
 
@@ -76,11 +76,11 @@ cd /work
 '
 case "$mode" in
   test)
-    inner+="dotnet test tests/Tasker.Tests -p:EmbedFrontend=false --logger \"trx;LogFileName=/work/result.trx\" --logger \"console;verbosity=normal\""
+    inner+="dotnet test dotnet/tests/Tasker.Tests -p:EmbedFrontend=false --logger \"trx;LogFileName=/work/result.trx\" --logger \"console;verbosity=normal\""
     [ -n "$filter" ] && inner+=" --filter \"$filter\""
     for a in "${extra[@]+"${extra[@]}"}"; do inner+=" $(printf '%q' "$a")"; done
     ;;
-  stress) inner+="dotnet run -c Release --project tools/Tasker.Stress -p:EmbedFrontend=false -- $stress_args" ;;
+  stress) inner+="dotnet run -c Release --project dotnet/tools/Tasker.Stress -p:EmbedFrontend=false -- $stress_args" ;;
   shell) inner+="exec bash" ;;
 esac
 

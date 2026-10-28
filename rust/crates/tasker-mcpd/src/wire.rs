@@ -1,16 +1,16 @@
-//! Обмен супервизора демона с рабочим процессом (.NET `WorkerProtocol.cs`, `WireMessage`): одна строка JSON на сообщение.
+//! Обмен супервизора демона с рабочим процессом ([`WireMessage`]): одна строка JSON на сообщение.
 //! Супервизор пишет в stdin рабочего процесса, рабочий пишет в stdout строки с префиксом [`PREFIX`] (остальной вывод игнорируется).
 //! Один тип на все сообщения, лишние поля неизвестны другой стороне — так сборки супервизора и рабочего процесса могут
-//! отличаться на версию и даже на язык: .NET-супервизор с Rust-рабочим процессом и наоборот.
+//! отличаться на версию.
 //!
 //! - супервизор → рабочий: `hello` (секрет управления, порт), `activate` (открыть приём вызовов), `drain` (закончить начатое и
 //!   выйти), `stop` (остановиться), `workers` (список рабочих процессов для статуса), `reply` (ответ на запрос);
 //! - рабочий → супервизор: `ready` (области открыты, можно принимать вызовы), `active` (приём вызовов открыт), `request`
 //!   (`upgrade` или `stop` из управления демоном).
 //!
-//! JSON — как `TaskerJson` с `WhenWritingNull`: camelCase, свойства в порядке объявления в C# (`type`, `id`, `op`, `ok`,
+//! JSON — как `TaskerJson` с `WhenWritingNull`: camelCase, свойства в порядке объявления (`type`, `id`, `op`, `ok`,
 //! `message`, `token`, `port`, `supervisorPid`, `supervisorStartedAt`, `listenSocket`, `version`, `build`, `workspaces`,
-//! `workers`, `upgrade`, `require`, `result`), null не пишутся ни на каком уровне, `id` (не nullable в C#) пишется всегда.
+//! `workers`, `upgrade`, `require`, `result`), null не пишутся ни на каком уровне, `id` (не nullable) пишется всегда.
 //! Чтение — имена без учёта регистра (`JsonSerializerDefaults.Web`); строка, которая не разбирается, пропускается.
 use crate::state::{UpgradeRequest, UpgradeResult, WorkerStatus, WorkspaceStatus, optional_string, property};
 use serde_json::{Map, Value};
@@ -100,7 +100,7 @@ impl WireMessage {
         tasker_core::json::to_string(&Value::Object(map))
     }
 
-    /// Разбор строки; None — не JSON-объект или свойство не того типа (как `JsonException` в .NET: строка пропускается).
+    /// Разбор строки; None — не JSON-объект или свойство не того типа (строка пропускается).
     pub fn parse(line: &str) -> Option<WireMessage> {
         let value: Value = serde_json::from_str(line).ok()?;
         value.as_object()?;
@@ -191,7 +191,7 @@ mod tests {
     use tasker_core::settings::WorkspaceKind;
 
     #[test]
-    fn hello_is_written_like_the_dotnet_supervisor_writes_it() {
+    fn hello_is_written_with_properties_in_declaration_order() {
         let hello = WireMessage {
             token: Some("abc".into()),
             port: Some(5719),

@@ -1,5 +1,5 @@
-//! Директива `[suggest]` — то, что вызывают скрипты автодополнения оболочек (`CompleteDirective`, `Completer`, `Sources`,
-//! `ShellWords`, `NaturalOrder` в .NET): `tasker "[suggest:ПОЗИЦИЯ]" "строка без имени программы"` печатает варианты по
+//! Директива `[suggest]` — то, что вызывают скрипты автодополнения оболочек:
+//! `tasker "[suggest:ПОЗИЦИЯ]" "строка без имени программы"` печатает варианты по
 //! одному в строке. Тихая и ограниченная: любая ошибка — пустой ответ без вывода в stderr, запасные ключи справки (`-?`) не
 //! предлагаются, вариантов не больше [`LIMIT`]. Значения берутся из области (`-w`/текущая папка, проект — `-p`,
 //! `TASKER_PROJECT` или единственный), которая открывается только если она есть.
@@ -34,8 +34,8 @@ pub fn run(args: &[String], out: &mut dyn Write) -> i32 {
     let directive = args.first().map(String::as_str).unwrap_or_default();
     let root = spec::root();
     let tree = Tree::new(&root);
-    // Строка — второй аргумент программы, и .NET разбирает его как любой аргумент (`parseResult.Tokens.LastOrDefault(...)`):
-    // начатая с короткого параметра строка («-p X status get») теряет его, с `--x=` — делится. Так и здесь, ради паритета.
+    // Строка — второй аргумент программы, и System.CommandLine разбирает его как любой аргумент (`parseResult.Tokens.LastOrDefault(...)`):
+    // начатая с короткого параметра строка («-p X status get») теряет его, с `--x=` — делится. Так и здесь.
     let Ok(tokens) = scl::tokenize(&tree, args.to_vec()) else {
         return 0;
     };
@@ -65,11 +65,11 @@ pub fn run(args: &[String], out: &mut dyn Write) -> i32 {
     0
 }
 
-/// Варианты для разобранной строки (курсор в конце), уже отсортированные и ограниченные (`CompleteDirective.Suggest.Invoke`).
+/// Варианты для разобранной строки (курсор в конце), уже отсортированные и ограниченные.
 pub fn complete(line: &str) -> Vec<String> {
     let root = spec::root();
     let tree = Tree::new(&root);
-    // Исключение где угодно в .NET — пустой ответ (директива ловит всё).
+    // Ошибка где угодно — пустой ответ (директива ловит всё).
     complete_in(&tree, line).unwrap_or_default()
 }
 
@@ -155,7 +155,7 @@ fn completions(tree: &Tree<'_>, typed: &Parsed<'_>, line: &str) -> Result<Vec<St
 }
 
 /// Значения аргумента команды (`Argument.GetCompletions`): допустимые значения (`AcceptOnlyFromAmong`) или источник Tasker — только
-/// для аргумента, на позиции которого стоит курсор (`Completer.IsCurrent`).
+/// для аргумента, на позиции которого стоит курсор.
 fn argument_values(tree: &Tree<'_>, typed: &Parsed<'_>, path: &[&CommandSpec], argument: &spec::ArgSpec, line: &str) -> Vec<String> {
     if !argument.accepted.is_empty() {
         return argument.accepted.iter().map(|a| a.to_string()).collect();
@@ -171,7 +171,7 @@ fn argument_values(tree: &Tree<'_>, typed: &Parsed<'_>, path: &[&CommandSpec], a
     collect(typed, path, source, line)
 }
 
-/// Дописывают ли именно этот аргумент (`Completer.IsCurrent`): строка до слова разобрана заново, курсор — после уже набранных
+/// Дописывают ли именно этот аргумент: строка до слова разобрана заново, курсор — после уже набранных
 /// аргументов команды и не на значении параметра.
 fn is_current(tree: &Tree<'_>, preceding: &str, argument: &spec::ArgSpec) -> bool {
     let Ok(parse) = scl::parse(tree, preceding) else { return false };
@@ -198,7 +198,7 @@ fn is_current(tree: &Tree<'_>, preceding: &str, argument: &spec::ArgSpec) -> boo
     index == typed
 }
 
-/// Параметры команды из строки до слова и всех родительских, начинающиеся с `word` (`CompleteDirective.OptionsFor`); уже набранные
+/// Параметры команды из строки до слова и всех родительских, начинающиеся с `word`; уже набранные
 /// предлагаются снова, только если их можно повторять (несколько значений).
 fn options_for(tree: &Tree<'_>, preceding: &str, word: &str) -> Result<Vec<String>, Abort> {
     let before = scl::parse(tree, preceding)?;
@@ -221,7 +221,7 @@ fn options_for(tree: &Tree<'_>, preceding: &str, word: &str) -> Result<Vec<Strin
     Ok(result)
 }
 
-/// Значения источника (`Completer.Collect`): только начинающиеся с набранного слова, без повторов, по порядку, не больше [`LIMIT`].
+/// Значения источника: только начинающиеся с набранного слова, без повторов, по порядку, не больше [`LIMIT`].
 fn collect(typed: &Parsed<'_>, path: &[&CommandSpec], source: Source, line: &str) -> Vec<String> {
     if matches!(source, Source::None) {
         return Vec::new();
@@ -247,7 +247,7 @@ fn dedup(items: &mut Vec<String>) {
     items.retain(|x| seen.insert(x.clone()));
 }
 
-/// Строка, уже приведённая [`normalize`], — то, что до последнего слова, и само слово без кавычек (`ShellWords.SplitLast`).
+/// Строка, уже приведённая [`normalize`], — то, что до последнего слова, и само слово без кавычек.
 pub fn split_last(normalized: &str) -> (String, String) {
     let mut start = 0;
     let mut quoted = false;
@@ -269,7 +269,7 @@ fn is_double_quote(c: char) -> bool {
     matches!(c, '"' | '\u{201C}' | '\u{201D}' | '\u{201E}')
 }
 
-/// Строка, набранная в оболочке, в виде для разбора (`ShellWords.Normalize`): каждое слово разбирается по правилам оболочки и
+/// Строка, набранная в оболочке, в виде для разбора: каждое слово разбирается по правилам оболочки и
 /// записывается заново в двойных кавычках, если в нём есть пробелы; последнее набираемое слово с пробелами остаётся с
 /// незакрытой кавычкой.
 pub fn normalize(text: &str, dialect: Dialect) -> String {
@@ -364,7 +364,7 @@ pub fn normalize(text: &str, dialect: Dialect) -> String {
     result
 }
 
-/// Порядок вариантов (`NaturalOrder`): без учёта регистра, числа по значению (`TSK-2` раньше `TSK-10`).
+/// Порядок вариантов: без учёта регистра, числа по значению (`TSK-2` раньше `TSK-10`).
 pub fn natural_order(x: &str, y: &str) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     let (a, b): (Vec<char>, Vec<char>) = (x.chars().collect(), y.chars().collect());
@@ -418,7 +418,7 @@ enum Source {
     None,
     Projects,
     Statuses,
-    /// Статусы наборов типов, набранных в параметре `--type` (`Sources.TaskStatuses`).
+    /// Статусы наборов типов, набранных в параметре `--type`.
     TaskStatuses,
     StatusSets,
     TaskTypes,
@@ -453,7 +453,7 @@ enum Source {
 }
 
 impl Source {
-    /// Источник значений аргумента или параметра команды — как `Suggests(...)` в `Commands/*.cs`.
+    /// Источник значений аргумента или параметра команды.
     fn of(path: &[&CommandSpec], target: Target) -> Source {
         let group = path.get(1).map(|c| c.name).unwrap_or_default();
         let leaf = path.last().map(|c| c.name).unwrap_or_default();
@@ -512,7 +512,7 @@ impl Source {
     }
 }
 
-/// Что известно источнику: область (лениво), разобранная строка целиком и слово под курсором (`Lookup` в .NET).
+/// Что известно источнику: область (лениво), разобранная строка целиком и слово под курсором.
 struct Lookup<'w, 'a> {
     typed: &'w Parsed<'a>,
     path: &'w [&'a CommandSpec],
@@ -570,7 +570,7 @@ impl<'w, 'a> Lookup<'w, 'a> {
         self.session()?.workspace().link_types().get_all(&project).ok()
     }
 
-    /// Набранное значение аргумента команды под курсором (`Lookup.Value(argument)`).
+    /// Набранное значение аргумента команды под курсором.
     fn argument(&self, name: &str) -> Option<String> {
         let command = self.path.last()?;
         let argument = command.arguments.iter().find(|a| a.name == name)?;
@@ -582,7 +582,7 @@ impl<'w, 'a> Lookup<'w, 'a> {
         self.path.iter().rev().flat_map(|c| c.options.iter()).find(|o| o.id() == id)
     }
 
-    /// Набранные значения параметра: у повторяемого — все (`Lookup.Values`), у одиночного — единственное (`Lookup.Value`).
+    /// Набранные значения параметра: у повторяемого — все, у одиночного — единственное.
     fn option_values(&self, id: &str) -> Vec<String> {
         let Some(option) = self.option(id) else { return Vec::new() };
         match option.kind {
@@ -602,7 +602,7 @@ fn names<T: Entity>(lookup: &Lookup<'_, '_>, name: impl Fn(&T) -> String) -> Opt
 
 fn try_values(lookup: &mut Lookup<'_, '_>, source: Source) -> Option<Vec<String>> {
     let word = lookup.word.clone();
-    // Как `ValueSource` в .NET: источнику проекта сначала нужен проект (`InProject`), источнику области — открытая область
+    // Источнику проекта сначала нужен проект (`InProject`), источнику области — открытая область
     // (`NeedsWorkspace`); нет их — пусто, даже если ответ из набранного слова был бы известен.
     match source {
         Source::None
@@ -908,7 +908,7 @@ mod tests {
     #[test]
     fn shell_words_are_normalized_to_double_quotes() {
         assert_eq!(normalize("task get 'a b'", Dialect::Posix), "task get \"a b\"");
-        // Слово с экранированным пробелом набирается без кавычек: оно остаётся с открывающей кавычкой, как у .NET.
+        // Слово с экранированным пробелом набирается без кавычек: оно остаётся с открывающей кавычкой.
         assert_eq!(normalize("task get a\\ b", Dialect::Posix), "task get \"a b");
         // Незакрытая кавычка набираемого слова остаётся: System.CommandLine видит слово целиком.
         assert_eq!(normalize("task get \"a b", Dialect::Posix), "task get \"a b");

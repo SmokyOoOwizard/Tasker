@@ -1,7 +1,7 @@
-//! Справка в формате System.CommandLine (`HelpBuilder` 2.0) — слово в слово и пробел в пробел как у .NET-консоли:
+//! Справка в формате System.CommandLine (`HelpBuilder` 2.0) — слово в слово и пробел в пробел:
 //! разделы `Description:`, `Usage:`, `Arguments:`, `Options:`, `Commands:`, две колонки с выравниванием по самой длинной строке
 //! раздела, `[default: …]`, `(REQUIRED)`, подсказки значений `<a|b>` из области; перенос строк по ширине окна, когда вывод идёт
-//! в терминал (при перенаправлении — без переноса). Эталоны — `rust/tests/golden/expected/cli/*help-*`.
+//! в терминал (при перенаправлении — без переноса). Эталоны — `tests/golden/expected/cli/*help-*`.
 //!
 //! Здесь же — подсказки при опечатке (`TypoCorrection`: расстояние Левенштейна не больше трёх) и тексты ошибок разбора.
 use crate::spec::{ArgSpec, Arity, CommandSpec, GLOBAL_OPTIONS, HELP_OPTION, Hint, OptKind, OptSpec, VERSION_OPTION};
@@ -216,7 +216,7 @@ fn write_section(out: &mut String, heading: &str, rows: &[(String, String)], max
     out.push('\n');
 }
 
-/// Длина в знаках UTF-16, как `string.Length` в .NET.
+/// Длина в знаках UTF-16 — так ширину считает System.CommandLine.
 fn text_length(text: &str) -> usize {
     text.chars().map(char::len_utf16).sum()
 }

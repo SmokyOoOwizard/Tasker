@@ -1,4 +1,4 @@
-//! `tasker completion zsh|bash|pwsh` (`CompletionCommands`, `Shells`, `PowerShellProfile*` в .NET): скрипт автодополнения по
+//! `tasker completion zsh|bash|pwsh`: скрипт автодополнения по
 //! Tab (встроен из `completion/`, печатается байт в байт); для PowerShell — `--install`/`--uninstall`
 //! помеченного блока в `$PROFILE`.
 use crate::context::Context;
@@ -331,7 +331,7 @@ mod tests {
         assert_eq!((replaced.contains("other.ps1"), change), (true, ProfileChange::Replaced));
         let (removed, change) = uninstall(&replaced, "\n");
         assert_eq!((removed.as_str(), change), ("", ProfileChange::Removed));
-        // Файл кончается переводом строки: блок отделяется одной пустой строкой (как у .NET).
+        // Файл кончается переводом строки: блок отделяется одной пустой строкой.
         let (text, change) = install("echo hi\n", &b, "\n");
         assert_eq!(
             (text.as_str(), change),

@@ -1,5 +1,5 @@
-//! `tasker migrate [--dry-run] [--check]` (`MigrateCommands` в .NET): вывод, коды выхода (0; 2 у `--check`; 1 при ошибке)
-//! — как у .NET-консоли, эталоны `expected/cli/*migrate*` и `expected/migrate`.
+//! `tasker migrate [--dry-run] [--check]`: вывод, коды выхода (0; 2 у `--check`; 1 при ошибке) — эталоны
+//! `expected/cli/*migrate*` и `expected/migrate`.
 use crate::context::Context;
 use crate::errors::Result;
 use serde_json::{Map, Value};
@@ -150,7 +150,7 @@ pub fn show(report: &MigrationReport, dry_run: bool, check: bool, json: bool) ->
     format!("{}\n", lines.join("\n"))
 }
 
-/// Форма `--json` отчёта (анонимный объект .NET в camelCase, порядок полей тот же).
+/// Форма `--json` отчёта (camelCase, порядок полей постоянный).
 fn report_json(report: &MigrationReport, dry_run: bool, check: bool) -> Value {
     let object = |pairs: Vec<(&str, Value)>| Value::Object(pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect::<Map<_, _>>());
     let files = |items: &[migration::MigrationFile]| {

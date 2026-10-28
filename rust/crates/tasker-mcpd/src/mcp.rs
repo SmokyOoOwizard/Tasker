@@ -1,4 +1,4 @@
-//! Каталог областей для MCP (.NET `McpWorkspaceCatalog` + `McpDaemon.ConfigureCatalog`): открытые области реестра — по ключу,
+//! Каталог областей для MCP: открытые области реестра — по ключу,
 //! остальные из статуса демона (ещё открываются или не открылись) — по имени папки; агент других папок открыть не может.
 use crate::registry::WorkspaceRegistry;
 use crate::state::{DaemonState, WorkspaceState};

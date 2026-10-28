@@ -18,7 +18,7 @@ const PROJECT: &str = "11111111-1111-4111-8111-111111111111";
 const FEATURE: &str = "0000002b-0000-4000-8000-00000000002b";
 
 fn golden() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/workspace")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden/workspace")
 }
 
 fn copy_dir(from: &Path, to: &Path) {

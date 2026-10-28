@@ -1,5 +1,5 @@
-//! `tasker hooks install | status | uninstall` и хуки в деле на настоящем git (сценарии `GitHooksTests` .NET): тексты и коды как у
-//! .NET, содержимое хука (блок с маркерами в начале, чужие команды сохраняются и возвращаются при удалении, `core.hooksPath`), и
+//! `tasker hooks install | status | uninstall` и хуки в деле на настоящем git (сценарии `GitHooksTests` .NET): тексты и коды выхода,
+//! содержимое хука (блок с маркерами в начале, чужие команды сохраняются и возвращаются при удалении, `core.hooksPath`), и
 //! главное — после `checkout`, `merge`, `rebase`, `worktree add` хук сам обновляет кэш (`.cache/index.db`): кэш читается
 //! напрямую, ни одного процесса Tasker при этом не запускается. Репозитории — во временных каталогах; настройки git пользователя
 //! (`core.hooksPath`, шаблоны) не участвуют.
@@ -133,14 +133,14 @@ fn projects_in_cache(workspace: &Path) -> i64 {
         .unwrap()
 }
 
-/// Путь в форме для sh, как в хуке: на Windows с прямыми слэшами (`GitHooks.ToShellPath` в .NET), в одинарных кавычках.
+/// Путь в форме для sh, как в хуке: на Windows с прямыми слэшами, в одинарных кавычках.
 fn shell_quote(text: &str) -> String {
     let text = if cfg!(windows) { text.replace('\\', "/") } else { text.to_string() };
     format!("'{}'", text.replace('\'', "'\\''"))
 }
 
 #[test]
-fn install_status_and_uninstall_print_what_dotnet_prints_and_write_the_same_block() {
+fn install_status_and_uninstall_print_the_expected_texts_and_write_the_same_block() {
     let repo = Repo::new();
     let workspace = repo.folder("tools/my ws");
     let w = workspace.to_str().unwrap();

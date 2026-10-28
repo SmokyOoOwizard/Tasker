@@ -127,7 +127,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn slugs_match_the_dotnet_tests_and_the_golden_corpus() {
+    fn slugs_match_the_golden_corpus() {
         for (title, expected) in [
             ("Fix login", "fix-login"),
             ("  Fix   login!!  ", "fix-login"),
@@ -143,7 +143,7 @@ mod tests {
             ("!!! ???", "task"),
             ("😀 only emoji 😀", "only-emoji"),
             ("CON", "con"),
-            // Корпус (`rust/tests/golden/workspace`): имя файла = FileName(title, id).
+            // Корпус (`tests/golden/workspace`): имя файла = FileName(title, id).
             ("Ümläute, İstanbul, ß, Ærø, naïve café", "ümläute-İstanbul-ß-ærø-naïve-café"),
             (
                 "Кириллица и эмодзи 🚀 ✨, ещё — тире и «ёлочки»",

@@ -1,4 +1,4 @@
-//! Команды дерева по группам (`Commands/*.cs` в .NET). Каждая группа — функция `run(ctx, subcommand, matches)`, которая
+//! Команды дерева по группам. Каждая группа — функция `run(ctx, subcommand, matches)`, которая
 //! выполняет подкоманду по имени; вывод и ошибки — через [`crate::context::Context`].
 pub mod board;
 pub mod completion;
@@ -24,7 +24,7 @@ use tasker_services::Storage;
 use tasker_services::storage::Entity;
 use uuid::Uuid;
 
-/// Сущность проекта по ссылке (`Refs.FindItem` над `GetAll`); ссылка на файл, который не удалось прочитать, — ошибка его чтения.
+/// Сущность проекта по ссылке среди всех сущностей вида; ссылка на файл, который не удалось прочитать, — ошибка его чтения.
 fn find_entity<T: Entity>(
     ctx: &Context<'_>,
     project_id: &Uuid,

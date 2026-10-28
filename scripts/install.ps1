@@ -12,7 +12,7 @@ Where the files come from (one of; default: the release this script came with, t
 
 Layout (default -Prefix %LOCALAPPDATA%\Programs\Tasker):
   <Prefix>\app\   tasker.exe and tasker-mcpd.exe; this folder is added to the user PATH. It is replaced as a whole, so nothing
-                  of an earlier installation (the .NET build with its libraries) stays in it
+                  of an earlier installation stays in it
 What it does: copies the build (the old one stays until the new one works), adds <Prefix>\app to the user PATH (no administrator
 rights; running windows are told about the change), enables the autostart of the MCP server (Task Scheduler task of the current user,
 'tasker mcp autostart enable'), connects PowerShell Tab completion ('tasker completion pwsh --install'). A running MCP server is
@@ -71,7 +71,7 @@ $ErrorActionPreference = 'Stop'
 
 # ---------------------------------------------------------------- pure functions (no disk, no registry; tests load them)
 
-# Windows architecture name (PROCESSOR_ARCHITECTURE) -> .NET RID; $null for architectures there is no build for.
+# Windows architecture name (PROCESSOR_ARCHITECTURE) -> platform name of the release (RID); $null for architectures there is no build for.
 function ConvertTo-WindowsRid {
     param([string]$Architecture)
     switch -Regex ($Architecture) {
@@ -406,14 +406,8 @@ function Invoke-Main {
         try {
             Write-Host ('Installing tasker from ' + $sourceText + ' (' + $rid + ')...')
             New-Item -ItemType Directory -Path $staging -Force | Out-Null
-            if (Test-Path -LiteralPath (Join-Path $buildSource 'tasker.dll')) {
-                # a .NET build (an old release): the program is the whole folder with its libraries
-                Copy-Item -Path (Join-Path $buildSource '*') -Destination $staging -Recurse -Force
-            }
-            else {
-                # a Rust build: only the two programs (a folder like rust\target\release has intermediate cargo files too)
-                foreach ($name in @('tasker.exe', 'tasker-mcpd.exe')) { Copy-Item -LiteralPath (Join-Path $buildSource $name) -Destination $staging -Force }
-            }
+            # only the two programs (a folder like rust\target\release has intermediate cargo files too)
+            foreach ($name in @('tasker.exe', 'tasker-mcpd.exe')) { Copy-Item -LiteralPath (Join-Path $buildSource $name) -Destination $staging -Force }
             # a download is marked as coming from the internet: remove the mark so that SmartScreen/PowerShell do not ask again
             Get-ChildItem -LiteralPath $staging -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
 
@@ -430,10 +424,6 @@ function Invoke-Main {
             # Windows locks a running program: stop the MCP server (it is started again below), then swap the folders.
             if ($daemonRunning) {
                 Write-Host 'The MCP server is running: stopping it to replace the files (it is started again afterwards)...'
-                if (Test-Path -LiteralPath (Join-Path $app 'tasker.dll')) {
-                    # an update over the .NET build: after the restart the whole server (its supervisor too) is the new build
-                    Write-Host '  (the previous build is the .NET one: after the restart the whole MCP server runs the new build)'
-                }
                 [void](Invoke-Native $tasker @('mcp', 'stop'))
             }
             # Folders left by earlier runs (a file in them was still in use then): try again, quietly.

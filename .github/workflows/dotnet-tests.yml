@@ -1,6 +1,6 @@
-# Сборка .NET-решения (десктоп, сервер, общие библиотеки, стенд) и тесты tests/Tasker.Tests на Linux, macOS и Windows.
-# Тестам нужны консоль tasker и демон tasker-mcpd (Rust): их собирает сама сборка тестов (cargo build, профиль dev,
-# tools/RustBinaries.targets), кэш cargo — Swatinem/rust-cache. Фронтенд в сборку не встраивается (-p:EmbedFrontend=false):
+# Сборка .NET-решения dotnet/Tasker.slnx (десктоп, сервер, общие библиотеки, стенд) и тесты dotnet/tests/Tasker.Tests на Linux,
+# macOS и Windows. Тестам нужны консоль tasker и демон tasker-mcpd (Rust): их собирает сама сборка тестов (cargo build, профиль dev,
+# dotnet/tools/RustBinaries.targets), кэш cargo — Swatinem/rust-cache. Фронтенд в сборку не встраивается (-p:EmbedFrontend=false):
 # тестам веб-слоя интерфейс не нужен, Node.js в этом прогоне не ставится.
 name: .NET tests
 
@@ -8,25 +8,19 @@ on:
   push:
     branches: ['**']
     paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'tools/**'
+      - 'dotnet/**'
       - 'rust/**'
+      - 'tests/golden/**'
       - 'scripts/**'
-      - 'Tasker.slnx'
-      - 'Directory.Build.props'
       - 'VERSION'
       - '.github/workflows/dotnet-tests.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'tools/**'
+      - 'dotnet/**'
       - 'rust/**'
+      - 'tests/golden/**'
       - 'scripts/**'
-      - 'Tasker.slnx'
-      - 'Directory.Build.props'
       - 'VERSION'
       - '.github/workflows/dotnet-tests.yml'
   workflow_dispatch:
@@ -74,12 +68,12 @@ jobs:
         with:
           workspaces: rust
           key: dotnet-tests
-      - name: dotnet build Tasker.slnx
-        run: dotnet build Tasker.slnx -p:EmbedFrontend=false
+      - name: dotnet build dotnet/Tasker.slnx
+        run: dotnet build dotnet/Tasker.slnx -p:EmbedFrontend=false
       # Тест, который висит дольше 10 минут, снимается с дампом и называется в выводе; остальные результаты — в trx.
-      - name: dotnet test tests/Tasker.Tests
+      - name: dotnet test dotnet/tests/Tasker.Tests
         run: >-
-          dotnet test tests/Tasker.Tests --no-build -p:EmbedFrontend=false
+          dotnet test dotnet/tests/Tasker.Tests --no-build -p:EmbedFrontend=false
           --blame-hang-timeout 10m --blame-hang-dump-type none
           --results-directory TestResults
           --logger "trx;LogFileName=tasker-tests.trx"

@@ -1,5 +1,6 @@
-//! `tasker migrate` на копии golden-корпуса (`rust/tests/golden`): вывод, код выхода и вся область после миграции — байт в байт как
-//! у .NET (`expected/cli/*migrate*`, `expected/migrate/*`). Бинарник вызывается как процесс (`CARGO_BIN_EXE_tasker`).
+//! `tasker migrate` на копии golden-корпуса (`tests/golden`): вывод, код выхода и вся область после миграции — байт в байт как
+//! в эталонах (`expected/cli/*migrate*`, `expected/migrate/*`). Бинарник вызывается как процесс (`CARGO_BIN_EXE_tasker`).
+//! `TASKER_GOLDEN_UPDATE=1` переснимает и дерево `expected/migrate/tasker`, и `expected/migrate/versions.json`.
 mod common;
 
 use common::*;
@@ -17,11 +18,30 @@ fn check_and_dry_run_on_the_untouched_corpus_match_the_cli_snapshots() {
 }
 
 #[test]
-fn migrate_rewrites_and_renames_the_corpus_exactly_like_dotnet() {
+fn migrate_rewrites_and_renames_the_corpus_exactly_like_the_snapshot() {
     let (root, workspace) = fresh_copy();
     assert_snapshot("migrate", "001-migrate", &root);
 
     let actual = files(&workspace.join(".tasker"));
+    if golden_update() {
+        let tree = golden().join("expected/migrate/tasker");
+        std::fs::remove_dir_all(&tree).unwrap();
+        for (name, bytes) in &actual {
+            let path = tree.join(name);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, bytes).unwrap();
+        }
+        let versions: std::collections::BTreeMap<&String, String> = actual
+            .iter()
+            .filter(|(name, _)| name.ends_with(".yaml"))
+            .map(|(name, bytes)| (name, tasker_core::versioning::version_of(bytes)))
+            .collect();
+        std::fs::write(
+            golden().join("expected/migrate/versions.json"),
+            serde_json::to_string_pretty(&versions).unwrap() + "\n",
+        )
+        .unwrap();
+    }
     let expected = files(&golden().join("expected/migrate/tasker"));
     let actual_names: Vec<&String> = actual.keys().collect();
     let expected_names: Vec<&String> = expected.keys().collect();
@@ -48,7 +68,7 @@ fn migrate_rewrites_and_renames_the_corpus_exactly_like_dotnet() {
 
 // Справка `migrate --help` сверяется со снапшотом в `tests/help.rs` (из корня репозитория: подсказки значений берутся из его области).
 #[test]
-fn errors_use_the_dotnet_texts() {
+fn errors_and_an_empty_folder_print_the_expected_texts() {
     let (root, _workspace) = fresh_copy();
 
     let nowhere = root.join("nowhere");

@@ -1,5 +1,5 @@
-//! `WorkspaceRegistry` (.NET `Tasker.Web.Workspaces`): открытые рабочие области процесса. Папка открывается один раз, как бы её ни
-//! назвали; у области есть ключ — имя папки, у одновременно открытых одноимённых — с суффиксом (`Tasker-2`): это аргумент
+//! `WorkspaceRegistry` (как `dotnet/src/Tasker.Web/Workspaces/WorkspaceRegistry.cs`): открытые рабочие области процесса.
+//! Папка открывается один раз, как бы её ни назвали; у области есть ключ — имя папки, у одновременно открытых одноимённых — с суффиксом (`Tasker-2`): это аргумент
 //! `workspace` MCP и часть адреса `/w/{key}`, ключ не меняется между запусками. Открытая область: индекс со сверкой файлов
 //! ([`Workspace::open`]) и наблюдатель `.tasker` ([`WorkspaceWatcher`]: `Changed → refresh`, `FullSync → sync`), как
 //! `FileStorageModule(watchFiles: true)` + `WorkspaceWatcher` в .NET.

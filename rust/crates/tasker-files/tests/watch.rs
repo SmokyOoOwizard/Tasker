@@ -1,4 +1,4 @@
-//! Наблюдатель `watch` на реальной файловой системе (на macOS — FSEvents, с его повторами и «липкими» флагами): копия `rust/tests/golden/workspace` в `target/tmp`,
+//! Наблюдатель `watch` на реальной файловой системе (на macOS — FSEvents, с его повторами и «липкими» флагами): копия `tests/golden/workspace` в `target/tmp`,
 //! правки файлов → одна пачка `Changed` с относительными путями; `.cache` и `*.tmp` не приходят; 600 файлов → `FullSync`;
 //! остановка не отдаёт накопленное окно (как `Stop` в .NET). Тайминги с запасом: ждём до нескольких секунд, не ровно 300 мс.
 use std::path::{Path, PathBuf};
@@ -33,7 +33,7 @@ fn copy_dir(from: &Path, to: &Path) {
 
 /// Копия golden-области; возвращает путь к её `.tasker`.
 fn workspace_copy() -> PathBuf {
-    let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/workspace/.tasker");
+    let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden/workspace/.tasker");
     let root = temp_dir().join(".tasker");
     copy_dir(&golden, &root);
     std::fs::create_dir_all(root.join(".cache")).unwrap();

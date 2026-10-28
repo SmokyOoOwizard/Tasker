@@ -9,6 +9,7 @@ on:
     tags: ['v*']
     paths:
       - 'rust/**'
+      - 'tests/golden/**'
       - 'VERSION'
       - 'scripts/release.sh'
       - 'scripts/install.sh'

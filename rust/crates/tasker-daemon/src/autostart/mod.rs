@@ -1,6 +1,5 @@
-//! Автозапуск демона через службу системы (`Tasker.Daemon.Services` в .NET): launchd на macOS, пользовательский systemd на Linux,
-//! Планировщик заданий на Windows. Описания служб генерируются дословно как у .NET-версии (`autostart enable` на уже стоящей
-//! службе даёт байт-идентичный файл), команды системы вызываются через [`ProcessRunner`] — тесты подменяют его и проверяют аргументы.
+//! Автозапуск демона через службу системы: launchd на macOS, пользовательский systemd на Linux, Планировщик заданий на Windows.
+//! Описания служб генерируются детерминированно (`autostart enable` на уже стоящей службе даёт байт-идентичный файл), команды системы вызываются через [`ProcessRunner`] — тесты подменяют его и проверяют аргументы.
 //!
 //! Чистые генераторы: [`render_launchd`], [`render_systemd`], [`render_windows_task`] на [`AutostartContext`]; службы —
 //! [`LaunchdService`], [`SystemdService`], [`WindowsTaskService`] за трейтом [`ServiceManager`]; [`create`] выбирает службу для текущей
@@ -26,7 +25,7 @@ pub const SERVICE_LABEL_VARIABLE: &str = "TASKER_SERVICE_LABEL";
 /// Имя программы демона (`tasker-mcpd`) — она лежит рядом с `tasker`.
 pub const DAEMON_NAME: &str = "tasker-mcpd";
 
-/// Результат системной команды (`ProcessResult` в .NET).
+/// Результат системной команды.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessResult {
     pub exit_code: i32,
@@ -64,8 +63,8 @@ impl<T: ProcessRunner> ProcessRunner for std::rc::Rc<T> {
     }
 }
 
-/// Настоящий запуск: stdout и stderr читаются целиком; программа не найдена — код 127 и `<file>: <ошибка>`, как у .NET
-/// (`Win32Exception`).
+/// Настоящий запуск: stdout и stderr читаются целиком; программа не найдена — код 127 и `<file>: <ошибка>`
+/// (текст ошибки ОС).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SystemProcessRunner;
 
@@ -82,7 +81,7 @@ impl ProcessRunner for SystemProcessRunner {
     }
 }
 
-/// Текст ошибки ОС без суффикса ` (os error N)` — так его показывает `Win32Exception.Message` в .NET.
+/// Текст ошибки ОС без суффикса ` (os error N)`.
 fn os_message(e: &std::io::Error) -> String {
     let text = e.to_string();
     match text.rfind(" (os error ") {
@@ -91,12 +90,12 @@ fn os_message(e: &std::io::Error) -> String {
     }
 }
 
-/// Ошибки автозапуска: `ServiceException`, `DaemonStartException` (демона рядом нет) и ошибки файловой системы .NET.
+/// Ошибки автозапуска: команда системы не удалась, демона рядом нет, ошибка файловой системы.
 #[derive(Debug)]
 pub enum ServiceError {
-    /// `ServiceException`: команда системы не удалась, автозапуск не включён, система не поддерживается.
+    /// Команда системы не удалась, автозапуск не включён, система не поддерживается.
     Service(String),
-    /// `DaemonStartException`: программа `tasker-mcpd` не установлена рядом с `tasker`.
+    /// Программа `tasker-mcpd` не установлена рядом с `tasker`.
     DaemonNotInstalled(String),
     Io(std::io::Error),
 }
@@ -154,7 +153,7 @@ pub trait ServiceManager {
     fn is_loaded(&self) -> bool;
 }
 
-/// Всё, что генераторам нужно от окружения (`ServiceManagers.DaemonCommand()`, `ServiceManagers.Environment()`, `AppDirectories`):
+/// Всё, что генераторам нужно от окружения:
 /// команда демона с `--detached`, переменные окружения для службы, каталог данных, имя службы и (Windows) пользователь.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AutostartContext {
@@ -191,7 +190,7 @@ impl AutostartContext {
     }
 }
 
-/// `ServiceManagers.Environment()`: `TASKER_HOME`, если он переопределён (непустой).
+/// Переменные окружения службы: `TASKER_HOME`, если он переопределён (непустой).
 pub fn service_environment() -> Vec<(String, String)> {
     match std::env::var(tasker_core::settings::HOME_VARIABLE) {
         Ok(home) if !home.is_empty() => vec![(tasker_core::settings::HOME_VARIABLE.to_string(), home)],
@@ -199,15 +198,15 @@ pub fn service_environment() -> Vec<(String, String)> {
     }
 }
 
-/// `ServiceManagers.DaemonCommand()`: программа `tasker-mcpd` из каталога текущей программы (ссылка `~/.local/bin/tasker`
-/// раскрывается до настоящего пути) и `--detached`. Rust-консоль — всегда нативный бинарник, ветки `dotnet tasker.dll` нет.
+/// Команда запуска демона: программа `tasker-mcpd` из каталога текущей программы (ссылка `~/.local/bin/tasker`
+/// раскрывается до настоящего пути) и `--detached`.
 pub fn daemon_command() -> Result<Vec<String>> {
     let exe = std::env::current_exe().map_err(|_| ServiceError::service("Cannot find the path of the running program"))?;
     let program = daemon_program(&exe)?;
     Ok(vec![program.to_string_lossy().into_owned(), "--detached".to_string()])
 }
 
-/// `Launcher.DaemonCommand(processPath, null)` для нативной программы `process_path`.
+/// Программа демона рядом с нативной программой `process_path`.
 pub fn daemon_program(process_path: &Path) -> Result<PathBuf> {
     let resolved = resolve_link_target(process_path);
     let directory = resolved.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -261,8 +260,8 @@ pub(crate) fn xml_escape(value: &str) -> String {
     out
 }
 
-/// `AppEnvironment.Get(name)`: `null` только у незаданной переменной — пустое значение в .NET проходит через `??` как есть, поэтому и
-/// здесь возвращается `Some("")`.
+/// Переопределение из переменной окружения: `None` только у незаданной переменной — пустое значение считается заданным, поэтому
+/// возвращается `Some("")`.
 pub(crate) fn env_override(name: &str) -> Option<String> {
     std::env::var(name).ok()
 }
@@ -316,7 +315,7 @@ impl ServiceManager for UnsupportedService {
     }
 }
 
-/// `ServiceManagers.Create`: служба текущей системы с каталогом и именем по умолчанию (`TASKER_SERVICE_DIR`, `TASKER_SERVICE_LABEL`).
+/// Служба текущей системы с каталогом и именем по умолчанию (`TASKER_SERVICE_DIR`, `TASKER_SERVICE_LABEL`).
 pub fn create(runner: Box<dyn ProcessRunner>) -> Box<dyn ServiceManager> {
     if cfg!(target_os = "macos") {
         Box::new(LaunchdService::new(runner, None, None))
@@ -343,7 +342,7 @@ pub(crate) mod test_support {
     use std::rc::Rc;
     use std::sync::{Mutex, MutexGuard};
 
-    /// Поддельный исполнитель как `FakeRunner` в тестах .NET: запоминает строки `file arg arg`, отвечает по префиксу.
+    /// Поддельный исполнитель: запоминает строки `file arg arg`, отвечает по префиксу.
     #[derive(Default)]
     pub struct FakeRunner {
         pub calls: RefCell<Vec<String>>,
@@ -526,7 +525,7 @@ mod tests {
     }
 
     #[test]
-    fn system_runner_reports_a_missing_program_like_dotnet() {
+    fn system_runner_reports_a_missing_program_with_code_127() {
         let r = SystemProcessRunner.run("tasker-no-such-program-xyz", &["a"]);
         assert_eq!(r.exit_code, 127);
         assert!(r.error.starts_with("tasker-no-such-program-xyz: "), "{}", r.error);

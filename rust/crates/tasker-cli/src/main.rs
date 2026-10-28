@@ -1,4 +1,4 @@
-//! Бинарник `tasker`: консоль на Windows переключается в UTF-8 (`ConsoleSetup`), строка выполняется [`tasker_cli::app::run`].
+//! Бинарник `tasker`: консоль на Windows переключается в UTF-8, строка выполняется [`tasker_cli::app::run`].
 use std::io::Write;
 
 fn main() {

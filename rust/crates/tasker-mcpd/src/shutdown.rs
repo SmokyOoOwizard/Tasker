@@ -1,8 +1,8 @@
 //! Все способы остановить демон снаружи: сигналы SIGTERM и SIGINT (Ctrl+C) на Unix; на Windows — именованное событие
-//! `Local\tasker-mcp-stop-<16 hex SHA-256 пути>` (.NET `ShutdownSignal`), которое взводят `tasker mcp stop` и `tasker mcp run` по
+//! `Local\tasker-mcp-stop-<16 hex SHA-256 пути>`, которое взводят `tasker mcp stop` и `tasker mcp run` по
 //! Ctrl+C, плюс Ctrl+C/Ctrl+Break консоли. Запрос `/daemon/stop` — отдельно, в HTTP.
 //!
-//! Windows-ветка написана по C# и не проверена (как и вся поддержка Windows).
+//! Windows-ветка не проверена (как и вся поддержка Windows).
 use sha2::{Digest as _, Sha256};
 use std::path::Path;
 use tokio::sync::watch;
@@ -95,7 +95,7 @@ mod windows_event {
         fn CloseHandle(handle: Handle) -> i32;
     }
 
-    /// Ждёт события в отдельном потоке (он живёт до конца процесса — как зарегистрированное ожидание в .NET).
+    /// Ждёт события в отдельном потоке (он живёт до конца процесса).
     pub async fn listen(name: &str) {
         let wide: Vec<u16> = std::ffi::OsStr::new(name).encode_wide().chain(std::iter::once(0)).collect();
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();

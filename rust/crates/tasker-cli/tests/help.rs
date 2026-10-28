@@ -1,12 +1,26 @@
-//! Справка каждой команды и ошибки разбора — байт в байт как у .NET (System.CommandLine): снапшоты `expected/cli/*help-*` и
-//! `*error-*` golden-корпуса. Справку .NET снимали из корня репозитория: подсказки значений (`<R&D|Баг|Фича>`, `<Tasker>`)
+//! Справка каждой команды и ошибки разбора в стиле System.CommandLine — байт в байт как снапшоты `expected/cli/*help-*` и
+//! `*error-*` golden-корпуса. Справка снята из корня репозитория: подсказки значений (`<R&D|Баг|Фича>`, `<Tasker>`)
 //! берутся из его области `.tasker`, поэтому и здесь бинарник запускается из корня репозитория. Глобальные настройки —
-//! из пустого `TASKER_HOME`, переменные ширины и проекта сняты.
+//! из пустого `TASKER_HOME`, переменные ширины и проекта сняты. `TASKER_GOLDEN_UPDATE=1` переснимает stdout, stderr и код
+//! (путь корня — снова `<ROOT>`; на Windows замена неточна, снапшоты переснимаются на macOS/Linux).
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+fn golden_update() -> bool {
+    std::env::var("TASKER_GOLDEN_UPDATE").is_ok_and(|v| !v.is_empty() && v != "0")
+}
+
+fn write_snapshot(name: &str, root: &Path, run: &Run) {
+    let base = golden().join("expected/cli").join(name);
+    let root = root.to_string_lossy();
+    let write = |ext: &str, text: &str| std::fs::write(format!("{}.{ext}", base.display()), text).unwrap();
+    write("out", &run.stdout.replace(&*root, "<ROOT>"));
+    write("err", &run.stderr.replace(&*root, "<ROOT>"));
+    write("code", &format!("{}\n", run.code));
+}
+
 fn golden() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden")
 }
 
 fn repository_root() -> PathBuf {
@@ -30,6 +44,7 @@ struct Run {
 fn tasker(cwd: &Path, home: &Path, args: &[String], env: &[(&str, &str)]) -> Run {
     let mut command = Command::new(env!("CARGO_BIN_EXE_tasker"));
     command
+        .env_remove("TASKER_GOLDEN_UPDATE")
         .args(args)
         .env("TASKER_HOME", home)
         .env_remove("TASKER_PROJECT")
@@ -78,15 +93,19 @@ fn help_snapshots() -> Vec<String> {
 }
 
 #[test]
-fn the_help_of_every_command_matches_the_dotnet_snapshot_byte_for_byte() {
+fn the_help_of_every_command_matches_its_snapshot_byte_for_byte() {
     let home = temp_dir();
     let root = repository_root();
     let names = help_snapshots();
     assert_eq!(names.len(), 112, "help snapshots in the corpus");
     let mut failures = Vec::new();
     for name in &names {
-        let (args, out, err, code) = snapshot(name, &root);
+        let (args, _, _, _) = snapshot(name, &root);
         let run = tasker(&root, &home, &args, &[]);
+        if golden_update() {
+            write_snapshot(name, &root, &run);
+        }
+        let (_, out, err, code) = snapshot(name, &root);
         if run.stdout != out || run.stderr != err || run.code != code {
             failures.push(format!(
                 "{name}: code {} (expected {code}), stderr {:?}\n--- expected\n{out}--- actual\n{}",
@@ -104,7 +123,7 @@ fn the_help_of_every_command_matches_the_dotnet_snapshot_byte_for_byte() {
     std::fs::remove_dir_all(&home).unwrap();
 }
 
-/// Копия golden-области под именем `golden` в пустом каталоге (как `<ROOT>/golden` у `generate.py`).
+/// Копия golden-области под именем `golden` в пустом каталоге (`<ROOT>/golden`).
 fn golden_copy() -> PathBuf {
     fn copy_dir(from: &Path, to: &Path) {
         std::fs::create_dir_all(to).unwrap();
@@ -124,7 +143,7 @@ fn golden_copy() -> PathBuf {
 }
 
 #[test]
-fn parse_and_workspace_errors_match_the_dotnet_snapshots() {
+fn parse_and_workspace_errors_match_the_snapshots() {
     let home = temp_dir();
     let root = golden_copy();
     for name in [
@@ -133,14 +152,18 @@ fn parse_and_workspace_errors_match_the_dotnet_snapshots() {
         "122-error-no-workspace",
         "123-error-unknown-command",
     ] {
-        let (args, out, err, code) = snapshot(name, &root);
-        // Справку в ошибке разбора .NET снимал из корня репозитория (подсказка `<Tasker>`), как и `help-*`.
+        let (args, _, _, _) = snapshot(name, &root);
+        // Справка в ошибке разбора снята из корня репозитория (подсказка `<Tasker>`), как и `help-*`.
         let cwd = if name.contains("unknown-command") {
             repository_root()
         } else {
             root.clone()
         };
         let run = tasker(&cwd, &home, &args, &[]);
+        if golden_update() {
+            write_snapshot(name, &root, &run);
+        }
+        let (_, out, err, code) = snapshot(name, &root);
         assert_eq!(run.stdout, out, "stdout of {name}");
         assert_eq!(run.stderr, err, "stderr of {name}");
         assert_eq!(run.code, code, "exit code of {name}");
@@ -172,7 +195,7 @@ fn parse_and_workspace_errors_match_the_dotnet_snapshots() {
 fn sqlite_creates_the_database_and_version_prints_the_repository_version() {
     let home = temp_dir();
     let root = golden_copy();
-    // Файла нет — он создаётся со схемой EF Core (TSK-159), как у .NET; проектов в новой БД нет.
+    // Файла нет — он создаётся со схемой EF Core (TSK-159); проектов в новой БД нет.
     let run = tasker(&root, &home, &["task".into(), "list".into(), "--sqlite".into(), "x.db".into()], &[]);
     assert_eq!(
         (run.stdout.as_str(), run.stderr.as_str(), run.code),

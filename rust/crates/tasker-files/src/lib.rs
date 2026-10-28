@@ -1,4 +1,4 @@
-//! Файлы `.tasker` на Rust (TSK-129, фаза 1 плана `docs/rust-migration-plan.md`): разбор YAML через saphyr в модели
+//! Файлы `.tasker` на Rust (TSK-129): разбор YAML через saphyr в модели
 //! `tasker-core`, собственный эмиттер, повторяющий YamlDotNet байт в байт, версия формата `formatVersion` с апгрейдом в памяти.
 //!
 //! Модели файлов работают с байтами: [`parse`](files::project::parse) принимает содержимое файла и путь (для текстов ошибок),
@@ -7,8 +7,8 @@
 //! ([`edit_locks`]) и `tasker migrate` ([`migration`]); индекс области в SQLite `.cache/index.db`, общий с .NET ([`index`], TSK-131, TSK-161);
 //! наблюдатель файлов для демона ([`watch`], TSK-133).
 //!
-//! Правило переноса: поведение `Tasker.Storage.Files` (.NET) воспроизводится буквально — ключи, их порядок, правила пропуска
-//! (null, false, пустые списки, пустое описание), стиль скаляров YamlDotNet, тексты ошибок. Эталоны — `rust/tests/golden`.
+//! Поведение совпадает с `dotnet/src/Tasker.Storage.Files` буквально — ключи, их порядок, правила пропуска (null, false,
+//! пустые списки, пустое описание), стиль скаляров YamlDotNet, тексты ошибок. Эталоны — `tests/golden`.
 
 pub mod edit_locks;
 pub mod error;

@@ -1,4 +1,4 @@
-//! Супервизор демона (.NET `Supervisor.cs`): процесс, которым владеют служба (launchd, systemd) или `tasker mcp start`, и блокировка
+//! Супервизор демона: процесс, которым владеют служба (launchd, systemd) или `tasker mcp start`, и блокировка
 //! `daemon.lock`. Он ничего не обслуживает сам. Его дело — слушающий сокет (открывает один раз и не закрывает, пока жив демон) и
 //! рабочие процессы ([`crate::worker`]), которые принимают вызовы из этого сокета. Поэтому сервер можно заменить на лету, не трогая
 //! ни службу, ни порт, ни блокировку:
@@ -9,10 +9,10 @@
 //! 3. новому открывают затвор (`activate`), старому закрывают (`drain`): он заканчивает начатые вызовы и выходит.
 //!
 //! Супервизор живёт до перезапуска демона и не обновляется на лету, поэтому обмен с рабочими процессами ([`crate::wire`]) совместим в
-//! обе стороны — и с рабочими процессами .NET. Рабочий процесс упал — супервизор запускает его снова (последней сборкой) с паузами
-//! 0/1/2/5/10 с; больше пяти падений за минуту — сдаётся (код 1). Тексты журнала — как у .NET.
+//! обе стороны — со старыми и новыми сборками рабочих процессов. Рабочий процесс упал — супервизор запускает его снова (последней сборкой) с паузами
+//! 0/1/2/5/10 с; больше пяти падений за минуту — сдаётся (код 1).
 //!
-//! Windows (задание с «убить всех при закрытии», `CREATE_NO_WINDOW`, сокет через `WSADuplicateSocketW`) написано по C# и не проверено.
+//! Windows (задание с «убить всех при закрытии», `CREATE_NO_WINDOW`, сокет через `WSADuplicateSocketW`) не проверено.
 use crate::daemon::detach;
 use crate::files::{DaemonFiles, DaemonInfo, new_token};
 use crate::gate::seconds;
@@ -567,7 +567,7 @@ fn capitalize(text: &str) -> String {
     }
 }
 
-/// Своя программа (`Launcher.Command`): рабочий процесс — тот же `tasker-mcpd`.
+/// Своя программа: рабочий процесс — тот же `tasker-mcpd`.
 fn own_command() -> (String, Vec<String>) {
     let path = std::env::current_exe()
         .map(|p| p.to_string_lossy().into_owned())
@@ -619,7 +619,7 @@ struct WorkerProcess {
     active_ack: Flag,
     exited: Flag,
     exit_code: AtomicI32,
-    /// Строки в stdin процесса: пишет одна задача по порядку (как синхронный `Send` у .NET).
+    /// Строки в stdin процесса: пишет одна задача по порядку.
     input: mpsc::UnboundedSender<String>,
     kill: Notify,
 }
@@ -778,7 +778,7 @@ fn exit_code(status: &std::process::ExitStatus) -> i32 {
     status.code().unwrap_or(-1)
 }
 
-/// Привязка рабочих процессов к супервизору (.NET `WorkerJob.cs`): на Unix рабочий процесс выходит сам, когда закрывается канал
+/// Привязка рабочих процессов к супервизору: на Unix рабочий процесс выходит сам, когда закрывается канал
 /// (stdin); на Windows надёжнее объект «задание» с признаком «убить всех при закрытии». Не проверено.
 mod job {
     #[cfg(windows)]
@@ -868,7 +868,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn capitalize_like_dotnet() {
+    fn capitalize_makes_the_first_letter_upper_case() {
         assert_eq!(capitalize("the new MCP server"), "The new MCP server");
         assert_eq!(capitalize(""), "");
     }

@@ -1,4 +1,4 @@
-//! `tasker manual` (`howto`): микро-справочник «как сделать то-то» (`ManualCommands`, `ManualCatalog` в .NET). Страницы
+//! `tasker manual` (`howto`): микро-справочник «как сделать то-то». Страницы
 //! встроены в бинарник (`include_str!` из `rust/crates/tasker-cli/manual/<язык>/`), рабочая область не нужна. Язык — `--lang`,
 //! переменная `TASKER_LANG`, иначе язык по умолчанию; нет страницы — откат на язык по умолчанию с пометкой.
 use crate::context::Context;

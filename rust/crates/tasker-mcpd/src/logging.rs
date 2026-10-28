@@ -1,7 +1,7 @@
-//! Журнал демона — как Serilog в .NET (`McpDaemon.ConfigureLogging`): файл `<data>/logs/mcp-YYYYMMDD.log` (день — файл, хранятся
+//! Журнал демона в формате Serilog: файл `<data>/logs/mcp-YYYYMMDD.log` (день — файл, хранятся
 //! 7 последних), строки `2026-10-09 13:58:27.056 +02:00 [INF] сообщение` с уровнями INF/WRN/ERR/FTL в местном времени; не в фоне —
 //! ещё и консоль `[13:58:27 INF] сообщение`. Формат файла важен: консоль при неудачном старте читает хвост журнала и показывает
-//! последнюю строку с `[ERR]`/`[FTL]` после «Starting the MCP server» (`DaemonController.LogTail`).
+//! последнюю строку с `[ERR]`/`[FTL]` после «Starting the MCP server».
 //!
 //! `tracing-appender` не используется: он именует файлы `prefix.YYYY-MM-DD.suffix`, а нужен `mcp-YYYYMMDD.log`, — ролик по дате
 //! здесь свой ([`DailyFile`]). Файл открыт на дозапись без исключительной блокировки (`shared: true`): в журнал могут писать

@@ -1,8 +1,10 @@
 //! MCP демона на golden-корпусе (`tests/golden/expected/mcp`): `tasker-mcpd` на свободном порту с изолированным `TASKER_HOME`, область
-//! `golden` — копия корпуса, область `broken` — несуществующая папка (как у `scripts/golden/generate.py`). Те же вызовы, что снимал
-//! скрипт, сравниваются с эталонами .NET семантически: разбор JSON, нормализация `<ROOT>`, `<WSID:…>`, `<LOCAL-AGENT-*>`, `<TIME>`;
-//! `isError: false` и порядок ключей конверта не считаются различием; `text` с JSON внутри сравнивается как JSON с порядком ключей,
-//! а `tools/list` сверяется и по порядку ключей схем.
+//! `golden` — копия корпуса, область `broken` — несуществующая папка; раздел SQLite (`tests/golden/sqlite/expected/mcp`) — область
+//! `golden.db`, восстановленная из `sqlite/workspace.sql`. Ответы сравниваются с эталонами семантически: разбор JSON, нормализация
+//! `<ROOT>`, `<WSID:…>`, `<LOCAL-AGENT-*>`, `<TIME>`; `isError: false` и порядок ключей конверта не считаются различием; `text` с JSON
+//! внутри сравнивается как JSON с порядком ключей, а `tools/list` сверяется и по порядку ключей схем.
+//! `TASKER_GOLDEN_UPDATE=1` переснимает эталоны: весь конверт JSON-RPC (отступ 2) с обратной заменой на плейсхолдеры; на Windows
+//! замена путей неточна — эталоны переснимаются на macOS/Linux.
 use serde_json::{Map, Value, json};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
@@ -17,9 +19,14 @@ const BIN: &str = env!("CARGO_BIN_EXE_tasker-mcpd");
 const GOLDEN_PROJECT: &str = "11111111-1111-4111-8111-111111111111";
 const LEGACY_PROJECT: &str = "22222222-2222-4222-8222-222222222222";
 const BUG_ID: &str = "00000035-0000-4000-8000-000000000035";
+const SQLITE_BUG_ID: &str = "00000073-0000-4000-8000-000000000073";
+
+fn golden_update() -> bool {
+    std::env::var("TASKER_GOLDEN_UPDATE").is_ok_and(|v| !v.is_empty() && v != "0")
+}
 
 fn golden() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden")
 }
 
 fn copy_dir(from: &Path, to: &Path) {
@@ -54,21 +61,43 @@ impl Fixture {
 
     /// `prepare` — правка копии корпуса (папка `golden/`) до запуска демона.
     fn start_with(prepare: impl FnOnce(&Path)) -> Fixture {
+        let root = Fixture::root();
+        copy_dir(&golden().join("workspace"), &root.join("golden"));
+        prepare(&root.join("golden"));
+        let workspaces = format!(
+            "{{\"kind\":\"files\",\"path\":\"{}\"}},{{\"kind\":\"files\",\"path\":\"{}\"}}",
+            root.join("golden").display(),
+            root.join("broken").display()
+        );
+        Fixture::launch(root, &workspaces)
+    }
+
+    fn start_sqlite() -> Fixture {
+        let root = Fixture::root();
+        let connection = rusqlite::Connection::open(root.join("golden.db")).unwrap();
+        let _: String = connection.query_row("PRAGMA journal_mode = wal", [], |r| r.get(0)).unwrap();
+        connection
+            .execute_batch(&std::fs::read_to_string(golden().join("sqlite/workspace.sql")).unwrap())
+            .unwrap();
+        drop(connection);
+        let workspaces = format!("{{\"kind\":\"sqlite\",\"path\":\"{}\"}}", root.join("golden.db").display());
+        Fixture::launch(root, &workspaces)
+    }
+
+    fn root() -> PathBuf {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/tmp")
             .join(uuid::Uuid::new_v4().simple().to_string());
         std::fs::create_dir_all(root.join("home")).unwrap();
-        let root = canonical(&root);
-        copy_dir(&golden().join("workspace"), &root.join("golden"));
-        prepare(&root.join("golden"));
+        canonical(&root)
+    }
+
+    fn launch(root: PathBuf, workspaces: &str) -> Fixture {
         let port = free_port();
-        let settings = format!(
-            "{{\"mcp\":{{\"port\":{port},\"workspaces\":[{{\"kind\":\"files\",\"path\":\"{}\"}},{{\"kind\":\"files\",\"path\":\"{}\"}}]}}}}\n",
-            root.join("golden").display(),
-            root.join("broken").display()
-        );
+        let settings = format!("{{\"mcp\":{{\"port\":{port},\"workspaces\":[{workspaces}]}}}}\n");
         std::fs::write(root.join("home/settings.json"), settings).unwrap();
         let child = Command::new(BIN)
+            .env_remove("TASKER_GOLDEN_UPDATE")
             .env("TASKER_HOME", root.join("home"))
             .env("TASKER_SERVICE_DIR", root.join("home/service"))
             .env("TASKER_SERVICE_LABEL", format!("com.tasker.mcp-test-{port}"))
@@ -154,24 +183,32 @@ impl Drop for Fixture {
 
 /// Семантическое сравнение ответа с эталоном `expected/mcp/<name>.json`.
 struct Snapshots {
+    dir: PathBuf,
     replacements: Vec<(String, String)>,
     failures: Vec<String>,
 }
 
 impl Snapshots {
     fn normalize(&self, value: &Value) -> Value {
-        let mut text = serde_json::to_string(value).unwrap();
-        for (from, to) in &self.replacements {
-            text = text.replace(from, to);
-        }
-        let mut value: Value = serde_json::from_str(&text).unwrap();
+        let mut value: Value = serde_json::from_str(&self.placeholders(&serde_json::to_string(value).unwrap())).unwrap();
         strip_false_is_error(&mut value);
         canonical_texts(&mut value);
         value
     }
 
+    fn placeholders(&self, text: &str) -> String {
+        let mut text = text.to_string();
+        for (from, to) in &self.replacements {
+            text = text.replace(from, to);
+        }
+        text
+    }
+
     fn check(&mut self, name: &str, actual: &Value) {
-        let path = golden().join("expected/mcp").join(format!("{name}.json"));
+        let path = self.dir.join(format!("{name}.json"));
+        if golden_update() {
+            std::fs::write(&path, self.placeholders(&serde_json::to_string_pretty(actual).unwrap()) + "\n").unwrap();
+        }
         let expected: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         let expected = self.normalize(&expected["result"]);
         let actual = self.normalize(&actual["result"]);
@@ -222,11 +259,12 @@ fn scrub_times(value: &Value) -> Value {
 
 #[test]
 #[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
-fn mcp_answers_match_the_dotnet_snapshots() {
+fn mcp_answers_match_the_snapshots() {
     let f = Fixture::start();
     let root = f.root.to_string_lossy().into_owned();
     let golden_path = f.golden_path();
     let mut snapshots = Snapshots {
+        dir: golden().join("expected/mcp"),
         replacements: vec![
             (root.clone(), "<ROOT>".into()),
             (WorkspaceLocation::files(&golden_path).id().to_string(), "<WSID:golden>".into()),
@@ -267,7 +305,7 @@ fn mcp_answers_match_the_dotnet_snapshots() {
     );
     let tools = f.rpc("tools/list", json!({}), &[]);
     snapshots.check("tools-list", &tools);
-    // Схемы — ещё и по порядку ключей: таблица отдаётся так, как её объявил .NET.
+    // Схемы — ещё и по порядку ключей: таблица отдаётся в порядке объявления, как в эталоне.
     let expected_tools: Value =
         serde_json::from_str(&std::fs::read_to_string(golden().join("expected/mcp/tools-list.json")).unwrap()).unwrap();
     assert_eq!(
@@ -281,6 +319,9 @@ fn mcp_answers_match_the_dotnet_snapshots() {
         .map(|t| t["name"].as_str().unwrap())
         .collect();
     names.sort_unstable();
+    if golden_update() {
+        std::fs::write(golden().join("expected/mcp/tool-names.txt"), names.join("\n") + "\n").unwrap();
+    }
     assert_eq!(
         names.join("\n") + "\n",
         std::fs::read_to_string(golden().join("expected/mcp/tool-names.txt")).unwrap()
@@ -395,6 +436,143 @@ fn mcp_answers_match_the_dotnet_snapshots() {
     console.entity_locks().release(LockedEntity::Task, &bug_uuid).unwrap();
 
     snapshots.check("errors/unknown-tool", &f.call("no_such_tool", json!({})));
+
+    assert!(
+        snapshots.failures.is_empty(),
+        "{} snapshot(s) differ:\n{}",
+        snapshots.failures.len(),
+        snapshots.failures.join("\n")
+    );
+}
+
+#[test]
+#[cfg_attr(windows, ignore = "TSK-156: the daemon does not get ready in these tests on Windows")]
+fn sqlite_mcp_answers_match_the_snapshots() {
+    let f = Fixture::start_sqlite();
+    let root = f.root.to_string_lossy().into_owned();
+    let db = f.root.join("golden.db");
+    let mut snapshots = Snapshots {
+        dir: golden().join("sqlite/expected/mcp"),
+        replacements: vec![
+            (root.clone(), "<ROOT>".into()),
+            (
+                WorkspaceLocation::sqlite(&db.to_string_lossy()).id().to_string(),
+                "<WSID:golden.db>".into(),
+            ),
+        ],
+        failures: Vec::new(),
+    };
+    let w = json!({"workspace": "golden.db"});
+    let g = |extra: Value| -> Value {
+        let mut map: Map<String, Value> = json!({"workspace": "golden.db", "projectId": GOLDEN_PROJECT})
+            .as_object()
+            .unwrap()
+            .clone();
+        map.extend(extra.as_object().unwrap().clone());
+        Value::Object(map)
+    };
+
+    let me = f.result_json("whoami", w.clone());
+    for (key, marker) in [("id", "<LOCAL-AGENT-ID>"), ("createdAt", "<LOCAL-AGENT-CREATED>")] {
+        snapshots
+            .replacements
+            .push((me[key].as_str().unwrap().to_string(), marker.to_string()));
+    }
+
+    snapshots.check("list_workspaces", &f.call("list_workspaces", json!({})));
+    snapshots.check("whoami", &f.call("whoami", w.clone()));
+    snapshots.check("list_projects", &f.call("list_projects", w.clone()));
+    snapshots.check("list_tasks", &f.call("list_tasks", g(json!({}))));
+    snapshots.check(
+        "list_tasks-filtered",
+        &f.call(
+            "list_tasks",
+            g(json!({"statusIds": [], "descriptionLength": 0, "limit": 5, "offset": 2})),
+        ),
+    );
+    let bug = f.call("get_task", g(json!({"taskId": SQLITE_BUG_ID})));
+    snapshots.check("get_task", &bug);
+    let bug_version = {
+        let text: Value = serde_json::from_str(bug["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+        text["version"].as_str().unwrap().to_string()
+    };
+    snapshots.check("get_task-by-reference", &f.call("get_task", g(json!({"taskId": "GLD-1"}))));
+    snapshots.check("get_task_links", &f.call("get_task_links", g(json!({"taskId": SQLITE_BUG_ID}))));
+    snapshots.check(
+        "find_tasks_by_reference",
+        &f.call("find_tasks_by_reference", g(json!({"reference": "BUG-1"}))),
+    );
+    snapshots.check("list_fields", &f.call("list_fields", g(json!({}))));
+    snapshots.check("list_enums", &f.call("list_enums", g(json!({}))));
+    let boards = f.result_json("list_boards", g(json!({})));
+    snapshots.check("list_boards", &f.call("list_boards", g(json!({}))));
+    let main_board = boards["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|b| b["name"] == "Main board")
+        .map(|b| b["id"].as_str().unwrap().to_string())
+        .unwrap();
+    snapshots.check("get_board", &f.call("get_board", g(json!({"boardId": main_board}))));
+    snapshots.check("list_link_types", &f.call("list_link_types", g(json!({}))));
+    snapshots.check("list_series", &f.call("list_series", g(json!({}))));
+    snapshots.check("series_health", &f.call("series_health", g(json!({}))));
+    let statuses = f.result_json("list_statuses", g(json!({})));
+    snapshots.check("list_statuses", &f.call("list_statuses", g(json!({}))));
+    snapshots.check("list_status_sets", &f.call("list_status_sets", g(json!({}))));
+    snapshots.check("list_task_types", &f.call("list_task_types", g(json!({}))));
+    snapshots.check("list_users", &f.call("list_users", w.clone()));
+    snapshots.check("list_workspace_problems", &f.call("list_workspace_problems", w.clone()));
+    snapshots.check(
+        "get_lock",
+        &f.call("get_lock", g(json!({"entity": "task", "entityId": SQLITE_BUG_ID}))),
+    );
+
+    snapshots.check("errors/not_found-task", &f.call("get_task", g(json!({"taskId": "GLD-999"}))));
+    snapshots.check(
+        "errors/modified",
+        &f.call(
+            "update_task",
+            g(json!({"taskId": SQLITE_BUG_ID, "title": "x", "version": "0000000000000000"})),
+        ),
+    );
+    snapshots.check(
+        "errors/modified-stale-counter",
+        &f.call("update_task", g(json!({"taskId": SQLITE_BUG_ID, "title": "x", "version": "1"}))),
+    );
+    let done = statuses["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["name"] == "Done")
+        .cloned()
+        .unwrap();
+    snapshots.check(
+        "errors/in_use",
+        &f.call("delete_status", g(json!({"statusId": done["id"], "version": done["version"]}))),
+    );
+
+    let console = Workspace::open_sqlite(&db).unwrap().with_editor(console_editor("golden-user"));
+    let bug_uuid = uuid::Uuid::parse_str(SQLITE_BUG_ID).unwrap();
+    let project = uuid::Uuid::parse_str(GOLDEN_PROJECT).unwrap();
+    console
+        .entity_locks()
+        .acquire(Some(project), LockedEntity::Task, &bug_uuid)
+        .unwrap()
+        .unwrap();
+    let locked = f.call(
+        "update_task",
+        g(json!({"taskId": SQLITE_BUG_ID, "title": "x", "version": bug_version})),
+    );
+    snapshots.check("errors/locked", &scrub_times(&locked));
+    console.entity_locks().release(LockedEntity::Task, &bug_uuid).unwrap();
+    drop(console);
+
+    let updated = f.call(
+        "update_task",
+        g(json!({"taskId": SQLITE_BUG_ID, "description": "Changed over MCP", "version": bug_version})),
+    );
+    snapshots.check("update_task", &scrub_times(&updated));
 
     assert!(
         snapshots.failures.is_empty(),

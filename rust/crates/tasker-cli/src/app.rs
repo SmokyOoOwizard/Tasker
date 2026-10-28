@@ -1,4 +1,4 @@
-//! Выполнение строки `tasker …` (`CliApp` и `GlobalOptions` в .NET): предупреждения `TASKER_*`, разбор clap по дереву [`spec`],
+//! Выполнение строки `tasker …`: предупреждения `TASKER_*`, разбор clap по дереву [`spec`],
 //! справка и `--version`, проверки и тексты ошибок разбора как у System.CommandLine, открытие области и выполнение команды с
 //! переводом ошибок в сообщение и код 1.
 use crate::context::Context;
@@ -12,11 +12,11 @@ use clap::ArgMatches;
 use clap::error::{ContextKind, ContextValue, ErrorKind};
 use std::io::Write;
 
-/// Версия сборки, как `--version` у .NET (`InformationalVersion`): `0.1.0` у релиза, `0.1.0+<коммит>` у сборки из исходников
+/// Версия сборки для `--version`: `0.1.0` у релиза, `0.1.0+<коммит>` у сборки из исходников
 /// (`tasker-version`, `build.rs`).
 const VERSION: &str = tasker_version::VERSION;
 
-/// Общие параметры (`GlobalOptions`) из разобранной строки.
+/// Общие параметры из разобранной строки.
 struct Globals {
     workspace: Option<String>,
     sqlite: Option<String>,
@@ -164,7 +164,7 @@ fn invoke(
     dispatch(&names, leaf, &globals, terminal, out, err)
 }
 
-/// Выполнение команды по её пути (`CliApp.BuildRoot`: группа → модуль команд).
+/// Выполнение команды по её пути (группа → модуль команд).
 fn dispatch(names: &[&str], leaf: &ArgMatches, globals: &Globals, terminal: &Terminal, out: &mut dyn Write, err: &mut dyn Write) -> i32 {
     use crate::commands;
     let sub = names.get(1).copied().unwrap_or_default();
@@ -204,7 +204,7 @@ fn dispatch(names: &[&str], leaf: &ArgMatches, globals: &Globals, terminal: &Ter
     }
 }
 
-/// Открывает рабочую область, выполняет команду и переводит ожидаемые ошибки в сообщение и код 1 (`GlobalOptions.Run`).
+/// Открывает рабочую область, выполняет команду и переводит ожидаемые ошибки в сообщение и код 1.
 fn with_workspace(
     globals: &Globals,
     terminal: &Terminal,
@@ -230,7 +230,7 @@ fn with_workspace(
     guard(run(out, err), err)
 }
 
-/// Команда без рабочей области (настройки, демон): только вывод и обработка ошибок (`GlobalOptions.RunPlain`).
+/// Команда без рабочей области (настройки, демон): только вывод и обработка ошибок.
 fn plain(
     globals: &Globals,
     terminal: &Terminal,

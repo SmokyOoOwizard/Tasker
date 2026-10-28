@@ -1,14 +1,14 @@
 //! Таблица инструментов: имя, описание, `inputSchema` и аннотации каждого из 62 инструментов — `tools.json` рядом, в том виде, в каком
-//! их отдаёт .NET-демон в `tools/list` (схемы собраны руками, с `workspace` у всех, кроме `list_workspaces`, и необязательным
+//! они уходят в `tools/list` (схемы собраны руками, с `workspace` у всех, кроме `list_workspaces`, и необязательным
 //! `projectId`; порядок ключей сохраняется — `serde_json` с `preserve_order`). Эталон — `tests/golden/expected/mcp/tools-list.json`.
 use rmcp::model::{Tool, ToolAnnotations};
 use serde_json::{Map, Value};
 use std::sync::Arc;
 
-/// Аргумент области у всех инструментов, кроме [`LIST_WORKSPACES`] (`WorkspaceArgument.Argument`).
+/// Аргумент области у всех инструментов, кроме [`LIST_WORKSPACES`].
 pub const WORKSPACE_ARGUMENT: &str = "workspace";
 
-/// Инструмент, которому область не нужна: он сам показывает области (`WorkspaceArgument.ListTool`).
+/// Инструмент, которому область не нужна: он сам показывает области.
 pub const LIST_WORKSPACES: &str = "list_workspaces";
 
 /// Аргумент проекта (`DefaultProject.Argument`).
@@ -29,7 +29,7 @@ impl ToolDef {
         self.schema.get("properties").and_then(Value::as_object)
     }
 
-    /// У инструмента есть аргумент `workspace` (`WorkspaceArgument.Takes`).
+    /// У инструмента есть аргумент `workspace`.
     pub fn takes_workspace(&self) -> bool {
         self.name != LIST_WORKSPACES && self.properties().is_some_and(|p| p.contains_key(WORKSPACE_ARGUMENT))
     }

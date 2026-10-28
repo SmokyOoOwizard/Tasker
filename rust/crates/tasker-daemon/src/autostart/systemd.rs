@@ -1,4 +1,4 @@
-//! Linux: пользовательская служба systemd `~/.config/systemd/user/tasker-mcp.service` (`SystemdService` в .NET).
+//! Linux: пользовательская служба systemd `~/.config/systemd/user/tasker-mcp.service`.
 //! WantedBy=default.target — стартует при входе (чтобы без входа — `loginctl enable-linger`), Restart=always — перезапуск при падении.
 //! `TASKER_SERVICE_DIR` и `TASKER_SERVICE_LABEL` переопределяют каталог и имя.
 use super::{
@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 pub const DEFAULT_UNIT: &str = "tasker-mcp.service";
 
-/// Текст unit-файла дословно как `SystemdService.UnitFile()`: `Environment=` по строке на переменную перед `Restart=always`.
+/// Текст unit-файла: `Environment=` по строке на переменную перед `Restart=always`.
 pub fn render_systemd(ctx: &AutostartContext) -> String {
     let command = ctx.command.iter().map(|a| quote(a)).collect::<Vec<_>>().join(" ");
     let environment = ctx
@@ -22,7 +22,7 @@ pub fn render_systemd(ctx: &AutostartContext) -> String {
     )
 }
 
-/// Аргументы с пробелами и спецсимволами — в кавычках по правилам systemd (`SystemdService.Quote`).
+/// Аргументы с пробелами и спецсимволами — в кавычках по правилам systemd.
 pub fn quote(value: &str) -> String {
     if value
         .chars()
@@ -101,7 +101,7 @@ impl SystemdService {
     }
 }
 
-/// `SystemdService.Check`: с подсказкой про сеанс пользователя, если systemctl не достучался до шины (TSK-111).
+/// Проверка итога команды systemctl: с подсказкой про сеанс пользователя, если systemctl не достучался до шины (TSK-111).
 fn check(result: &ProcessResult, what: &str) -> Result<()> {
     if result.success() {
         return Ok(());

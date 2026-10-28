@@ -46,7 +46,7 @@ impl<'a> ProjectService<'a> {
         self.ws.project_range(None, page)
     }
 
-    /// Все проекты области по имени (страницами по `Page::MaxLimit`, как `Context.AllProjects`).
+    /// Все проекты области по имени (страницами по `Page::MaxLimit`).
     pub fn get_all(&self) -> Result<Vec<Project>> {
         let mut all: Vec<Project> = Vec::new();
         loop {

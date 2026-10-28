@@ -42,7 +42,7 @@ class Env:
         self.ws = os.path.join(self.root, "ws")
         os.makedirs(self.home)
         os.makedirs(self.ws)
-        self.env = dict(os.environ, TASKER_HOME=self.home, DOTNET_gcServer="0")
+        self.env = dict(os.environ, TASKER_HOME=self.home)
         for name in ("TASKER_PROJECT", "TASKER_PROFILE", "TASKER_SERVICE_LABEL"):
             self.env.pop(name, None)
         self.env["TASKER_SERVICE_LABEL"] = "com.tasker.perf-" + os.path.basename(self.root)[-8:]
@@ -121,17 +121,16 @@ def noise_line(tag):
 
 # ----------------------------------------------------------------------------- calls
 
-PROFILE = re.compile(r"^\[profile\] (\S+) ([\d.]+) (\d+)$", re.M)
+PROFILE = re.compile(r"^\[profile\] (\S+) ([\d.]+)$", re.M)
 COUNT = re.compile(r"^\[count\] (\S+) (\d+) ([\d.]+)$", re.M)
 
 
 def phases(stderr):
-    marks = [(m.group(1), float(m.group(2)), int(m.group(3))) for m in PROFILE.finditer(stderr)]
-    result, prev, prev_jit = {}, 0.0, 0
-    for name, t, jit in marks:
+    marks = [(m.group(1), float(m.group(2))) for m in PROFILE.finditer(stderr)]
+    result, prev = {}, 0.0
+    for name, t in marks:
         result[name] = result.get(name, 0.0) + (t - prev)
-        result[name + " (jit methods)"] = result.get(name + " (jit methods)", 0) + (jit - prev_jit)
-        prev, prev_jit = t, jit
+        prev = t
     for m in COUNT.finditer(stderr):
         result[f"#{m.group(1)} x{m.group(2)}"] = float(m.group(3))
     return result

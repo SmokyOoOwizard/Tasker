@@ -62,7 +62,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn references_are_parsed_like_dotnet() {
+    fn references_are_parsed() {
         assert_eq!(
             TaskReference::try_parse(Some(" TSK-5 "), false),
             Some(TaskReference::Series {

@@ -1,9 +1,9 @@
-//! Индекс области в SQLite — `.tasker/.cache/index.db`, общий с .NET-сборкой (TSK-161, решение (А) раздела 3.2 плана
-//! `docs/rust-migration-plan.md`; до него у Rust был свой `index-rs.db`, TSK-131). Файлы `.tasker` — источник правды: индекс хранит
+//! Индекс области в SQLite — `.tasker/.cache/index.db`, общий с .NET-сборкой (TSK-161; до него у Rust был
+//! свой `index-rs.db`, TSK-131). Файлы `.tasker` — источник правды: индекс хранит
 //! для каждого файла его отпечаток (размер, время изменения) и сущность целиком, а списки, страницы, подсчёты, поиск и
 //! `max(number)` серий идут SQL-запросами по нему.
 //!
-//! Один файл на все процессы — десктоп, сервер и консоль .NET, консоль и демон Rust, — поэтому всё как у `WorkspaceIndex` .NET:
+//! Один файл на все процессы — десктоп и сервер .NET, консоль и демон Rust, — поэтому всё как у `WorkspaceIndex` .NET:
 //! схема буква в букву (`user_version` = [`SCHEMA_VERSION`], те же таблицы, колонки, индексы и даже комментарии в CREATE), колонка
 //! `data` — JSON System.Text.Json байт в байт ([`data`]: PascalCase, enum числами), `size`/`mtime` и время задач — в тиках .NET
 //! (100 нс от 0001-01-01; иначе процессы перечитывали бы файлы друг друга без конца), блокировка `.cache/index.lock` тем же
@@ -315,7 +315,7 @@ fn create_schema(connection: &Connection) -> io::Result<()> {
         return Ok(());
     }
     // Текст — буква в букву из `WorkspaceIndex.CreateSchema` (.NET): SQLite хранит CREATE с комментариями, и `.schema` обеих сборок
-    // совпадает (эталон — rust/tests/golden/index/schema.sql).
+    // совпадает (эталон — tests/golden/index/schema.sql).
     connection
         .execute_batch(&format!(
             "\
@@ -447,7 +447,7 @@ mod tests {
     fn the_first_free_write_section_after_open_knows_the_numbers_written_by_other_sections() {
         use tasker_core::model::{TaskItem, TaskSeriesNumber};
         let ws = temp_dir();
-        copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/workspace"), &ws);
+        copy_dir(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/golden/workspace"), &ws);
         let dir = TaskerDirectory::new(&ws);
         let index = WorkspaceIndex::open(&dir).unwrap();
         let task = index

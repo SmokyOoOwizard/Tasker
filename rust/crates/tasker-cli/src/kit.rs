@@ -1,4 +1,4 @@
-//! Мелочи для описания команд (`Kit` в .NET): карточка `get` («поле: значение» с выравниванием), «Имя (id)», итоги каскадов,
+//! Мелочи для описания команд: карточка `get` («поле: значение» с выравниванием), «Имя (id)», итоги каскадов,
 //! `Deleted …`, проверка «хоть что-то меняется», чтение параметров clap (параметр не указан — `None`, как у System.CommandLine),
 //! страницы списков (`--offset`/`--limit`/`--all`).
 use crate::errors::{CliError, Result};
@@ -57,7 +57,7 @@ pub fn with_description(text: String, description: &str) -> String {
     }
 }
 
-/// `C# bool.ToString()`: `True`/`False`.
+/// Текст булева значения: `True`/`False`.
 pub fn bool_text(value: bool) -> String {
     if value { "True".to_string() } else { "False".to_string() }
 }
@@ -189,7 +189,7 @@ impl Paging {
     }
 }
 
-/// Ячейки строки списка: короткий id и остальные колонки (`Kit.Row`).
+/// Ячейки строки списка: короткий id и остальные колонки.
 pub fn row(id: &Uuid, cells: &[&str]) -> Vec<String> {
     std::iter::once(tasker_core::ShortId::of(id))
         .chain(cells.iter().map(|c| c.to_string()))
@@ -212,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn pages_clamp_like_dotnet() {
+    fn pages_clamp_offset_and_limit() {
         assert_eq!(page_of(-3, 500), Page::new(0, 200));
         assert_eq!(page_of(5, 0), Page::new(5, 1));
         assert_eq!(tasks(1), "1 task");

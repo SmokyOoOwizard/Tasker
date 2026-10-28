@@ -1,5 +1,5 @@
-//! `tasker sync` (`SyncCommands` в .NET): привести кэш рабочей папки в соответствие с её файлами — после `git pull`, `checkout`,
-//! слияния. Если демон MCP (.NET или Rust) обслуживает эту папку, сверяет он (`via daemon`: индекс уже у него), иначе консоль
+//! `tasker sync`: привести кэш рабочей папки в соответствие с её файлами — после `git pull`, `checkout`,
+//! слияния. Если демон MCP обслуживает эту папку, сверяет он (`via daemon`: индекс уже у него), иначе консоль
 //! сверяет сама (`via direct`). Показывает файлы, которые не удалось прочитать, и состояние серий и связей проектов.
 use crate::context::Context;
 use crate::daemon::{self, SyncReply};
@@ -12,7 +12,7 @@ use tasker_core::tasks::Page;
 use tasker_files::layout::NAME;
 use tasker_services::health::{self, ProjectSeriesHealth};
 
-/// Сколько проблемных файлов показывается (`SyncResult.ProblemsShown`).
+/// Сколько проблемных файлов показывается.
 pub const PROBLEMS_SHOWN: usize = 10;
 
 /// Команда открывает область сама: не рабочая папка — с `-q` молчит (режим хука git).
@@ -127,7 +127,7 @@ fn sync(location: &WorkspaceLocation, workspace: Option<&str>, sqlite: Option<&s
     ))
 }
 
-/// `ProjectSeriesHealth` в JSON: порядок полей — как у записи .NET (общая с демоном форма — `health::to_json`).
+/// `ProjectSeriesHealth` в JSON: порядок полей — порядок объявления (общая с демоном форма — `health::to_json`).
 pub(crate) fn health_json(h: &ProjectSeriesHealth) -> Value {
     health::to_json(h)
 }

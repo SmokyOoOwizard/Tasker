@@ -1,4 +1,4 @@
-//! `tasker series …` (`SeriesCommands` в .NET).
+//! `tasker series …`.
 use super::find_series;
 use crate::commands::task::find_one;
 use crate::context::Context;
