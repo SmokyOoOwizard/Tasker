@@ -3,7 +3,7 @@ use super::super::step::{Chain, Check, FormValue, FormValues, Item, Section, Sec
 use super::super::wizard::{Steps, Wizard, cmd};
 use crate::errors::CliError;
 use tasker_core::ids::{guid_d, parse_guid};
-use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType, Status};
+use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType};
 use tasker_core::tasks::{Page, TaskFilter};
 use tasker_services::Storage;
 
@@ -268,23 +268,21 @@ pub fn filtered_tasks(w: &Wizard<'_, '_>, project: &uuid::Uuid, settings: &[Form
     let sort = strings("sort");
     let sort = if sort.is_empty() { "-created".to_string() } else { sort.join(",") };
     let ws = w.ctx.session.workspace();
-    let prefixes = ws.series().prefixes(project)?;
-    let statuses: std::collections::HashMap<uuid::Uuid, String> =
-        ws.get_all::<Status>(project)?.into_iter().map(|s| (s.id, s.name)).collect();
-    let mut items: Vec<Item> = Vec::new();
+    let names = super::TaskNames::load(w, project)?;
+    let mut tasks: Vec<tasker_core::model::TaskItem> = Vec::new();
     loop {
         let page = ws.tasks().list(
             project,
             Some(&filter),
             (!conditions.is_empty()).then_some(conditions.as_slice()),
-            Page::new(items.len(), crate::kit::MAX_LIMIT),
+            Page::new(tasks.len(), crate::kit::MAX_LIMIT),
             0,
             Some(&sort),
         )?;
         let got = page.data.len();
-        items.extend(page.data.iter().map(|x| super::task_item(&x.task, &prefixes, &statuses)));
-        if got == 0 || items.len() >= page.total_count {
-            return Ok(items);
+        tasks.extend(page.data.into_iter().map(|x| x.task));
+        if got == 0 || tasks.len() >= page.total_count {
+            return Ok(names.items(&tasks.iter().collect::<Vec<_>>()));
         }
     }
 }

@@ -171,6 +171,7 @@ pub struct App {
     pub quit: bool,
     pub page: usize,
     pub refresh: Duration,
+    last_refresh: Instant,
 }
 
 fn answer_summary(answer: &Answer) -> String {
@@ -217,6 +218,7 @@ impl App {
             quit: false,
             page: 10,
             refresh,
+            last_refresh: Instant::now(),
         };
         let _ = app.enter(Flow::Menu);
         if app.project.is_none() && app.session.all_projects().map(|p| p.len() > 1).unwrap_or(false) {
@@ -606,8 +608,45 @@ impl App {
     }
 
     pub fn refresh_due(&self) -> Option<Duration> {
-        let result = self.result.as_ref()?;
-        (result.kind == ResultKind::View).then(|| self.refresh.saturating_sub(result.at.elapsed()))
+        if let Some(result) = &self.result {
+            return (result.kind == ResultKind::View).then(|| self.refresh.saturating_sub(result.at.elapsed()));
+        }
+        self.list_refreshes()
+            .then(|| self.refresh.saturating_sub(self.last_refresh.elapsed()))
+    }
+
+    pub fn list_refreshes(&self) -> bool {
+        self.result.is_none()
+            && self
+                .frames
+                .last()
+                .is_some_and(|f| matches!(f.flow, Flow::Entity(..)) && matches!(f.state, StepState::List(_)))
+    }
+
+    pub fn refresh_step(&mut self) {
+        self.last_refresh = Instant::now();
+        let Some(frame) = self.frames.last() else { return };
+        let fresh = match self.next(frame.flow, &frame.answers, false) {
+            Err(Pending::Step(spec)) | Ok(Next::Step(spec)) if spec.title() == frame.spec.title() => spec,
+            _ => return,
+        };
+        let items = match &fresh {
+            StepSpec::Select { items, .. } | StepSpec::MultiSelect { items, .. } => items.clone(),
+            _ => return,
+        };
+        let frame = self.frames.last_mut().expect("a frame");
+        let StepState::List(list) = &mut frame.state else { return };
+        if list.items == items {
+            return;
+        }
+        let under_cursor = list.current().map(|i| i.key.clone());
+        list.items = items;
+        list.picked.retain(|k| list.items.iter().any(|i| i.key == *k));
+        let visible = list.visible();
+        list.cursor = under_cursor
+            .and_then(|key| visible.iter().position(|&at| list.items[at].key == key))
+            .unwrap_or_else(|| list.cursor.min(visible.len().saturating_sub(1)));
+        frame.spec = fresh;
     }
 
     fn viewing(&self) -> bool {
@@ -664,6 +703,7 @@ impl App {
     }
 
     pub fn handle(&mut self, key: Key) -> Effect {
+        self.last_refresh = Instant::now();
         if key == Key::CtrlC {
             return Effect::Quit;
         }

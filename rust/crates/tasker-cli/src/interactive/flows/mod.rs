@@ -124,29 +124,62 @@ pub fn series(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
         .collect())
 }
 
-pub fn tasks(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
-    let ws = w.ctx.session.workspace();
-    let prefixes = ws.series().prefixes(project)?;
-    let statuses: std::collections::HashMap<Uuid, String> = all::<Status>(w, project)?.into_iter().map(|s| (s.id, s.name)).collect();
-    let mut items: Vec<TaskItem> = ws.tasks().get_all(project, None)?;
-    items.sort_by_key(|t| std::cmp::Reverse(t.created_at));
-    Ok(items.iter().map(|x| task_item(x, &prefixes, &statuses)).collect())
+pub struct TaskNames {
+    prefixes: std::collections::HashMap<Uuid, String>,
+    statuses: std::collections::HashMap<Uuid, String>,
+    types: std::collections::HashMap<Uuid, String>,
 }
 
-pub fn task_item(
-    task: &TaskItem,
-    prefixes: &std::collections::HashMap<Uuid, String>,
-    statuses: &std::collections::HashMap<Uuid, String>,
-) -> Item {
-    let refs = crate::commands::series::references(&task.series_numbers, prefixes);
-    let handle = if refs.is_empty() {
-        tasker_core::ShortId::of(&task.id)
-    } else {
-        refs.join(",")
-    };
-    Item::new(guid_d(&task.id), format!("{handle}  {}", task.title))
-        .detail(statuses.get(&task.status_id).cloned().unwrap_or_default())
-        .version(&task.version)
+impl TaskNames {
+    pub fn load(w: &Wizard<'_, '_>, project: &Uuid) -> Result<TaskNames> {
+        Ok(TaskNames {
+            prefixes: w.ctx.session.workspace().series().prefixes(project)?,
+            statuses: all::<Status>(w, project)?.into_iter().map(|s| (s.id, s.name)).collect(),
+            types: all::<TaskType>(w, project)?.into_iter().map(|t| (t.id, t.name)).collect(),
+        })
+    }
+
+    pub fn items(&self, tasks: &[&TaskItem]) -> Vec<Item> {
+        let rows: Vec<[String; 3]> = tasks
+            .iter()
+            .map(|task| {
+                let refs = crate::commands::series::references(&task.series_numbers, &self.prefixes);
+                let handle = if refs.is_empty() {
+                    tasker_core::ShortId::of(&task.id)
+                } else {
+                    refs.join(",")
+                };
+                [
+                    handle,
+                    self.statuses.get(&task.status_id).cloned().unwrap_or_default(),
+                    self.types.get(&task.type_id).cloned().unwrap_or_default(),
+                ]
+            })
+            .collect();
+        let widths = (0..3)
+            .map(|column| rows.iter().map(|r| crate::table::width(&r[column])).max().unwrap_or(0))
+            .collect::<Vec<_>>();
+        tasks
+            .iter()
+            .zip(rows)
+            .map(|(task, row)| {
+                let mut label = String::new();
+                for (cell, width) in row.iter().zip(&widths) {
+                    label.push_str(cell);
+                    label.push_str(&" ".repeat(width - crate::table::width(cell) + 2));
+                }
+                label.push_str(&task.title);
+                Item::new(guid_d(&task.id), label).version(&task.version)
+            })
+            .collect()
+    }
+}
+
+pub fn tasks(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
+    let names = TaskNames::load(w, project)?;
+    let mut items: Vec<TaskItem> = w.ctx.session.workspace().tasks().get_all(project, None)?;
+    items.sort_by_key(|t| std::cmp::Reverse(t.created_at));
+    Ok(names.items(&items.iter().collect::<Vec<_>>()))
 }
 
 pub fn confirm_delete(w: &mut Wizard<'_, '_>, what: &str, name: &str) -> Steps<()> {

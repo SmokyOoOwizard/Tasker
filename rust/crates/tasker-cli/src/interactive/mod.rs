@@ -72,10 +72,14 @@ fn event_loop(terminal: &mut ratatui::DefaultTerminal, app: &mut App) -> std::io
         let event = match app.refresh_due() {
             Some(left) => {
                 if !crossterm::event::poll(left.min(Duration::from_secs(1)))? {
-                    if app.refresh_due().is_some_and(|left| left.is_zero())
-                        && let Some(argv) = app.refresh_argv()
-                    {
-                        execute(app, &argv);
+                    if app.refresh_due().is_some_and(|left| left.is_zero()) {
+                        if app.result.is_some() {
+                            if let Some(argv) = app.refresh_argv() {
+                                execute(app, &argv);
+                            }
+                        } else {
+                            app.refresh_step();
+                        }
                     }
                     continue;
                 }

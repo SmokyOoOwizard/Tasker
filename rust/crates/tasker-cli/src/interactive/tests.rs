@@ -517,8 +517,8 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
         app.result.as_ref().map(|r| &r.text)
     );
     let Some(StepState::List(list)) = app.state() else { panic!() };
-    let labels: Vec<String> = list.items.iter().map(|i| format!("{}  {}", i.label, i.detail)).collect();
-    assert_eq!(labels, ["BUG-1  Bug with all fields (renamed)  In Progress"]);
+    let labels: Vec<String> = list.items.iter().map(|i| i.label.clone()).collect();
+    assert_eq!(labels, ["BUG-1  In Progress  Bug  Bug with all fields (renamed)"]);
     assert!(app.has_filters());
     app.handle(Key::CtrlF);
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
@@ -533,7 +533,38 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     app.handle(Key::Enter);
     assert_eq!(app.breadcrumb(), "Browse › Task › Task");
     let Some(StepState::List(list)) = app.state() else { panic!() };
-    assert!(list.items.iter().all(|i| i.detail == "In Progress"), "{:?}", list.items);
+    assert!(list.items.iter().all(|i| i.label.contains("  In Progress  ")), "{:?}", list.items);
+    assert!(app.list_refreshes());
+    let before = list.items.len();
+    let code = crate::app::run(
+        &[
+            "-w".to_string(),
+            workspace.to_string_lossy().into_owned(),
+            "-p".into(),
+            "Golden".into(),
+            "task".into(),
+            "create".into(),
+            "Fresh in the list".into(),
+            "--type".into(),
+            "Bug".into(),
+            "--field".into(),
+            "Priority=High".into(),
+            "--status".into(),
+            "In Progress".into(),
+        ],
+        &mut Vec::new(),
+        &mut Vec::new(),
+    );
+    assert_eq!(code, 0);
+    app.refresh_step();
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    assert_eq!(list.items.len(), before + 1);
+    assert!(
+        list.items.iter().any(|i| i.label.ends_with("Fresh in the list")),
+        "{:?}",
+        list.items
+    );
+    assert!(list.current().is_some_and(|i| i.label.contains("Bug with all fields")));
     assert!(!snapshot(&app).value.contains("Priority"));
     let first = list.items[0].key.clone();
     let effect = choose(&mut app, &first);
