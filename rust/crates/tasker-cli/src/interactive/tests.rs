@@ -487,7 +487,7 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     choose(&mut app, "task");
     choose(&mut app, "card");
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
-    assert_eq!(snapshot(&app).items, ["type", "status", "series", "field", "sort"]);
+    assert_eq!(snapshot(&app).items, ["type", "status", "series", "field", "sort", "columns"]);
     open_section(&mut app, "status");
     {
         let layer = form(&mut app).popup.as_mut().unwrap().layer_mut();
@@ -565,7 +565,36 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
         list.items
     );
     assert!(list.current().is_some_and(|i| i.label.contains("Bug with all fields")));
-    assert!(!snapshot(&app).value.contains("Priority"));
+    assert!(app.has_columns());
+    app.handle(Key::CtrlL);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
+    let (title, items) = popup(&mut app);
+    assert_eq!(title, "Extra columns");
+    assert!(
+        items.contains(&"Priority".to_string()) && items.contains(&"Estimate".to_string()),
+        "{items:?}"
+    );
+    for label in ["Priority", "Estimate"] {
+        let layer = form(&mut app).popup.as_mut().unwrap().layer_mut();
+        let super::step::Inner::List(list) = &mut layer.inner else {
+            panic!()
+        };
+        list.cursor = list.items.iter().position(|i| i.label == label).unwrap();
+        app.handle(Key::Char(' '));
+    }
+    app.handle(Key::Enter);
+    assert_eq!(section_values(&mut app, "columns"), ["Priority", "Estimate"]);
+    app.handle(Key::End);
+    app.handle(Key::Enter);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    let bug = list.items.iter().find(|i| i.label.contains("Bug with all fields")).unwrap();
+    let cells: Vec<&str> = bug.label.split("  ").filter(|c| !c.is_empty()).map(str::trim).collect();
+    assert_eq!(cells[..5], ["BUG-1", "In Progress", "Bug", "High", "7"], "{}", bug.label);
+    let fresh = list.items.iter().find(|i| i.label.ends_with("Fresh in the list")).unwrap();
+    let cells: Vec<&str> = fresh.label.split("  ").filter(|c| !c.is_empty()).map(str::trim).collect();
+    assert_eq!(cells[1..5], ["In Progress", "Bug", "High", "-"], "{}", fresh.label);
+    assert!(!snapshot(&app).value.contains("Priority=High"));
     let first = list.items[0].key.clone();
     let effect = choose(&mut app, &first);
     let Effect::Run(argv) = &effect else {

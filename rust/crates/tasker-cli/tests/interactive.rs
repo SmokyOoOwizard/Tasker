@@ -1102,7 +1102,21 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     let screen = tui.wait_for("Task filters");
     assert!(screen.contains("Statuses          Done"), "{screen}");
     tui.submit_form("Task filters");
-    tui.wait_for("Ctrl+F filters");
+    tui.wait_for("Ctrl+L columns");
+    tui.send("\x0c");
+    tui.wait_for("┌ Extra columns ");
+    tui.mark("prio", "Priority", 1);
+    tui.send(ENTER);
+    tui.wait_for("Extra columns     Priority");
+    tui.submit_form("Task filters");
+    let screen = tui.wait_for("Ctrl+L columns");
+    assert!(
+        screen.lines().any(|l| {
+            let at = |text: &str| l.find(text);
+            at("Bug done").is_some() && at("BUG-3") < at("Done") && at("Done") < at("Bug ") && at("High") < at("Bug done")
+        }),
+        "{screen}"
+    );
     tui.pick("Task", "plain task", "Plain task");
     let screen = tui.view("title:        Plain task");
     assert!(screen.contains("Updated description"), "{screen}");

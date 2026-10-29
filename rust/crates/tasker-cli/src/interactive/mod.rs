@@ -118,6 +118,7 @@ fn key_of(event: &Event) -> Option<Key> {
     Some(match key.code {
         KeyCode::Char('c') | KeyCode::Char('C') if control => Key::CtrlC,
         KeyCode::Char('f') | KeyCode::Char('F') if control => Key::CtrlF,
+        KeyCode::Char('l') | KeyCode::Char('L') if control => Key::CtrlL,
         KeyCode::Char(c) => Key::Char(c),
         KeyCode::Enter => Key::Enter,
         KeyCode::Esc => Key::Esc,

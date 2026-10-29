@@ -223,6 +223,18 @@ pub fn task_settings(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, title: &str, 
             },
         ),
     ];
+    if !shape {
+        let columns = definitions
+            .iter()
+            .map(|f| Item::new(&f.name, &f.name).detail(f.field_type.name()))
+            .collect();
+        sections.push(Section::new(
+            "columns",
+            "Extra columns",
+            "none",
+            SectionKind::Multi { items: columns },
+        ));
+    }
     if shape {
         sections.push(
             Section::new(
@@ -282,7 +294,7 @@ pub fn filtered_tasks(w: &Wizard<'_, '_>, project: &uuid::Uuid, settings: &[Form
         let got = page.data.len();
         tasks.extend(page.data.into_iter().map(|x| x.task));
         if got == 0 || tasks.len() >= page.total_count {
-            return Ok(names.items(&tasks.iter().collect::<Vec<_>>()));
+            return Ok(names.items(&tasks.iter().collect::<Vec<_>>(), &strings("columns")));
         }
     }
 }

@@ -282,6 +282,7 @@ pub enum Key {
     Tab,
     CtrlC,
     CtrlF,
+    CtrlL,
 }
 
 pub enum Outcome {
@@ -569,6 +570,17 @@ impl FormStep {
             inner: Inner::List(list),
             then: Vec::new(),
             prefix: false,
+        }
+    }
+
+    pub fn open_section(&mut self, key: &str) -> bool {
+        match self.sections.iter().position(|s| s.key == key) {
+            Some(at) => {
+                self.cursor = at;
+                self.open();
+                true
+            }
+            None => false,
         }
     }
 

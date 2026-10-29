@@ -273,6 +273,25 @@ impl App {
                 .is_some_and(|f| f.answers.iter().any(|a| matches!(a, Answer::Form(_))))
     }
 
+    pub fn has_columns(&self) -> bool {
+        self.result.is_none()
+            && self.frames.last().is_some_and(|f| {
+                f.answers
+                    .iter()
+                    .any(|a| matches!(a, Answer::Form(values) if values.iter().any(|v| v.key == "columns")))
+            })
+    }
+
+    fn back_to_columns(&mut self) {
+        if !self.has_columns() {
+            return;
+        }
+        self.back_to_filters();
+        if let Some(StepState::Form(form)) = self.state_mut() {
+            form.open_section("columns");
+        }
+    }
+
     fn back_to_filters(&mut self) {
         if !self.has_filters() {
             return;
@@ -744,6 +763,10 @@ impl App {
         }
         if key == Key::CtrlF {
             self.back_to_filters();
+            return Effect::None;
+        }
+        if key == Key::CtrlL {
+            self.back_to_columns();
             return Effect::None;
         }
         let page = self.page;

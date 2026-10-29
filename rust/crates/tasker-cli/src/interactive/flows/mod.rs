@@ -128,6 +128,8 @@ pub struct TaskNames {
     prefixes: std::collections::HashMap<Uuid, String>,
     statuses: std::collections::HashMap<Uuid, String>,
     types: std::collections::HashMap<Uuid, String>,
+    definitions: Vec<FieldDefinition>,
+    enums: std::collections::HashMap<Uuid, FieldEnum>,
 }
 
 impl TaskNames {
@@ -136,11 +138,25 @@ impl TaskNames {
             prefixes: w.ctx.session.workspace().series().prefixes(project)?,
             statuses: all::<Status>(w, project)?.into_iter().map(|s| (s.id, s.name)).collect(),
             types: all::<TaskType>(w, project)?.into_iter().map(|t| (t.id, t.name)).collect(),
+            definitions: all::<FieldDefinition>(w, project)?,
+            enums: all::<FieldEnum>(w, project)?.into_iter().map(|e| (e.id, e)).collect(),
         })
     }
 
-    pub fn items(&self, tasks: &[&TaskItem]) -> Vec<Item> {
-        let rows: Vec<[String; 3]> = tasks
+    fn field_text(&self, task: &TaskItem, name: &str) -> String {
+        let Some(definition) = self.definitions.iter().find(|d| d.name == name) else {
+            return "-".to_string();
+        };
+        let Some(field) = task.fields.iter().find(|f| f.field_id == definition.id) else {
+            return "-".to_string();
+        };
+        let enumeration = definition.enum_id.and_then(|e| self.enums.get(&e));
+        let texts = tasker_core::fields::texts(definition.field_type, enumeration, &field.values);
+        if texts.is_empty() { "-".to_string() } else { texts.join(", ") }
+    }
+
+    pub fn items(&self, tasks: &[&TaskItem], columns: &[String]) -> Vec<Item> {
+        let rows: Vec<Vec<String>> = tasks
             .iter()
             .map(|task| {
                 let refs = crate::commands::series::references(&task.series_numbers, &self.prefixes);
@@ -149,14 +165,16 @@ impl TaskNames {
                 } else {
                     refs.join(",")
                 };
-                [
+                let mut row = vec![
                     handle,
                     self.statuses.get(&task.status_id).cloned().unwrap_or_default(),
                     self.types.get(&task.type_id).cloned().unwrap_or_default(),
-                ]
+                ];
+                row.extend(columns.iter().map(|name| self.field_text(task, name)));
+                row
             })
             .collect();
-        let widths = (0..3)
+        let widths = (0..3 + columns.len())
             .map(|column| rows.iter().map(|r| crate::table::width(&r[column])).max().unwrap_or(0))
             .collect::<Vec<_>>();
         tasks
@@ -179,7 +197,7 @@ pub fn tasks(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
     let names = TaskNames::load(w, project)?;
     let mut items: Vec<TaskItem> = w.ctx.session.workspace().tasks().get_all(project, None)?;
     items.sort_by_key(|t| std::cmp::Reverse(t.created_at));
-    Ok(names.items(&items.iter().collect::<Vec<_>>()))
+    Ok(names.items(&items.iter().collect::<Vec<_>>(), &[]))
 }
 
 pub fn confirm_delete(w: &mut Wizard<'_, '_>, what: &str, name: &str) -> Steps<()> {
