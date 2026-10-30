@@ -124,29 +124,98 @@ pub fn series(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
         .collect())
 }
 
-pub fn tasks(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
-    let ws = w.ctx.session.workspace();
-    let prefixes = ws.series().prefixes(project)?;
-    let statuses: std::collections::HashMap<Uuid, String> = all::<Status>(w, project)?.into_iter().map(|s| (s.id, s.name)).collect();
-    let mut items: Vec<TaskItem> = ws.tasks().get_all(project, None)?;
-    items.sort_by_key(|t| std::cmp::Reverse(t.created_at));
-    Ok(items.iter().map(|x| task_item(x, &prefixes, &statuses)).collect())
+pub struct TaskNames {
+    prefixes: std::collections::HashMap<Uuid, String>,
+    statuses: std::collections::HashMap<Uuid, String>,
+    types: std::collections::HashMap<Uuid, String>,
+    definitions: Vec<FieldDefinition>,
+    enums: std::collections::HashMap<Uuid, FieldEnum>,
 }
 
-pub fn task_item(
-    task: &TaskItem,
-    prefixes: &std::collections::HashMap<Uuid, String>,
-    statuses: &std::collections::HashMap<Uuid, String>,
-) -> Item {
-    let refs = crate::commands::series::references(&task.series_numbers, prefixes);
-    let handle = if refs.is_empty() {
-        tasker_core::ShortId::of(&task.id)
-    } else {
-        refs.join(",")
-    };
-    Item::new(guid_d(&task.id), format!("{handle}  {}", task.title))
-        .detail(statuses.get(&task.status_id).cloned().unwrap_or_default())
-        .version(&task.version)
+impl TaskNames {
+    pub fn load(w: &Wizard<'_, '_>, project: &Uuid) -> Result<TaskNames> {
+        Ok(TaskNames {
+            prefixes: w.ctx.session.workspace().series().prefixes(project)?,
+            statuses: all::<Status>(w, project)?.into_iter().map(|s| (s.id, s.name)).collect(),
+            types: all::<TaskType>(w, project)?.into_iter().map(|t| (t.id, t.name)).collect(),
+            definitions: all::<FieldDefinition>(w, project)?,
+            enums: all::<FieldEnum>(w, project)?.into_iter().map(|e| (e.id, e)).collect(),
+        })
+    }
+
+    fn field_text(&self, task: &TaskItem, name: &str) -> String {
+        let Some(definition) = self.definitions.iter().find(|d| d.name == name) else {
+            return "-".to_string();
+        };
+        let Some(field) = task.fields.iter().find(|f| f.field_id == definition.id) else {
+            return "-".to_string();
+        };
+        let enumeration = definition.enum_id.and_then(|e| self.enums.get(&e));
+        let texts = tasker_core::fields::texts(definition.field_type, enumeration, &field.values);
+        if texts.is_empty() { "-".to_string() } else { texts.join(", ") }
+    }
+
+    pub fn items(&self, tasks: &[TaskRow<'_>], columns: &[String]) -> Vec<Item> {
+        let rows: Vec<Vec<String>> = tasks
+            .iter()
+            .map(|row| {
+                let task = row.task;
+                let refs = crate::commands::series::references(&task.series_numbers, &self.prefixes);
+                let handle = if refs.is_empty() {
+                    tasker_core::ShortId::of(&task.id)
+                } else {
+                    refs.join(",")
+                };
+                let mut row = vec![
+                    format!("{}{handle}{}", "    ".repeat(row.depth), if row.repeated { " (+)" } else { "" }),
+                    self.statuses.get(&task.status_id).cloned().unwrap_or_default(),
+                    self.types.get(&task.type_id).cloned().unwrap_or_default(),
+                ];
+                row.extend(columns.iter().map(|name| self.field_text(task, name)));
+                row
+            })
+            .collect();
+        let widths = (0..3 + columns.len())
+            .map(|column| rows.iter().map(|r| crate::table::width(&r[column])).max().unwrap_or(0))
+            .collect::<Vec<_>>();
+        tasks
+            .iter()
+            .map(|row| row.task)
+            .zip(rows)
+            .map(|(task, row)| {
+                let mut label = String::new();
+                for (cell, width) in row.iter().zip(&widths) {
+                    label.push_str(cell);
+                    label.push_str(&" ".repeat(width - crate::table::width(cell) + 2));
+                }
+                label.push_str(&task.title);
+                Item::new(guid_d(&task.id), label).version(&task.version)
+            })
+            .collect()
+    }
+}
+
+pub struct TaskRow<'a> {
+    pub task: &'a TaskItem,
+    pub depth: usize,
+    pub repeated: bool,
+}
+
+impl<'a> TaskRow<'a> {
+    pub fn flat(task: &'a TaskItem) -> TaskRow<'a> {
+        TaskRow {
+            task,
+            depth: 0,
+            repeated: false,
+        }
+    }
+}
+
+pub fn tasks(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
+    let names = TaskNames::load(w, project)?;
+    let mut items: Vec<TaskItem> = w.ctx.session.workspace().tasks().get_all(project, None)?;
+    items.sort_by_key(|t| std::cmp::Reverse(t.created_at));
+    Ok(names.items(&items.iter().map(TaskRow::flat).collect::<Vec<_>>(), &[]))
 }
 
 pub fn confirm_delete(w: &mut Wizard<'_, '_>, what: &str, name: &str) -> Steps<()> {

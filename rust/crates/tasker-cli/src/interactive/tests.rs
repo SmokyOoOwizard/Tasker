@@ -487,7 +487,10 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     choose(&mut app, "task");
     choose(&mut app, "card");
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
-    assert_eq!(snapshot(&app).items, ["type", "status", "series", "field", "sort"]);
+    assert_eq!(
+        snapshot(&app).items,
+        ["type", "status", "series", "field", "sort", "columns", "shape"]
+    );
     open_section(&mut app, "status");
     {
         let layer = form(&mut app).popup.as_mut().unwrap().layer_mut();
@@ -517,8 +520,8 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
         app.result.as_ref().map(|r| &r.text)
     );
     let Some(StepState::List(list)) = app.state() else { panic!() };
-    let labels: Vec<String> = list.items.iter().map(|i| format!("{}  {}", i.label, i.detail)).collect();
-    assert_eq!(labels, ["BUG-1  Bug with all fields (renamed)  In Progress"]);
+    let labels: Vec<String> = list.items.iter().map(|i| i.label.clone()).collect();
+    assert_eq!(labels, ["BUG-1  In Progress  Bug  Bug with all fields (renamed)"]);
     assert!(app.has_filters());
     app.handle(Key::CtrlF);
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
@@ -533,8 +536,68 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     app.handle(Key::Enter);
     assert_eq!(app.breadcrumb(), "Browse › Task › Task");
     let Some(StepState::List(list)) = app.state() else { panic!() };
-    assert!(list.items.iter().all(|i| i.detail == "In Progress"), "{:?}", list.items);
-    assert!(!snapshot(&app).value.contains("Priority"));
+    assert!(list.items.iter().all(|i| i.label.contains("  In Progress  ")), "{:?}", list.items);
+    assert!(app.list_refreshes());
+    let before = list.items.len();
+    let code = crate::app::run(
+        &[
+            "-w".to_string(),
+            workspace.to_string_lossy().into_owned(),
+            "-p".into(),
+            "Golden".into(),
+            "task".into(),
+            "create".into(),
+            "Fresh in the list".into(),
+            "--type".into(),
+            "Bug".into(),
+            "--field".into(),
+            "Priority=High".into(),
+            "--status".into(),
+            "In Progress".into(),
+        ],
+        &mut Vec::new(),
+        &mut Vec::new(),
+    );
+    assert_eq!(code, 0);
+    app.refresh_step();
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    assert_eq!(list.items.len(), before + 1);
+    assert!(
+        list.items.iter().any(|i| i.label.ends_with("Fresh in the list")),
+        "{:?}",
+        list.items
+    );
+    assert!(list.current().is_some_and(|i| i.label.contains("Bug with all fields")));
+    assert!(app.has_columns());
+    app.handle(Key::CtrlL);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
+    let (title, items) = popup(&mut app);
+    assert_eq!(title, "Extra columns");
+    assert!(
+        items.contains(&"Priority".to_string()) && items.contains(&"Estimate".to_string()),
+        "{items:?}"
+    );
+    for label in ["Priority", "Estimate"] {
+        let layer = form(&mut app).popup.as_mut().unwrap().layer_mut();
+        let super::step::Inner::List(list) = &mut layer.inner else {
+            panic!()
+        };
+        list.cursor = list.items.iter().position(|i| i.label == label).unwrap();
+        app.handle(Key::Char(' '));
+    }
+    app.handle(Key::Enter);
+    assert_eq!(section_values(&mut app, "columns"), ["Priority", "Estimate"]);
+    app.handle(Key::End);
+    app.handle(Key::Enter);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    let bug = list.items.iter().find(|i| i.label.contains("Bug with all fields")).unwrap();
+    let cells: Vec<&str> = bug.label.split("  ").filter(|c| !c.is_empty()).map(str::trim).collect();
+    assert_eq!(cells[..5], ["BUG-1", "In Progress", "Bug", "High", "7"], "{}", bug.label);
+    let fresh = list.items.iter().find(|i| i.label.ends_with("Fresh in the list")).unwrap();
+    let cells: Vec<&str> = fresh.label.split("  ").filter(|c| !c.is_empty()).map(str::trim).collect();
+    assert_eq!(cells[1..5], ["In Progress", "Bug", "High", "-"], "{}", fresh.label);
+    assert!(!snapshot(&app).value.contains("Priority=High"));
     let first = list.items[0].key.clone();
     let effect = choose(&mut app, &first);
     let Effect::Run(argv) = &effect else {
@@ -548,6 +611,92 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     app.handle(Key::Esc);
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
     assert!(snapshot(&app).value.contains("status=0000") && snapshot(&app).value.contains("field=;"));
+    std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
+}
+
+#[test]
+fn the_task_picker_is_a_tree_and_the_card_opens_linked_tasks_with_arrows_and_returns_on_esc() {
+    let workspace = golden_copy();
+    let mut app = open(&workspace);
+    choose(&mut app, "browse");
+    choose(&mut app, "task");
+    choose(&mut app, "card");
+    assert_eq!(
+        snapshot(&app).items,
+        ["type", "status", "series", "field", "sort", "columns", "shape"]
+    );
+    app.handle(Key::End);
+    app.handle(Key::Enter);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    let labels: Vec<&str> = list.items.iter().map(|i| i.label.as_str()).collect();
+    let parent = labels.iter().position(|l| l.contains("Epic: hierarchy")).expect("the parent task");
+    assert!(labels[parent].starts_with("GLD-54"), "{}", labels[parent]);
+    let subtree = &labels[parent + 1..parent + 4];
+    assert!(
+        subtree.iter().any(|l| l.starts_with("    GLD-5") && l.contains("Child one"))
+            && subtree.iter().any(|l| l.starts_with("    GLD-5") && l.contains("Child two"))
+            && subtree.iter().any(|l| l.starts_with("        GLD-57") && l.contains("Grandchild")),
+        "{subtree:?}"
+    );
+    assert!(labels.iter().any(|l| l.contains("(+)")), "{labels:?}");
+    let bug = list
+        .items
+        .iter()
+        .find(|i| i.label.contains("Bug with all fields"))
+        .unwrap()
+        .key
+        .clone();
+
+    let effect = choose(&mut app, &bug);
+    execute(&mut app, effect);
+    let result = app.result.as_ref().unwrap();
+    assert_eq!(result.kind, super::app::ResultKind::View);
+    assert_eq!(result.related.len(), 4, "{}", result.text);
+    assert_eq!(result.selected, None);
+    let lines: Vec<&str> = result.text.lines().collect();
+    assert!(lines[result.related[0].0].starts_with("  blocks") && lines[result.related[0].0].contains("Bug with own fields"));
+    assert!(
+        matches!(app.handle(Key::Enter), Effect::Run(_)),
+        "Enter without a selection refreshes"
+    );
+    app.handle(Key::Down);
+    app.handle(Key::Down);
+    assert_eq!(app.result.as_ref().unwrap().selected, Some(1));
+    app.handle(Key::Up);
+    assert_eq!(app.result.as_ref().unwrap().selected, Some(0));
+    let effect = app.handle(Key::Enter);
+    let Effect::Run(argv) = &effect else {
+        panic!("Enter must open the linked task")
+    };
+    assert_eq!(
+        argv[argv.len() - 3..],
+        ["task", "get", &tasker_core::ids::guid_d(&app.result.as_ref().unwrap().related[0].1)]
+    );
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task › Linked task");
+    let result = app.result.as_ref().unwrap();
+    assert_eq!(result.kind, super::app::ResultKind::View);
+    assert!(result.text.contains("title:        Bug with own fields"), "{}", result.text);
+    assert!(!result.related.is_empty());
+    app.handle(Key::Down);
+    let effect = app.handle(Key::Enter);
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task › Linked task › Linked task");
+
+    let effect = app.handle(Key::Esc);
+    assert!(matches!(effect, Effect::Run(_)), "Esc must show the previous card again");
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task › Linked task");
+    assert!(app.result.as_ref().unwrap().text.contains("title:        Bug with own fields"));
+    let effect = app.handle(Key::Esc);
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    assert!(app.result.as_ref().unwrap().text.contains("title:        Bug with all fields"));
+    assert_eq!(app.result.as_ref().unwrap().selected, Some(0));
+    assert!(matches!(app.handle(Key::Esc), Effect::None));
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    assert!(app.result.is_none());
     std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
 }
 

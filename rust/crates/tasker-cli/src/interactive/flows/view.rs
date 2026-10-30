@@ -1,9 +1,10 @@
 use super::super::app::Kind;
 use super::super::step::{Chain, Check, FormValue, FormValues, Item, Section, SectionKind, StepSpec};
 use super::super::wizard::{Steps, Wizard, cmd};
+use super::TaskRow;
 use crate::errors::CliError;
 use tasker_core::ids::{guid_d, parse_guid};
-use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType, Status};
+use tasker_core::model::{Board, FieldDefinition, FieldEnum, FieldType};
 use tasker_core::tasks::{Page, TaskFilter};
 use tasker_services::Storage;
 
@@ -177,7 +178,7 @@ fn tasks(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Vec<String>> {
     Ok(argv)
 }
 
-pub fn task_settings(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, title: &str, submit: &str, shape: bool) -> Steps<FormValues> {
+pub fn task_settings(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, title: &str, submit: &str, for_list: bool) -> Steps<FormValues> {
     let definitions = field_definitions(w, project)?;
     let mut sections = vec![
         Section::new(
@@ -216,14 +217,26 @@ pub fn task_settings(w: &mut Wizard<'_, '_>, project: &uuid::Uuid, title: &str, 
         Section::new(
             "sort",
             "Sort",
-            if shape { "creation order" } else { "newest first" },
+            if for_list { "creation order" } else { "newest first" },
             SectionKind::List {
                 add: sort_chain(&definitions),
                 add_label: "Add a key".to_string(),
             },
         ),
     ];
-    if shape {
+    if !for_list {
+        let columns = definitions
+            .iter()
+            .map(|f| Item::new(&f.name, &f.name).detail(f.field_type.name()))
+            .collect();
+        sections.push(Section::new(
+            "columns",
+            "Extra columns",
+            "none",
+            SectionKind::Multi { items: columns },
+        ));
+    }
+    {
         sections.push(
             Section::new(
                 "shape",
@@ -268,25 +281,54 @@ pub fn filtered_tasks(w: &Wizard<'_, '_>, project: &uuid::Uuid, settings: &[Form
     let sort = strings("sort");
     let sort = if sort.is_empty() { "-created".to_string() } else { sort.join(",") };
     let ws = w.ctx.session.workspace();
-    let prefixes = ws.series().prefixes(project)?;
-    let statuses: std::collections::HashMap<uuid::Uuid, String> =
-        ws.get_all::<Status>(project)?.into_iter().map(|s| (s.id, s.name)).collect();
-    let mut items: Vec<Item> = Vec::new();
+    let names = super::TaskNames::load(w, project)?;
+    let columns = strings("columns");
+    let field_filters = (!conditions.is_empty()).then_some(conditions.as_slice());
+    if strings("shape").iter().any(|s| s == "flat") {
+        let mut tasks: Vec<tasker_core::model::TaskItem> = Vec::new();
+        loop {
+            let page = ws.tasks().list(
+                project,
+                Some(&filter),
+                field_filters,
+                Page::new(tasks.len(), crate::kit::MAX_LIMIT),
+                0,
+                Some(&sort),
+            )?;
+            let got = page.data.len();
+            tasks.extend(page.data.into_iter().map(|x| x.task));
+            if got == 0 || tasks.len() >= page.total_count {
+                let rows: Vec<TaskRow<'_>> = tasks.iter().map(TaskRow::flat).collect();
+                return Ok(names.items(&rows, &columns));
+            }
+        }
+    }
+    let mut rows: Vec<(tasker_core::model::TaskItem, usize, bool)> = Vec::new();
+    let mut top = 0;
     loop {
-        let page = ws.tasks().list(
+        let page = ws.tasks().list_tree(
             project,
             Some(&filter),
-            (!conditions.is_empty()).then_some(conditions.as_slice()),
-            Page::new(items.len(), crate::kit::MAX_LIMIT),
+            field_filters,
+            Page::new(top, crate::kit::MAX_LIMIT),
             0,
             Some(&sort),
         )?;
-        let got = page.data.len();
-        items.extend(page.data.iter().map(|x| super::task_item(&x.task, &prefixes, &statuses)));
-        if got == 0 || items.len() >= page.total_count {
-            return Ok(items);
+        rows.extend(page.data.into_iter().map(|x| (x.item.task, x.depth, x.repeated)));
+        top += crate::kit::MAX_LIMIT;
+        if top >= page.top_level_count {
+            break;
         }
     }
+    let rows: Vec<TaskRow<'_>> = rows
+        .iter()
+        .map(|(task, depth, repeated)| TaskRow {
+            task,
+            depth: *depth,
+            repeated: *repeated,
+        })
+        .collect();
+    Ok(names.items(&rows, &columns))
 }
 
 fn task_to_show(w: &mut Wizard<'_, '_>, project: &uuid::Uuid) -> Steps<Item> {

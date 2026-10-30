@@ -38,8 +38,14 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App) {
     }
     let title = app.current_spec().map(|s| s.title().to_string()).unwrap_or_default();
     let filters = app.has_filters();
+    let columns = app.has_columns();
+    let refreshes = app.list_refreshes().then(|| app.refresh.as_secs_f64().ceil() as u64);
     let Some(state) = app.state_mut() else { return };
-    let block = Block::default().borders(Borders::ALL).title(format!(" {title} "));
+    let title = match refreshes {
+        Some(seconds) => format!(" {title}  refreshes every {seconds} s "),
+        None => format!(" {title} "),
+    };
+    let block = Block::default().borders(Borders::ALL).title(title);
     let inner = block.inner(body);
     frame.render_widget(block, body);
     match state {
@@ -47,6 +53,9 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App) {
             let mut hint = draw_list(frame, list, inner);
             if filters {
                 hint.push_str("   Ctrl+F filters");
+            }
+            if columns {
+                hint.push_str("   Ctrl+L columns");
             }
             frame.render_widget(Paragraph::new(hint).style(Style::default().fg(HINT)), footer);
         }
@@ -245,8 +254,23 @@ fn draw_result(frame: &mut Frame<'_>, app: &mut App, body: Rect, footer: Rect) {
         .borders(Borders::ALL)
         .title(title)
         .border_style(Style::default().fg(color));
+    let selected = result.selected.and_then(|at| result.related.get(at)).map(|(line, _)| *line);
+    let lines: Vec<Line> = result
+        .text
+        .lines()
+        .enumerate()
+        .map(|(at, text)| {
+            if selected == Some(at) {
+                Line::styled(text.to_string(), Style::default().add_modifier(Modifier::REVERSED | Modifier::BOLD))
+            } else if result.related.iter().any(|(line, _)| *line == at) {
+                Line::styled(text.to_string(), Style::default().fg(Color::Cyan))
+            } else {
+                Line::raw(text.to_string())
+            }
+        })
+        .collect();
     frame.render_widget(
-        Paragraph::new(result.text.clone())
+        Paragraph::new(lines)
             .wrap(Wrap { trim: false })
             .scroll((result.scroll, 0))
             .block(block),
@@ -254,6 +278,9 @@ fn draw_result(frame: &mut Frame<'_>, app: &mut App, body: Rect, footer: Rect) {
     );
     let hint = match result.kind {
         ResultKind::Done => " Enter back to the menu   ↑↓ scroll",
+        ResultKind::View if !result.related.is_empty() => {
+            " ↑↓ linked task   Enter open it   Esc back   PgUp PgDn scroll   r refresh   f setting   q menu"
+        }
         ResultKind::View => " Esc previous step   f change a setting   r refresh now   q menu   ↑↓ scroll",
         ResultKind::Failed => " Enter back to the steps (Esc there returns to the previous step)   ↑↓ scroll",
         ResultKind::Retryable => " r retry with the current data   Enter back to the steps   ↑↓ scroll",
