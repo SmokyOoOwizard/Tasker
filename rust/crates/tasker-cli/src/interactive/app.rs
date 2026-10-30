@@ -5,6 +5,7 @@ use crate::errors::CliError;
 use crate::session::Session;
 use std::time::{Duration, Instant};
 use tasker_core::model::Project;
+use tasker_services::Storage;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
@@ -103,6 +104,7 @@ pub enum Flow {
     Entity(Action, Kind),
     SwitchProject,
     Pick,
+    Card(uuid::Uuid),
 }
 
 impl Flow {
@@ -116,6 +118,7 @@ impl Flow {
             Flow::Kinds(action) => action.label().to_string(),
             Flow::Entity(_, kind) => kind.label().to_string(),
             Flow::SwitchProject => "Project".to_string(),
+            Flow::Card(_) => "Linked task".to_string(),
         }
     }
 }
@@ -161,6 +164,8 @@ pub struct ResultView {
     pub kind: ResultKind,
     pub scroll: u16,
     pub at: Instant,
+    pub related: Vec<(usize, uuid::Uuid)>,
+    pub selected: Option<usize>,
 }
 
 pub struct App {
@@ -172,6 +177,8 @@ pub struct App {
     pub page: usize,
     pub refresh: Duration,
     last_refresh: Instant,
+    remembered: Vec<Option<usize>>,
+    restore: Option<usize>,
 }
 
 fn answer_summary(answer: &Answer) -> String {
@@ -219,6 +226,8 @@ impl App {
             page: 10,
             refresh,
             last_refresh: Instant::now(),
+            remembered: Vec::new(),
+            restore: None,
         };
         let _ = app.enter(Flow::Menu);
         if app.project.is_none() && app.session.all_projects().map(|p| p.len() > 1).unwrap_or(false) {
@@ -237,14 +246,16 @@ impl App {
 
     pub fn breadcrumb(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
-        for frame in &self.frames {
+        for (at, frame) in self.frames.iter().enumerate() {
             let title = frame.flow.title();
             if !title.is_empty() {
                 parts.push(title);
             }
-        }
-        if let Some(frame) = self.frames.last() {
-            parts.push(frame.spec.title().to_string());
+            let card = matches!(frame.flow, Flow::Card(_));
+            let before_card = self.frames.get(at + 1).is_some_and(|f| matches!(f.flow, Flow::Card(_)));
+            if !card && (at + 1 == self.frames.len() || before_card) {
+                parts.push(frame.spec.title().to_string());
+            }
         }
         parts.join(" › ")
     }
@@ -361,6 +372,11 @@ impl App {
                 Ok(Next::SwitchProject(project))
             }
             Flow::Entity(action, kind) => Ok(Next::Run(flows::run(&mut wizard, action, kind)?)),
+            Flow::Card(id) => Ok(Next::Run(vec![
+                "task".to_string(),
+                "get".to_string(),
+                tasker_core::ids::guid_d(&id),
+            ])),
             Flow::Pick => {
                 let parent = self
                     .frames
@@ -425,6 +441,8 @@ impl App {
             kind: ResultKind::Failed,
             scroll: 0,
             at: Instant::now(),
+            related: Vec::new(),
+            selected: None,
         });
     }
 
@@ -586,7 +604,7 @@ impl App {
         while self
             .frames
             .last()
-            .is_some_and(|f| matches!(f.flow, Flow::Entity(..) | Flow::Kinds(_) | Flow::Pick))
+            .is_some_and(|f| matches!(f.flow, Flow::Entity(..) | Flow::Kinds(_) | Flow::Pick | Flow::Card(_)))
         {
             self.frames.pop();
         }
@@ -669,7 +687,52 @@ impl App {
     }
 
     fn viewing(&self) -> bool {
-        self.frames.last().is_some_and(|f| matches!(f.flow, Flow::Entity(Action::View, _)))
+        self.frames
+            .last()
+            .is_some_and(|f| matches!(f.flow, Flow::Entity(Action::View, _) | Flow::Card(_)))
+    }
+
+    fn card_task(&self) -> Option<uuid::Uuid> {
+        let frame = self.frames.last()?;
+        match frame.flow {
+            Flow::Card(id) => Some(id),
+            Flow::Entity(Action::View, Kind::Task) => {
+                let first = frame.answers.first()?;
+                let last = frame.answers.last()?;
+                match (first, last) {
+                    (Answer::Choice(what), Answer::Choice(task)) if what.key == "card" => tasker_core::ids::parse_guid(&task.key),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn related_tasks(&self, text: &str) -> Vec<(usize, uuid::Uuid)> {
+        let Some(id) = self.card_task() else { return Vec::new() };
+        let Some(project) = &self.project else { return Vec::new() };
+        let ws = self.session.workspace();
+        let Ok(Some(task)) = ws.get_by_id::<tasker_core::model::TaskItem>(&project.id, &id) else {
+            return Vec::new();
+        };
+        let Ok(details) = ws.tasks().describe(&project.id, &task) else {
+            return Vec::new();
+        };
+        let lines: Vec<&str> = text.lines().collect();
+        let Some(header) = lines.iter().position(|l| *l == "links:") else {
+            return Vec::new();
+        };
+        details
+            .link_views
+            .iter()
+            .enumerate()
+            .filter(|(at, _)| {
+                lines
+                    .get(header + 1 + at)
+                    .is_some_and(|l| l.starts_with("  ") && !l.starts_with("  ..."))
+            })
+            .map(|(at, view)| (header + 1 + at, view.task.id))
+            .collect()
     }
 
     pub fn set_result(&mut self, stdout: &str, stderr: &str, code: i32) {
@@ -691,15 +754,28 @@ impl App {
         } else {
             ResultKind::Failed
         };
-        let scroll = match &self.result {
-            Some(previous) if previous.kind == ResultKind::View && kind == ResultKind::View => previous.scroll,
-            _ => 0,
+        let related = if kind == ResultKind::View {
+            self.related_tasks(&text)
+        } else {
+            Vec::new()
+        };
+        let (scroll, selected) = match (self.restore.take(), &self.result) {
+            (Some(at), _) => (0, Some(at).filter(|&at| at < related.len())),
+            (None, Some(previous)) if previous.kind == ResultKind::View && kind == ResultKind::View => (
+                previous.scroll,
+                previous
+                    .selected
+                    .filter(|&at| at < related.len() && previous.related.get(at).is_some_and(|(_, id)| *id == related[at].1)),
+            ),
+            _ => (0, None),
         };
         self.result = Some(ResultView {
             text,
             kind,
             scroll,
             at: Instant::now(),
+            related,
+            selected,
         });
     }
 
@@ -712,12 +788,40 @@ impl App {
         }
     }
 
-    fn close_result(&mut self) {
-        let Some(result) = self.result.take() else { return };
+    fn close_result(&mut self) -> Effect {
+        let Some(result) = self.result.take() else {
+            return Effect::None;
+        };
+        if self.frames.last().is_some_and(|f| matches!(f.flow, Flow::Card(_))) {
+            self.frames.pop();
+            self.restore = self.remembered.pop().flatten();
+            return self.refresh_argv().map(Effect::Run).unwrap_or(Effect::None);
+        }
         if result.kind == ResultKind::Done {
             self.return_to_menu();
         } else {
             self.back();
+        }
+        Effect::None
+    }
+
+    fn select_related(&mut self, down: bool) {
+        let page = self.page;
+        let Some(result) = &mut self.result else { return };
+        let count = result.related.len();
+        result.selected = match (result.selected, down) {
+            (None, true) => Some(0),
+            (Some(at), true) => Some((at + 1).min(count - 1)),
+            (Some(0), false) | (None, false) => None,
+            (Some(at), false) => Some(at - 1),
+        };
+        if let Some(at) = result.selected {
+            let line = result.related[at].0 as u16;
+            if line < result.scroll {
+                result.scroll = line;
+            } else if line >= result.scroll + page as u16 {
+                result.scroll = line + 1 - page as u16;
+            }
         }
     }
 
@@ -728,8 +832,14 @@ impl App {
         }
         if let Some(result) = &mut self.result {
             match key {
+                Key::Up | Key::Down if !result.related.is_empty() => self.select_related(key == Key::Down),
                 Key::Up => result.scroll = result.scroll.saturating_sub(1),
                 Key::Down => result.scroll = result.scroll.saturating_add(1),
+                Key::Enter if result.kind == ResultKind::View && result.selected.is_some() => {
+                    let id = result.related[result.selected.expect("a selection")].1;
+                    self.remembered.push(result.selected);
+                    return self.enter(Flow::Card(id));
+                }
                 Key::PageUp => result.scroll = result.scroll.saturating_sub(self.page as u16),
                 Key::PageDown => result.scroll = result.scroll.saturating_add(self.page as u16),
                 Key::Char('r') | Key::Char('R') if result.kind == ResultKind::Retryable => {
@@ -751,9 +861,10 @@ impl App {
                 }
                 Key::Char('q') | Key::Char('Q') if result.kind == ResultKind::View => {
                     self.result = None;
+                    self.remembered.clear();
                     self.return_to_menu();
                 }
-                Key::Enter | Key::Esc | Key::Char('q') => self.close_result(),
+                Key::Enter | Key::Esc | Key::Char('q') => return self.close_result(),
                 _ => {}
             }
             return Effect::None;

@@ -1122,6 +1122,28 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     assert!(screen.contains("Updated description"), "{screen}");
 
     tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "task", "Task");
+    tui.pick("Tasks: what to show", "card", "Card of a task");
+    tui.submit_form("Task filters");
+    let screen = tui.wait_for("Grandchild");
+    assert!(
+        screen.lines().any(|l| l.contains("│      GLD-5") && l.contains("Child one"))
+            && screen.lines().any(|l| l.contains("│          GLD-57") && l.contains("Grandchild")),
+        "{screen}"
+    );
+    tui.pick("Task", "bug with all", "Bug with all fields");
+    tui.wait_for("↑↓ linked task");
+    tui.send(DOWN);
+    tui.send(ENTER);
+    tui.wait_for("title:        Bug with own fields");
+    tui.wait_for("Linked task");
+    tui.send(ESC);
+    let screen = tui.wait_for("title:        Bug with all fields");
+    assert!(!screen.contains("Linked task"), "{screen}");
+    tui.send("q");
+    tui.wait_for("What to do");
+
+    tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "board", "Board");
     tui.pick("Boards: what to show", "whole", "Whole board");
     tui.pick("Board", "main", "Main board");

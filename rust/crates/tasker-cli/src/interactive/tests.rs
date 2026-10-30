@@ -487,7 +487,10 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     choose(&mut app, "task");
     choose(&mut app, "card");
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
-    assert_eq!(snapshot(&app).items, ["type", "status", "series", "field", "sort", "columns"]);
+    assert_eq!(
+        snapshot(&app).items,
+        ["type", "status", "series", "field", "sort", "columns", "shape"]
+    );
     open_section(&mut app, "status");
     {
         let layer = form(&mut app).popup.as_mut().unwrap().layer_mut();
@@ -608,6 +611,92 @@ fn the_card_of_a_task_is_chosen_from_a_list_narrowed_by_the_same_filters() {
     app.handle(Key::Esc);
     assert_eq!(app.breadcrumb(), "Browse › Task › Task filters");
     assert!(snapshot(&app).value.contains("status=0000") && snapshot(&app).value.contains("field=;"));
+    std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
+}
+
+#[test]
+fn the_task_picker_is_a_tree_and_the_card_opens_linked_tasks_with_arrows_and_returns_on_esc() {
+    let workspace = golden_copy();
+    let mut app = open(&workspace);
+    choose(&mut app, "browse");
+    choose(&mut app, "task");
+    choose(&mut app, "card");
+    assert_eq!(
+        snapshot(&app).items,
+        ["type", "status", "series", "field", "sort", "columns", "shape"]
+    );
+    app.handle(Key::End);
+    app.handle(Key::Enter);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    let Some(StepState::List(list)) = app.state() else { panic!() };
+    let labels: Vec<&str> = list.items.iter().map(|i| i.label.as_str()).collect();
+    let parent = labels.iter().position(|l| l.contains("Epic: hierarchy")).expect("the parent task");
+    assert!(labels[parent].starts_with("GLD-54"), "{}", labels[parent]);
+    let subtree = &labels[parent + 1..parent + 4];
+    assert!(
+        subtree.iter().any(|l| l.starts_with("    GLD-5") && l.contains("Child one"))
+            && subtree.iter().any(|l| l.starts_with("    GLD-5") && l.contains("Child two"))
+            && subtree.iter().any(|l| l.starts_with("        GLD-57") && l.contains("Grandchild")),
+        "{subtree:?}"
+    );
+    assert!(labels.iter().any(|l| l.contains("(+)")), "{labels:?}");
+    let bug = list
+        .items
+        .iter()
+        .find(|i| i.label.contains("Bug with all fields"))
+        .unwrap()
+        .key
+        .clone();
+
+    let effect = choose(&mut app, &bug);
+    execute(&mut app, effect);
+    let result = app.result.as_ref().unwrap();
+    assert_eq!(result.kind, super::app::ResultKind::View);
+    assert_eq!(result.related.len(), 4, "{}", result.text);
+    assert_eq!(result.selected, None);
+    let lines: Vec<&str> = result.text.lines().collect();
+    assert!(lines[result.related[0].0].starts_with("  blocks") && lines[result.related[0].0].contains("Bug with own fields"));
+    assert!(
+        matches!(app.handle(Key::Enter), Effect::Run(_)),
+        "Enter without a selection refreshes"
+    );
+    app.handle(Key::Down);
+    app.handle(Key::Down);
+    assert_eq!(app.result.as_ref().unwrap().selected, Some(1));
+    app.handle(Key::Up);
+    assert_eq!(app.result.as_ref().unwrap().selected, Some(0));
+    let effect = app.handle(Key::Enter);
+    let Effect::Run(argv) = &effect else {
+        panic!("Enter must open the linked task")
+    };
+    assert_eq!(
+        argv[argv.len() - 3..],
+        ["task", "get", &tasker_core::ids::guid_d(&app.result.as_ref().unwrap().related[0].1)]
+    );
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task › Linked task");
+    let result = app.result.as_ref().unwrap();
+    assert_eq!(result.kind, super::app::ResultKind::View);
+    assert!(result.text.contains("title:        Bug with own fields"), "{}", result.text);
+    assert!(!result.related.is_empty());
+    app.handle(Key::Down);
+    let effect = app.handle(Key::Enter);
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task › Linked task › Linked task");
+
+    let effect = app.handle(Key::Esc);
+    assert!(matches!(effect, Effect::Run(_)), "Esc must show the previous card again");
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task › Linked task");
+    assert!(app.result.as_ref().unwrap().text.contains("title:        Bug with own fields"));
+    let effect = app.handle(Key::Esc);
+    execute(&mut app, effect);
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    assert!(app.result.as_ref().unwrap().text.contains("title:        Bug with all fields"));
+    assert_eq!(app.result.as_ref().unwrap().selected, Some(0));
+    assert!(matches!(app.handle(Key::Esc), Effect::None));
+    assert_eq!(app.breadcrumb(), "Browse › Task › Task");
+    assert!(app.result.is_none());
     std::fs::remove_dir_all(workspace.parent().unwrap()).unwrap();
 }
 

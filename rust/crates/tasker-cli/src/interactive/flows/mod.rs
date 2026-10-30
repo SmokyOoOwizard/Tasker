@@ -155,10 +155,11 @@ impl TaskNames {
         if texts.is_empty() { "-".to_string() } else { texts.join(", ") }
     }
 
-    pub fn items(&self, tasks: &[&TaskItem], columns: &[String]) -> Vec<Item> {
+    pub fn items(&self, tasks: &[TaskRow<'_>], columns: &[String]) -> Vec<Item> {
         let rows: Vec<Vec<String>> = tasks
             .iter()
-            .map(|task| {
+            .map(|row| {
+                let task = row.task;
                 let refs = crate::commands::series::references(&task.series_numbers, &self.prefixes);
                 let handle = if refs.is_empty() {
                     tasker_core::ShortId::of(&task.id)
@@ -166,7 +167,7 @@ impl TaskNames {
                     refs.join(",")
                 };
                 let mut row = vec![
-                    handle,
+                    format!("{}{handle}{}", "    ".repeat(row.depth), if row.repeated { " (+)" } else { "" }),
                     self.statuses.get(&task.status_id).cloned().unwrap_or_default(),
                     self.types.get(&task.type_id).cloned().unwrap_or_default(),
                 ];
@@ -179,6 +180,7 @@ impl TaskNames {
             .collect::<Vec<_>>();
         tasks
             .iter()
+            .map(|row| row.task)
             .zip(rows)
             .map(|(task, row)| {
                 let mut label = String::new();
@@ -193,11 +195,27 @@ impl TaskNames {
     }
 }
 
+pub struct TaskRow<'a> {
+    pub task: &'a TaskItem,
+    pub depth: usize,
+    pub repeated: bool,
+}
+
+impl<'a> TaskRow<'a> {
+    pub fn flat(task: &'a TaskItem) -> TaskRow<'a> {
+        TaskRow {
+            task,
+            depth: 0,
+            repeated: false,
+        }
+    }
+}
+
 pub fn tasks(w: &Wizard<'_, '_>, project: &Uuid) -> Result<Vec<Item>> {
     let names = TaskNames::load(w, project)?;
     let mut items: Vec<TaskItem> = w.ctx.session.workspace().tasks().get_all(project, None)?;
     items.sort_by_key(|t| std::cmp::Reverse(t.created_at));
-    Ok(names.items(&items.iter().collect::<Vec<_>>(), &[]))
+    Ok(names.items(&items.iter().map(TaskRow::flat).collect::<Vec<_>>(), &[]))
 }
 
 pub fn confirm_delete(w: &mut Wizard<'_, '_>, what: &str, name: &str) -> Steps<()> {
