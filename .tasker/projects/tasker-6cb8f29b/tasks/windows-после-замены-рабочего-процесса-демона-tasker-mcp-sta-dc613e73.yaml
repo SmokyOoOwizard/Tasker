@@ -1,0 +1,31 @@
+formatVersion: 10
+id: dc613e73-6621-4941-80dd-f1cb52bd6233
+title: 'Windows: после замены рабочего процесса демона tasker mcp status не видит демон'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-11-03T22:58:32.2662230+00:00
+updatedAt: 2026-11-03T22:58:32.2662230+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 206
+description: |-
+  Что происходит
+  На Windows (CI, windows-latest) после замены рабочего процесса демона .NET-консоль `tasker mcp status --json` постоянно отдаёт `"daemon": null`. Так бывает и после `tasker mcp upgrade`, и после того, как супервизор перезапустил упавший рабочий процесс. На macOS и Linux всё работает.
+
+  Падающие тесты (ветка dotnet-cli-parity, PR SmokyOoOwizard/Tasker#35, коммит 0a90899):
+  - DaemonUpgradeTests.A_server_started_as_one_process_is_restarted_by_upgrade_and_is_seamless_afterwards. NullReferenceException: статуса нет после второго upgrade.
+  - DaemonUpgradeTests.A_call_in_progress_is_finished_by_the_old_process_and_both_are_shown_in_the_status. Тайм-аут WaitStatus.
+  - DaemonUpgradeTests.A_worker_that_crashes_is_started_again_by_the_supervisor. Тайм-аут WaitStatus.
+  - ParallelWorkTests.The_daemon_replaced_on_the_fly_under_load_loses_no_call_and_no_write. Сценарий upgrade стенда Tasker.Stress: сразу после `mcp upgrade` вызов `mcp status --json` вернул daemon null.
+
+  В main эти тесты на Windows проходили, но тогда тесты запускали Rust-консоль. Демон и там, и там один — .NET. Значит, разница, скорее всего, на стороне клиента: DaemonClient.GetStatus и DaemonFiles в dotnet/src/Tasker.Daemon.
+
+  Что уже известно
+  - daemon.lock держит супервизор (Supervisor.cs, DaemonFiles.TryHold с FileShare.None). Клиент проверяет, работает ли демон: пробно открывает этот файл (DaemonFiles.IsRunning). Rust-клиент делал это через FileLock::acquire с нулевым ожиданием.
+  - Rust-клиент разбирал ответ /daemon/status как произвольный JSON. .NET разбирает его в строгий тип DaemonStatus и при JsonException возвращает null. Тайм-аут у обоих 5 с и один повтор через 300 мс.
+  - В DaemonUpgradeTests добавлена диагностика (коммит 199d621). Если статуса нет, тест сам читает daemon.json и делает прямой GET /daemon/status. В сообщение об ошибке попадают: держится ли блокировка, pid, порт, HTTP-код, время ответа, тело ответа и результат строгого разбора в DaemonStatus. С этого и стоит начать: взять сообщение из ближайшего прогона CI на Windows.
+
+  Готово, когда
+  - Найдена причина. Это одно из трёх: блокировка, HTTP-запрос или разбор ответа.
+  - Исправлен клиент или демон, а не тест.
+  - Четыре теста выше проходят на windows-latest, а на macOS и Linux ничего не сломано.
