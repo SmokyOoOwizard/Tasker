@@ -28,6 +28,7 @@
 # <файл>.tasker-backup; --no-completion файл не трогает; --uninstall убирает блок и скрипты. Остальное содержимое файла не меняется.
 
 set -euo pipefail
+export MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0 UseSharedCompilation=false
 
 usage() {
   cat <<'USAGE'

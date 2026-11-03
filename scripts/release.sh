@@ -29,6 +29,7 @@
 #   install.sh, install.ps1                         скрипты установки отдельно (чтобы запускать их, не распаковывая архив)
 
 set -euo pipefail
+export MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0 UseSharedCompilation=false
 
 usage() {
   cat <<'USAGE'
