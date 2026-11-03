@@ -87,7 +87,7 @@ internal sealed class ConsoleSetup : IDisposable
         });
     }
 
-    private static StreamWriter Writer(Stream stream) => new(stream, Utf8, 4096) { AutoFlush = true };
+    private static StreamWriter Writer(Stream stream) => new(stream, Utf8, 4096) { AutoFlush = true, NewLine = "\n" };
 
     private static void Restore(Action restore, Encoding? previous)
     {

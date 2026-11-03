@@ -16,7 +16,7 @@ public class ParallelWorkTests
 {
     private static async Task Run(string client, string storage, int clients, int ops, params string[] scenarios)
     {
-        var options = new StressOptions { Clients = clients, Ops = ops, Client = client, Storage = storage, Scenarios = [.. scenarios], Scale = [2] };
+        var options = new StressOptions { Tasker = TaskerProcess.Binary, Clients = clients, Ops = ops, Client = client, Storage = storage, Scenarios = [.. scenarios], Scale = [2] };
         var report = await StressRunner.Run(options);
         Assert.True(report.Passed, report.ToText());
     }
@@ -43,7 +43,7 @@ public class ParallelWorkTests
         if (Environment.GetEnvironmentVariable("TASKER_STRESS") is not "1")
             return;
 
-        var options = new StressOptions { Clients = 10, Ops = 5, Client = client, Storage = storage };
+        var options = new StressOptions { Tasker = TaskerProcess.Binary, Clients = 10, Ops = 5, Client = client, Storage = storage };
         var report = await StressRunner.Run(options);
         Assert.True(report.Passed, report.ToText());
     }

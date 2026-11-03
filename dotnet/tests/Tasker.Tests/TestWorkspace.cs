@@ -91,8 +91,8 @@ public static class TaskerProcess
 
     private static string Executable(string name) => OperatingSystem.IsWindows() ? name + ".exe" : name;
 
-    /// <summary>Исполняемый файл консоли: <c>TASKER_BIN</c> (см. <see cref="TestRun"/>) или <c>tasker</c> из каталога тестов.</summary>
-    public static string Binary => Path.GetFullPath(TestRun.TaskerBin ?? Path.Combine(AppContext.BaseDirectory, Executable("tasker")));
+    /// <summary>Исполняемый файл консоли: <c>TASKER_BIN</c> (см. <see cref="TestRun"/>) или <c>tasker</c> из каталога <c>programs</c> рядом с тестами.</summary>
+    public static string Binary => Path.GetFullPath(TestRun.TaskerBin ?? Path.Combine(AppContext.BaseDirectory, "programs", Executable("tasker")));
 
     /// <summary>Каталог, где лежат программы <c>tasker</c> и <c>tasker-mcpd</c>.</summary>
     public static string ProgramDirectory => Path.GetDirectoryName(Binary)!;
