@@ -1,7 +1,7 @@
 namespace Tasker.Global;
 
 /// <summary>
-/// Каталоги данных самого Tasker (не рабочих папок): одни и те же для десктопа, командной строки и демона MCP —
+/// Каталоги данных самого Tasker (не рабочих папок): одни и те же для командной строки и демона MCP —
 /// поэтому настройки и состояние демона у них общие. <c>TASKER_HOME</c> переопределяет каталог (тесты, портативная установка).
 /// </summary>
 public static class AppDirectories
@@ -12,7 +12,12 @@ public static class AppDirectories
     public static string Data =>
         AppEnvironment.Get(HomeVariable) is { Length: > 0 } home
             ? Path.GetFullPath(UserPath.Expand(home)!)
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "Tasker");
+            : Path.Combine(LocalApplicationData(), "Tasker");
+
+    private static string LocalApplicationData() =>
+        OperatingSystem.IsMacOS() && AppEnvironment.Get("HOME") is { Length: > 0 } home
+            ? Path.Combine(home, "Library", "Application Support")
+            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
 
     public static string Logs => Path.Combine(Data, "logs");
 
