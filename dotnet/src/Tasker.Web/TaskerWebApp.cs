@@ -17,7 +17,7 @@ public static class TaskerWebApp
     /// <summary>
     /// Настройки — группы <see cref="AConfigs"/> из переменных окружения и аргументов командной строки
     /// Все группы регистрируются в Autofac как есть.
-    /// Autofac: общие регистрации в модулях Core/Web, хост (Server/Desktop) добавляет свой модуль.
+    /// Autofac: общие регистрации в модулях Core/Web, хост (Server/Daemon) добавляет свой модуль.
     /// </summary>
     /// <param name="configure">Хост может дописать значения по умолчанию после разбора.</param>
     /// <param name="log">Куда писать предупреждения о незнакомых настройках; по умолчанию — <see cref="Log.Logger"/>.</param>

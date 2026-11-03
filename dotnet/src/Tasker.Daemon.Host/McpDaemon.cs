@@ -67,7 +67,7 @@ public static class McpDaemon
             // Десктоп мог занять порт раньше: он видит блокировку демона и отпускает порт сам — даём ему на это время.
             if (!await WaitForPort(port, ct))
             {
-                var message = $"Port {port} is busy: another program (for example Tasker desktop) listens on it. Free it or change the port with 'tasker mcp port <number>'";
+                var message = $"Port {port} is busy: another program listens on it. Free it or change the port with 'tasker mcp port <number>'";
                 Log.Error(message);
                 error.WriteLine(message);
                 return 1;
@@ -261,7 +261,7 @@ public static class McpDaemon
                 return false;
             if (!announced)
             {
-                Log.Information("Port {Port} is busy: waiting up to {Seconds:0} s for the desktop to release it", port, PortWait.TotalSeconds);
+                Log.Information("Port {Port} is busy: waiting up to {Seconds:0} s for it to be released", port, PortWait.TotalSeconds);
                 announced = true;
             }
             await Task.Delay(PortPoll, ct);

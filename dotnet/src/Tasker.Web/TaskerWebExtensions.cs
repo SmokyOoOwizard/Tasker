@@ -11,7 +11,7 @@ namespace Tasker.Web;
 
 /// <summary>
 /// Общий веб-слой: API и встроенный фронтенд.
-/// Подключается одинаково и в Tasker.Server, и в Tasker.Desktop.
+/// Подключается одинаково на сервере (Tasker.Server) и в локальном режиме.
 /// </summary>
 public static class TaskerWebExtensions
 {

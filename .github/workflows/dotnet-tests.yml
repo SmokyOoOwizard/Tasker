@@ -1,4 +1,4 @@
-# Сборка .NET-решения dotnet/Tasker.slnx (консоль, демон, десктоп, сервер, общие библиотеки, стенд) и тесты dotnet/tests/Tasker.Tests
+# Сборка .NET-решения dotnet/Tasker.slnx (консоль, демон, сервер, общие библиотеки, стенд) и тесты dotnet/tests/Tasker.Tests
 # на Linux, macOS и Windows. Консоль tasker и демон tasker-mcpd кладёт рядом с тестами сама сборка тестов (ссылки на их проекты).
 # Фронтенд в сборку не встраивается (-p:EmbedFrontend=false): тестам веб-слоя интерфейс не нужен, Node.js в этом прогоне не ставится.
 name: .NET tests

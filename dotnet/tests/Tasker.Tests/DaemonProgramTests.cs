@@ -14,156 +14,7 @@ using Xunit;
 
 namespace Tasker.Tests;
 
-/// <summary>Десктоп и демон MCP: десктоп запускает настоящий демон tasker-mcpd, если тот не работает, и отдаёт ему открытые папки.</summary>
-public class DesktopDaemonTests : IDisposable
-{
-    private readonly DaemonFixture _daemon = new();
-
-    public void Dispose() => _daemon.Dispose();
-
-    /// <summary>Десктоп с программой демона из каталога тестов (её туда кладёт сборка, как в сборку десктопа).</summary>
-    private DesktopDaemon Desktop() => new(() => TaskerProcess.DaemonCommand().File, _daemon.Store);
-
-    [Fact]
-    public async Task Without_a_daemon_the_desktop_starts_it_and_mcp_answers()
-    {
-        await _daemon.Workspace("a", "Alpha");
-        Assert.Null(await DaemonClient.GetStatus());
-
-        var result = await Desktop().Start();
-
-        Assert.Null(result.Error);
-        Assert.True(result.Started);
-        var status = result.Status!;
-        Assert.Equal(_daemon.Port, status.Port);
-        Assert.True(status.Settled);
-        Assert.Equal(WorkspaceState.Open, status.Workspaces.Single().State);
-        Assert.Equal(["Alpha"], DaemonFixture.ProjectNames(await _daemon.CallTool(status.Workspaces.Single().Key!, "list_projects")));
-        // Тот же демон видит и консоль.
-        Assert.Equal(status.Pid, (await _daemon.Status())!.Pid);
-    }
-
-    [Fact]
-    public async Task A_running_daemon_is_left_as_it_is()
-    {
-        await _daemon.Workspace("a", "Alpha");
-        var running = await _daemon.Start();
-
-        var result = await Desktop().Start();
-
-        Assert.Null(result.Error);
-        Assert.False(result.Started);
-        Assert.Equal(running.Pid, result.Status!.Pid);
-        Assert.Equal(running.Pid, (await _daemon.Status())!.Pid);
-    }
-
-    [Fact]
-    public async Task The_daemon_keeps_running_after_the_desktop_is_gone()
-    {
-        await _daemon.Workspace("a", "Alpha");
-        var pid = (await Desktop().Start()).Status!.Pid;
-
-        // У десктопа нет ничего, что останавливало бы демон: его процесс не дочерний в смысле жизни.
-        await Task.Delay(500);
-        var status = await _daemon.Status();
-        Assert.NotNull(status);
-        Assert.Equal(pid, status.Pid);
-    }
-
-    [Fact]
-    public async Task A_folder_opened_in_a_tab_becomes_a_workspace_of_the_daemon()
-    {
-        var folder = await _daemon.Workspace("tab", "Tab", allow: false);
-        var desktop = Desktop();
-        await desktop.Start();
-        var locator = new DaemonMcpLocator(desktop);
-        var before = await locator.Find(WorkspaceLocation.Files(folder));
-        Assert.Equal(DaemonState.Running, before.Daemon);
-        Assert.Null(before.Url);
-        Assert.Null(before.Workspace);
-
-        Assert.True(await desktop.Allow(WorkspaceLocation.Files(folder)));
-        Assert.False(await desktop.Allow(WorkspaceLocation.Files(folder)));
-
-        // Демон следит за настройками: область открывается без перезапуска, и агент работает в ней.
-        WorkspaceMcp found = before;
-        await Eventually(async () => (found = await locator.Find(WorkspaceLocation.Files(folder))).Url != null);
-        Assert.Equal($"http://127.0.0.1:{_daemon.Port}/mcp", found.Url);
-        Assert.Equal(WorkspaceState.Open, found.WorkspaceState);
-        Assert.Equal(_daemon.Port, found.Port);
-        Assert.Equal(["Tab"], DaemonFixture.ProjectNames(await _daemon.CallTool(found.Workspace!, "list_projects")));
-        Assert.Contains(folder, (await _daemon.Mcp("workspace", "list")).Out);
-    }
-
-    [Fact]
-    public async Task Locator_reports_a_stopped_daemon()
-    {
-        var folder = await _daemon.Workspace("a", "Alpha");
-
-        var found = await new DaemonMcpLocator(Desktop()).Find(WorkspaceLocation.Files(folder));
-
-        Assert.Equal(DaemonState.Stopped, found.Daemon);
-        Assert.Null(found.Url);
-        Assert.Null(found.Port);
-    }
-
-    [Fact]
-    public async Task Locator_follows_the_settings_without_a_restart()
-    {
-        var folder = await _daemon.Workspace("a", "Alpha", allow: false);
-        await _daemon.Start();
-        var locator = new DaemonMcpLocator(Desktop());
-        Assert.Null((await locator.Find(WorkspaceLocation.Files(folder))).Url);
-
-        // Разрешили из командной строки — десктоп при следующем обращении видит адрес.
-        await _daemon.Mcp("workspace", "add", folder);
-        await Eventually(async () => (await locator.Find(WorkspaceLocation.Files(folder))).Url != null);
-
-        await _daemon.Mcp("workspace", "remove", folder);
-        await Eventually(async () => (await locator.Find(WorkspaceLocation.Files(folder))).Url == null);
-    }
-
-    [Fact]
-    public async Task Without_the_program_the_desktop_says_what_is_missing()
-    {
-        var desktop = new DesktopDaemon(() => null, _daemon.Store);
-
-        var result = await desktop.Start();
-
-        Assert.Null(result.Status);
-        Assert.Contains("tasker-mcpd", result.Error);
-        var view = await desktop.GetView();
-        Assert.Equal(DaemonState.Failed, view.State);
-        Assert.Equal(result.Error, view.Error);
-        Assert.False(DaemonFiles.IsRunning());
-    }
-
-    [PlatformFact(TestPlatform.Unix)]
-    [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
-    public async Task A_program_that_exits_at_once_is_a_failure_and_not_a_hang()
-    {
-        var fake = Path.Combine(_daemon.Root, "tasker-mcpd");
-        await File.WriteAllTextAsync(fake, "#!/bin/sh\nexit 7\n");
-        File.SetUnixFileMode(fake, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-
-        var started = DateTime.UtcNow;
-        var result = await new DesktopDaemon(() => fake, _daemon.Store).Start();
-
-        Assert.Null(result.Status);
-        Assert.Contains("exited right after start (code 7)", result.Error);
-        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(10));
-    }
-
-    private static async Task Eventually(Func<Task<bool>> condition)
-    {
-        for (var i = 0; i < 150 && !await condition(); i++)
-            await Task.Delay(100);
-
-        Assert.True(await condition(), "the condition did not become true in 15 seconds");
-    }
-}
-
-/// <summary>Где десктоп ищет программу демона.</summary>
+/// <summary>Где консоль ищет программу демона.</summary>
 public class DaemonProgramTests : IDisposable
 {
     private readonly string _root = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"))).FullName;
@@ -215,7 +66,7 @@ public class DaemonProgramTests : IDisposable
     }
 }
 
-/// <summary>Эндпоинт десктопа <c>/w/{key}/api/workspace/mcp</c>: состояние демона и MCP этой области для интерфейса; своего MCP у десктопа нет.</summary>
+/// <summary>Эндпоинт локального хоста <c>/w/{key}/api/workspace/mcp</c>: состояние демона и MCP этой области для интерфейса; своего MCP у хоста нет.</summary>
 public class WorkspaceMcpEndpointTests : IAsyncLifetime
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));
@@ -313,7 +164,7 @@ public class WorkspaceMcpEndpointTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_desktop_host_has_no_mcp_of_its_own()
+    public async Task The_local_host_has_no_mcp_of_its_own()
     {
         await Ask(null, async address =>
         {

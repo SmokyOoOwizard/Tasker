@@ -44,7 +44,7 @@ internal static class UserCommands
 
         reference.Suggests(g, Sources.Users);
         
-        return Kit.Group("user", "Users (only a name, as in the desktop app)",
+        return Kit.Group("user", "Users (only a name)",
             Kit.Leaf(g, "create", "Creates a user", c => c.Arguments.Add(name), async (parse, ctx) =>
             {
                 var user = await ctx.Get<UserService>().Create(new CreateUser(parse.GetRequiredValue(name), null, null), ctx.Ct);

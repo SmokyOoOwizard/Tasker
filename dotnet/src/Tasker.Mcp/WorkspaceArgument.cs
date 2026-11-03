@@ -115,7 +115,7 @@ internal static class WorkspaceArgument
             if (all.Count == 0)
             {
                 return (null, ErrorText.Error(
-                    $"[invalid] {Argument} is required: no workspace is available to MCP (allow one with 'tasker mcp workspace add <path>' or open a folder in the Tasker desktop app)"));
+                    $"[invalid] {Argument} is required: no workspace is available to MCP (allow one with 'tasker mcp workspace add <path>')"));
             }
 
             if (all.Count > 1)

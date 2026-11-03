@@ -5,7 +5,6 @@
     <Project Path="src/Tasker.Core/Tasker.Core.csproj" />
     <Project Path="src/Tasker.Daemon/Tasker.Daemon.csproj" />
     <Project Path="src/Tasker.Daemon.Host/Tasker.Daemon.Host.csproj" />
-    <Project Path="src/Tasker.Desktop/Tasker.Desktop.csproj" />
     <Project Path="src/Tasker.Global/Tasker.Global.csproj" />
     <Project Path="src/Tasker.Mcp/Tasker.Mcp.csproj" />
     <Project Path="src/Tasker.Server/Tasker.Server.csproj" />

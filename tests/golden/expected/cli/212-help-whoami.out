@@ -1,5 +1,5 @@
 Description:
-  Shows or sets your name that others see in edit locks (shared by the desktop app and the console)
+  Shows or sets your name that others see in edit locks
 
 Usage:
   tasker whoami [<name>] [options]

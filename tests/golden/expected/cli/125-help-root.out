@@ -29,10 +29,10 @@ Commands:
   series                                 Task series: numbered references like TSK-5
   cleanup                                Removes references to missing series and links to missing tasks or link types after a git merge (with --resolve-conflicts also renumbers duplicate numbers); link cycles are only reported, remove one link with 'task unlink'
   migrate                                Brings the files of the workspace to the current file format (formatVersion, order of keys in task files) and names the files of project entities after their names (titles of tasks)
-  user                                   Users (only a name, as in the desktop app)
+  user                                   Users (only a name)
   agent                                  Agents (users for LLMs working through MCP)
   lock                                   Locks an entity while you edit it, so nobody else changes or deletes it (expires after 2 minutes)
-  whoami <name>                          Shows or sets your name that others see in edit locks (shared by the desktop app and the console)
+  whoami <name>                          Shows or sets your name that others see in edit locks
   sync                                   Brings the cache of a workspace up to date with its files (after git pull, checkout, merge)
   hooks                                  Git hooks that keep the cache up to date after pull, checkout, merge and rebase
   howto, manual <topic>                  Short how-to recipes with ready commands: the list of topics, 'manual <topic>' for a recipe, 'manual <word>' to search

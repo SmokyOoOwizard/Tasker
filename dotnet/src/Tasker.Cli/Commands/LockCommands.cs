@@ -61,7 +61,7 @@ internal static class LockCommands
         var name = new Argument<string?>("name") { Description = "New name; without it the current one is shown", Arity = ArgumentArity.ZeroOrOne }.NoSuggestions();
         var clear = new Option<bool>("--clear") { Description = "Use the operating system user name again" };
 
-        return Kit.Plain(g, "whoami", "Shows or sets your name that others see in edit locks (shared by the desktop app and the console)", c =>
+        return Kit.Plain(g, "whoami", "Shows or sets your name that others see in edit locks", c =>
         {
             c.Arguments.Add(name);
             c.Options.Add(clear);

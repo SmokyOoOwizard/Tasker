@@ -76,7 +76,7 @@ internal sealed class Supervisor
             var listener = await Bind(port, handoff, ct);
             if (listener == null)
             {
-                var message = $"Port {port} is busy: another program (for example Tasker desktop) listens on it. Free it or change the port with 'tasker mcp port <number>'";
+                var message = $"Port {port} is busy: another program listens on it. Free it or change the port with 'tasker mcp port <number>'";
                 Log.Error(message);
                 error.WriteLine(message);
                 return 1;
@@ -136,7 +136,7 @@ internal sealed class Supervisor
                     return null;
                 if (!announced)
                 {
-                    Log.Information("Port {Port} is busy: waiting up to {Seconds:0} s for the desktop to release it", port, PortWait.TotalSeconds);
+                    Log.Information("Port {Port} is busy: waiting up to {Seconds:0} s for it to be released", port, PortWait.TotalSeconds);
                     announced = true;
                 }
                 await Task.Delay(200, ct);

@@ -1,5 +1,5 @@
 Description:
-  Users (only a name, as in the desktop app)
+  Users (only a name)
 
 Usage:
   tasker user [command] [options]

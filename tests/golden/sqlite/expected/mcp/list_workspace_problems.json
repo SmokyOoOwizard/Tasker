@@ -5,7 +5,7 @@
     "content": [
       {
         "type": "text",
-        "text": "[invalid] Workspace problems exist only in the desktop app with file storage"
+        "text": "[invalid] Workspace problems exist only with file storage"
       }
     ],
     "isError": true
