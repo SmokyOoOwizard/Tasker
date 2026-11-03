@@ -1,0 +1,81 @@
+name: PR dependencies
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, closed]
+
+permissions:
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: pr-dependencies-${{ github.event.pull_request.number }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const statusContext = 'pr-dependencies';
+            const { owner, repo } = context.repo;
+
+            function dependencies(body) {
+              const numbers = new Set();
+              for (const line of (body || '').split(/\r?\n/)) {
+                const match = line.match(/^\s*(?:[-*]\s*)?(?:depends on|зависит от)(.*)$/i);
+                if (!match) continue;
+                for (const ref of match[1].matchAll(/#(\d+)/g)) numbers.add(Number(ref[1]));
+              }
+              return [...numbers];
+            }
+
+            async function evaluate(pr) {
+              const deps = dependencies(pr.body).filter(n => n !== pr.number);
+              let state = 'success';
+              let description = 'Нет зависимостей';
+              if (deps.length > 0) {
+                const waiting = [];
+                const broken = [];
+                for (const number of deps) {
+                  try {
+                    const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+                    if (data.merged) continue;
+                    if (data.state === 'closed') broken.push(`#${number} закрыт без вливания`);
+                    else waiting.push(`#${number}`);
+                  } catch (error) {
+                    if (error.status !== 404) throw error;
+                    broken.push(`#${number} не найден`);
+                  }
+                }
+                if (broken.length > 0) {
+                  state = 'failure';
+                  description = broken.join(', ');
+                } else if (waiting.length > 0) {
+                  state = 'pending';
+                  description = `Ждёт вливания: ${waiting.join(', ')}`;
+                } else {
+                  description = `Все зависимости влиты: ${deps.map(n => `#${n}`).join(', ')}`;
+                }
+              }
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha: pr.head.sha,
+                state,
+                context: statusContext,
+                description: description.slice(0, 140),
+              });
+              core.info(`#${pr.number}: ${state} — ${description}`);
+            }
+
+            const pr = context.payload.pull_request;
+            if (context.payload.action === 'closed') {
+              const open = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+              for (const other of open) {
+                if (dependencies(other.body).includes(pr.number)) await evaluate(other);
+              }
+            } else {
+              await evaluate(pr);
+            }
