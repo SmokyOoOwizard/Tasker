@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
+using Tasker.Core;
 using Tasker.Core.IO;
 using Tasker.Core.Workspace;
 using YamlDotNet.Core;
@@ -22,7 +24,7 @@ internal record Versioned<T>(T Model, string Version);
 /// правки в разных полях. Любое изменение файла — в Tasker, руками или через git — меняет версию.
 /// </para>
 /// </summary>
-internal static class YamlFile
+internal static partial class YamlFile
 {
     public const string Extension = ".yaml";
 
@@ -60,13 +62,35 @@ internal static class YamlFile
             return null;
 
         // Старый формат приводится к текущему в памяти, файл на диске не меняется. Версия сущности — хэш настоящих байтов файла.
-        var model = Deserializer.Deserialize<T?>(FormatVersions.Upgrade(Decode(bytes), path));
+        var model = Deserialize<T>(Decode(bytes), path);
         return model == null ? null : new Versioned<T>(model, Hash(bytes));
     }
 
+    public static int? ConflictLine(string text) =>
+        ConflictMarker().Match(text) is { Success: true } marker ? text[..marker.Index].Count(x => x == '\n') + 1 : null;
+
+    private static T? Deserialize<T>(string text, string path) where T : class
+    {
+        if (ConflictLine(text) is { } line)
+            throw new TaskerValidationException($"Unresolved git merge conflict (line {line})");
+
+        var upgraded = FormatVersions.Upgrade(text, path);
+        try
+        {
+            return Deserializer.Deserialize<T?>(upgraded);
+        }
+        catch (YamlException e)
+        {
+            throw new TaskerValidationException(e.Message);
+        }
+    }
+
+    [GeneratedRegex(@"^(<{7}|>{7})( |$)|^={7}$", RegexOptions.Multiline)]
+    private static partial Regex ConflictMarker();
+
     /// <summary>Модель из уже прочитанных байтов (старый формат — в памяти); null — файл пуст.</summary>
     public static Versioned<T>? Parse<T>(byte[] bytes, string path) where T : class =>
-        Deserializer.Deserialize<T?>(FormatVersions.Upgrade(Decode(bytes), path)) is { } model ? new Versioned<T>(model, Hash(bytes)) : null;
+        Deserialize<T>(Decode(bytes), path) is { } model ? new Versioned<T>(model, Hash(bytes)) : null;
 
     /// <summary>Запись нового файла. Возвращает его версию.</summary>
     public static Task<string> Write<T>(string path, T model, CancellationToken ct) where T : class =>

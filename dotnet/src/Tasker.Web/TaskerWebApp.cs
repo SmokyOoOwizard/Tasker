@@ -25,7 +25,8 @@ public static class TaskerWebApp
         string[] args,
         TaskerMode mode,
         Action<AConfigs[]>? configure = null,
-        ILogger? log = null
+        ILogger? log = null,
+        bool localMcp = false
     )
         where THostModule : Module, new()
     {
@@ -59,11 +60,11 @@ public static class TaskerWebApp
                 x.RegisterStorage(files, db);
             else
                 x.RegisterWorkspaceStoragePlaceholders();
-            x.RegisterTaskerMode(mode, configs.Get<AuthConfigs>());
+            x.RegisterTaskerMode(mode, configs.Get<AuthConfigs>(), localMcp);
             x.RegisterModule<THostModule>();
         });
 
-        builder.Services.AddTaskerMode(mode);
+        builder.Services.AddTaskerMode(mode, localMcp);
 
         // Логирование ASP.NET Core идёт в Serilog (Log.Logger, настроенный хостом).
         builder.Services.AddSerilog();

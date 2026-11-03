@@ -5,6 +5,7 @@ using Serilog;
 using Tasker.Core;
 using Tasker.Core.Dto;
 using Tasker.Core.Workspace;
+using Tasker.Mcp;
 using Tasker.Storage.Db;
 using Tasker.Storage.Db.Configs.Tasker;
 using Tasker.Storage.Files;
@@ -22,7 +23,8 @@ namespace Tasker.Web.Workspaces;
 /// У каждой области свой дочерний контейнер Autofac с модулем хранилища (<see cref="FileStorageModule"/>
 /// или <see cref="DbStorageModule"/> для SQLite); сервисы Core — общие регистрации корневого контейнера.
 /// Запросы REST и интерфейса попадают в область по адресу <c>/w/{key}/…</c>, где key — имя папки (см. <see cref="WorkspaceRouting"/>).
-/// MCP десктоп не обслуживает: открытые папки он добавляет в области демона <c>tasker-mcpd</c>.
+/// Десктоп своего MCP не поднимает: открытые папки он добавляет в области демона <c>tasker-mcpd</c>. У .NET-демона MCP — по одному
+/// адресу <c>/mcp</c>, область там — аргумент вызова: то же имя (см. <see cref="McpWorkspaceCatalog"/>).
 /// </para>
 /// </summary>
 public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
@@ -88,6 +90,53 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Открытая область по имени (ключу) без учёта регистра или по каноническому пути папки (файла SQLite) — так её называет агент MCP.
+    /// Относительный путь не принимается: «имя» без разделителей — только ключ.
+    /// </summary>
+    internal Workspace? FindByNameOrPath(string nameOrPath)
+    {
+        _gate.Wait();
+        try
+        {
+            if (_byKey.TryGetValue(nameOrPath, out var byKey))
+                return byKey;
+            if (!Path.IsPathRooted(nameOrPath))
+                return null;
+
+            try
+            {
+                return _open.GetValueOrDefault(WorkspaceLocation.Files(nameOrPath).Id)
+                    ?? _open.GetValueOrDefault(WorkspaceLocation.Sqlite(nameOrPath).Id);
+            }
+            catch (Exception e) when (e is ArgumentException or IOException or NotSupportedException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>Открытые области с их ключами (именами для агента).</summary>
+    internal IReadOnlyList<(string Key, WorkspaceLocation Location)> OpenedWithKeys
+    {
+        get
+        {
+            _gate.Wait();
+            try
+            {
+                return _open.Values.Select(x => (x.Key, x.Location)).ToArray();
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+    }
+
     internal async Task Release(Workspace workspace)
     {
         await _gate.WaitAsync();
@@ -128,7 +177,8 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
     }
 
     /// <summary>
-    /// Ключ — имя папки (или файла БД): оно в адресе интерфейса и не меняется между запусками. У одновременно открытых папок с одинаковым именем — суффикс: «Tasker-2».
+    /// Ключ — имя папки (или файла БД): оно в адресе интерфейса и в аргументе <c>workspace</c> MCP, которое прописывают агенту,
+    /// и оно не меняется между запусками. У одновременно открытых папок с одинаковым именем — суффикс: «Tasker-2».
     /// Вызывается под блокировкой реестра.
     /// </summary>
     private string UniqueKey(WorkspaceLocation location)
@@ -155,6 +205,7 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
             scope = root.BeginLifetimeScope(ScopeTag, builder =>
             {
                 builder.RegisterInstance(location);
+                builder.RegisterType<LocalMcpAgent>().AsSelf().SingleInstance();
                 builder.RegisterType<WorkspaceEvents>().AsSelf().SingleInstance();
                 builder.RegisterType<WorkspaceLockNotifier>().As<Tasker.Core.Locks.ILockNotifier>().SingleInstance();
 
@@ -237,7 +288,7 @@ public sealed class WorkspaceLease : IAsyncDisposable
     }
 
     /// <summary>
-    /// Сервис из контейнера открытой области — тот же экземпляр, что у вкладки: хранилища, уже загруженный индекс.
+    /// Сервис из контейнера открытой области — тот же экземпляр, что у вкладки и MCP: хранилища, уже загруженный индекс.
     /// Не вызывать после <see cref="DisposeAsync"/>.
     /// </summary>
     /// <exception cref="ObjectDisposedException">Аренда уже освобождена.</exception>

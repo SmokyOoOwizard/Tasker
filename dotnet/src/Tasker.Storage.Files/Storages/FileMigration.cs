@@ -20,6 +20,16 @@ internal sealed partial class FileMigration(TaskerDirectory directory, Workspace
     [GeneratedRegex(@"^(<{7}|>{7})( |$)|^={7}$", RegexOptions.Multiline)]
     private static partial Regex ConflictMarker();
 
+    public async Task<ProjectFoldersReport> TidyProjectFolders(bool dryRun, Guid? project, CancellationToken ct = default)
+    {
+        var tidy = dryRun
+            ? new ProjectFolders(directory).Tidy(dryRun: true, rename: false, project)
+            : await FileLock.Run(directory.WriteLock, () => Task.FromResult(new ProjectFolders(directory).Tidy(dryRun: false, rename: false, project)), ct);
+        if (tidy.Changed.Count > 0)
+            await index.Refresh(tidy.Changed, ct);
+        return new ProjectFoldersReport([.. tidy.Renamed], [.. tidy.Merged], [.. tidy.Problems]);
+    }
+
     public async Task<MigrationReport> Run(MigrationOptions options, CancellationToken ct = default)
     {
         var scanned = 0;

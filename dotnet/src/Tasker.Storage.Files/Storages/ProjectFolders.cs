@@ -41,7 +41,7 @@ internal sealed partial class ProjectFolders(TaskerDirectory directory)
 
     /// <summary>Совпадает ли имя папки с тем, каким оно должно быть у проекта (без учёта формы Unicode).</summary>
     public static bool IsCurrent(string folder, string name, Guid id) =>
-        string.Equals(folder.Normalize(NormalizationForm.FormC), FolderName(name, id), StringComparison.Ordinal);
+        string.Equals(UnicodeNfc.Normalize(folder), FolderName(name, id), StringComparison.Ordinal);
 
     /// <summary>Что имя папки говорит о проекте: первые 8 знаков id и, у прежнего имени, полный Guid; false — не папка проекта.</summary>
     public static bool TryParse(string folder, out string id8, out Guid? guid)
@@ -213,14 +213,14 @@ internal sealed partial class ProjectFolders(TaskerDirectory directory)
     /// теряется. Опустевшая вторая папка удаляется.
     /// </summary>
     /// <param name="rename">Ещё и переименовать папку проекта с одной папкой, если её имя не текущее (<c>tasker migrate</c>).</param>
-    public TidyReport Tidy(bool dryRun, bool rename)
+    public TidyReport Tidy(bool dryRun, bool rename, Guid? project = null)
     {
         var report = new TidyReport([], [], [], []);
         if (!Directory.Exists(directory.Projects))
             return report;
 
         var (groups, unknown) = Groups();
-        if (rename)
+        if (rename && project == null)
         {
             foreach (var folder in unknown)
                 report.Problems.Add(new MigrationProblem($"projects/{folder}", HasProjectFile(folder) ? MismatchReason : NoProjectFileReason));
@@ -228,7 +228,7 @@ internal sealed partial class ProjectFolders(TaskerDirectory directory)
 
         foreach (var (id, group) in groups)
         {
-            if (group.Length < 2 && !rename)
+            if ((group.Length < 2 && !rename) || (project != null && project != id))
                 continue;
 
             var primary = group[0];

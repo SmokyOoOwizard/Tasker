@@ -10,6 +10,7 @@
   <ItemGroup>
     <!-- Веб-слой (десктоп, сервер) и клиент демона для десктопа проверяются в процессе тестов. -->
     <ProjectReference Include="..\..\src\Tasker.Web\Tasker.Web.csproj" />
+    <ProjectReference Include="..\..\src\Tasker.Cli\Tasker.Cli.csproj" />
     <!-- Стенд параллельной работы: тесты запускают его с малыми числами (ParallelWorkTests). -->
     <ProjectReference Include="..\..\tools\Tasker.Stress\Tasker.Stress.csproj" />
   </ItemGroup>

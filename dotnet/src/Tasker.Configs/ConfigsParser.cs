@@ -65,6 +65,9 @@ public static class ConfigsParser
             if (!seen.TryAdd(assembly.FullName!, assembly))
                 continue;
 
+            if (!System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported)
+                continue;
+
             foreach (var reference in assembly.GetReferencedAssemblies().Where(x => x.Name?.StartsWith("Tasker", StringComparison.Ordinal) == true))
                 queue.Enqueue(Assembly.Load(reference));
         }
@@ -72,6 +75,15 @@ public static class ConfigsParser
         return seen.Values;
     }
 
-    private static bool IsTasker(Assembly assembly) =>
-        assembly.GetName().Name?.StartsWith("Tasker", StringComparison.Ordinal) == true;
+    private static bool IsTasker(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetName().Name?.StartsWith("Tasker", StringComparison.Ordinal) == true;
+        }
+        catch (System.Globalization.CultureNotFoundException)
+        {
+            return false;
+        }
+    }
 }

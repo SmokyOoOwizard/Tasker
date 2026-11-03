@@ -13,8 +13,16 @@ internal class TaskStorage(TaskerDirectory directory, WorkspaceIndex index) : IT
 
     public Task<TaskItem?> GetById(Guid projectId, Guid id, CancellationToken ct = default) => files.GetById(projectId, id, ct);
 
-    public Task<TaskItem[]> FindByIdPrefix(Guid projectId, string idKey, CancellationToken ct = default) =>
-        index.All<TaskItem>(new IndexQuery(IndexKind.Task) { ProjectId = projectId, IdPrefix = idKey }, ct);
+    public async Task<TaskItem[]> FindByIdPrefix(Guid projectId, string idKey, CancellationToken ct = default)
+    {
+        var found = await index.All<TaskItem>(new IndexQuery(IndexKind.Task) { ProjectId = projectId, IdPrefix = idKey }, ct);
+        if (found.Length == 0)
+        {
+            foreach (var path in await index.UnreadablePaths(IndexKind.Task, projectId, idKey, ct))
+                await TaskFile.Read(projectId, path, ct);
+        }
+        return found;
+    }
 
     public Task<ListDto<TaskItem>> GetRange(Guid projectId, TaskFilter? filter, Page page, CancellationToken ct = default) =>
         index.GetRange<TaskItem>(Query(projectId, filter), page, ct);

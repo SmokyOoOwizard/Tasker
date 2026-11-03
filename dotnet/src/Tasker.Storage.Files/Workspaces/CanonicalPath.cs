@@ -84,6 +84,9 @@ public static class CanonicalPath
         if (name is "." or "..")
             return name;
 
+        if (OperatingSystem.IsMacOS() && StoredName(Path.Combine(directory, name)) == name)
+            return name;
+
         try
         {
             var matches = new DirectoryInfo(directory)
@@ -121,4 +124,41 @@ public static class CanonicalPath
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetLongPathNameW")]
     private static extern uint GetLongPathName(string shortPath, StringBuilder longPath, uint length);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct AttrList
+    {
+        public ushort BitmapCount;
+        public ushort Reserved;
+        public uint CommonAttr;
+        public uint VolAttr;
+        public uint DirAttr;
+        public uint FileAttr;
+        public uint ForkAttr;
+    }
+
+    [DllImport("libc", EntryPoint = "getattrlist")]
+    private static extern unsafe int GetAttrList(byte* path, AttrList* request, byte* buffer, nuint size, uint options);
+
+    private static unsafe string? StoredName(string path)
+    {
+        var request = new AttrList { BitmapCount = 5, CommonAttr = 0x1 };
+        var buffer = stackalloc byte[4 + 8 + 1024];
+        var encoded = Encoding.UTF8.GetBytes(path + "\0");
+        int rc;
+        fixed (byte* p = encoded)
+            rc = GetAttrList(p, &request, buffer, 4 + 8 + 1024, 0x1);
+        if (rc != 0)
+            return null;
+
+        var offset = *(int*)(buffer + 4);
+        var length = (int)*(uint*)(buffer + 8);
+        var start = 4 + offset;
+        if (start < 0 || length < 0 || start + length > 4 + 8 + 1024)
+            return null;
+
+        if (length > 0 && buffer[start + length - 1] == 0)
+            length--;
+        return Encoding.UTF8.GetString(buffer + start, length);
+    }
 }
