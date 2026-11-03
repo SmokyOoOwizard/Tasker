@@ -257,7 +257,7 @@ public class McpSettingsCommandTests : IDisposable
     public async Task Sqlite_file_is_recognised_by_being_a_file()
     {
         var db = Path.Combine(_folder, "tasker.db");
-        Assert.Equal(0, (await TaskerProcess.Run("project", "create", "P", "--sqlite", db)).Code);
+        await File.WriteAllBytesAsync(db, []);
 
         var added = await Cli("mcp", "workspace", "add", db);
 

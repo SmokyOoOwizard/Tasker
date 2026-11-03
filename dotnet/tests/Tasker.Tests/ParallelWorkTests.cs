@@ -26,10 +26,6 @@ public class ParallelWorkTests
         Run("mix", "files", 4, 2, "create", "edit-same", "edit-different", "locks", "cascade-wait", "links", "delete-while-edit");
 
     [Fact]
-    public Task Several_console_clients_in_a_sqlite_workspace_keep_the_data_consistent() =>
-        Run("cli", "sqlite", 3, 2, "create", "edit-same", "links");
-
-    [Fact]
     public Task Killed_processes_leave_no_broken_files_and_no_stuck_locks() =>
         Run("mix", "files", 3, 2, "kill");
 
@@ -42,8 +38,6 @@ public class ParallelWorkTests
     [InlineData("cli", "files")]
     [InlineData("mcp", "files")]
     [InlineData("mix", "files")]
-    [InlineData("cli", "sqlite")]
-    [InlineData("mix", "sqlite")]
     public async Task Stand_with_ten_clients(string client, string storage)
     {
         if (Environment.GetEnvironmentVariable("TASKER_STRESS") is not "1")

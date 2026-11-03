@@ -1,9 +1,0 @@
-task
-list
---all
---field
-Tags:set
---sqlite
-<ROOT>/golden.db
--p
-Golden

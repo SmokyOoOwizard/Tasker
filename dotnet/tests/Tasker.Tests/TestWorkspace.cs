@@ -32,17 +32,15 @@ public sealed class TestWorkspace : IDisposable
 
     public string Root { get; }
 
-    /// <param name="storage"><c>files</c> или <c>sqlite</c>.</param>
+    /// <param name="storage"><c>files</c>: консоль работает только с папками.</param>
     public static TestWorkspace Create(string storage)
     {
         var root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
-        return storage == "sqlite"
-            ? new TestWorkspace(root, ["--sqlite", Path.Combine(root, "tasker.db")])
-            : new TestWorkspace(root, ["--workspace", root]);
+        return new TestWorkspace(root, ["--workspace", root]);
     }
 
-    public static IEnumerable<object[]> Storages() => [["files"], ["sqlite"]];
+    public static IEnumerable<object[]> Storages() => [["files"]];
 
     /// <summary>Выполняет команду в этой области.</summary>
     public Task<CliResult> Run(params string[] args) => Invoke([.. args, .. _location]);
@@ -82,8 +80,8 @@ public sealed class TestWorkspace : IDisposable
 }
 
 /// <summary>
-/// Запуск настоящего процесса <c>tasker</c> (Rust, <c>rust/crates/tasker-cli</c>). По умолчанию — бинарник из каталога тестов: его и демон
-/// <c>tasker-mcpd</c> туда кладёт сборка тестов (<c>tools/RustBinaries.targets</c>). Переменная <c>TASKER_BIN</c> — путь к другому
+/// Запуск настоящего процесса <c>tasker</c> (<c>dotnet/src/Tasker.Cli</c>). По умолчанию — программа из каталога тестов: её и демон
+/// <c>tasker-mcpd</c> туда кладёт сборка тестов (ссылки на их проекты). Переменная <c>TASKER_BIN</c> — путь к другому
 /// исполняемому файлу консоли. Демон консоль всегда ищет рядом с собой, поэтому он должен лежать в том же каталоге, что и консоль;
 /// <c>TASKER_MCPD_BIN</c> нужна только тестам, которые запускают демон сами (<see cref="DaemonCommand"/>), и по умолчанию равна этому соседу.
 /// </summary>

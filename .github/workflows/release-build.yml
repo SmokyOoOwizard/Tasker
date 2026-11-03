@@ -1,6 +1,6 @@
-# Сборка релиза Tasker (Rust: консоль tasker и демон tasker-mcpd) на всех платформах и тесты Rust на Linux, macOS и Windows.
-# Архивы — scripts/release.sh --rid <RID> на машине своей ОС (Windows — в Git Bash) — остаются артефактами прогона; релизы и
-# теги этот workflow не создаёт и никуда ничего не публикует.
+# Сборка релиза Tasker (.NET: консоль tasker — NativeAOT, демон tasker-mcpd — один файл с рантаймом) на всех платформах.
+# Архивы — scripts/release.sh --rid <RID> на машине своей ОС и архитектуры (Windows — в Git Bash, Linux musl — в контейнере Alpine)
+# — остаются артефактами прогона; релизы и теги этот workflow не создаёт и никуда ничего не публикует. Тесты — .NET tests.
 name: Release build
 
 on:
@@ -8,8 +8,8 @@ on:
     branches: ['**']
     tags: ['v*']
     paths:
-      - 'rust/**'
-      - 'tests/golden/**'
+      - 'dotnet/src/**'
+      - 'dotnet/Directory.Build.props'
       - 'VERSION'
       - 'scripts/release.sh'
       - 'scripts/install.sh'
@@ -25,88 +25,47 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: '0'
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
 
 jobs:
-  test:
-    name: cargo test (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
-    defaults:
-      run:
-        shell: bash
-        working-directory: rust
-    steps:
-      # Эталоны golden-корпуса сравниваются байт в байт: на Windows без перевода строк в CRLF.
-      - run: git config --global core.autocrlf false
-        working-directory: .
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
-      - name: cargo fmt --check
-        if: runner.os == 'Linux'
-        run: cargo fmt --all -- --check
-      - name: cargo clippy
-        run: cargo clippy --locked --all-targets -- -D warnings
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest
-      # nextest с профилем ci (rust/.config/nextest.toml): тест дольше 3 минут снимается и называется, остальные идут дальше.
-      - name: cargo nextest
-        run: cargo nextest run --locked --profile ci --no-fail-fast
-      - name: doc tests
-        run: cargo test --locked --doc
-
   build:
     name: ${{ matrix.rid }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { rid: osx-arm64, os: macos-latest, target: aarch64-apple-darwin }
-          - { rid: osx-x64, os: macos-latest, target: x86_64-apple-darwin }
-          - { rid: linux-x64, os: ubuntu-latest, target: x86_64-unknown-linux-gnu, zig: true }
-          - { rid: linux-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, zig: true }
-          - { rid: linux-musl-x64, os: ubuntu-latest, target: x86_64-unknown-linux-musl, zig: true }
-          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, zig: true }
-          - { rid: win-x64, os: windows-latest, target: x86_64-pc-windows-msvc }
-          - { rid: win-arm64, os: windows-11-arm, target: aarch64-pc-windows-msvc }
+          - { rid: osx-arm64, os: macos-latest }
+          - { rid: osx-x64, os: macos-latest }
+          - { rid: linux-x64, os: ubuntu-22.04 }
+          - { rid: linux-arm64, os: ubuntu-22.04-arm }
+          - { rid: linux-musl-x64, os: ubuntu-latest, container: 'mcr.microsoft.com/dotnet/sdk:10.0-alpine' }
+          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, container: 'mcr.microsoft.com/dotnet/sdk:10.0-alpine' }
+          - { rid: win-x64, os: windows-latest }
+          - { rid: win-arm64, os: windows-11-arm }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    container: ${{ matrix.container }}
+    timeout-minutes: 40
     defaults:
       run:
         shell: bash
     steps:
+      - name: packages of the Alpine container
+        if: matrix.container
+        shell: sh
+        run: apk add --no-cache bash git tar python3 file clang build-base zlib-dev sqlite-dev
       - run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-dotnet@v4
+        if: ${{ !matrix.container }}
         with:
-          targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
-          key: ${{ matrix.rid }}
-      - uses: mlugg/setup-zig@v2
-        if: matrix.zig
-        with:
-          version: 0.13.0
-      - uses: taiki-e/install-action@v2
-        if: matrix.zig
-        with:
-          tool: cargo-zigbuild
+          dotnet-version: '10.0.x'
+      - name: packages of the Linux runner
+        if: ${{ !matrix.container && startsWith(matrix.rid, 'linux-') }}
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev libsqlite3-dev
       - name: scripts/release.sh --rid ${{ matrix.rid }}
-        run: scripts/release.sh --rid '${{ matrix.rid }}' --out dist
-      # release.sh запускает только сборку под платформу самой машины; здесь — ещё и то, что раннер умеет запустить
-      # (статическая musl-сборка на glibc, x64 на Apple Silicon через Rosetta).
+        run: scripts/release.sh --rid '${{ matrix.rid }}' --builder dotnet --out dist
       - name: run the built programs
         run: |
           set -euo pipefail
@@ -142,7 +101,6 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # Все архивы вместе: общий SHA256SUMS и установщики отдельно, как в каталоге, который делает release.sh.
   collect:
     needs: build
     runs-on: ubuntu-latest

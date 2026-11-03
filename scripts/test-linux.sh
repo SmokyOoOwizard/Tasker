@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Прогон тестов Tasker на Linux в контейнере Docker (TSK-111) — например, с macOS. Репозиторий монтируется только для чтения,
 # исходники копируются внутрь контейнера (без bin, obj, node_modules, каталога VCS), поэтому каталоги bin/obj хоста не затрагиваются.
-# Кэши NuGet и cargo лежат в именованных томах, чтобы не качать пакеты каждый раз. Консоль и демон (Rust) собирает сама сборка тестов
-# (cargo build, dotnet/tools/RustBinaries.targets): в образе есть Rust (rustup, профиль minimal).
+# Кэш NuGet лежит в именованном томе, чтобы не качать пакеты каждый раз. Консоль и демон кладёт рядом с тестами сама сборка тестов.
 #
 #   scripts/test-linux.sh                            # все тесты, нативная архитектура Docker
 #   scripts/test-linux.sh --filter "FullyQualifiedName~DaemonUpgradeTests"
@@ -14,10 +13,9 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-image="${TASKER_LINUX_IMAGE:-tasker-linux-test-rust}"
+image="${TASKER_LINUX_IMAGE:-tasker-linux-test}"
 base="${TASKER_LINUX_BASE:-mcr.microsoft.com/dotnet/sdk:10.0}"
 nuget_volume="${TASKER_LINUX_NUGET_VOLUME:-tasker-nuget-user}"
-cargo_volume="${TASKER_LINUX_CARGO_VOLUME:-tasker-cargo-user}"
 platform=""
 filter=""
 log="test-linux.log"
@@ -33,7 +31,7 @@ while [ $# -gt 0 ]; do
     --shell) mode="shell"; shift ;;
     --stress) mode="stress"; stress_args="$2"; shift 2 ;;
     --) shift; extra=("$@"); break ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
     *) echo "Неизвестный аргумент: $1" >&2; exit 2 ;;
   esac
 done
@@ -53,11 +51,9 @@ if ! docker image inspect "$tag" >/dev/null 2>&1; then
 FROM $base
 RUN apt-get update && apt-get install -y --no-install-recommends git python3 procps ca-certificates curl build-essential && rm -rf /var/lib/apt/lists/*
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-RUN useradd -m -u 1500 -s /bin/bash tester && mkdir -p /home/tester/.nuget /home/tester/.cargo/registry /work && chown -R tester:tester /home/tester /work
+RUN useradd -m -u 1500 -s /bin/bash tester && mkdir -p /home/tester/.nuget /work && chown -R tester:tester /home/tester /work
 USER tester
 WORKDIR /work
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
-ENV PATH="\$PATH:/home/tester/.cargo/bin"
 # pwsh нужен тесту автодополнения PowerShell (WindowsConsoleTests): без него он молча ничего не проверяет.
 RUN dotnet tool install --global PowerShell
 ENV PATH="\$PATH:/home/tester/.dotnet/tools"
@@ -71,7 +67,7 @@ trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
 inner='set -e
 mkdir -p /work
 cd /src
-tar -c --exclude=./.git --exclude=bin --exclude=obj --exclude=target --exclude=node_modules --exclude=./.claude . | tar -x -C /work
+tar -c --exclude=./.git --exclude=bin --exclude=obj --exclude=node_modules --exclude=./.claude . | tar -x -C /work
 cd /work
 '
 case "$mode" in
@@ -88,6 +84,6 @@ ti=()
 [ "$mode" = shell ] && ti=(-it)
 echo ">> $mode в контейнере $name (журнал: $log)"
 set +e
-docker run --init "${ti[@]+"${ti[@]}"}" "${pf[@]+"${pf[@]}"}" --name "$name" -v "$repo":/src:ro -v "$nuget_volume":/home/tester/.nuget -v "$cargo_volume":/home/tester/.cargo/registry \
+docker run --init "${ti[@]+"${ti[@]}"}" "${pf[@]+"${pf[@]}"}" --name "$name" -v "$repo":/src:ro -v "$nuget_volume":/home/tester/.nuget \
   "$tag" bash -c "$inner" 2>&1 | tee "$log"
 exit "${PIPESTATUS[0]}"

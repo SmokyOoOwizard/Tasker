@@ -1,8 +1,8 @@
 # Эталоны автозапуска: описания служб и команды системы
 
 Файлы служб (plist launchd, unit systemd, XML Планировщика заданий) и команды системы, которые вызывает `tasker mcp autostart`.
-Крейт `tasker-daemon` (`autostart`) обязан давать байт-идентичные файлы и те же команды — проверяет
-`rust/crates/tasker-daemon/tests/golden_autostart.rs`.
+Демон обязан давать байт-идентичные файлы и те же команды — проверяет
+`dotnet/tests/Tasker.Tests/GoldenAutostartTests.cs`.
 
 ## Как проверяются
 
@@ -15,8 +15,7 @@
   (enable) и `print` (проверка, что служба загружена).
 
 Команда демона во всех случаях задаётся явно — `<DOTNET> <BIN>/tasker-mcpd.dll --detached`: генераторы от неё не зависят, она лишь
-подставляется в файлы. Эталон с нативным `tasker-mcpd.exe`, пробелами и кириллицей в путях — в `windows_task.rs`
-(`task_xml_matches_the_golden_sample`).
+подставляется в файлы.
 
 | Каталог | `TASKER_HOME` | Имя | Что проверяет |
 |---|---|---|---|
@@ -39,6 +38,6 @@
 
 ## Как переснять
 
-`cd rust && TASKER_GOLDEN_UPDATE=1 cargo test -p tasker-daemon --test golden_autostart` записывает файлы служб и вызовы текущей
+`TASKER_GOLDEN_UPDATE=1 dotnet test dotnet/tests/Tasker.Tests --filter GoldenAutostartTests` записывает файлы служб и вызовы текущей
 сборкой с обратной заменой на плейсхолдеры (XML — снова UTF-16 LE с BOM); дифф каталога — изменения поведения. Переснимать на macOS
 или Linux: тесты launchd на Windows пропускаются, а замена путей там неточна. Общие правила — в `../README.md`.

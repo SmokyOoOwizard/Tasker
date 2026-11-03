@@ -40,6 +40,17 @@
     <NativeLibrary Include="$(IntermediateOutputPath)sqlite_stubs.o" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(PublishAot)' == 'true' and $(RuntimeIdentifier.StartsWith('linux'))">
+    <DirectPInvoke Include="e_sqlite3" />
+    <NativeLibrary Include="-lsqlite3" />
+  </ItemGroup>
+
+  <Target Name="DropBundledSqlite" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(PublishAot)' == 'true' and ($(RuntimeIdentifier.StartsWith('osx')) or $(RuntimeIdentifier.StartsWith('linux')))">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)' == 'libe_sqlite3'" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="CompileSqliteStubs" BeforeTargets="PrepareForPublish" Condition="'$(PublishAot)' == 'true' and $(RuntimeIdentifier.StartsWith('osx'))">
     <PropertyGroup>
       <_SqliteStubsArch Condition="$(RuntimeIdentifier.EndsWith('arm64'))">arm64</_SqliteStubsArch>

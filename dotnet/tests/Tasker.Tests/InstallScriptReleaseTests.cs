@@ -78,7 +78,7 @@ public partial class InstallScriptTests
     }
 
     /// <summary>
-    /// Весь путь: release.sh собирает настоящие tasker и tasker-mcpd (Rust, cargo) для этой машины, кладёт в архив с контрольной суммой,
+    /// Весь путь: release.sh собирает настоящие tasker и tasker-mcpd (.NET) для этой машины, кладёт в архив с контрольной суммой,
     /// install.sh ставит из архива и установленная программа работает; удаление всё убирает.
     /// </summary>
     [UnixFact]

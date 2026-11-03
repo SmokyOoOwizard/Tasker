@@ -84,19 +84,6 @@ public class SyncTests : IDisposable
     }
 
     [Fact]
-    public async Task Sqlite_workspace_has_nothing_to_sync()
-    {
-        using var ws = TestWorkspace.Create("sqlite");
-        await ws.Run("project", "create", "P");
-
-        var loud = await ws.Run("sync");
-        Assert.Equal(0, loud.Code);
-        Assert.Contains("nothing to sync", loud.Out);
-
-        Assert.Empty((await ws.Run("sync", "--quiet")).Out);
-    }
-
-    [Fact]
     public async Task A_folder_without_a_workspace_is_an_error_but_silent_when_quiet()
     {
         var empty = Directory.CreateDirectory(Path.Combine(_daemon.Root, "empty")).FullName;
@@ -124,15 +111,6 @@ public class SyncTests : IDisposable
         var quiet = await Cli("sync", "--quiet", "-w", missing);
         Assert.Equal(0, quiet.Code);
         Assert.Empty(quiet.Out + quiet.Err);
-    }
-
-    [Fact]
-    public async Task Workspace_and_sqlite_together_are_rejected()
-    {
-        var result = await Cli("sync", "-w", _daemon.Root, "--sqlite", Path.Combine(_daemon.Root, "x.db"));
-
-        Assert.Equal(1, result.Code);
-        Assert.Contains("not both", result.Err);
     }
 
     // ---- через демон ----

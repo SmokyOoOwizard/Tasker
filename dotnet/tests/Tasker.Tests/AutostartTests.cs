@@ -11,7 +11,7 @@ namespace Tasker.Tests;
 /// Автозапуск и управление демоном через службу системы — командами <c>tasker mcp …</c>. Служба поддельная: в PATH процессов
 /// <c>tasker</c> первыми стоят свои <c>launchctl</c> и <c>systemctl</c> (<see cref="FakeService"/>), которые делают то, что launchd и
 /// systemd, — запускают и останавливают настоящий демон. Настоящие launchd и systemd не трогаются; описания служб и команды системы
-/// проверяют модульные тесты Rust (<c>tasker-daemon/src/autostart</c>) и эталоны <c>tests/golden/autostart</c>.
+/// проверяют эталоны <c>tests/golden/autostart</c>.
 /// </summary>
 public class AutostartTests : IDisposable
 {

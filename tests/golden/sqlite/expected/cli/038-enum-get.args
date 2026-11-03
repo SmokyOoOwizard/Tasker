@@ -1,7 +1,0 @@
-enum
-get
-Платформа
---sqlite
-<ROOT>/golden.db
--p
-Golden

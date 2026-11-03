@@ -4,7 +4,6 @@
 --no-wrap
 --project
 --quiet
---sqlite
 --truncate
 --width
 --workspace

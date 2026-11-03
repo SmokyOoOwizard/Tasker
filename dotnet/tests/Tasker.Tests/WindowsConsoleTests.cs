@@ -8,8 +8,7 @@ namespace Tasker.Tests;
 /// <summary>
 /// Консоль на Windows (TSK-119): всё, что можно проверить без Windows, — общие функции путей и имени пользователя, кодировка вывода,
 /// подсказки в диалекте PowerShell, установка блока в <c>$PROFILE</c> командой и скрипт автодополнения PowerShell (golden-проверка, а при
-/// наличии pwsh или образа Docker с pwsh — настоящий прогон). Разбор строки PowerShell, ширина окна и правка профиля по шагам — модульные
-/// тесты Rust (<c>suggest/mod.rs</c>, <c>terminal.rs</c>, <c>commands/completion.rs</c>).
+/// наличии pwsh или образа Docker с pwsh — настоящий прогон).
 /// </summary>
 public class WindowsConsoleTests
 {

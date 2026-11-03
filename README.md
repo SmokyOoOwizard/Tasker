@@ -16,18 +16,18 @@
 
 macOS (arm64, x64), Linux (x64, arm64; glibc 2.28+ или статическая сборка для Alpine и любого Linux), Windows (x64, arm64): подробнее на странице [Платформы](https://github.com/SmokyOoOwizard/Tasker/wiki/Платформы).
 
-Консоль `tasker` и демон `tasker-mcpd` написаны на Rust: две программы по 4–5 МБ без зависимостей, кроме системной библиотеки C, архив релиза около 5 МБ. Типичная команда выполняется за 8–15 мс.
+Консоль `tasker` и демон `tasker-mcpd` написаны на .NET: консоль собрана NativeAOT (около 18 МБ, одна программа), демон — один файл вместе с рантаймом .NET (около 127 МБ). Ставить .NET не нужно. Типичная команда выполняется за 12–25 мс.
 
 ## Установка
 
-Готовых релизов на GitHub пока нет: релиз собирается скриптом (для сборки нужен Rust: `cargo`). Сама установка ставит консоль и демон одним скриптом, права администратора и ничего другого не нужно.
+Готовых релизов на GitHub пока нет: релиз собирается скриптом (для сборки нужен .NET SDK 10). Сама установка ставит консоль и демон одним скриптом, права администратора и ничего другого не нужно.
 
 ```bash
 scripts/release.sh --rid osx-arm64        # релиз для своей платформы (osx-arm64, osx-x64, linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, win-x64, win-arm64)
 artifacts/release/<версия>/install.sh --from artifacts/release/<версия>/tasker-<версия>-osx-arm64.tar.gz
 ```
 
-Из исходников (нужен Rust): `scripts/install.sh --from-source`. Обновление — тот же `install.sh` с новым архивом: работающий демон переходит на новую сборку без простоя. На Windows: `scripts/install.ps1`. Подробности и удаление: [Установка](https://github.com/SmokyOoOwizard/Tasker/wiki/Установка).
+Из исходников (нужен .NET SDK 10): `scripts/install.sh --from-source`. Обновление — тот же `install.sh` с новым архивом: работающий демон переходит на новую сборку без простоя. На Windows: `scripts/install.ps1`. Подробности и удаление: [Установка](https://github.com/SmokyOoOwizard/Tasker/wiki/Установка).
 
 ## Быстрый старт
 
@@ -54,4 +54,4 @@ claude mcp add --transport http tasker http://127.0.0.1:5719/mcp
 
 Полное описание — в [вики проекта](https://github.com/SmokyOoOwizard/Tasker/wiki): команды консоли, формат файлов, MCP и демон, поля и связи, REST API, настройки, устройство и сборка.
 
-Исходники разложены по языкам: `rust/` — консоль и демон (Cargo workspace), `dotnet/` — десктоп, сервер и .NET-тесты, `tests/golden` — общий корпус эталонов поведения, `frontend/` — интерфейс; подробнее — страница [Разработка](https://github.com/SmokyOoOwizard/Tasker/wiki/Разработка).
+Исходники: `dotnet/` — консоль, демон, десктоп, сервер и тесты, `tests/golden` — общий корпус эталонов поведения, `frontend/` — интерфейс; подробнее — страница [Разработка](https://github.com/SmokyOoOwizard/Tasker/wiki/Разработка).

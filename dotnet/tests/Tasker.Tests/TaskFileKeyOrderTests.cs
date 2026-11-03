@@ -10,8 +10,8 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>
-/// Порядок ключей файла задачи: <c>description</c> последним. Запись <see cref="TaskFile"/> даёт те же байты, что golden-корпус
-/// (его пишет и Rust), чтение принимает оба порядка, <c>tasker migrate</c> переставляет описание в файлах прежнего порядка.
+/// Порядок ключей файла задачи: <c>description</c> последним. Запись <see cref="TaskFile"/> даёт те же байты, что golden-корпус,
+/// чтение принимает оба порядка, <c>tasker migrate</c> переставляет описание в файлах прежнего порядка.
 /// </summary>
 public class TaskFileKeyOrderTests : IDisposable
 {

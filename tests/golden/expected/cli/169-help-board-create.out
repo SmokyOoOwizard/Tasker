@@ -13,7 +13,6 @@ Options:
   --column-filter                     Field condition of a column, in addition to its statuses (AND): "Column:Field=value", "Column:Field>=3", "Column:Field:set" and so on - the same conditions as 'task list --field' (=, !=, >, >=, <, <=, :set, :unset, :attached, :detached), by the field's name in the catalog (stored by id). Repeat for several conditions; the column is named as in --column. A task is in the column only if its status and all conditions fit
   -?, -h, --help                      Show help and usage information
   -w, --workspace <workspace>         Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
-  --sqlite <sqlite>                   SQLite file with the workspace instead of a folder
   -p, --project <Tasker>              Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
   --json                              Print the result as JSON
   -q, --quiet                         Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention

@@ -63,7 +63,11 @@ public class DaemonLauncherTests : IDisposable
     {
         // Копия tasker без tasker-mcpd — как установка с --no-daemon.
         var copy = Dir("cli-only");
-        File.Copy(TaskerProcess.Binary, Path.Combine(copy, Path.GetFileName(TaskerProcess.Binary)));
+        foreach (var file in Directory.GetFiles(TaskerProcess.ProgramDirectory))
+        {
+            if (!Path.GetFileName(file).StartsWith(TaskerProcess.DaemonName, StringComparison.Ordinal))
+                File.Copy(file, Path.Combine(copy, Path.GetFileName(file)));
+        }
 
         using var home = new IsolatedHome();
         home.IsolateDaemon(); // на машине может работать настоящий демон: порт по умолчанию и служба автозапуска заняты им

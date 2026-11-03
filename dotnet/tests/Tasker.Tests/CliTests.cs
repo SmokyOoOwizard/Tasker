@@ -233,17 +233,6 @@ public class CliTests
     }
 
     [Fact]
-    public async Task Workspace_and_sqlite_together_are_rejected()
-    {
-        using var ws = TestWorkspace.Create("files");
-
-        var result = await TaskerProcess.Run("project", "list", "--workspace", ws.Root, "--sqlite", Path.Combine(ws.Root, "x.db"));
-
-        Assert.Equal(1, result.Code);
-        Assert.Contains("not both", result.Err);
-    }
-
-    [Fact]
     public async Task Missing_folder_is_an_error_and_is_not_created()
     {
         var folder = Path.Combine(Path.GetTempPath(), "tasker-tests-missing-" + Guid.NewGuid().ToString("N"));

@@ -1,4 +1,0 @@
-migrate
---check
---sqlite
-<ROOT>/golden.db

@@ -1,7 +1,0 @@
-status
-list
---json
---sqlite
-<ROOT>/golden.db
--p
-Golden

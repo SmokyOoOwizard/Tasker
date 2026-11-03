@@ -1,8 +1,0 @@
-task
-get
-OLD-3
---json
---sqlite
-<ROOT>/golden.db
--p
-Legacy

@@ -1,7 +1,0 @@
-task
-links
-00000073-0000-4000-8000-000000000073
---sqlite
-<ROOT>/golden.db
--p
-Golden

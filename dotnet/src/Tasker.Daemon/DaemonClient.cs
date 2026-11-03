@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Net.Sockets;
 using System.Text.Json;
 using Tasker.Core;
 
@@ -30,7 +31,7 @@ public static class DaemonClient
                 return await http.GetFromJsonAsync<DaemonStatus>("/daemon/status", TaskerJson.Options, ct);
             }, ct);
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException)
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException or JsonException)
         {
             return null;
         }
@@ -46,7 +47,7 @@ public static class DaemonClient
         {
             return await request();
         }
-        catch (HttpRequestException)
+        catch (Exception e) when (e is HttpRequestException or SocketException)
         {
             await Task.Delay(RetryPause, ct);
             return await request();
@@ -68,7 +69,7 @@ public static class DaemonClient
             using var response = await http.GetAsync("/ready", ct);
             return response.IsSuccessStatusCode;
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
         {
             return null;
         }
@@ -101,7 +102,7 @@ public static class DaemonClient
 
             return new UpgradeResult(false, $"The daemon refused the upgrade: HTTP {(int)response.StatusCode} {await response.Content.ReadAsStringAsync(ct)}".Trim());
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException)
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException or JsonException)
         {
             return new UpgradeResult(false, $"The daemon did not answer the upgrade request: {e.Message}");
         }
@@ -126,7 +127,7 @@ public static class DaemonClient
                 return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<SyncResult>(TaskerJson.Options, ct) : null;
             }, ct);
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException)
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException or JsonException)
         {
             return null;
         }
@@ -144,7 +145,7 @@ public static class DaemonClient
             using var response = await http.PostAsync("/daemon/stop", null, ct);
             return response.IsSuccessStatusCode;
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
         {
             return false;
         }

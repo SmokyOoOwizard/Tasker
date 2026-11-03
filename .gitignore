@@ -498,6 +498,3 @@ tasker.db-shm
 tasker.db-wal
 *.sqlite
 
-# Rust (консоль и демон, rust/)
-rust/target/
-rust/**/target/

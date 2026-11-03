@@ -68,8 +68,8 @@ public sealed class StressOptions
 
         if (o.Client is not ("cli" or "mcp" or "mix"))
             throw new ArgumentException("--client: cli, mcp or mix");
-        if (o.Storage is not ("files" or "sqlite"))
-            throw new ArgumentException("--storage: files or sqlite");
+        if (o.Storage is not "files")
+            throw new ArgumentException("--storage: files (the console works with folders only)");
         var unknown = o.Scenarios.Except(AllScenarios).ToArray();
         if (unknown.Length > 0)
             throw new ArgumentException($"Unknown scenarios: {string.Join(", ", unknown)}. Known: {string.Join(", ", AllScenarios)}");
@@ -82,7 +82,7 @@ public sealed class StressOptions
           --clients N        concurrent clients (default 10)
           --ops M            operations per client in a scenario (default 5)
           --client cli|mcp|mix   console processes, HTTP /mcp of an own daemon, or half and half (default cli)
-          --storage files|sqlite (default files)
+          --storage files (default files)
           --scenarios a,b,c  create, edit-same, edit-fields, edit-different, locks, cascade-wait, mass, fields, links, delete-while-edit, delete-project, kill, multiws, scale, upgrade (daemon replaced on the fly under load) (default: all)
           --scale 1,2,5,10   client counts of the scale scenario
           --long             also real lock expiry (2 min) and cascade wait until refusal (30 s)

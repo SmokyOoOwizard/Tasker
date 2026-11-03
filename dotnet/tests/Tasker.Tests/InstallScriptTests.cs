@@ -43,16 +43,13 @@ public partial class InstallScriptTests : IDisposable
         foreach (var argument in args)
             info.ArgumentList.Add(argument);
 
-        // Свой HOME, чтобы не трогать настоящие ~/.zprofile, ~/.zshrc и ~/.bash_profile; cargo (--from-source) должен по-прежнему видеть
-        // настоящий кэш пакетов и toolchain (rustup), а не скачивать их заново в подставной HOME.
+        // Свой HOME, чтобы не трогать настоящие ~/.zprofile, ~/.zshrc и ~/.bash_profile; dotnet (--from-source) должен по-прежнему видеть
+        // настоящий кэш пакетов NuGet, а не скачивать их заново в подставной HOME.
         var realHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         info.Environment["HOME"] = home;
         info.Environment["SHELL"] = shell;
-        info.Environment["CARGO_HOME"] = Environment.GetEnvironmentVariable("CARGO_HOME") ?? Path.Combine(realHome, ".cargo");
-        if (Environment.GetEnvironmentVariable("RUSTUP_HOME") is { } rustup)
-            info.Environment["RUSTUP_HOME"] = rustup;
-        else if (Directory.Exists(Path.Combine(realHome, ".rustup")))
-            info.Environment["RUSTUP_HOME"] = Path.Combine(realHome, ".rustup");
+        info.Environment["NUGET_PACKAGES"] = Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? Path.Combine(realHome, ".nuget", "packages");
+        info.Environment["DOTNET_CLI_HOME"] = Environment.GetEnvironmentVariable("DOTNET_CLI_HOME") ?? realHome;
 
         // Настоящая служба автозапуска тестам не нужна: uninstall выключает её у своего (тестового) имени.
         info.Environment["TASKER_SERVICE_DIR"] = Path.Combine(_root, "service");
@@ -109,7 +106,7 @@ public partial class InstallScriptTests : IDisposable
         var link = Path.Combine(prefix, "bin", "tasker");
         var app = Path.Combine(prefix, "share", "tasker", "app");
 
-        // Установка из исходников: cargo build --release в rust/ (повторные сборки берутся из кэша rust/target).
+        // Установка из исходников: dotnet publish консоли (NativeAOT) и демона.
         var installed = await Run(["--prefix", prefix, "--from-source", "--no-autostart", "--add-to-path"], fakeHome);
         Assert.True(installed.Code == 0, installed.Out + installed.Err);
         Assert.Contains("Installed tasker", installed.Out);

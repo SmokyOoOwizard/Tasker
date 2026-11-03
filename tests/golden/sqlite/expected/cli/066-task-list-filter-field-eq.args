@@ -1,9 +1,0 @@
-task
-list
---all
---field
-Priority=High
---sqlite
-<ROOT>/golden.db
--p
-Golden

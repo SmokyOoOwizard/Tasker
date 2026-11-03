@@ -5,48 +5,48 @@
 # супервизора (Restart=always), остановка `systemctl stop` (SIGTERM всему cgroup), запуск и остановка командами tasker. Печатает
 # «ok»/«FAIL» по каждому пункту; код выхода 1, если что-то не прошло. Настоящая служба хоста не задета.
 #
-#   scripts/test-linux-systemd.sh [--platform linux/amd64] [--keep]    # собрать tasker и tasker-mcpd из репозитория (cargo в контейнере);
+#   scripts/test-linux-systemd.sh [--platform linux/amd64] [--keep]    # собрать tasker и tasker-mcpd из репозитория (dotnet в контейнере);
 #                                                                      # --keep: не удалять контейнер (имя tasker-systemd-check)
-#   scripts/test-linux-systemd.sh --rust <каталог>   # готовые сборки tasker и tasker-mcpd под Linux
+#   scripts/test-linux-systemd.sh --bin <каталог>    # готовые сборки tasker и tasker-mcpd под Linux
 #   scripts/test-linux-systemd.sh --archive <tasker-X-linux-*.tar.gz>   # релизный архив (scripts/release.sh): install.sh из
 #                                                    # распакованного архива в ~/.local, затем чек-лист с установленными программами
 set -uo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-image="${TASKER_SYSTEMD_IMAGE:-tasker-linux-systemd-rust}"
+image="${TASKER_SYSTEMD_IMAGE:-tasker-linux-systemd}"
 name="tasker-systemd-check"
-cargo_volume="${TASKER_LINUX_CARGO_VOLUME:-tasker-cargo-registry}"
+nuget_volume="${TASKER_LINUX_NUGET_VOLUME:-tasker-nuget-root}"
 keep=0
-rust=""
+bin=""
 archive=""
 pf=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --platform) pf=(--platform "$2"); image="$image-${2//\//-}"; shift 2 ;;
     --keep) keep=1; shift ;;
-    --rust) rust="$(cd "$2" && pwd)"; shift 2 ;;
+    --bin) bin="$(cd "$2" && pwd)"; shift 2 ;;
     --archive) archive="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"; shift 2 ;;
     -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
     *) echo "Неизвестный аргумент: $1" >&2; exit 2 ;;
   esac
 done
 command -v docker >/dev/null || { echo "Нужен docker." >&2; exit 1; }
-if [ -n "$rust" ] && { [ ! -x "$rust/tasker" ] || [ ! -x "$rust/tasker-mcpd" ]; }; then
-  echo "В $rust нет исполняемых tasker и tasker-mcpd (сборка под Linux)." >&2; exit 2
+if [ -n "$bin" ] && { [ ! -x "$bin/tasker" ] || [ ! -x "$bin/tasker-mcpd" ]; }; then
+  echo "В $bin нет исполняемых tasker и tasker-mcpd (сборка под Linux)." >&2; exit 2
 fi
 if [ -n "$archive" ] && [ ! -f "$archive" ]; then
   echo "Нет архива $archive." >&2; exit 2
 fi
-[ -n "$rust" ] && [ -n "$archive" ] && { echo "--rust и --archive — разные режимы, выберите один." >&2; exit 2; }
-rust_mount=()
-[ -n "$rust" ] && rust_mount=(-v "$rust":/rust:ro)
-[ -n "$archive" ] && rust_mount=(-v "$archive":/release.tar.gz:ro)
+[ -n "$bin" ] && [ -n "$archive" ] && { echo "--bin и --archive — разные режимы, выберите один." >&2; exit 2; }
+bin_mount=()
+[ -n "$bin" ] && bin_mount=(-v "$bin":/bin-ready:ro)
+[ -n "$archive" ] && bin_mount=(-v "$archive":/release.tar.gz:ro)
 
 if ! docker image inspect "$image" >/dev/null 2>&1; then
   echo ">> сборка образа $image"
   docker build "${pf[@]+"${pf[@]}"}" -t "$image" - <<'DOCKERFILE' || exit 1
-FROM rust:1-bookworm
-RUN apt-get update && apt-get install -y --no-install-recommends systemd systemd-sysv dbus dbus-user-session libpam-systemd procps curl ca-certificates && rm -rf /var/lib/apt/lists/*
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+RUN apt-get update && apt-get install -y --no-install-recommends systemd systemd-sysv dbus dbus-user-session libpam-systemd procps curl ca-certificates clang zlib1g-dev libsqlite3-dev && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -u 1500 -s /bin/bash tester
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
@@ -57,7 +57,7 @@ cleanup() { [ "$keep" = 1 ] || docker rm -f "$name" >/dev/null 2>&1; }
 trap cleanup EXIT
 docker rm -f "$name" >/dev/null 2>&1
 docker run -d --name "$name" "${pf[@]+"${pf[@]}"}" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-  --tmpfs /run --tmpfs /run/lock --tmpfs /tmp -v "$repo":/src:ro -v "$cargo_volume":/usr/local/cargo/registry "${rust_mount[@]+"${rust_mount[@]}"}" "$image" >/dev/null || exit 1
+  --tmpfs /run --tmpfs /run/lock --tmpfs /tmp -v "$repo":/src:ro -v "$nuget_volume":/root/.nuget/packages "${bin_mount[@]+"${bin_mount[@]}"}" "$image" >/dev/null || exit 1
 
 for _ in $(seq 1 30); do
   state="$(docker exec "$name" systemctl is-system-running 2>/dev/null)"
@@ -70,17 +70,21 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-if [ -n "$rust" ]; then
-  echo ">> готовые tasker и tasker-mcpd из $rust"
-  docker exec "$name" bash -c 'mkdir -p /opt/tasker && cp /rust/tasker /rust/tasker-mcpd /opt/tasker/ && ln -sf /opt/tasker/tasker /usr/local/bin/tasker' \
+if [ -n "$bin" ]; then
+  echo ">> готовые tasker и tasker-mcpd из $bin"
+  docker exec "$name" bash -c 'mkdir -p /opt/tasker && cp /bin-ready/tasker /bin-ready/tasker-mcpd /opt/tasker/ && ln -sf /opt/tasker/tasker /usr/local/bin/tasker' \
     || { echo "FAIL: копирование сборок"; exit 1; }
 elif [ -z "$archive" ]; then
-  echo ">> сборка tasker и tasker-mcpd в контейнере (cargo build --release)"
+  echo ">> сборка tasker и tasker-mcpd в контейнере (dotnet publish)"
   docker exec "$name" bash -c '
     mkdir -p /work && cd /src &&
-    tar -c --exclude=./.git --exclude=target --exclude=bin --exclude=obj --exclude=node_modules --exclude=./.claude . | tar -x -C /work &&
-    cd /work/rust && cargo build --release --locked --quiet --bin tasker --bin tasker-mcpd &&
-    mkdir -p /opt/tasker && cp target/release/tasker target/release/tasker-mcpd /opt/tasker/ &&
+    tar -c --exclude=./.git --exclude=bin --exclude=obj --exclude=node_modules --exclude=./.claude . | tar -x -C /work &&
+    cd /work/dotnet &&
+    case "$(uname -m)" in aarch64) rid=linux-arm64 ;; *) rid=linux-x64 ;; esac &&
+    dotnet publish src/Tasker.Cli -c Release -r $rid -p:PublishAot=true -o /tmp/cli --nologo -v quiet &&
+    dotnet publish src/Tasker.Daemon.Host -c Release -r $rid --self-contained true -p:PublishSingleFile=true \
+      -p:IncludeNativeLibrariesForSelfExtract=true -p:EmbedFrontend=false -o /tmp/daemon --nologo -v quiet &&
+    mkdir -p /opt/tasker && cp /tmp/cli/tasker /tmp/daemon/tasker-mcpd /opt/tasker/ &&
     ln -sf /opt/tasker/tasker /usr/local/bin/tasker' || { echo "FAIL: сборка"; exit 1; }
 fi
 

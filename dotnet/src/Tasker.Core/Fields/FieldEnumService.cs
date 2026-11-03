@@ -59,8 +59,13 @@ public class FieldEnumService(
             return null;
 
         var all = await enums.GetAll(projectId, ct);
-        if (Guid.TryParse(text, out var id) && all.FirstOrDefault(x => x.Id == id) is { } byId)
-            return byId;
+        if (Guid.TryParse(text, out var id))
+        {
+            if (all.FirstOrDefault(x => x.Id == id) is { } byId)
+                return byId;
+            if (await enums.GetById(projectId, id, ct) is { } read)
+                return read;
+        }
 
         var byName = all.Where(x => string.Equals(x.Name, text, StringComparison.OrdinalIgnoreCase)).ToArray();
         return byName.Length switch
