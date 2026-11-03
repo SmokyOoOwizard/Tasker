@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tasker — IDE</title>
+<style>
+:root{--bg:#14161a;--bg2:#181b20;--panel:#1b1e24;--panel2:#21252c;--edge:#2b303a;--fg:#c9d1d9;--dim:#7d8797;--dim2:#566071;--acc:#5ad4a4;--acc2:#2f8f6c;--blue:#6cb6ff;--yel:#e5c07b;--red:#f47067;--pur:#b392f0;--org:#f0a35e;--sel:#243040;--hov:#232831;--st:#0f3d33}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:12.5px/1.5 ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:var(--panel2);border:1px solid var(--edge);border-radius:3px;padding:2px 9px}
+button:hover{border-color:var(--acc2);background:#262c35}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,select,textarea{background:#111317;border:1px solid var(--edge);border-radius:3px;padding:3px 7px;outline:none;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--acc2)}
+input[type=checkbox]{accent-color:var(--acc)}
+input[type=color]{padding:0;width:28px;height:22px}
+textarea{resize:vertical;width:100%}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#2b303a;border-radius:5px;border:2px solid var(--bg)}
+::-webkit-scrollbar-corner{background:transparent}
+#app{display:grid;grid-template-rows:34px auto 1fr 24px;height:100vh}
+#title{display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--bg2);border-bottom:1px solid var(--edge);white-space:nowrap}
+#title .logo{color:var(--acc);font-weight:700}
+#title .gap{flex:1}
+#title .qs{width:min(460px,40vw);text-align:left;color:var(--dim);background:#111317;display:flex;justify-content:space-between}
+.mock{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim2)}
+.seg{display:inline-flex;border:1px solid var(--edge);border-radius:3px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent;padding:1px 8px;font-size:11px}
+.seg button.on{background:var(--acc2);color:#fff}
+#wsrow{display:flex;background:var(--bg2);height:0;overflow:hidden}
+#wsrow.on{height:28px;border-bottom:1px solid var(--edge)}
+#wsrow .w{padding:3px 14px;border-right:1px solid var(--edge);color:var(--dim);cursor:pointer}
+#wsrow .w.on{color:var(--fg);background:var(--bg);border-top:2px solid var(--acc)}
+#body{display:grid;grid-template-columns:48px var(--sw,270px) 1fr;min-height:0}
+#act{background:var(--bg2);border-right:1px solid var(--edge);display:flex;flex-direction:column;align-items:center;padding-top:4px;gap:2px}
+#act .ab{width:48px;height:44px;background:transparent;border:0;border-left:2px solid transparent;border-radius:0;color:var(--dim);position:relative;font-size:17px;padding:0}
+#act .ab small{display:block;font-size:8.5px;line-height:1;margin-top:1px}
+#act .ab:hover{color:var(--fg);background:transparent}
+#act .ab.on{color:var(--acc);border-left-color:var(--acc)}
+#act .sp{flex:1}
+.bdg{position:absolute;top:3px;right:5px;background:var(--red);color:#fff;border-radius:8px;font-size:9px;padding:0 4px;line-height:14px}
+#side{background:var(--panel);border-right:1px solid var(--edge);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#side.off{display:none}
+.sh{padding:6px 10px;color:var(--dim);font-size:11px;letter-spacing:.08em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.sb{overflow:auto;flex:1;padding-bottom:20px}
+.sctl{padding:0 8px 6px;display:flex;gap:6px;flex-wrap:wrap}
+.sctl input,.sctl select{flex:1}
+.tn{display:flex;align-items:center;gap:4px;padding:1px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;line-height:20px}
+.tn:hover{background:var(--hov)}
+.tn.on{background:var(--sel);color:#fff}
+.tn .tx{overflow:hidden;text-overflow:ellipsis}
+.car{width:12px;color:var(--dim);flex:none;text-align:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ref{color:var(--blue)}
+.dim{color:var(--dim)}
+.warn{color:var(--yel)}
+.err{color:var(--red)}
+.ok{color:var(--acc)}
+.fold{color:var(--yel)}
+.bad{color:var(--red)!important;text-decoration:underline wavy var(--red);text-underline-offset:3px}
+#center{display:grid;grid-template-rows:34px 1fr auto;min-width:0;min-height:0}
+#tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--edge);overflow-x:auto;overflow-y:hidden}
+.tab{display:flex;align-items:center;gap:6px;padding:0 10px;border-right:1px solid var(--edge);color:var(--dim);cursor:pointer;white-space:nowrap;border-top:2px solid transparent}
+.tab.on{background:var(--bg);color:var(--fg);border-top-color:var(--acc)}
+.tab .x{width:16px;height:16px;line-height:14px;text-align:center;border-radius:3px;padding:0;border:0;background:transparent;color:var(--dim)}
+.tab .x:hover{background:#333a46;color:#fff}
+.tab .dd{color:var(--org);font-size:14px}
+#main{overflow:auto;background:var(--bg);min-height:0;position:relative}
+#panel{background:var(--panel);border-top:1px solid var(--edge);display:flex;flex-direction:column;height:250px;min-height:0}
+#panel.off{display:none}
+#rsz{height:4px;cursor:ns-resize;background:transparent;margin-top:-2px;position:relative;z-index:2}
+#ptabs{display:flex;align-items:center;gap:2px;padding:0 8px;border-bottom:1px solid var(--edge);height:28px;flex:none}
+#ptabs .pt{padding:3px 10px;border:0;background:transparent;border-bottom:2px solid transparent;border-radius:0;color:var(--dim);text-transform:uppercase;font-size:11px;letter-spacing:.05em}
+#ptabs .pt.on{color:var(--fg);border-bottom-color:var(--acc)}
+#ptabs .gap{flex:1}
+#pbody{flex:1;min-height:0;display:flex;flex-direction:column}
+.conout{flex:1;overflow:auto;padding:6px 10px;white-space:pre;font-size:12px;line-height:1.45}
+.conin{display:flex;gap:8px;padding:5px 10px;border-top:1px solid var(--edge);align-items:center;flex:none}
+.conin input{flex:1;background:transparent;border:0;padding:2px}
+.ps{color:var(--acc)}
+.plist{overflow:auto;flex:1;padding:4px 0}
+.prow{display:flex;gap:10px;align-items:center;padding:3px 12px;border-bottom:1px solid #22262e}
+.prow:hover{background:var(--hov)}
+.prow .m{flex:1;min-width:0}
+.jrow{padding:1px 12px;white-space:pre;overflow:hidden;text-overflow:ellipsis}
+#status{background:var(--st);color:#cfeee2;display:flex;align-items:center;gap:0;font-size:11.5px;overflow:hidden;white-space:nowrap}
+#status span{padding:0 10px;height:24px;line-height:24px;border-right:1px solid #1d5c4b}
+#status .gap{flex:1;border:0}
+#status .cl{cursor:pointer}
+#status .cl:hover{background:#17604c}
+.pane{padding:14px 18px 40px;max-width:1500px}
+.crumb{color:var(--dim);margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.crumb b{color:var(--fg)}
+h2{margin:0 0 10px;font-size:14px;color:var(--acc);font-weight:600}
+h3{margin:16px 0 6px;font-size:12px;color:var(--yel);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.bar .gap{flex:1}
+.cmdline{background:#111317;border:1px solid var(--edge);border-radius:3px;padding:3px 9px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:200px}
+.cmdline b{color:var(--acc)}
+.btn.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.btn.dng{border-color:#7a2d28;color:var(--red)}
+.btn.sm{padding:0 6px;font-size:11px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;color:var(--dim);font-weight:400;border-bottom:1px solid var(--edge);padding:3px 8px;white-space:nowrap;position:sticky;top:0;background:var(--bg)}
+.tbl td{padding:2px 8px;border-bottom:1px solid #1d2026;vertical-align:middle}
+.tbl tr:hover td{background:#191c21}
+.tbl td.ttl{max-width:560px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl select{padding:0 3px;font-size:11.5px}
+.chip{display:inline-block;border:1px solid var(--edge);border-radius:10px;padding:0 8px;margin:1px 3px 1px 0;color:var(--dim);cursor:pointer;background:transparent;line-height:18px}
+.chip.on{border-color:var(--acc2);color:var(--acc);background:#14291f}
+.tag{display:inline-block;border-radius:3px;padding:0 6px;background:#262b34;color:var(--dim);margin-right:4px;font-size:11px;line-height:17px}
+.card-box{border:1px solid var(--edge);border-radius:4px;background:var(--panel);padding:10px 12px;margin-bottom:10px}
+.fp{border:1px solid var(--edge);border-radius:4px;background:var(--bg2);padding:8px 12px;margin-bottom:10px}
+.fp .rw{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:3px 0}
+.fp .lb{width:90px;color:var(--dim);flex:none}
+.qc{display:flex;gap:6px;margin-bottom:8px;align-items:center}
+.qc input[name=t]{flex:1}
+.pg{display:flex;gap:6px;align-items:center;margin-top:10px;color:var(--dim)}
+.prog{display:inline-block;width:46px;height:6px;background:#262b34;border-radius:3px;vertical-align:middle;overflow:hidden;margin:0 4px}
+.prog i{display:block;height:100%;background:var(--acc)}
+.edg{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+@media(max-width:1300px){.edg{grid-template-columns:1fr}}
+.fld{display:grid;grid-template-columns:150px 1fr auto;gap:8px;align-items:center;margin:4px 0}
+.fld .n{color:var(--pur);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fld .n.req::after{content:" *";color:var(--red)}
+.fld input[type=text],.fld input[type=number],.fld input[type=date],.fld select{width:100%}
+.ttlin{width:100%;font-size:15px;padding:6px 9px;font-weight:600}
+.lock{display:inline-block;background:#3a2f12;color:var(--yel);border:1px solid #6b5a22;border-radius:3px;padding:0 7px}
+.lock.me{background:#12342a;color:var(--acc);border-color:var(--acc2)}
+.yaml{background:#101216;border:1px solid var(--edge);border-radius:4px;padding:8px 0;overflow:auto;font-size:12.5px;line-height:1.6}
+.yl{display:flex;white-space:pre}
+.yl .ln{width:44px;text-align:right;padding-right:12px;color:var(--dim2);flex:none;user-select:none}
+.yk{color:var(--blue)}.ys{color:var(--org)}.yn{color:var(--acc)}.yb{color:var(--pur)}.yi{color:var(--yel)}.yd{color:var(--dim)}
+.board{display:flex;gap:10px;align-items:flex-start;overflow-x:auto;padding-bottom:12px}
+.col{flex:1 0 250px;max-width:340px;background:var(--panel);border:1px solid var(--edge);border-radius:4px;min-height:200px}
+.col.ok{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.col.no{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset}
+.col .ch{padding:6px 10px;border-bottom:1px solid var(--edge)}
+.col .ch b{color:var(--fg)}
+.col .cb{padding:6px;display:flex;flex-direction:column;gap:6px}
+.kc{background:var(--panel2);border:1px solid var(--edge);border-left:3px solid var(--dim);border-radius:3px;padding:6px 8px;cursor:grab}
+.kc:hover{border-color:#3d4452}
+.kc.drag{opacity:.4}
+.kc .tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:2px 0 4px}
+.kc .ft{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px}
+.kc select{font-size:11px;padding:0 2px}
+.empty{padding:40px;color:var(--dim);text-align:center}
+.step{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #1f2329}
+.step .n{width:22px;height:22px;border-radius:50%;border:1px solid var(--edge);text-align:center;line-height:20px;color:var(--dim)}
+.step.done .n{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.step .t{flex:1}
+#modal{display:none}
+#modal.on{display:flex;position:fixed;inset:0;background:rgba(5,7,10,.65);z-index:50;align-items:flex-start;justify-content:center;padding-top:9vh}
+.dlg{background:var(--panel);border:1px solid #3a4150;border-radius:5px;width:min(540px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.6);max-height:80vh;display:flex;flex-direction:column}
+.dlg.wide{width:min(820px,94vw)}
+.dh{padding:8px 12px;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;color:var(--acc)}
+.dh button{border:0;background:transparent}
+.db{padding:12px;overflow:auto}
+.db label{display:block;margin:6px 0 2px;color:var(--dim)}
+.db input[type=text],.db input[type=password],.db input[type=number],.db input[type=email],.db select,.db textarea,.db input[type=date]{width:100%}
+.df{padding:8px 12px;border-top:1px solid var(--edge);display:flex;justify-content:flex-end;gap:8px}
+#toasts{position:fixed;right:14px;bottom:36px;display:flex;flex-direction:column;gap:6px;z-index:80}
+.toast{background:var(--panel2);border:1px solid var(--acc2);border-left:4px solid var(--acc);padding:6px 12px;border-radius:3px;max-width:460px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.toast.err{border-color:#7a2d28;border-left-color:var(--red);color:#ffb3ad}
+.toast.info{border-left-color:var(--blue)}
+#palette{display:none}
+#palette.on{display:flex;position:fixed;inset:0;z-index:60;justify-content:center;padding-top:10vh;background:rgba(5,7,10,.45)}
+.pal{width:min(640px,94vw);background:var(--panel);border:1px solid #3a4150;border-radius:5px;align-self:flex-start;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.pal input{width:100%;border:0;border-bottom:1px solid var(--edge);border-radius:0;padding:9px 12px;font-size:14px}
+.pal .it{padding:4px 12px;display:flex;gap:10px;cursor:pointer;white-space:nowrap;overflow:hidden}
+.pal .it.on{background:var(--sel)}
+.pal .res{max-height:50vh;overflow:auto}
+#login{display:none}
+#login.on{display:flex;position:fixed;inset:0;background:var(--bg);z-index:70;align-items:center;justify-content:center}
+.lg{width:min(400px,94vw);border:1px solid var(--edge);background:var(--panel);border-radius:5px;padding:20px}
+.lg label{display:block;margin:8px 0 2px;color:var(--dim)}
+.lg input{width:100%}
+.lg .tabs2{display:flex;gap:14px;margin-bottom:10px}
+.lg .tabs2 a{cursor:pointer;color:var(--dim)}
+.lg .tabs2 a.on{color:var(--acc);text-decoration:underline}
+.menu{position:fixed;background:var(--panel2);border:1px solid #3a4150;border-radius:4px;z-index:65;min-width:200px;padding:3px 0;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.menu div{padding:3px 12px;cursor:pointer}
+.menu div:hover{background:var(--sel)}
+.menu hr{border:0;border-top:1px solid var(--edge);margin:3px 0}
+pre.raw{background:#101216;padding:10px;border:1px solid var(--edge);overflow:auto;margin:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mono-in{width:100%}
+.hint{color:var(--dim);font-size:11.5px}
+.sq{text-decoration:underline wavy var(--yel);text-underline-offset:3px}
+.ddrop{outline:1px dashed var(--acc)}
+.sbtn{background:transparent;border:0;color:var(--dim);padding:0 4px}
+.sbtn:hover{color:var(--fg);background:transparent}
+</style>
+</head>
+<body>
+<div id="app">
+<header id="title"></header>
+<div id="wsrow"></div>
+<div id="body">
+<nav id="act"></nav>
+<aside id="side"></aside>
+<section id="center">
+<div id="tabs"></div>
+<div id="main"></div>
+<div id="panel"><div id="rsz"></div><div id="ptabs"></div><div id="pbody"></div></div>
+</section>
+</div>
+<footer id="status"></footer>
+</div>
+<div id="modal"></div>
+<div id="palette"></div>
+<div id="login"></div>
+<div id="toasts"></div>
+<script>
+const DB = {
+  me: 'u-artem',
+  mode: 'server',
+  users: [
+    { id: 'u-artem', kind: 'human', name: 'Артём', email: 'artem@example.com', admin: true },
+    { id: 'u-maria', kind: 'human', name: 'Мария', email: 'maria@example.com', admin: false },
+    { id: 'u-ivan', kind: 'human', name: 'Иван', email: 'ivan@example.com', admin: false },
+    { id: 'a-claude', kind: 'agent', name: 'Claude', owner: 'u-artem' },
+    { id: 'a-review', kind: 'agent', name: 'Ревьюер-бот', owner: 'u-maria' }
+  ],
+  agentTokens: [
+    { id: 't1', agentId: 'a-claude', name: 'Ноутбук', prefix: 'tsk_7f3a', createdAt: '2026-09-01T10:00:00Z', expiresAt: null, lastUsedAt: '2026-11-03T09:41:00Z', revokedAt: null },
+    { id: 't2', agentId: 'a-claude', name: 'CI', prefix: 'tsk_c91d', createdAt: '2026-10-01T10:00:00Z', expiresAt: '2026-12-30T10:00:00Z', lastUsedAt: '2026-11-02T22:10:00Z', revokedAt: null },
+    { id: 't3', agentId: 'a-review', name: 'Старый', prefix: 'tsk_02be', createdAt: '2026-07-01T10:00:00Z', expiresAt: null, lastUsedAt: '2026-08-15T12:00:00Z', revokedAt: '2026-09-01T08:00:00Z' }
+  ],
+  projects: [
+    { id: 'p-tasker', name: 'Tasker', createdAt: '2026-06-01T10:00:00Z', members: ['u-artem', 'u-maria', 'u-ivan', 'a-claude', 'a-review'] },
+    { id: 'p-demo', name: 'Demo', createdAt: '2026-10-20T10:00:00Z', members: ['u-artem', 'a-claude'] }
+  ],
+  statuses: [
+    { id: 's-backlog', name: 'Бэклог', color: '#8993a4', description: 'Идея или задача без срока, ещё не взята в план' },
+    { id: 's-todo', name: 'Туду', color: '#2684ff', description: 'Взята в план, можно начинать' },
+    { id: 's-doing', name: 'В работе', color: '#f5a623', description: 'Кто-то работает над задачей прямо сейчас' },
+    { id: 's-review', name: 'Ревью', color: '#9b59b6', description: 'Открыт PR, ждёт проверки' },
+    { id: 's-done', name: 'Готово', color: '#36b37e', description: 'Сделано и влито в main' },
+    { id: 's-cancel', name: 'Отменена', color: '#de350b', description: 'Задача больше не актуальна: не делается и не будет сделана' }
+  ],
+  statusSets: [
+    { id: 'ss-main', name: 'Основной', statusIds: ['s-backlog', 's-todo', 's-doing', 's-review', 's-done', 's-cancel'] },
+    { id: 'ss-bug', name: 'Баги', statusIds: ['s-backlog', 's-doing', 's-done', 's-cancel'] }
+  ],
+  taskTypes: [
+    { id: 'tt-feature', name: 'Фича', description: 'Новая возможность для пользователя', statusSetId: 'ss-main', fields: [{ fieldId: 'f-estimate', required: false }, { fieldId: 'f-priority', required: true }, { fieldId: 'f-component', required: false }] },
+    { id: 'tt-bug', name: 'Баг', description: 'Поведение расходится с документацией или ожиданием', statusSetId: 'ss-bug', fields: [{ fieldId: 'f-priority', required: true }, { fieldId: 'f-regression', required: false }, { fieldId: 'f-version', required: false }, { fieldId: 'f-component', required: false }] },
+    { id: 'tt-rnd', name: 'R&D', description: 'Исследование: результат — вывод или прототип, а не фича', statusSetId: 'ss-main', fields: [{ fieldId: 'f-deadline', required: false }] }
+  ],
+  series: [
+    { id: 'sr-tsk', name: 'Tasker', prefix: 'TSK' },
+    { id: 'sr-rel', name: 'Релиз 1.0', prefix: 'REL' }
+  ],
+  enums: [
+    { id: 'e-priority', name: 'Приоритеты', values: [{ id: 'ev-low', name: 'Низкий' }, { id: 'ev-mid', name: 'Средний' }, { id: 'ev-high', name: 'Высокий' }, { id: 'ev-crit', name: 'Критичный' }] },
+    { id: 'e-component', name: 'Компоненты', values: [{ id: 'ev-cli', name: 'CLI' }, { id: 'ev-mcp', name: 'MCP' }, { id: 'ev-daemon', name: 'Демон' }, { id: 'ev-desktop', name: 'Desktop' }, { id: 'ev-web', name: 'Web' }, { id: 'ev-core', name: 'Core' }] }
+  ],
+  fields: [
+    { id: 'f-estimate', name: 'Оценка', type: 'int', multiple: false },
+    { id: 'f-priority', name: 'Приоритет', type: 'enum', enumId: 'e-priority', multiple: false },
+    { id: 'f-component', name: 'Компонент', type: 'enum', enumId: 'e-component', multiple: true },
+    { id: 'f-deadline', name: 'Срок', type: 'date', multiple: false },
+    { id: 'f-regression', name: 'Регрессия', type: 'bool', multiple: false },
+    { id: 'f-version', name: 'Версия', type: 'string', multiple: false },
+    { id: 'f-hours', name: 'Часы', type: 'float', multiple: false }
+  ],
+  linkTypes: [
+    { id: 'lt-blocks', name: 'Blocks', outward: 'блокирует', inward: 'заблокирована', allowCycles: false, hierarchical: false },
+    { id: 'lt-dup', name: 'Duplicate', outward: 'дублирует', inward: 'дублируется', allowCycles: true, hierarchical: false },
+    { id: 'lt-clone', name: 'Cloners', outward: 'клонирует', inward: 'клонирована из', allowCycles: true, hierarchical: false },
+    { id: 'lt-rel', name: 'Relates', outward: 'связана с', inward: null, allowCycles: true, hierarchical: false },
+    { id: 'lt-cause', name: 'Problem/Incident', outward: 'вызывает', inward: 'вызвана', allowCycles: true, hierarchical: false },
+    { id: 'lt-parent', name: 'Parent/Child', outward: 'включает', inward: 'входит в', allowCycles: false, hierarchical: true }
+  ],
+  boards: [
+    {
+      id: 'b-main', name: 'Основная', statusSetIds: ['ss-main', 'ss-bug'],
+      columns: [
+        { id: 'c-backlog', name: 'Бэклог', statusIds: ['s-backlog', 's-todo'], dropStatuses: { 'ss-main': 's-todo', 'ss-bug': 's-backlog' }, fieldConditions: [] },
+        { id: 'c-doing', name: 'В работе', statusIds: ['s-doing'], dropStatuses: {}, fieldConditions: [] },
+        { id: 'c-review', name: 'Ревью', statusIds: ['s-review'], dropStatuses: {}, fieldConditions: [] },
+        { id: 'c-done', name: 'Готово', statusIds: ['s-done'], dropStatuses: {}, fieldConditions: [] }
+      ]
+    },
+    {
+      id: 'b-triage', name: 'Разбор багов', statusSetIds: ['ss-bug'],
+      columns: [
+        { id: 'c-crit', name: 'Горит', statusIds: ['s-backlog', 's-doing'], dropStatuses: {}, fieldConditions: [{ fieldId: 'f-priority', operator: 'equal', value: 'ev-crit' }] },
+        { id: 'c-rest', name: 'Остальные', statusIds: ['s-backlog', 's-doing'], dropStatuses: {}, fieldConditions: [{ fieldId: 'f-priority', operator: 'notEqual', value: 'ev-crit' }] },
+        { id: 'c-fixed', name: 'Исправлено', statusIds: ['s-done'], dropStatuses: {}, fieldConditions: [] }
+      ]
+    }
+  ],
+  tasks: [
+    { id: 'k1', title: 'Rust: перенос консоли и демона', typeId: 'tt-feature', statusId: 's-doing', series: [{ seriesId: 'sr-tsk', number: 100 }], fields: { 'f-priority': 'ev-high', 'f-estimate': 40, 'f-component': ['ev-cli', 'ev-daemon'] }, custom: [], extra: [], createdAt: '2026-08-01T10:00:00Z', updatedAt: '2026-11-02T18:00:00Z', description: 'Эпик: консоль `tasker` и демон `tasker-mcpd` переписываются на Rust.\n\n- фаза 0: golden-корпус и базовая линия\n- фаза 1–2: ядро, файлы, индекс\n- фаза 3–4: консоль и демон' },
+    { id: 'k2', title: 'Rust, фаза 1: крейт tasker-files — разбор YAML и свой эмиттер байт в байт', typeId: 'tt-feature', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 104 }], fields: { 'f-priority': 'ev-high', 'f-estimate': 8, 'f-component': ['ev-core'] }, custom: [], extra: [], createdAt: '2026-08-03T10:00:00Z', updatedAt: '2026-09-10T10:00:00Z', description: 'Парсер на saphyr, эмиттер повторяет вывод .NET байт в байт. Проверка — golden-корпус.' },
+    { id: 'k3', title: 'Rust, фаза 2: индекс index-rs.db — схема, Sync по (size, mtime), сортировки', typeId: 'tt-feature', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 107 }], fields: { 'f-priority': 'ev-mid', 'f-estimate': 5, 'f-component': ['ev-core'] }, custom: [], extra: [], createdAt: '2026-08-05T10:00:00Z', updatedAt: '2026-09-20T10:00:00Z', description: 'Индекс для быстрых списков. Сверка по размеру и mtime, без чтения файлов.' },
+    { id: 'k4', title: 'Rust, фаза 4: супервизор и воркер — upgrade без простоя', typeId: 'tt-feature', statusId: 's-review', series: [{ seriesId: 'sr-tsk', number: 118 }], fields: { 'f-priority': 'ev-high', 'f-estimate': 13, 'f-component': ['ev-daemon'] }, custom: [], extra: [], createdAt: '2026-08-10T10:00:00Z', updatedAt: '2026-11-03T08:30:00Z', description: '`--listen-fd`, NDJSON-протокол, AcceptGate, дренаж, backoff.' },
+    { id: 'k5', title: 'Rust-демон: REST API и живые события для интерфейса', typeId: 'tt-feature', statusId: 's-todo', series: [{ seriesId: 'sr-tsk', number: 121 }, { seriesId: 'sr-rel', number: 3 }], fields: { 'f-priority': 'ev-mid', 'f-estimate': 8, 'f-component': ['ev-daemon', 'ev-web'] }, custom: [], extra: [], createdAt: '2026-09-01T10:00:00Z', updatedAt: '2026-10-30T10:00:00Z', description: 'Перенос REST и SSE-событий из Tasker.Web, чтобы веб-интерфейс работал поверх демона.' },
+    { id: 'k6', title: 'Rust-демон на Linux: при замене под нагрузкой обрывается ответ /mcp после заголовков 200', typeId: 'tt-bug', statusId: 's-doing', series: [{ seriesId: 'sr-tsk', number: 131 }], fields: { 'f-priority': 'ev-crit', 'f-regression': true, 'f-version': '0.9.2', 'f-component': ['ev-daemon', 'ev-mcp'] }, custom: [], extra: [], createdAt: '2026-10-12T10:00:00Z', updatedAt: '2026-11-03T09:40:00Z', description: 'SSE без тела. Воспроизводится примерно 1 раз на 300 запросов во время `upgrade`.' },
+    { id: 'k7', title: 'Сверка индекса падает с «database is locked» при двух рабочих процессах', typeId: 'tt-bug', statusId: 's-backlog', series: [{ seriesId: 'sr-tsk', number: 133 }], fields: { 'f-priority': 'ev-crit', 'f-regression': false, 'f-component': ['ev-daemon', 'ev-core'] }, custom: [], extra: [], createdAt: '2026-10-14T10:00:00Z', updatedAt: '2026-10-14T10:00:00Z', description: 'Во время замены воркера оба процесса сверяют индекс одновременно.' },
+    { id: 'k8', title: 'JSON: кириллица экранируется как \\uXXXX (MCP, --json, REST)', typeId: 'tt-bug', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 88 }], fields: { 'f-priority': 'ev-mid', 'f-regression': false, 'f-version': '0.8.0', 'f-component': ['ev-mcp', 'ev-cli'] }, custom: [], extra: [], createdAt: '2026-07-20T10:00:00Z', updatedAt: '2026-08-01T10:00:00Z', description: 'Ответы нечитаемы для человека и раздувают токены агента.' },
+    { id: 'k9', title: 'MCP: убрать экранирование \\uXXXX на проводе', typeId: 'tt-feature', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 89 }], fields: { 'f-priority': 'ev-mid', 'f-estimate': 3, 'f-component': ['ev-mcp'] }, custom: [], extra: [], createdAt: '2026-07-21T10:00:00Z', updatedAt: '2026-08-02T10:00:00Z', description: 'Свой слой записи ответа поверх SDK.' },
+    { id: 'k10', title: 'Веб-интерфейс: поля, связи и серии', typeId: 'tt-feature', statusId: 's-todo', series: [{ seriesId: 'sr-tsk', number: 140 }, { seriesId: 'sr-rel', number: 1 }], fields: { 'f-priority': 'ev-high', 'f-estimate': 21, 'f-component': ['ev-web'] }, custom: [], extra: [], createdAt: '2026-10-25T10:00:00Z', updatedAt: '2026-11-01T10:00:00Z', description: 'Сейчас в вебе только задачи, доски, статусы и типы. Нужны поля, связи, серии, фильтры.' },
+    { id: 'k11', title: 'Карточка задачи: связи и иерархия', typeId: 'tt-feature', statusId: 's-backlog', series: [{ seriesId: 'sr-tsk', number: 141 }], fields: { 'f-priority': 'ev-mid', 'f-estimate': 5, 'f-component': ['ev-web'] }, custom: [], extra: [], createdAt: '2026-10-25T11:00:00Z', updatedAt: '2026-10-25T11:00:00Z', description: '' },
+    { id: 'k12', title: 'Фильтры списка задач по полям', typeId: 'tt-feature', statusId: 's-backlog', series: [{ seriesId: 'sr-tsk', number: 142 }], fields: { 'f-priority': 'ev-mid', 'f-estimate': 5, 'f-component': ['ev-web'] }, custom: [], extra: [], createdAt: '2026-10-25T12:00:00Z', updatedAt: '2026-10-25T12:00:00Z', description: '' },
+    { id: 'k13', title: 'Настройки: каталог полей и перечисления', typeId: 'tt-feature', statusId: 's-backlog', series: [{ seriesId: 'sr-tsk', number: 143 }], fields: { 'f-priority': 'ev-low', 'f-estimate': 8, 'f-component': ['ev-web'] }, custom: [], extra: [], createdAt: '2026-10-25T13:00:00Z', updatedAt: '2026-10-25T13:00:00Z', description: '' },
+    { id: 'k14', title: 'Get по префиксу id файла с конфликтом слияния отвечает «No task»', typeId: 'tt-bug', statusId: 's-backlog', series: [{ seriesId: 'sr-tsk', number: 95 }], fields: { 'f-priority': 'ev-low', 'f-regression': false, 'f-component': ['ev-cli'] }, custom: [], extra: [], createdAt: '2026-08-11T10:00:00Z', updatedAt: '2026-08-11T10:00:00Z', description: 'Ожидается ошибка чтения файла, а не «не найдено».' },
+    { id: 'k15', title: 'PostgreSQL для серий не проверялся', typeId: 'tt-rnd', statusId: 's-backlog', series: [{ seriesId: 'sr-tsk', number: 61 }], fields: { 'f-deadline': '2026-12-15' }, custom: [], extra: [], createdAt: '2026-06-20T10:00:00Z', updatedAt: '2026-06-20T10:00:00Z', description: 'Проверить уникальность номеров под конкурентной записью в Postgres.' },
+    { id: 'k16', title: 'Spike rmcp: stateless Streamable HTTP и ручные схемы', typeId: 'tt-rnd', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 101 }], fields: { 'f-deadline': '2026-08-10' }, custom: [], extra: [], createdAt: '2026-08-01T11:00:00Z', updatedAt: '2026-08-09T10:00:00Z', description: 'Вывод: rmcp подходит, схемы пишем вручную.' },
+    { id: 'k17', title: 'Access-токен после выхода', typeId: 'tt-bug', statusId: 's-cancel', series: [{ seriesId: 'sr-tsk', number: 40 }], fields: { 'f-priority': 'ev-mid', 'f-component': ['ev-web'] }, custom: [], extra: [], createdAt: '2026-06-10T10:00:00Z', updatedAt: '2026-07-01T10:00:00Z', description: 'Оказалось ожидаемым поведением: JWT живёт до истечения срока.' },
+    { id: 'k18', title: 'cleanup: убирать недействительные связи между задачами', typeId: 'tt-feature', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 72 }], fields: { 'f-priority': 'ev-low', 'f-estimate': 2, 'f-component': ['ev-cli'] }, custom: [], extra: [], createdAt: '2026-07-01T10:00:00Z', updatedAt: '2026-07-05T10:00:00Z', description: '' },
+    { id: 'k19', title: 'Desktop: вкладки рабочих областей и трей', typeId: 'tt-feature', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 80 }], fields: { 'f-priority': 'ev-mid', 'f-estimate': 8, 'f-component': ['ev-desktop'] }, custom: [], extra: [], createdAt: '2026-07-10T10:00:00Z', updatedAt: '2026-07-30T10:00:00Z', description: '' },
+    { id: 'k20', title: 'Интерактивный режим: фильтры списка на одном экране', typeId: 'tt-feature', statusId: 's-done', series: [{ seriesId: 'sr-tsk', number: 172 }], fields: { 'f-priority': 'ev-mid', 'f-estimate': 5, 'f-component': ['ev-cli'], 'cf-tags': ['tui', 'ux'], 'f-hours': 6.5 }, custom: [{ fieldId: 'cf-tags', name: 'Теги', type: 'string', multiple: true, required: false }], extra: ['f-hours'], createdAt: '2026-10-28T10:00:00Z', updatedAt: '2026-11-02T10:00:00Z', description: 'Строки «типы», «статусы», «серии», «условия по полям», «сортировка», «вид»; Enter открывает окошко.' },
+    { id: 'k21', title: 'Дубль: веб показывает \\u0420 вместо кириллицы', typeId: 'tt-bug', statusId: 's-cancel', series: [{ seriesId: 'sr-tsk', number: 90 }], fields: { 'f-priority': 'ev-low', 'f-component': ['ev-web'] }, custom: [], extra: [], createdAt: '2026-07-22T10:00:00Z', updatedAt: '2026-07-23T10:00:00Z', description: '' },
+    { id: 'k22', title: 'Rust на Windows: интеграционные тесты демона не доходят до готовности', typeId: 'tt-bug', statusId: 's-backlog', series: [{ seriesId: 'sr-tsk', number: 135 }], fields: { 'f-priority': 'ev-high', 'f-regression': false, 'f-component': ['ev-daemon'] }, custom: [], extra: [], createdAt: '2026-10-15T10:00:00Z', updatedAt: '2026-10-15T10:00:00Z', description: '' },
+    { id: 'k23', title: 'Релиз 1.0: установщики и вики', typeId: 'tt-feature', statusId: 's-backlog', series: [{ seriesId: 'sr-rel', number: 2 }], fields: { 'f-priority': 'ev-mid', 'f-component': ['ev-cli', 'ev-desktop'] }, custom: [], extra: [], createdAt: '2026-10-26T10:00:00Z', updatedAt: '2026-10-26T10:00:00Z', description: '' },
+    { id: 'k24', title: 'Синхронизация с GitLab issues', typeId: 'tt-rnd', statusId: 's-backlog', series: [], fields: {}, custom: [], extra: [], createdAt: '2026-11-01T10:00:00Z', updatedAt: '2026-11-01T10:00:00Z', description: 'Пока вне серий: идея без номера.' },
+    { id: 'k25', title: 'Автодополнение: значения полей-перечислений', typeId: 'tt-feature', statusId: 's-review', series: [{ seriesId: 'sr-tsk', number: 133 }], fields: { 'f-priority': 'ev-low', 'f-estimate': 2, 'f-component': ['ev-cli'] }, custom: [], extra: [], createdAt: '2026-10-14T11:00:00Z', updatedAt: '2026-11-03T07:00:00Z', description: 'Номер TSK-133 выдан в двух ветках git — конфликт номера.' }
+  ],
+  links: [
+    { typeId: 'lt-parent', from: 'k1', to: 'k2' },
+    { typeId: 'lt-parent', from: 'k1', to: 'k3' },
+    { typeId: 'lt-parent', from: 'k1', to: 'k4' },
+    { typeId: 'lt-parent', from: 'k1', to: 'k5' },
+    { typeId: 'lt-parent', from: 'k1', to: 'k16' },
+    { typeId: 'lt-parent', from: 'k10', to: 'k11' },
+    { typeId: 'lt-parent', from: 'k10', to: 'k12' },
+    { typeId: 'lt-parent', from: 'k10', to: 'k13' },
+    { typeId: 'lt-parent', from: 'k23', to: 'k5' },
+    { typeId: 'lt-blocks', from: 'k5', to: 'k10' },
+    { typeId: 'lt-blocks', from: 'k7', to: 'k4' },
+    { typeId: 'lt-cause', from: 'k4', to: 'k6' },
+    { typeId: 'lt-dup', from: 'k21', to: 'k8' },
+    { typeId: 'lt-rel', from: 'k8', to: 'k9' },
+    { typeId: 'lt-clone', from: 'k22', to: 'k6' }
+  ],
+  locks: [
+    { entity: 'task', id: 'k6', holder: 'Мария', mine: false, expiresInSec: 95 },
+    { entity: 'board', id: 'b-triage', holder: 'Claude', mine: false, expiresInSec: 40 }
+  ],
+  problems: [
+    { kind: 'unreadable', path: '.tasker/projects/tasker-6cb8f29b/tasks/fix-login-11ab5ea4.yaml', reason: 'Маркеры конфликта git (<<<<<<<)' },
+    { kind: 'unreadable', path: '.tasker/projects/tasker-6cb8f29b/boards/release-5f0e11aa.yaml', reason: 'formatVersion 11 новее этой версии Tasker (10)' },
+    { kind: 'seriesConflict', seriesId: 'sr-tsk', number: 133, taskIds: ['k7', 'k25'] },
+    { kind: 'secondFolder', path: '.tasker/projects/tasker-old-6cb8f29b/', reason: 'Вторая папка проекта после переименования в другой ветке' }
+  ],
+  activity: [
+    { at: '2026-11-03T09:41:00Z', who: 'a-claude', text: 'перевёл TSK-131 в «В работе»' },
+    { at: '2026-11-03T09:40:00Z', who: 'u-maria', text: 'правит TSK-131' },
+    { at: '2026-11-03T08:30:00Z', who: 'u-ivan', text: 'перевёл TSK-118 в «Ревью»' },
+    { at: '2026-11-03T07:00:00Z', who: 'a-claude', text: 'создал TSK-133 «Автодополнение: значения полей-перечислений»' },
+    { at: '2026-11-02T18:00:00Z', who: 'u-artem', text: 'связал TSK-121 блокирует TSK-140' }
+  ]
+};
+
+const HOST='tasker.example.com';
+const BASE='https:'+'//'+HOST;
+const KEYS=['statuses','statusSets','taskTypes','series','enums','fields','linkTypes','boards','tasks','links','locks','problems'];
+const ACT={},CHG={},INP={};
+const newFilter=()=>({types:[],statuses:[],series:[],conds:[],sort:[{key:'series',dir:1}],flat:false,page:1,open:false});
+const S={mode:'server',in:false,proj:'p-tasker',stash:{},tabs:[],active:'tasks',side:'tasks',sideView:'tree',explQ:'',panel:'console',panelOpen:true,
+filter:newFilter(),newCond:{fieldId:'',op:'equal',value:''},collapsed:{},drafts:{},vers:{},myLocks:{},journal:[],con:[],hist:[],hi:0,sync:Date.now(),daemon:'ok',
+ignored:{},dangling:2,view:{},bflt:{},bshow:{},bdr:{},nextId:100,once:{k4:true},modal:null,pal:null,regTab:'login',tokenShown:null,
+ws:['~/Projects/Tasker','~/Projects/Demo'],wsActive:0,newBc:{fieldId:'',op:'equal',value:''},bnc:{},lc:{},sec:{},linkSearch:{},tcSel:{}};
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const byId=(a,id)=>a.find(x=>x.id===id);
+const T=id=>byId(DB.tasks,id),ST=id=>byId(DB.statuses,id),TY=id=>byId(DB.taskTypes,id),SS=id=>byId(DB.statusSets,id),SR=id=>byId(DB.series,id),FL=id=>byId(DB.fields,id),EN=id=>byId(DB.enums,id),LT=id=>byId(DB.linkTypes,id),BD=id=>byId(DB.boards,id),U=id=>byId(DB.users,id);
+const OK=m=>({ok:true,msg:m}),ERR=m=>({ok:false,msg:m});
+const now=()=>new Date().toISOString();
+const clock=()=>new Date().toTimeString().slice(0,8);
+const dt=s=>s?String(s).slice(0,16).replace('T',' '):'—';
+const pfx=id=>{const s=SR(id);return s?s.prefix:'?'};
+const hash32=s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h};
+const hex=(s,n)=>{let o='',h=hash32(s);while(o.length<n){h=(Math.imul(h,1103515245)+12345)>>>0;o+=h.toString(16).padStart(8,'0')}return o.slice(0,n)};
+const sid=t=>hex(t.id,8);
+const uuid=id=>{const h=hex(id,32);return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20,32)};
+const TR={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+const slug=(s,n=4)=>String(s).toLowerCase().split('').map(c=>TR[c]!==undefined?TR[c]:c).join('').replace(/[^a-z0-9]+/g,' ').trim().split(' ').slice(0,n).join('-')||'task';
+const fileOf=t=>'tasks/'+slug(t.title)+'-'+sid(t)+'.yaml';
+const refStr=s=>pfx(s.seriesId)+'-'+s.number;
+const refOf=t=>t.series.length?refStr(t.series[0]):sid(t);
+const dupOf=(t,s)=>DB.tasks.filter(o=>o!==t&&o.series.some(x=>x.seriesId===s.seriesId&&x.number===s.number));
+const inConflict=t=>t.series.some(s=>dupOf(t,s).length);
+const ambig=t=>t.series.length&&dupOf(t,t.series[0]).length>0;
+const href=t=>'#/task/'+encodeURIComponent(ambig(t)?t.id:refOf(t));
+const rl=t=>`<a class="ref" href="${href(t)}">${esc(refOf(t))}</a>`;
+const verOf=id=>S.vers[id]||1;
+const touch=t=>{t.updatedAt=now();S.vers[t.id]=verOf(t.id)+1;S.sync=Date.now()};
+const isDone=t=>t.statusId==='s-done';
+function findRef(q){q=String(q||'').trim();const m=q.match(/^([A-Za-z0-9]+)-(\d+)$/);if(m){const r=DB.tasks.filter(t=>t.series.some(s=>pfx(s.seriesId)===m[1]&&s.number==m[2]));if(r.length)return r}
+return DB.tasks.filter(t=>t.id===q||sid(t)===q||(q.length>=4&&sid(t).startsWith(q)))}
+const statusesOf=(t,typeId)=>{const ty=TY(typeId||t.typeId);const ss=ty&&SS(ty.statusSetId);return ss?ss.statusIds.map(ST).filter(Boolean):[]};
+const hierTypes=()=>DB.linkTypes.filter(l=>l.hierarchical).map(l=>l.id);
+const parentsOf=t=>DB.links.filter(l=>hierTypes().includes(l.typeId)&&l.to===t.id).map(l=>T(l.from)).filter(Boolean);
+const childrenOf=t=>DB.links.filter(l=>hierTypes().includes(l.typeId)&&l.from===t.id).map(l=>T(l.to)).filter(Boolean);
+const lockOf=(e,id)=>DB.locks.find(l=>l.entity===e&&l.id===id&&!l.mine);
+const sdot=st=>`<span class="dot" style="background:${st?st.color:'#555'}"></span>`;
+const allDefs=()=>{const m=new Map();DB.fields.forEach(f=>m.set(f.id,f));DB.tasks.forEach(t=>t.custom.forEach(c=>m.set(c.fieldId,{id:c.fieldId,name:c.name,type:c.type,multiple:c.multiple,custom:true})));return [...m.values()]};
+const defById=id=>allDefs().find(d=>d.id===id);
+const defByName=n=>allDefs().find(d=>d.name.toLowerCase()===String(n).trim().toLowerCase());
+function taskFields(t,typeId){const ty=TY(typeId||t.typeId);const out=[];(ty?ty.fields:[]).forEach(x=>{const d=FL(x.fieldId);if(d)out.push({def:d,kind:'type',required:x.required})});
+(t.extra||[]).forEach(id=>{const d=FL(id);if(d&&!out.some(o=>o.def.id===id))out.push({def:d,kind:'extra',required:false})});
+t.custom.forEach(c=>out.push({def:{id:c.fieldId,name:c.name,type:c.type,multiple:c.multiple},kind:'custom',required:c.required}));return out}
+const isSet=v=>v!==undefined&&v!==null&&v!==''&&!(Array.isArray(v)&&!v.length);
+const enumName=(enumId,vid)=>{const e=EN(enumId);const v=e&&e.values.find(x=>x.id===vid);return v?v.name:vid};
+function fmtVal(d,v){if(!isSet(v))return '—';const f=x=>d.type==='enum'?enumName(d.enumId,x):d.type==='bool'?(x?'да':'нет'):x;return Array.isArray(v)?v.map(f).join(', '):String(f(v))}
+const OPS={equal:'=',notEqual:'!=',gt:'>',gte:'>=',lt:'<',lte:'<=',set:'set',unset:'unset',attached:'attached',detached:'detached'};
+const OPSYM={equal:'=',notEqual:'≠',gt:'>',gte:'≥',lt:'<',lte:'≤',set:'задано',unset:'не задано',attached:'привязано',detached:'не привязано'};
+const NUMOPS=['gt','gte','lt','lte'];
+const noVal=o=>['set','unset','attached','detached'].includes(o);
+function condText(c){const d=defById(c.fieldId);const n=d?d.name:c.fieldId;if(noVal(c.operator))return n+' '+OPSYM[c.operator];return n+' '+OPSYM[c.operator]+' '+(d?fmtVal(d,d.type==='int'||d.type==='float'?+c.value:d.type==='bool'?c.value==='true'||c.value===true:c.value):c.value)}
+function condOk(t,c){const f=taskFields(t).find(x=>x.def.id===c.fieldId);if(c.operator==='attached')return !!f;if(c.operator==='detached')return !f;
+const v=f?t.fields[c.fieldId]:undefined,has=isSet(v);if(c.operator==='set')return has;if(c.operator==='unset')return !has;
+const arr=has?(Array.isArray(v)?v:[v]):[];const d=f?f.def:defById(c.fieldId)||{type:'string'};
+const num=d.type==='int'||d.type==='float',cv=c.value;
+const cmp=a=>num?(+a)-(+cv):d.type==='date'||d.type==='string'?String(a).localeCompare(String(cv)):String(a)===String(cv)?0:1;
+const o=c.operator;
+if(o==='equal')return arr.some(a=>cmp(a)===0);if(o==='notEqual')return !arr.some(a=>cmp(a)===0);
+if(o==='gt')return arr.some(a=>cmp(a)>0);if(o==='gte')return arr.some(a=>cmp(a)>=0);if(o==='lt')return arr.some(a=>cmp(a)<0);return arr.some(a=>cmp(a)<=0)}
+function parseVal(d,str){str=String(str).trim();const one=s=>{s=s.trim();
+if(d.type==='int'){if(!/^-?\d+$/.test(s))throw Error('«'+d.name+'»: ожидается целое число');return +s}
+if(d.type==='float'){if(isNaN(+s)||s==='')throw Error('«'+d.name+'»: ожидается число');return +s}
+if(d.type==='bool'){if(/^(true|да|1)$/i.test(s))return true;if(/^(false|нет|0)$/i.test(s))return false;throw Error('«'+d.name+'»: ожидается true/false')}
+if(d.type==='date'){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))throw Error('«'+d.name+'»: ожидается дата ГГГГ-ММ-ДД');return s}
+if(d.type==='enum'){const e=EN(d.enumId);const v=e&&e.values.find(x=>x.name.toLowerCase()===s.toLowerCase()||x.id===s);if(!v)throw Error('«'+d.name+'»: значение «'+s+'» не входит в перечисление «'+(e?e.name:'?')+'»');return v.id}
+return s};
+return d.multiple?str.split(',').map(one):one(str)}
+function sortVal(t,key){if(key==='status')return DB.statuses.findIndex(s=>s.id===t.statusId);if(key==='type'){const y=TY(t.typeId);return y?y.name.toLowerCase():null}
+if(key==='title')return t.title.toLowerCase();if(key==='created')return t.createdAt;if(key==='updated')return t.updatedAt;
+if(key==='series')return t.series.length?pfx(t.series[0].seriesId).padEnd(20)+String(t.series[0].number).padStart(8,'0'):null;
+const d=defByName(key);if(!d)return null;let v=t.fields[d.id];if(Array.isArray(v))v=v[0];if(!isSet(v))return null;
+if(d.type==='enum'){const e=EN(d.enumId);return e.values.findIndex(x=>x.id===v)}return v}
+const cmpTasks=sort=>(a,b)=>{for(const s of sort){const x=sortVal(a,s.key),y=sortVal(b,s.key);const nx=x==null||x==='',ny=y==null||y==='';if(nx&&ny)continue;if(nx)return 1;if(ny)return -1;if(x<y)return -s.dir;if(x>y)return s.dir}return 0};
+function matches(t,F){if(F.types.length&&!F.types.includes(t.typeId))return false;if(F.statuses.length&&!F.statuses.includes(t.statusId))return false;
+if(F.series.length&&!t.series.some(s=>F.series.includes(s.seriesId)))return false;return F.conds.every(c=>condOk(t,c))}
+function f2q(F){const p=new URLSearchParams();F.types.forEach(x=>p.append('type',x));F.statuses.forEach(x=>p.append('status',x));F.series.forEach(x=>p.append('series',x));
+F.conds.forEach(c=>p.append('c',[c.fieldId,c.operator,c.value==null?'':c.value].join('~')));p.set('sort',F.sort.map(s=>(s.dir<0?'-':'')+s.key).join(','));if(F.flat)p.set('flat','1');if(F.page>1)p.set('page',F.page);
+let q=p.toString();return q?'?'+q:''}
+function q2f(p){const F=newFilter();F.types=p.getAll('type');F.statuses=p.getAll('status');F.series=p.getAll('series');
+p.getAll('c').forEach(x=>{const a=x.split('~');F.conds.push({fieldId:a[0],operator:a[1],value:a[2]})});
+if(p.has('sort')){const s=p.get('sort');F.sort=s?s.split(',').map(x=>x[0]==='-'?{key:x.slice(1),dir:-1}:{key:x,dir:1}):[]}
+F.flat=p.get('flat')==='1';F.page=+p.get('page')||1;F.open=S.filter.open;return F}
+function cliOfFilter(F,withFlat=true){const a=['task list'];F.statuses.forEach(x=>a.push('--status "'+ST(x).name+'"'));F.types.forEach(x=>a.push('--type "'+TY(x).name+'"'));F.series.forEach(x=>a.push('--series '+pfx(x)));
+F.conds.forEach(c=>{const d=defById(c.fieldId);if(!d)return;a.push("--field '"+d.name+(noVal(c.operator)?' '+c.operator:OPS[c.operator]+(d.type==='enum'?enumName(d.enumId,c.value):c.value))+"'")});
+if(F.sort.length&&!(F.sort.length===1&&F.sort[0].key==='series'&&F.sort[0].dir===1))a.push('--sort '+F.sort.map(s=>(s.dir<0?'-':'')+s.key).join(','));if(F.flat&&withFlat)a.push('--flat');return a.join(' ')}
+
+function toast(m,k){const e=document.createElement('div');e.className='toast '+(k||'');e.textContent=m;$('#toasts').appendChild(e);setTimeout(()=>e.remove(),4300)}
+function cli(cmd,via){S.journal.push({t:clock(),via:via||'gui',cmd});if(S.journal.length>300)S.journal.shift();S.sync=Date.now();if(S.panel==='log'&&S.panelOpen)renderPanel()}
+function modal(title,body,btns,opts){S.modal={title,body,btns:btns||[],opts:opts||{}};renderModal()}
+function closeModal(){S.modal=null;renderModal()}
+function renderModal(){const m=S.modal,o=$('#modal');if(!m){o.innerHTML='';o.className='';return}o.className='on';
+o.innerHTML=`<div class="dlg ${m.opts.wide?'wide':''}"><div class="dh"><span>${esc(m.title)}</span><button data-a="mclose">×</button></div><div class="db">${m.body}</div><div class="df">${m.btns.map((b,i)=>`<button class="btn ${b.cls||''}" data-a="mbtn" data-p="${i}">${esc(b.label)}</button>`).join('')}</div></div>`;
+const f=o.querySelector('[autofocus]')||o.querySelector('input:not([type=checkbox]):not([type=radio]),select,textarea');if(f)f.focus()}
+const mv=n=>{const e=document.querySelector('#modal [name="'+n+'"]');return e?(e.type==='checkbox'?e.checked:e.value):''};
+const mr=n=>{const e=document.querySelector('#modal [name="'+n+'"]:checked');return e?e.value:''};
+function confirmBox(title,msg,label,fn,danger){modal(title,'<div>'+msg+'</div>',[{label:'Отмена'},{label,cls:danger?'dng':'pri',fn}])}
+function info(title,msg){modal(title,'<div>'+msg+'</div>',[{label:'Закрыть'}])}
+
+function jsonClone(x){return JSON.parse(JSON.stringify(x))}
+function lockFail(t){const l=lockOf('task',t.id);return l?ERR('Задача '+refOf(t)+' сейчас правится: '+l.holder+' (блокировка ещё '+l.expiresInSec+' с)'):null}
+function setStatus(t,stid,via){const lf=lockFail(t);if(lf)return lf;const st=ST(stid);if(!st)return ERR('Статус не найден');
+if(!statusesOf(t).some(s=>s.id===stid)){const ty=TY(t.typeId);return ERR('Статус «'+st.name+'» не входит в набор «'+SS(ty.statusSetId).name+'» типа «'+ty.name+'»')}
+if(t.statusId===stid)return OK('Без изменений');t.statusId=stid;touch(t);cli('task update '+refOf(t)+' --status "'+st.name+'"',via);return OK(refOf(t)+' → «'+st.name+'»')}
+function reqMissing(t,typeId,fields){return taskFields(Object.assign({},t,{fields}),typeId).filter(f=>f.required&&!isSet(fields[f.def.id]))}
+function setFieldValue(t,fid,v,via){const lf=lockFail(t);if(lf)return lf;const f=taskFields(t).find(x=>x.def.id===fid);if(!f)return ERR('Поле не привязано к задаче');
+if(f.required&&!isSet(v))return ERR('Обязательное поле: '+f.def.name);if(isSet(v))t.fields[fid]=v;else delete t.fields[fid];touch(t);
+cli("task update "+refOf(t)+" --field '"+f.def.name+"="+(isSet(v)?fmtVal(f.def,v):'')+"'",via);return OK(refOf(t)+': '+f.def.name+' = '+fmtVal(f.def,v))}
+function nextNum(seriesId){let m=0;DB.tasks.forEach(t=>t.series.forEach(s=>{if(s.seriesId===seriesId&&s.number>m)m=s.number}));return m+1}
+function createTask(o,via){const title=(o.title||'').trim();if(!title)return ERR('Название не может быть пустым');const ty=TY(o.typeId);if(!ty)return ERR('Тип не найден');
+const fields=Object.assign({},o.fields||{});const miss=reqMissing({custom:[],extra:[]},ty.id,fields);if(miss.length)return ERR('Обязательное поле: '+miss.map(m=>m.def.name).join(', '));
+let par=null;if(o.parent){const r=findRef(o.parent);if(!r.length)return ERR('Родитель «'+o.parent+'» не найден');par=r[0]}
+const t={id:'k'+(++S.nextId),title,typeId:ty.id,statusId:SS(ty.statusSetId).statusIds[0],series:[],fields,custom:[],extra:[],createdAt:now(),updatedAt:now(),description:o.description||''};
+(o.seriesIds||[]).forEach(id=>t.series.push({seriesId:id,number:nextNum(id)}));DB.tasks.push(t);S.vers[t.id]=1;
+const pl=DB.linkTypes.find(l=>l.hierarchical);if(par&&pl)DB.links.push({typeId:pl.id,from:par.id,to:t.id});
+cli('task create "'+title+'" --type "'+ty.name+'"'+(t.series.length?' --series '+t.series.map(s=>pfx(s.seriesId)).join(','):'')+(par?' --parent '+refOf(par):''),via);return {ok:true,task:t,msg:'Создана '+refOf(t)}}
+function deleteTask(t,via){const lf=lockFail(t);if(lf)return lf;const r=refOf(t);DB.tasks.splice(DB.tasks.indexOf(t),1);DB.links=DB.links.filter(l=>l.from!==t.id&&l.to!==t.id);delete S.drafts[t.id];cli('task delete '+r,via);return OK('Удалена '+r)}
+function lkSide(lt){return lt.name.toLowerCase().split('/')[0]}
+function findCycle(lt,a,b){if(lt.allowCycles)return null;const adj={};DB.links.filter(l=>l.typeId===lt.id).forEach(l=>{(adj[l.from]=adj[l.from]||[]).push(l.to)});
+const prev={[b.id]:null},q=[b.id];while(q.length){const x=q.shift();if(x===a.id){const p=[];let c=x;while(c){p.unshift(c);c=prev[c]}return [a.id,...p]}(adj[x]||[]).forEach(y=>{if(!(y in prev)){prev[y]=x;q.push(y)}})}return null}
+function linkTasks(a,ltId,b,via){const lt=LT(ltId);if(!lt)return ERR('Тип связи не найден');if(a.id===b.id)return ERR('Нельзя связать задачу саму с собой');
+const lf=lockFail(a)||lockFail(b);if(lf)return lf;
+if(DB.links.some(l=>l.typeId===ltId&&((l.from===a.id&&l.to===b.id)||(!lt.inward&&l.from===b.id&&l.to===a.id))))return ERR('Такая связь уже есть');
+const cyc=findCycle(lt,a,b);if(cyc)return ERR('Цикл: '+cyc.map(id=>refOf(T(id))).join(' → '));
+DB.links.push({typeId:ltId,from:a.id,to:b.id});touch(a);touch(b);cli('task link '+refOf(a)+' '+lkSide(lt)+' '+refOf(b),via);return OK(refOf(a)+' '+lt.outward+' '+refOf(b))}
+function unlinkTasks(l,via){const i=DB.links.indexOf(l);if(i<0)return ERR('Связи нет');const a=T(l.from),b=T(l.to);DB.links.splice(i,1);touch(a);touch(b);cli('task unlink '+refOf(a)+' '+lkSide(LT(l.typeId))+' '+refOf(b),via);return OK('Связь удалена')}
+function addToSeries(t,seriesId,num,via){if(t.series.some(s=>s.seriesId===seriesId))return ERR('Задача уже в серии '+pfx(seriesId));const n=num||nextNum(seriesId);
+if(DB.tasks.some(o=>o!==t&&o.series.some(s=>s.seriesId===seriesId&&s.number===n)))return ERR(pfx(seriesId)+'-'+n+' уже занят другой задачей');
+t.series.push({seriesId,number:n});touch(t);cli('series add '+pfx(seriesId)+' '+refOf(t)+(num?' --number '+n:''),via);return OK(refOf(t)+' → '+pfx(seriesId)+'-'+n)}
+function removeFromSeries(t,seriesId,via){const i=t.series.findIndex(s=>s.seriesId===seriesId);if(i<0)return ERR('Задача не в этой серии');const r=refStr(t.series[i]);t.series.splice(i,1);touch(t);cli('series remove '+r,via);return OK(r+' убрана из серии')}
+function renumber(t,seriesId,num,via){const s=t.series.find(x=>x.seriesId===seriesId);if(!s)return ERR('Задача не в этой серии');const n=num||nextNum(seriesId);
+if(!Number.isInteger(n)||n<1)return ERR('Номер должен быть положительным целым');if(DB.tasks.some(o=>o!==t&&o.series.some(x=>x.seriesId===seriesId&&x.number===n)))return ERR(pfx(seriesId)+'-'+n+' уже занят');
+const old=refStr(s);s.number=n;touch(t);cli('series renumber '+old+(num?' '+n:' --next'),via);return OK(old+' → '+refStr(s))}
+function conflictGroups(){const out=[];DB.series.forEach(sr=>{const m={};DB.tasks.forEach(t=>t.series.forEach(s=>{if(s.seriesId===sr.id)(m[s.number]=m[s.number]||[]).push(t)}));Object.keys(m).forEach(n=>{if(m[n].length>1)out.push({seriesId:sr.id,number:+n,tasks:m[n]})})});return out}
+function resolveConflicts(via){const g=conflictGroups();const moved=[];g.forEach(c=>{const ts=c.tasks.slice().sort((a,b)=>a.createdAt<b.createdAt?-1:1);ts.slice(1).forEach(t=>{const s=t.series.find(x=>x.seriesId===c.seriesId&&x.number===c.number);const old=refStr(s);s.number=nextNum(c.seriesId);touch(t);moved.push(old+' → '+refStr(s)+' ('+t.title.slice(0,30)+')')})});
+cli('cleanup --resolve-conflicts',via);return moved}
+function cleanLinks(via){const n=S.dangling;S.dangling=0;cli('cleanup',via);return n}
+function switchProject(id){if(id===S.proj)return;S.stash[S.proj]=Object.fromEntries(KEYS.map(k=>[k,DB[k]]));const n=S.stash[id]||Object.fromEntries(KEYS.map(k=>[k,[]]));KEYS.forEach(k=>DB[k]=n[k]);S.proj=id;S.tabs=[];S.drafts={};S.bdr={};S.myLocks={};S.filter=newFilter();go('#/tasks')}
+const projName=()=>byId(DB.projects,S.proj).name;
+const projDir=()=>'.tasker/projects/'+slug(projName(),1)+'-6cb8f29b';
+
+function go(h){if(location.hash===h)onRoute();else location.hash=h}
+function parseHash(){const h=location.hash.replace(/^#\/?/,'');const i=h.indexOf('?');const p=i<0?h:h.slice(0,i);return {parts:p.split('/').filter(Boolean).map(decodeURIComponent),q:new URLSearchParams(i<0?'':h.slice(i+1)),hasQ:i>=0}}
+function resolve(){const {parts}=parseHash();const [a,b,c]=parts;if(!a||a==='tasks')return {key:'tasks'};
+if(a==='task'){const r=findRef(b||'');return r.length?{key:'task/'+r[0].id}:{key:'missing/'+(b||'')}}
+if(a==='boards'){if(!b)return {key:'board/'+(DB.boards[0]?DB.boards[0].id:'none')};return {key:(c==='edit'?'bedit/':'board/')+b}}
+if(a==='schema')return {key:'schema/'+(b||'statuses')};
+if(['series','problems','agents','profile','users','welcome'].includes(a))return {key:a};return {key:'tasks'}}
+function routeOf(key){const [a,b]=key.split('/');
+if(a==='tasks')return '#/tasks'+f2q(S.filter);
+if(a==='task'){const t=T(b);return t?href(t):'#/tasks'}
+if(a==='board')return '#/boards/'+b;if(a==='bedit')return '#/boards/'+b+'/edit';if(a==='schema')return '#/schema/'+b;return '#/'+key}
+function onRoute(){const r=resolve();const p=parseHash();
+if(r.key==='tasks'){if(p.hasQ)S.filter=q2f(p.q);else history.replaceState(null,'','#/tasks'+f2q(S.filter))}
+if(!S.tabs.includes(r.key))S.tabs.push(r.key);S.active=r.key;render()}
+function closeTab(key,force){if(!force&&isDirty(key)){modal('Несохранённые изменения','<div>В «'+esc(tabTitle(key))+'» есть несохранённые правки.</div>',
+[{label:'Отмена'},{label:'Не сохранять',cls:'dng',fn:()=>{discard(key);closeTab(key,true)}},{label:'Сохранить',cls:'pri',fn:()=>{saveKey(key);if(!isDirty(key))closeTab(key,true)}}]);return}
+const i=S.tabs.indexOf(key);if(i<0)return;S.tabs.splice(i,1);if(S.active===key){const n=S.tabs[Math.min(i,S.tabs.length-1)];if(n)go(routeOf(n));else{S.active='';render()}}else render()}
+const dirty=t=>{const d=S.drafts[t.id];const f=x=>JSON.stringify(Object.entries(x).sort());return !!d&&(d.title!==t.title||d.description!==t.description||d.typeId!==t.typeId||d.statusId!==t.statusId||f(d.fields)!==f(t.fields))};
+const bdirty=id=>{const d=S.bdr[id],b=BD(id);return !!d&&!!b&&JSON.stringify(d)!==JSON.stringify(b)};
+function isDirty(key){const [a,b]=key.split('/');if(a==='task'){const t=T(b);return !!t&&dirty(t)}if(a==='bedit')return bdirty(b);return false}
+function discard(key){const [a,b]=key.split('/');if(a==='task'){delete S.drafts[b];delete S.myLocks[b]}if(a==='bedit'){delete S.bdr[b];delete S.myLocks['b:'+b]}}
+function saveKey(key){const [a,b]=key.split('/');if(a==='task'&&T(b))saveTask(T(b));else if(a==='bedit')saveBoard(b)}
+function tabTitle(key){const [a,b]=key.split('/');
+if(a==='tasks')return 'tasks';if(a==='task'){const t=T(b);return t?refOf(t)+'.yaml':b}
+if(a==='board'){const x=BD(b);return x?x.name+'.board':'доска'}if(a==='bedit'){const x=BD(b);return x?x.name+' ✎':'доска'}
+if(a==='schema')return {statuses:'statuses.yaml',sets:'status-sets.yaml',types:'task-types.yaml',links:'link-types.yaml',fields:'fields.yaml',enums:'enums.yaml',members:'members.yaml',project:'project.yaml'}[b]||b;
+return {series:'series.yaml',problems:'problems',agents:'agents',profile:'profile',users:'users',welcome:'welcome'}[a]||key}
+
+function render(){renderTitle();renderAct();renderSide();renderTabs();renderMain();renderPanel();renderStatus()}
+function problemItems(){const out=[];
+DB.problems.forEach((p,i)=>{if(p.kind==='unreadable'){const cm=/конфликт/i.test(p.reason);out.push({id:'u'+i,sev:'error',file:p.path,line:1,msg:p.reason,fixes:cm?[['Открыть файл','rawopen',i],['Принять нашу версию','ours',i],['Принять их версию','theirs',i]]:[['Открыть файл','rawopen',i],['Игнорировать файл','ign','u'+i]]})}
+if(p.kind==='secondFolder')out.push({id:'s'+i,sev:'warn',file:p.path,line:0,msg:p.reason,fixes:[['Объединить с основной папкой','merge2',i],['Показать в .tasker','showfiles',i]]})});
+conflictGroups().forEach(g=>out.push({id:'c'+g.number+g.seriesId,sev:'error',file:'series/'+pfx(g.seriesId),line:g.number,msg:'Конфликт номеров: '+pfx(g.seriesId)+'-'+g.number+' выдан '+g.tasks.length+' задачам ('+g.tasks.map(refOf2).join(', ')+')',fixes:[['Разрешить конфликты номеров','resolve',0],['Открыть задачи','opentasks',g.tasks.map(t=>t.id).join(',')]],tasks:g.tasks}));
+if(S.dangling)out.push({id:'d',sev:'warn',file:'tasks/…',line:0,msg:S.dangling+' связи ведут на удалённые или нечитаемые задачи (после слияния веток)',fixes:[['Очистить недействительные ссылки','clean',0]]});
+return out.filter(p=>!S.ignored[p.id])}
+const refOf2=t=>refOf(t)+' «'+t.title.slice(0,18)+'…»';
+const problemCount=()=>problemItems().length;
+
+function renderTitle(){const p=DB.projects;const ws=$('#wsrow');
+$('#title').innerHTML=`<span class="logo">▣ tasker</span><span class="dim">/</span>
+<select data-c="proj" title="Проект">${p.map(x=>`<option value="${x.id}" ${x.id===S.proj?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__new">＋ Новый проект…</option></select>
+<span class="gap"></span><button class="qs" data-a="palette"><span>Перейти к задаче, TSK-133 или команде…</span><span>Ctrl+K</span></button><span class="gap"></span>
+${S.mode==='server'?`<button data-a="usermenu">${esc(U(DB.me).name)} ▾</button>`:`<span class="dim">локально</span>`}
+<span class="mock"><span>05 · IDE</span><span class="seg"><button class="${S.mode==='server'?'on':''}" data-a="mode" data-p="server">Server</button><button class="${S.mode==='desktop'?'on':''}" data-a="mode" data-p="desktop">Desktop</button></span></span>`;
+ws.className=S.mode==='desktop'?'on':'';ws.innerHTML=S.mode==='desktop'?S.ws.map((w,i)=>`<div class="w ${i===S.wsActive?'on':''}" data-a="ws" data-p="${i}">${esc(w)}</div>`).join('')+'<div class="w" data-a="openfolder">＋ Открыть папку…</div>':''}
+const ACTS=[['tasks','☰','Задачи'],['boards','▥','Доски'],['series','#','Серии'],['schema','◈','Схема'],['problems','⚠︎','Проблемы'],['agents','☻','Агенты'],['profile','⚙︎','Профиль']];
+function renderAct(){$('#act').innerHTML=ACTS.map(a=>`<button class="ab ${S.side===a[0]&&!S.sideOff?'on':''}" data-a="act" data-p="${a[0]}" title="${a[2]}">${a[1]}<small>${a[2]}</small>${a[0]==='problems'&&problemCount()?`<span class="bdg">${problemCount()}</span>`:''}</button>`).join('');
+$('#side').className=S.sideOff?'off':'';$('#body').style.gridTemplateColumns=S.sideOff?'48px 0 1fr':'48px 270px 1fr'}
+ACT.act=k=>{if(S.side===k&&!S.sideOff&&k!=='problems'){S.sideOff=true;render();return}S.sideOff=false;S.side=k;
+const m={tasks:'#/tasks'+f2q(S.filter),boards:'#/boards/'+(DB.boards[0]?DB.boards[0].id:'none'),series:'#/series',schema:'#/schema/statuses',problems:'#/problems',agents:'#/agents',profile:'#/profile'};go(m[k])}
+
+function stNode(t,d,car,pre,suf){const st=ST(t.statusId);const cf=inConflict(t);const lk=lockOf('task',t.id);
+return `<div class="tn ${S.active==='task/'+t.id?'on':''}" style="padding-left:${8+d*14}px" data-a="open" data-p="task/${t.id}">${car||'<span class="car"></span>'}${sdot(st)}<span class="ref">${esc(refOf(t))}</span>${cf?'<span class="warn" title="Конфликт номера">⚠</span>':''}${lk?'<span class="warn" title="правит '+esc(lk.holder)+'">◉</span>':''}<span class="tx dim">${pre||''}${esc(t.title)}${suf||''}</span></div>`}
+function sideTasks(){const q=S.explQ.trim().toLowerCase();let h=`<div class="sctl"><input placeholder="фильтр дерева…" value="${esc(S.explQ)}" data-i="explq"><span class="seg"><button class="${S.sideView==='tree'?'on':''}" data-a="sview" data-p="tree">Задачи</button><button class="${S.sideView==='files'?'on':''}" data-a="sview" data-p="files">.tasker</button></span></div><div class="sb">`;
+if(!DB.tasks.length&&S.sideView==='tree')return h+'<div class="empty">Пока нет задач.<br><a href="#/welcome">Начать настройку проекта</a></div></div>';
+if(S.sideView==='files'){h+=filesTree()}
+else if(q){DB.tasks.filter(t=>(refOf(t)+' '+t.title).toLowerCase().includes(q)).forEach(t=>h+=stNode(t,0))}
+else{const seen=new Set();const cmp=cmpTasks([{key:'series',dir:1}]);
+const walk=(t,d,path)=>{const kids=childrenOf(t).sort(cmp);const rep=seen.has(t.id);seen.add(t.id);const col=S.collapsed['e:'+t.id];
+const car=kids.length?`<span class="car" data-a="ecol" data-p="${t.id}">${col?'▸':'▾'}</span>`:'<span class="car"></span>';
+h+=stNode(t,d,car,kids.length?'<span class="fold">▤</span> ':'',rep?' <span class="dim">(+)</span>':'');
+if(!rep&&!col)kids.forEach(k=>{if(!path.includes(k.id))walk(k,d+1,path.concat(t.id))})};
+h+=`<div class="tn dim"><span class="car">▾</span><span class="fold">▤</span> ${esc(projDir())}/tasks</div>`;
+DB.tasks.filter(t=>!parentsOf(t).length).sort(cmp).forEach(t=>walk(t,1,[]))}
+return h+'</div>'}
+function filesTree(){const d=projDir();const fd=(n,dd)=>`<div class="tn" style="padding-left:${8+dd*14}px"><span class="car">▾</span><span class="fold">▤</span><span>${esc(n)}</span></div>`;
+const fl=(n,dd,act,p,bad)=>`<div class="tn ${bad?'bad':''}" style="padding-left:${8+dd*14}px" data-a="${act}" data-p="${p}"><span class="car"></span><span class="dim">≡</span><span class="tx ${bad?'':'dim'}">${esc(n)}</span></div>`;
+let h=fd('.tasker',0)+fd('projects/'+d.split('/')[2],1);const sc=[['project.yaml','project'],['statuses.yaml','statuses'],['status-sets.yaml','sets'],['task-types.yaml','types'],['link-types.yaml','links'],['fields.yaml','fields'],['enums.yaml','enums']];
+sc.forEach(x=>h+=fl(x[0],3,'open','schema/'+x[1]));h+=fl('series.yaml',3,'open','series');
+h+=fd('boards',2);DB.boards.forEach(b=>h+=fl(slug(b.name,2)+'-'+hex(b.id,8)+'.yaml',3,'open','board/'+b.id));
+DB.problems.filter(p=>p.kind==='unreadable'&&/boards/.test(p.path)).forEach(()=>h+=fl('release-5f0e11aa.yaml',3,'open','problems',true));
+h+=fd('tasks',2);const names=DB.tasks.map(t=>({t,n:fileOf(t).slice(6)})).sort((a,b)=>a.n<b.n?-1:1);
+names.forEach(x=>h+=`<div class="tn ${S.active==='task/'+x.t.id?'on':''}" style="padding-left:${8+3*14}px" data-a="openyaml" data-p="${x.t.id}"><span class="car"></span><span class="dim">≡</span><span class="tx ${inConflict(x.t)?'warn':'dim'}">${esc(x.n)}</span></div>`);
+DB.problems.filter(p=>p.kind==='unreadable'&&/tasks/.test(p.path)).forEach(()=>h+=fl('fix-login-11ab5ea4.yaml',3,'open','problems',true));
+DB.problems.filter(p=>p.kind==='secondFolder').forEach(()=>h+=`<div class="tn bad" style="padding-left:22px" data-a="open" data-p="problems"><span class="car">▸</span><span class="fold">▤</span><span class="tx">projects/tasker-old-6cb8f29b</span></div>`);return h}
+function sideBoards(){let h=`<div class="sctl"><button class="btn pri" data-a="newboard">＋ Новая доска</button></div><div class="sb"><div class="tn dim"><span class="car">▾</span><span class="fold">▤</span> ${esc(projDir())}/boards</div>`;
+DB.boards.forEach(b=>{const lk=lockOf('board',b.id);h+=`<div class="tn ${S.active==='board/'+b.id||S.active==='bedit/'+b.id?'on':''}" style="padding-left:22px" data-a="open" data-p="board/${b.id}"><span class="car"></span><span class="dim">▥</span><span class="tx">${esc(b.name)}</span>${lk?`<span class="warn" title="правит ${esc(lk.holder)}">◉ ${esc(lk.holder)}</span>`:''}</div>`});
+if(!DB.boards.length)h+='<div class="empty">Досок нет</div>';return h+'</div>'}
+function sideSeries(){let h=`<div class="sctl"><button class="btn pri" data-a="newseries">＋ Серия</button></div><div class="sb">`;
+DB.series.forEach(s=>{const n=DB.tasks.filter(t=>t.series.some(x=>x.seriesId===s.id)).length;h+=`<div class="tn" data-a="open" data-p="series"><span class="car"></span><span class="ref">${esc(s.prefix)}</span><span class="tx dim">${esc(s.name)} · ${n}</span></div>`});
+const g=conflictGroups();if(g.length)h+=`<div class="tn warn" data-a="open" data-p="series">⚠ конфликтов номеров: ${g.length}</div>`;return h+'</div>'}
+const SCH=[['statuses','statuses.yaml','Статусы'],['sets','status-sets.yaml','Наборы статусов'],['types','task-types.yaml','Типы задач'],['links','link-types.yaml','Типы связей'],['fields','fields.yaml','Поля'],['enums','enums.yaml','Перечисления'],['members','members.yaml','Участники'],['project','project.yaml','Проект']];
+function sideSchema(){let h='<div class="sb">';SCH.filter(x=>x[0]!=='members'||S.mode==='server').forEach(x=>h+=`<div class="tn ${S.active==='schema/'+x[0]?'on':''}" data-a="open" data-p="schema/${x[0]}"><span class="car"></span><span class="dim">≡</span><span>${x[1]}</span><span class="dim tx"> ${x[2]}</span></div>`);return h+'</div>'}
+function sideProblems(){const it=problemItems();let h='<div class="sb">';it.forEach(p=>h+=`<div class="tn" data-a="open" data-p="problems"><span class="${p.sev==='error'?'err':'warn'}">${p.sev==='error'?'✖':'▲'}</span><span class="tx">${esc(p.msg)}</span></div>`);if(!it.length)h+='<div class="empty ok">Проблем нет</div>';return h+'</div>'}
+function sideAgents(){let h='<div class="sctl"><button class="btn pri" data-a="newagent">＋ Агент</button></div><div class="sb">';DB.users.filter(u=>u.kind==='agent').forEach(u=>h+=`<div class="tn" data-a="open" data-p="agents"><span class="car"></span><span>☻</span><span class="tx">${esc(u.name)}</span><span class="dim">${esc(U(u.owner).name)}</span></div>`);return h+'</div>'}
+function sideProfile(){let h='<div class="sb"><div class="tn" data-a="open" data-p="profile"><span class="car"></span>⚙︎ Профиль</div>';if(S.mode==='server'&&U(DB.me).admin)h+='<div class="tn" data-a="open" data-p="users"><span class="car"></span>☰ Пользователи</div>';return h+'</div>'}
+function renderSide(){if(S.sideOff){$('#side').innerHTML='';return}const t={tasks:'Проводник',boards:'Доски',series:'Серии',schema:'Схема проекта',problems:'Проблемы',agents:'Агенты',profile:'Профиль'}[S.side];
+const f={tasks:sideTasks,boards:sideBoards,series:sideSeries,schema:sideSchema,problems:sideProblems,agents:sideAgents,profile:sideProfile}[S.side];
+const ae=document.activeElement;const keep=ae&&ae.dataset&&ae.dataset.i==='explq';const pos=keep?ae.selectionStart:0;
+$('#side').innerHTML=`<div class="sh"><span>${t}</span><span class="dim">${esc(projName())}</span></div>`+f();if(keep){const e=$('#side [data-i=explq]');e.focus();e.setSelectionRange(pos,pos)}}
+ACT.sview=v=>{S.sideView=v;renderSide()};
+ACT.ecol=(id,q,el,e)=>{e.stopPropagation();S.collapsed['e:'+id]=!S.collapsed['e:'+id];renderSide()};
+ACT.open=key=>go(routeOf(key));
+ACT.openyaml=id=>{S.view[id]='yaml';go(routeOf('task/'+id))};
+INP.explq=el=>{S.explQ=el.value;renderSide()};
+
+function renderTabs(){$('#tabs').innerHTML=S.tabs.map(k=>`<div class="tab ${k===S.active?'on':''}" data-a="tab" data-p="${k}"><span class="dim">${k.startsWith('task/')?'≡':k.startsWith('board')||k.startsWith('bedit')?'▥':k==='tasks'?'☰':'◈'}</span><span>${esc(tabTitle(k))}</span>${isDirty(k)?'<span class="dd">●</span>':''}<button class="x" data-a="closetab" data-p="${k}">×</button></div>`).join('')}
+ACT.tab=k=>go(routeOf(k));ACT.closetab=(k,q,el,e)=>{e.stopPropagation();closeTab(k)};
+
+function mainHTML(key){const [a,b]=key.split('/');
+switch(a){case 'tasks':return vTasks();case 'task':return vTask(b);case 'board':return vBoard(b);case 'bedit':return vBedit(b);case 'schema':return vSchema(b);case 'series':return vSeries();case 'problems':return vProblems();case 'agents':return vAgents();case 'profile':return vProfile();case 'users':return vUsers();case 'welcome':return vWelcome();}
+return `<div class="pane"><div class="empty">Не найдено: ${esc(b||key)}<br><a href="#/tasks">к списку задач</a></div></div>`}
+function renderMain(){const m=$('#main');const y=m.scrollTop;const same=m.dataset.k===S.active;
+m.innerHTML=S.active?mainHTML(S.active):`<div class="pane"><div class="empty">Нет открытых вкладок<br>Откройте <a href="#/tasks">список задач</a> или нажмите Ctrl+K</div></div>`;m.dataset.k=S.active;m.scrollTop=same?y:0}
+
+function fmtSecs(n){return Math.floor(n/60)+':'+String(n%60).padStart(2,'0')}
+function renderStatus(){const mine=Object.keys(S.myLocks);const dm={ok:['работает','ok'],start:['запускается','warn'],down:['не работает','err'],open:['папка открывается','warn']}[S.daemon];
+const mcp=S.mode==='desktop'?`<span class="cl" data-a="open" data-p="agents" title="Демон MCP для этой папки">MCP <b class="${dm[1]}">●</b> 127.0.0.1:5719 ${dm[0]}</span>`:`<span class="cl" data-a="open" data-p="agents">MCP <b class="ok">●</b> ${HOST}/mcp</span>`;
+const lk=mine.length?`<span title="Ваши блокировки продлеваются">⚿ вы правите: ${mine.map(k=>k.startsWith('b:')?'доска':refOf(T(k)||{series:[],id:k})).join(', ')} · ${fmtSecs(Math.min(...mine.map(k=>S.myLocks[k])))}</span>`:`<span title="Блокировок нет">⚿ свободно</span>`;
+const pc=problemCount();
+$('#status').innerHTML=`<span>⎇ main</span><span title="Рабочая область">${S.mode==='desktop'?esc(S.ws[S.wsActive]):BASE+'/'+esc(slug(projName(),1))}</span><span>${esc(projDir())}</span>${mcp}${lk}<span class="gap"></span><span class="cl" data-a="open" data-p="problems">${pc?'✖ '+pc:'✔ 0'} проблем</span><span>формат 10</span><span id="upd">обновлено ${Math.max(0,Math.round((Date.now()-S.sync)/1000))} с назад</span>`}
+
+function renderPanel(){const pn=$('#panel');pn.className=S.panelOpen?'':'off';pn.style.height=S.panelH+'px';if(!S.panelOpen)return;
+const pc=problemCount();$('#ptabs').innerHTML=[['console','Консоль'],['problems','Проблемы'+(pc?' '+pc:'')],['log','Журнал']].map(x=>`<button class="pt ${S.panel===x[0]?'on':''}" data-a="ptab" data-p="${x[0]}">${x[1]}</button>`).join('')+'<span class="gap"></span><button class="sbtn" data-a="ptoggle" title="Ctrl+J">▾ свернуть</button>';
+const b=$('#pbody');
+if(S.panel==='console'){if(!$('#conIn')){b.innerHTML='<div class="conout" id="conOut"></div><div class="conin"><span class="ps">tasker ❯</span><input id="conIn" autocomplete="off" spellcheck="false" placeholder="help — список команд; ↑/↓ история; Tab — дополнить"></div>'}
+$('#conOut').innerHTML=S.con.join('\n');$('#conOut').scrollTop=1e9}
+else if(S.panel==='problems'){const it=problemItems();b.innerHTML='<div class="plist">'+(it.length?it.map(probRow).join(''):'<div class="empty ok">Проблем в рабочей области нет</div>')+'</div>'}
+else{b.innerHTML='<div class="plist">'+(S.journal.length?S.journal.map(j=>`<div class="jrow"><span class="dim">${j.t}</span> <span class="${j.via==='gui'?'warn':'ok'}">${j.via==='gui'?'GUI':'CLI'}</span> <span class="ps">$</span> tasker ${esc(j.cmd)}</div>`).join(''):'<div class="empty">Журнал пуст: любое действие в интерфейсе добавит сюда эквивалентную команду</div>')+'</div>';b.firstChild.scrollTop=1e9}}
+function probRow(p){return `<div class="prow"><span class="${p.sev==='error'?'err':'warn'}">${p.sev==='error'?'✖':'▲'}</span><div class="m"><div>${esc(p.msg)}</div><div class="dim">${esc(p.file)}${p.line?':'+p.line:''}</div></div>${p.fixes.map(f=>`<button class="btn sm" data-a="fix" data-p="${f[1]}" data-q="${esc(f[2])}">✦ ${esc(f[0])}</button>`).join('')}</div>`}
+ACT.ptab=k=>{S.panel=k;renderPanel()};ACT.ptoggle=()=>{S.panelOpen=!S.panelOpen;renderPanel()};
+function openPanel(k){S.panel=k;S.panelOpen=true;renderPanel()}
+
+function setFilter(){history.replaceState(null,'','#/tasks'+f2q(S.filter));if(S.active==='tasks')renderMain();renderSide()}
+function rows(F){const cmp=cmpTasks(F.sort);const list=DB.tasks.filter(t=>matches(t,F)).sort(cmp);if(F.flat)return {list,rows:list.map(t=>({t,d:0,kids:0}))};
+const set=new Set(list.map(t=>t.id)),seen=new Set(),out=[];const roots=list.filter(t=>!parentsOf(t).some(p=>set.has(p.id)));
+const walk=(t,d,path)=>{const kids=childrenOf(t).filter(k=>set.has(k.id)).sort(cmp);const rep=seen.has(t.id);seen.add(t.id);const col=S.collapsed['l:'+t.id];out.push({t,d,kids:kids.length,rep,col});if(rep||col)return;kids.forEach(k=>{if(!path.includes(k.id))walk(k,d+1,path.concat(t.id))})};
+roots.forEach(t=>walk(t,0,[]));return {list,rows:out}}
+function valInput(d,id,v){v=v==null?'':v;if(!d)return `<input type="text" id="${id}" value="${esc(v)}">`;
+if(d.type==='enum'){const e=EN(d.enumId);return `<select id="${id}">${(e?e.values:[]).map(x=>`<option value="${x.id}" ${x.id===v?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`}
+if(d.type==='bool')return `<select id="${id}"><option value="true" ${String(v)==='true'?'selected':''}>да</option><option value="false" ${String(v)==='false'?'selected':''}>нет</option></select>`;
+if(d.type==='date')return `<input type="date" id="${id}" value="${esc(v)}">`;if(d.type==='int'||d.type==='float')return `<input type="number" step="${d.type==='int'?1:'any'}" id="${id}" value="${esc(v)}">`;return `<input type="text" id="${id}" value="${esc(v)}">`}
+function opOptions(d,sel){return Object.keys(OPS).filter(o=>!NUMOPS.includes(o)||(d&&['int','float','date'].includes(d.type))).map(o=>`<option value="${o}" ${o===sel?'selected':''}>${OPS[o]}</option>`).join('')}
+function condEditor(nc,pre,addAct){const defs=allDefs();const d=defById(nc.fieldId)||defs[0];if(!nc.fieldId&&d)nc.fieldId=d.id;
+return `<select id="${pre}f" data-c="${pre}field">${defs.map(x=>`<option value="${x.id}" ${x.id===nc.fieldId?'selected':''}>${esc(x.name)}</option>`).join('')}</select><select id="${pre}o" data-c="${pre}op">${opOptions(d,nc.op)}</select>${noVal(nc.op)?'':valInput(d,pre+'v',nc.value)}<button class="btn sm" data-a="${addAct}">＋ условие</button>`}
+function readCond(pre){const d=defById($('#'+pre+'f').value);const op=$('#'+pre+'o').value;const ve=$('#'+pre+'v');let v='';if(!noVal(op)){v=ve?ve.value:'';if(v===''){toast('Укажите значение условия','err');return null}}return {fieldId:d.id,operator:op,value:v}}
+function vTasks(){const F=S.filter;
+if(!DB.statuses.length||!DB.taskTypes.length)return vWelcome();
+const r=rows(F);const per=50,pages=Math.max(1,Math.ceil(r.rows.length/per));if(F.page>pages)F.page=pages;const vis=r.rows.slice((F.page-1)*per,F.page*per);
+const sortKeys=['status','type','title','created','updated','series',...allDefs().map(d=>d.name)];
+const fc=F.types.length+F.statuses.length+F.series.length+F.conds.length;
+let h=`<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/</span><b>tasks</b></div>
+<div class="bar"><div class="cmdline"><b>$</b> tasker ${esc(cliOfFilter(F))}</div><button class="btn" data-a="ftoggle">${F.open?'▾':'▸'} Фильтры${fc?' ('+fc+')':''}</button><span class="seg"><button class="${!F.flat?'on':''}" data-a="fflat" data-p="0">дерево</button><button class="${F.flat?'on':''}" data-a="fflat" data-p="1">плоско</button></span><b class="ok">Найдено ${r.list.length}</b></div>
+<div class="qc"><span class="ps">＋</span><input name="t" id="qct" placeholder="Новая задача: название и Enter" data-k="qc"><select id="qcty">${DB.taskTypes.map(x=>`<option value="${x.id}" ${S.tcSel.ty===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select><select id="qcsr"><option value="">без серии</option>${DB.series.map(x=>`<option value="${x.id}" ${S.tcSel.sr!==undefined?(S.tcSel.sr===x.id?'selected':''):x.id==='sr-tsk'?'selected':''}>${esc(x.prefix)}</option>`).join('')}</select><input id="qcp" placeholder="родитель (TSK-100)" style="width:150px"><button class="btn pri" data-a="qcreate">создать</button></div>`;
+if(F.open){h+=`<div class="fp"><div class="rw"><span class="lb">типы</span><span>${DB.taskTypes.map(x=>`<span class="chip ${F.types.includes(x.id)?'on':''}" data-a="ftog" data-p="types" data-q="${x.id}">${esc(x.name)}</span>`).join('')}</span></div>
+<div class="rw"><span class="lb">статусы</span><span>${DB.statuses.map(x=>`<span class="chip ${F.statuses.includes(x.id)?'on':''}" data-a="ftog" data-p="statuses" data-q="${x.id}">${sdot(x)} ${esc(x.name)}</span>`).join('')}</span></div>
+<div class="rw"><span class="lb">серии</span><span>${DB.series.map(x=>`<span class="chip ${F.series.includes(x.id)?'on':''}" data-a="ftog" data-p="series" data-q="${x.id}">${esc(x.prefix)}</span>`).join('')}</span></div>
+<div class="rw"><span class="lb">условия</span><span>${F.conds.map((c,i)=>`<span class="chip on">${esc(condText(c))} <b data-a="fdelc" data-p="${i}">×</b></span>`).join('')||'<span class="dim">нет (все через AND)</span>'}</span></div>
+<div class="rw"><span class="lb"></span>${condEditor(S.newCond,'nc','faddc')}</div>
+<div class="rw"><span class="lb">сортировка</span><span>${F.sort.map((s,i)=>`<span class="chip on"><span data-a="fsortdir" data-p="${i}">${s.dir<0?'↓':'↑'}</span> ${esc(s.key)} <b data-a="fsortdel" data-p="${i}">×</b></span>`).join('')||'<span class="dim">нет</span>'}</span><select id="nsk">${sortKeys.map(k=>`<option>${esc(k)}</option>`).join('')}</select><button class="btn sm" data-a="fsortadd">＋ ключ</button><button class="btn sm" data-a="freset">сбросить всё</button></div></div>`}
+h+=`<table class="tbl"><thead><tr><th>ключ</th><th>тип</th><th>статус</th><th>название</th><th>приоритет</th><th>оц.</th><th>обновлено</th></tr></thead><tbody>`;
+vis.forEach(x=>{const t=x.t,ty=TY(t.typeId),st=ST(t.statusId);const kids=childrenOf(t);const dn=kids.filter(isDone).length;const car=!F.flat&&x.kids?`<span data-a="lcol" data-p="${t.id}" class="car" style="cursor:pointer">${x.col?'▸':'▾'}</span>`:'<span class="car"></span>';
+const lk=lockOf('task',t.id);
+h+=`<tr><td style="padding-left:${8+x.d*16}px;white-space:nowrap">${F.flat?'':car}${rl(t)}${inConflict(t)?' <span class="warn" title="Конфликт номера">⚠</span>':''}</td><td class="dim">${esc(ty?ty.name:'?')}</td>
+<td style="white-space:nowrap">${sdot(st)} <select data-c="lstatus" data-p="${t.id}">${statusesOf(t).map(s=>`<option value="${s.id}" ${s.id===t.statusId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td>
+<td class="ttl"><a href="${href(t)}" style="color:var(--fg)">${esc(t.title)}</a>${x.rep?' <span class="dim">(+)</span>':''}${kids.length?` <span class="dim"><span class="prog"><i style="width:${Math.round(dn/kids.length*100)}%"></i></span>${dn}/${kids.length}</span>`:''}${lk?` <span class="lock">◉ ${esc(lk.holder)}</span>`:''}</td>
+<td>${esc(fmtVal(FL('f-priority'),t.fields['f-priority']))}</td><td class="dim">${t.fields['f-estimate']==null?'—':t.fields['f-estimate']}</td><td class="dim">${dt(t.updatedAt)}</td></tr>`});
+h+='</tbody></table>';if(!vis.length)h+='<div class="empty">Ничего не найдено. <a href="#" data-a="freset">Сбросить фильтры</a></div>';
+h+=`<div class="pg"><span>Страница ${F.page} из ${pages}</span><button data-a="fpage" data-p="-1" ${F.page<=1?'disabled':''}>←</button><button data-a="fpage" data-p="1" ${F.page>=pages?'disabled':''}>→</button><span>по 50 · показано ${vis.length} из ${r.rows.length}</span></div></div>`;return h}
+ACT.ftoggle=()=>{S.filter.open=!S.filter.open;renderMain()};
+ACT.fflat=v=>{S.filter.flat=v==='1';S.filter.page=1;setFilter()};
+ACT.ftog=(k,id)=>{const a=S.filter[k],i=a.indexOf(id);i<0?a.push(id):a.splice(i,1);S.filter.page=1;setFilter()};
+ACT.fdelc=(i,q,el,e)=>{e.stopPropagation();S.filter.conds.splice(+i,1);setFilter()};
+ACT.faddc=()=>{const c=readCond('nc');if(!c)return;S.filter.conds.push(c);S.newCond={fieldId:c.fieldId,op:'equal',value:''};setFilter()};
+CHG.ncfield=v=>{S.newCond={fieldId:v,op:'equal',value:''};renderMain()};CHG.ncop=v=>{S.newCond.fieldId=$('#ncf').value;S.newCond.op=v;renderMain()};
+ACT.fsortdir=i=>{const s=S.filter.sort[+i];s.dir=-s.dir;setFilter()};ACT.fsortdel=(i,q,el,e)=>{e.stopPropagation();S.filter.sort.splice(+i,1);setFilter()};
+ACT.fsortadd=()=>{const k=$('#nsk').value;if(!S.filter.sort.some(s=>s.key===k))S.filter.sort.push({key:k,dir:1});setFilter()};
+ACT.freset=()=>{const o=S.filter.open;S.filter=newFilter();S.filter.open=o;setFilter()};
+ACT.fpage=d=>{S.filter.page+=+d;setFilter()};
+ACT.lcol=id=>{S.collapsed['l:'+id]=!S.collapsed['l:'+id];renderMain()};
+CHG.lstatus=(v,el)=>{const t=T(el.dataset.p);const r=setStatus(t,v);toast(r.msg,r.ok?'':'err');render()};
+ACT.qcreate=()=>{S.tcSel={ty:$('#qcty').value,sr:$('#qcsr').value};const o={title:$('#qct').value,typeId:$('#qcty').value,seriesIds:$('#qcsr').value?[$('#qcsr').value]:[],parent:$('#qcp').value.trim()};
+if(!o.title.trim()){toast('Название не может быть пустым','err');return}
+const miss=reqMissing({custom:[],extra:[]},o.typeId,{});if(miss.length){promptRequired(o,miss);return}finishCreate(o)};
+function finishCreate(o){const r=createTask(o);if(!r.ok){toast(r.msg,'err');return}toast(r.msg+' · '+r.task.title.slice(0,40));render()}
+function promptRequired(o,miss){modal('Обязательные поля','<div class="hint">Для типа «'+esc(TY(o.typeId).name)+'» нужно заполнить:</div>'+miss.map(m=>`<label>${esc(m.def.name)} *</label>${valInput(m.def,'rq_'+m.def.id,'')}`).join(''),
+[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{o.fields={};try{for(const m of miss){const e=$('#rq_'+m.def.id);o.fields[m.def.id]=parseVal(m.def,e.value)}}catch(x){toast(x.message,'err');return false}finishCreate(o)}}])}
+
+const curTask=()=>{const k=S.active||'';return k.startsWith('task/')?T(k.slice(5)):null};
+function dr(t){if(!S.drafts[t.id]){S.drafts[t.id]={base:verOf(t.id),title:t.title,description:t.description,typeId:t.typeId,statusId:t.statusId,fields:jsonClone(t.fields)};S.myLocks[t.id]=120}return S.drafts[t.id]}
+function syncDraft(t){if(!dirty(t)){delete S.drafts[t.id];delete S.myLocks[t.id]}}
+const viewOf=t=>S.drafts[t.id]||t;
+function lockBadge(t){const l=lockOf('task',t.id);if(l)return `<span class="lock">◉ правит ${esc(l.holder)} · ещё ${l.expiresInSec} с</span>`;if(S.myLocks[t.id]!==undefined)return `<span class="lock me">⚿ вы правите, блокировка продлевается (${fmtSecs(S.myLocks[t.id])})</span>`;return ''}
+function edTool(t){const dy=dirty(t),l=lockOf('task',t.id),m=S.view[t.id]||'form';
+return `<div class="bar"><span class="seg"><button class="${m==='form'?'on':''}" data-a="vmode" data-p="form">Форма</button><button class="${m==='yaml'?'on':''}" data-a="vmode" data-p="yaml">YAML</button></span>
+<button class="btn pri" data-a="savetask" ${!dy||l?'disabled':''}>Сохранить Ctrl+S</button><button class="btn" data-a="reverttask" ${dy?'':'disabled'}>Отменить правки</button>${dy?'<span class="warn">● не сохранено</span>':'<span class="dim">сохранено</span>'}
+<span class="gap"></span>${lockBadge(t)}<span class="tag">версия ${verOf(t.id)}</span><button class="btn sm" data-a="simconf" title="Имитировать правку другим пользователем">⚡ правка коллеги</button><button class="btn dng sm" data-a="deltask">Удалить</button></div>`}
+function vTask(id){const t=T(id);if(!t)return '<div class="pane"><div class="empty">Задача не найдена</div></div>';const m=S.view[t.id]||'form';
+return `<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/</span><b>${esc(fileOf(t))}</b>${inConflict(t)?'<span class="warn">⚠ конфликт номера</span>':''}</div><div id="edtool">${edTool(t)}</div>${m==='yaml'?yamlHTML(t):`<div id="edbody">${formHTML(t)}</div>`}</div>`}
+function refreshEd(){const t=curTask();if(!t)return;const e=$('#edtool');if(e)e.innerHTML=edTool(t);renderTabs();renderStatus()}
+ACT.vmode=v=>{const t=curTask();S.view[t.id]=v;renderMain()};
+function yamlHTML(t){const L=[];const k=(n,i)=>' '.repeat(i||0)+`<span class="yk">${esc(n)}</span>:`;const sv=v=>{v=String(v);return /[:#\[\]{}&*!|>'"%@`,]|^\s|\s$|^-/.test(v)||v===''?'<span class="ys">"'+esc(v.replace(/"/g,'\\"'))+'"</span>':'<span class="ys">'+esc(v)+'</span>'};
+const idv=v=>`<span class="yi">${esc(v)}</span>`,nv=v=>`<span class="yn">${esc(v)}</span>`;
+L.push(k('formatVersion')+' '+nv(10));L.push(k('id')+' '+idv(uuid(t.id)));L.push(k('title')+' '+sv(t.title));L.push(k('typeId')+' '+idv(t.typeId));L.push(k('statusId')+' '+idv(t.statusId));
+L.push(k('createdAt')+' '+sv(t.createdAt));L.push(k('updatedAt')+' '+sv(t.updatedAt));
+if(t.series.length){L.push(k('series'));t.series.forEach(s=>{L.push('  - '+`<span class="yk">seriesId</span>: `+idv(s.seriesId));L.push('    '+`<span class="yk">number</span>: `+nv(s.number))})}else L.push(k('series')+' <span class="yd">[]</span>');
+const ol=DB.links.filter(l=>l.from===t.id);if(ol.length){L.push(k('links'));ol.forEach(l=>{L.push('  - <span class="yk">typeId</span>: '+idv(l.typeId));L.push('    <span class="yk">to</span>: '+idv(uuid(l.to))+' <span class="yd"># '+esc(refOf(T(l.to)))+'</span>')})}else L.push(k('links')+' <span class="yd">[]</span>');
+const fk=Object.keys(t.fields);if(fk.length||t.custom.length){L.push(k('fields'));fk.forEach(f=>{const c=t.custom.find(x=>x.fieldId===f);const v=t.fields[f];const fv=x=>typeof x==='number'?nv(x):typeof x==='boolean'?`<span class="yb">${x}</span>`:(FL(f)&&FL(f).type==='enum')?idv(x):sv(x);
+const val=Array.isArray(v)?'<span class="yd">[</span>'+v.map(fv).join('<span class="yd">, </span>')+'<span class="yd">]</span>':fv(v);
+if(c){L.push('  '+k(f));L.push('    <span class="yk">custom</span>: <span class="yd">{</span>name: '+sv(c.name)+', type: '+esc(c.type)+', multiple: <span class="yb">'+c.multiple+'</span>, required: <span class="yb">'+c.required+'</span><span class="yd">}</span>');L.push('    <span class="yk">value</span>: '+val)}
+else L.push('  '+k(f)+' '+val)})}else L.push(k('fields')+' <span class="yd">{}</span>');
+if(t.description){L.push(k('description')+' <span class="yb">|</span>');t.description.split('\n').forEach(x=>L.push('  <span class="ys">'+esc(x)+'</span>'))}else L.push(k('description')+' <span class="ys">""</span>');
+return `<div class="hint" style="margin-bottom:6px">Файл задачи в порядке ключей, как его пишет Tasker. Только чтение: правки — через «Форма» или консоль.${dirty(t)?' <span class="warn">Показана сохранённая версия, есть несохранённые правки.</span>':''}</div><div class="yaml">${L.map((x,i)=>`<div class="yl"><span class="ln">${i+1}</span><span>${x}</span></div>`).join('')}</div>`}
+
+function fieldInput(f,v,err){const d=f.def,val=v.fields[d.id];const id=d.id;
+const base=`data-i="fv" data-p="${esc(id)}"`;const sty=err?' style="border-color:var(--red)"':'';
+if(d.type==='bool')return `<label><input type="checkbox" ${base} ${val?'checked':''}> ${val?'да':'нет'}</label>`;
+if(d.type==='enum'){const e=EN(d.enumId);if(d.multiple){const a=Array.isArray(val)?val:[];return `<span class="fmulti" data-f="${esc(id)}">${e.values.map(x=>`<label style="margin-right:8px"><input type="checkbox" data-i="fvm" data-p="${esc(id)}" value="${x.id}" ${a.includes(x.id)?'checked':''}> ${esc(x.name)}</label>`).join('')}</span>`}
+return `<select ${base}${sty}><option value="">—</option>${e.values.map(x=>`<option value="${x.id}" ${val===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`}
+if(d.type==='date')return `<input type="date" ${base}${sty} value="${esc(val||'')}">`;
+if(d.type==='int'||d.type==='float')return `<input type="${d.multiple?'text':'number'}" step="${d.type==='int'?1:'any'}" ${base}${sty} value="${esc(Array.isArray(val)?val.join(', '):val==null?'':val)}">`;
+return `<input type="text" ${base}${sty} value="${esc(Array.isArray(val)?val.join(', '):val==null?'':val)}" ${d.multiple?'placeholder="через запятую"':''}>`}
+function formHTML(t){const v=viewOf(t);const ty=TY(v.typeId);const errs=(S.errs&&S.errs[t.id])||[];const fs=taskFields(Object.assign({},t,{fields:v.fields}),v.typeId);
+const miss=reqMissing(t,v.typeId,v.fields);
+let L=`<div class="edg"><div>
+<input class="ttlin" data-i="dtitle" value="${esc(v.title)}" placeholder="Название задачи">
+<h3>description</h3><textarea rows="9" data-i="ddesc" placeholder="Описание (markdown)">${esc(v.description)}</textarea>
+<h3>fields${miss.length?` <span class="err" style="text-transform:none">· обязательные не заполнены: ${esc(miss.map(m=>m.def.name).join(', '))}</span>`:''}</h3>`;
+fs.forEach(f=>{L+=`<div class="fld"><span class="n ${f.required?'req':''}" title="${f.kind==='type'?'поле типа':f.kind==='extra'?'дополнительное поле из каталога':'своё поле задачи (определение неизменяемо)'}">${esc(f.def.name)}</span><div>${fieldInput(f,v,errs.includes(f.def.id)||(f.required&&!isSet(v.fields[f.def.id])&&errs.length))}</div><span class="dim">${f.kind==='type'?esc(f.def.type)+(f.def.multiple?'[]':''):f.kind==='extra'?`<span class="tag">доп.</span><button class="sbtn" data-a="detach" data-p="${f.def.id}" title="Отвязать поле">×</button>`:'<span class="tag">своё</span>'}</span></div>`});
+if(!fs.length)L+='<div class="dim">У типа нет полей.</div>';
+const avail=DB.fields.filter(d=>!fs.some(f=>f.def.id===d.id));
+L+=`<div class="bar" style="margin-top:8px"><select id="xf"><option value="">＋ поле из каталога…</option>${avail.map(d=>`<option value="${d.id}">${esc(d.name)} · ${d.type}</option>`).join('')}</select><button class="btn sm" data-a="attachx">привязать</button><button class="btn sm" data-a="addcustom">＋ своё поле…</button></div></div>`;
+L+=`<div><div class="card-box"><h3 style="margin-top:0">type / status</h3>
+<div class="fld"><span class="n">typeId</span><select data-c="dtype">${DB.taskTypes.map(x=>`<option value="${x.id}" ${x.id===v.typeId?'selected':''}>${esc(x.name)}</option>`).join('')}</select><span></span></div>
+<div class="fld"><span class="n">statusId</span><span style="display:flex;gap:6px;align-items:center">${sdot(ST(v.statusId))} <select data-c="dstatus">${statusesOf(t,v.typeId).map(s=>`<option value="${s.id}" ${s.id===v.statusId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></span><span></span></div>
+<div class="hint">Набор «${esc(ty?SS(ty.statusSetId).name:'?')}». Смена статуса применяется сразу и не проверяет обязательные поля.</div></div>`;
+L+=`<div class="card-box"><h3 style="margin-top:0">series</h3>${t.series.map(s=>{const du=dupOf(t,s).length;return `<div class="fld" style="grid-template-columns:1fr auto auto"><span class="${du?'sq':''} ref" ${du?'title="Номер выдан нескольким задачам"':''}>${esc(refStr(s))}${du?' <span class="warn">⚠</span>':''}</span><button class="btn sm" data-a="renum" data-p="${s.seriesId}">№…</button><button class="btn sm" data-a="unser" data-p="${s.seriesId}">×</button></div>`}).join('')||'<div class="dim">вне серий · ключ '+esc(sid(t))+'</div>'}
+${inConflict(t)?'<div class="warn" style="margin-top:6px">⚠ Конфликт номера. <a href="#" data-a="fix" data-p="resolve" data-q="0">Разрешить конфликты номеров</a></div>':''}
+<div class="bar" style="margin-top:6px"><select id="sadd">${DB.series.filter(s=>!t.series.some(x=>x.seriesId===s.id)).map(s=>`<option value="${s.id}">${esc(s.prefix)}</option>`).join('')}</select><input id="snum" type="number" placeholder="номер (авто)" style="width:110px"><button class="btn sm" data-a="addser">в серию</button></div></div>`;
+L+=hierHTML(t)+linksHTML(t);
+L+=`<div class="card-box"><h3 style="margin-top:0">meta</h3><div class="dim">id: ${esc(uuid(t.id))}<br>createdAt: ${dt(t.createdAt)}<br>updatedAt: ${dt(t.updatedAt)}<br>файл: ${esc(fileOf(t))}</div></div></div></div>`;return L}
+function hierHTML(t){const ps=parentsOf(t),ks=childrenOf(t);const dn=ks.filter(isDone).length;const hl=DB.linkTypes.find(l=>l.hierarchical);
+const row=(x,act)=>`<div class="fld" style="grid-template-columns:1fr auto"><span>${sdot(ST(x.statusId))} ${rl(x)} <span class="dim">${esc(x.title.slice(0,40))}</span></span><button class="sbtn" data-a="${act}" data-p="${x.id}">×</button></div>`;
+if(!hl)return '';return `<div class="card-box"><h3 style="margin-top:0">parent / children</h3>
+${ks.length?`<div>Эпик: <span class="prog" style="width:90px"><i style="width:${Math.round(dn/ks.length*100)}%"></i></span> ${dn}/${ks.length} готово</div>`:''}
+<div class="dim" style="margin-top:4px">${esc(hl.inward)}:</div>${ps.map(p=>row(p,'unpar')).join('')||'<div class="dim">—</div>'}
+<div style="position:relative"><input data-i="lsearch" data-p="parent" placeholder="＋ родитель: TSK-100 или название" style="width:100%"><div id="res-parent"></div></div>
+<div class="dim" style="margin-top:6px">${esc(hl.outward)}:</div>${ks.map(p=>row(p,'unchild')).join('')||'<div class="dim">—</div>'}
+<div style="position:relative"><input data-i="lsearch" data-p="child" placeholder="＋ подзадача: ссылка или название" style="width:100%"><div id="res-child"></div></div>
+<button class="btn sm" style="margin-top:6px" data-a="newchild">Создать подзадачу…</button></div>`}
+function linksHTML(t){const groups={};DB.links.forEach(l=>{const lt=LT(l.typeId);if(lt.hierarchical)return;if(l.from===t.id){const k=lt.outward;(groups[k]=groups[k]||[]).push({l,o:T(l.to)})}else if(l.to===t.id){const k=lt.inward||lt.outward;(groups[k]=groups[k]||[]).push({l,o:T(l.from)})}});
+let h='<div class="card-box"><h3 style="margin-top:0">links</h3>';
+Object.keys(groups).forEach(g=>{h+=`<div class="dim" style="margin-top:4px">${esc(g)}:</div>`+groups[g].map(x=>`<div class="fld" style="grid-template-columns:1fr auto"><span>${sdot(ST(x.o.statusId))} ${rl(x.o)} <span class="dim">${esc(x.o.title.slice(0,40))}</span></span><button class="sbtn" data-a="unlink" data-p="${DB.links.indexOf(x.l)}">×</button></div>`).join('')});
+if(!Object.keys(groups).length)h+='<div class="dim">Связей нет</div>';
+const sides=[];DB.linkTypes.filter(l=>!l.hierarchical).forEach(l=>{sides.push([l.id+'|out',l.outward]);if(l.inward)sides.push([l.id+'|in',l.inward])});
+h+=`<div class="bar" style="margin-top:8px"><select id="lside">${sides.map(s=>`<option value="${s[0]}">${esc(s[1])}</option>`).join('')}</select></div><div style="position:relative"><input data-i="lsearch" data-p="link" placeholder="＋ задача: TSK-121 или название" style="width:100%"><div id="res-link"></div></div>`;
+return h+'</div>'}
+INP.lsearch=el=>{const t=curTask();const q=el.value.trim().toLowerCase();const box=$('#res-'+el.dataset.p);if(!q){box.innerHTML='';return}
+const r=DB.tasks.filter(x=>x!==t&&((refOf(x)+' '+x.series.map(refStr).join(' ')+' '+x.title).toLowerCase().includes(q))).slice(0,7);
+box.innerHTML='<div style="background:var(--panel2);border:1px solid var(--edge);border-radius:3px;margin-top:2px">'+(r.map(x=>`<div class="tn" data-a="pick" data-p="${el.dataset.p}" data-q="${x.id}">${sdot(ST(x.statusId))}<span class="ref">${esc(refOf(x))}</span><span class="tx dim">${esc(x.title)}</span></div>`).join('')||'<div class="dim" style="padding:4px 8px">Ничего не найдено</div>')+'</div>'};
+ACT.pick=(kind,id)=>{const t=curTask(),o=T(id);let r;const hl=DB.linkTypes.find(l=>l.hierarchical);
+if(kind==='parent')r=linkTasks(o,hl.id,t);else if(kind==='child')r=linkTasks(t,hl.id,o);
+else{const [ltId,side]=$('#lside').value.split('|');r=side==='in'?linkTasks(o,ltId,t):linkTasks(t,ltId,o)}
+toast(r.msg,r.ok?'':'err');render()};
+ACT.unpar=id=>{const t=curTask();const l=DB.links.find(x=>hierTypes().includes(x.typeId)&&x.from===id&&x.to===t.id);const r=unlinkTasks(l);toast('Родитель убран');render()};
+ACT.unchild=id=>{const t=curTask();const l=DB.links.find(x=>hierTypes().includes(x.typeId)&&x.from===t.id&&x.to===id);unlinkTasks(l);toast('Подзадача отвязана');render()};
+ACT.unlink=i=>{const r=unlinkTasks(DB.links[+i]);toast(r.msg,r.ok?'':'err');render()};
+ACT.newchild=()=>{const t=curTask();const ty=DB.taskTypes;modal('Новая подзадача','<label>Название</label><input type="text" name="t" autofocus><label>Тип</label><select name="ty">'+ty.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')+'</select>',
+[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const o={title:mv('t'),typeId:mv('ty'),seriesIds:['sr-tsk'],parent:refOf(t)};const miss=reqMissing({custom:[],extra:[]},o.typeId,{});if(miss.length){closeModal();promptRequired(o,miss);return false}
+const r=createTask(o);if(!r.ok){toast(r.msg,'err');return false}toast(r.msg);render()}}])};
+INP.dtitle=el=>{const t=curTask();dr(t).title=el.value;syncDraft(t);refreshEd()};
+INP.ddesc=el=>{const t=curTask();dr(t).description=el.value;syncDraft(t);refreshEd()};
+INP.fv=el=>{const t=curTask();const def=defById(el.dataset.p);const d=dr(t);
+if(def.type==='bool')d.fields[def.id]=el.checked;else if(el.value==='')delete d.fields[def.id];else{try{d.fields[def.id]=parseVal(def,el.value);el.style.borderColor=''}catch(e){el.style.borderColor='var(--red)';return}}
+syncDraft(t);refreshEd()};
+INP.fvm=el=>{const t=curTask();const id=el.dataset.p;const d=dr(t);const a=[...document.querySelectorAll('[data-i=fvm][data-p="'+id+'"]')].filter(x=>x.checked).map(x=>x.value);if(a.length)d.fields[id]=a;else delete d.fields[id];syncDraft(t);refreshEd()};
+CHG.dstatus=v=>{const t=curTask();const d=S.drafts[t.id];if(d&&d.typeId!==t.typeId){d.statusId=v;syncDraft(t);renderMain();refreshEd();return}const r=setStatus(t,v);if(d&&r.ok)d.statusId=v;toast(r.msg,r.ok?'':'err');render()};
+CHG.dtype=v=>{const t=curTask();const d=dr(t);if(v===d.typeId)return;const ns=statusesOf(t,v);
+if(!ns.some(s=>s.id===d.statusId)){const ty=TY(v);modal('Выберите статус','<div class="warn">Статус «'+esc(ST(d.statusId).name)+'» не входит в набор «'+esc(SS(ty.statusSetId).name)+'» типа «'+esc(ty.name)+'».</div><label>Новый статус</label><select name="st">'+ns.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')+'</select>',
+[{label:'Отмена',fn:()=>{syncDraft(t);renderMain()}},{label:'Сменить тип и статус',cls:'pri',fn:()=>{d.typeId=v;d.statusId=mv('st');syncDraft(t);renderMain();refreshEd()}}])}
+else{d.typeId=v;syncDraft(t);renderMain();refreshEd()}};
+ACT.reverttask=()=>{const t=curTask();delete S.drafts[t.id];delete S.myLocks[t.id];S.errs&&delete S.errs[t.id];renderMain();refreshEd();toast('Правки отменены','info')};
+ACT.savetask=()=>{const t=curTask();if(t)saveTask(t)};
+function saveTask(t){const d=S.drafts[t.id];if(!d||!dirty(t))return;const lf=lockFail(t);if(lf){toast(lf.msg,'err');return}
+if(S.once[t.id]||d.base!==verOf(t.id)){S.once[t.id]=false;
+modal('Изменено другим пользователем','<div>Задача <b>'+esc(refOf(t))+'</b> была сохранена кем-то ещё, пока вы её правили (версия '+verOf(t.id)+' вместо '+d.base+').</div><div class="hint" style="margin-top:6px">Ваши правки не потеряны: перечитайте задачу и повторите сохранение.</div>',
+[{label:'Отмена'},{label:'Перечитать и повторить',cls:'pri',fn:()=>{d.base=verOf(t.id);saveTask(t)}}]);return}
+if(!d.title.trim()){toast('Название не может быть пустым','err');return}
+const miss=reqMissing(t,d.typeId,d.fields);if(miss.length){S.errs=S.errs||{};S.errs[t.id]=miss.map(m=>m.def.id);toast('Обязательное поле: '+miss.map(m=>m.def.name).join(', '),'err');renderMain();return}
+if(S.errs)delete S.errs[t.id];
+const parts=[];if(d.title!==t.title)parts.push('--title "'+d.title+'"');if(d.description!==t.description)parts.push('--description "…"');if(d.typeId!==t.typeId)parts.push('--type "'+TY(d.typeId).name+'"');if(d.statusId!==t.statusId)parts.push('--status "'+ST(d.statusId).name+'"');
+const oldF=t.fields;taskFields(Object.assign({},t,{fields:d.fields}),d.typeId).forEach(f=>{if(JSON.stringify(oldF[f.def.id])!==JSON.stringify(d.fields[f.def.id]))parts.push("--field '"+f.def.name+'='+(isSet(d.fields[f.def.id])?fmtVal(f.def,d.fields[f.def.id]):'')+"'")});
+t.title=d.title.trim();t.description=d.description;t.typeId=d.typeId;t.statusId=d.statusId;const nty=TY(d.typeId);
+Object.keys(d.fields).forEach(k=>{if(FL(k)&&!nty.fields.some(x=>x.fieldId===k)&&!(t.extra||[]).includes(k)&&!t.custom.some(c=>c.fieldId===k))t.extra.push(k)});t.fields=jsonClone(d.fields);
+delete S.drafts[t.id];delete S.myLocks[t.id];touch(t);cli('task update '+refOf(t)+' '+parts.join(' '));toast(refOf(t)+' сохранена');render()}
+ACT.simconf=()=>{const t=curTask();S.vers[t.id]=verOf(t.id)+1;S.sync=Date.now();toast('Мария сохранила '+refOf(t)+' (версия '+verOf(t.id)+')','info');refreshEd()};
+ACT.deltask=()=>{const t=curTask();const kids=childrenOf(t);confirmBox('Удалить задачу','Удалить <b>'+esc(refOf(t))+'</b> «'+esc(t.title)+'»?'+(kids.length?' <div class="warn">У задачи '+kids.length+' подзадач: связи будут удалены.</div>':'')+'<div class="hint">Файл '+esc(fileOf(t))+' будет удалён.</div>','Удалить',()=>{const k='task/'+t.id;const r=deleteTask(t);if(!r.ok){toast(r.msg,'err');return false}toast(r.msg);const i=S.tabs.indexOf(k);if(i>=0)S.tabs.splice(i,1);go('#/tasks'+f2q(S.filter))},true)};
+ACT.addser=()=>{const t=curTask();const sel=$('#sadd');if(!sel||!sel.value){toast('Нет доступных серий','err');return}const n=parseInt($('#snum').value)||0;const r=addToSeries(t,sel.value,n);toast(r.msg,r.ok?'':'err');render()};
+ACT.unser=sId=>{const t=curTask();const r=removeFromSeries(t,sId);toast(r.msg,r.ok?'':'err');history.replaceState(null,'',routeOf(S.active));render()};
+ACT.renum=sId=>{const t=curTask();modal('Перенумеровать '+pfx(sId)+'-'+t.series.find(s=>s.seriesId===sId).number,'<label>Новый номер (пусто — следующий свободный: '+nextNum(sId)+')</label><input type="number" name="n" autofocus>',
+[{label:'Отмена'},{label:'Применить',cls:'pri',fn:()=>{const v=mv('n');const r=renumber(t,sId,v?parseInt(v):0);toast(r.msg,r.ok?'':'err');if(!r.ok)return false;history.replaceState(null,'',routeOf(S.active));render()}}])};
+ACT.attachx=()=>{const t=curTask();const id=$('#xf').value;if(!id)return;const lf=lockFail(t);if(lf){toast(lf.msg,'err');return}t.extra.push(id);touch(t);cli("task update "+refOf(t)+" --attach-field '"+FL(id).name+"'");toast('Поле «'+FL(id).name+'» привязано');render()};
+ACT.detach=id=>{const t=curTask();t.extra=t.extra.filter(x=>x!==id);delete t.fields[id];if(S.drafts[t.id])delete S.drafts[t.id].fields[id];touch(t);cli("task update "+refOf(t)+" --detach-field '"+FL(id).name+"'");toast('Поле отвязано');render()};
+ACT.addcustom=()=>{const t=curTask();modal('Своё поле задачи','<div class="hint">Определение хранится в самой задаче и потом не меняется.</div><label>Имя (буквы и цифры)</label><input type="text" name="n" autofocus><label>Тип</label><select name="ty"><option value="string">string</option><option value="int">int</option><option value="float">float</option><option value="bool">bool</option><option value="date">date</option></select><label><input type="checkbox" name="m"> несколько значений</label><label><input type="checkbox" name="r"> обязательное</label>',
+[{label:'Отмена'},{label:'Добавить',cls:'pri',fn:()=>{const n=mv('n').trim();if(!/^[\p{L}\p{N}]+$/u.test(n)){toast('Имя поля: только буквы и цифры','err');return false}if(allDefs().some(d=>d.name.toLowerCase()===n.toLowerCase())){toast('Поле с таким именем уже есть','err');return false}
+t.custom.push({fieldId:'cf-'+hex(n+t.id,6),name:n,type:mv('ty'),multiple:mv('m'),required:mv('r')});touch(t);cli("task update "+refOf(t)+" --custom-field '"+n+":"+mv('ty')+"'");toast('Поле «'+n+'» добавлено');render()}}])};
+
+function boardTasks(b){const flt=S.bflt[b.id]||[];return DB.tasks.filter(t=>{const ty=TY(t.typeId);return ty&&b.statusSetIds.includes(ty.statusSetId)&&flt.every(c=>condOk(t,c))})}
+function boardCols(b){const cols=b.columns.map(c=>({c,items:[]}));const out=[];
+boardTasks(b).forEach(t=>{const x=cols.find(k=>k.c.statusIds.includes(t.statusId)&&k.c.fieldConditions.every(cd=>condOk(t,cd)));if(x)x.items.push(t);else out.push(t)});
+cols.forEach(k=>k.items.sort(cmpTasks([{key:'series',dir:1}])));return {cols,out}}
+const colOf=(b,t)=>{const x=b.columns.find(k=>k.statusIds.includes(t.statusId)&&k.fieldConditions.every(cd=>condOk(t,cd)));return x}
+function dropStatus(col,t){const ty=TY(t.typeId);const set=SS(ty.statusSetId);return col.dropStatuses[set.id]||col.statusIds.find(id=>set.statusIds.includes(id))}
+function moveCard(t,col,b,via){const lf=lockFail(t);if(lf)return lf;const unmet=col.fieldConditions.filter(c=>!condOk(t,c));
+if(unmet.length)return ERR('Сначала поправьте поля: '+unmet.map(condText).join(', '));
+const sid2=dropStatus(col,t);if(!sid2){const ty=TY(t.typeId);return ERR('В колонке «'+col.name+'» нет статусов набора «'+SS(ty.statusSetId).name+'»')}
+if(sid2===t.statusId)return OK('Карточка уже в колонке «'+col.name+'»');return setStatus(t,sid2,via)}
+function vBoard(id){const b=BD(id);if(!b)return '<div class="pane"><div class="empty">Досок нет. <a href="#" data-a="newboard">Создать доску</a></div></div>';
+if(!DB.statuses.length)return vWelcome();
+const {cols,out}=boardCols(b);const lk=lockOf('board',b.id);const flt=S.bflt[b.id]||[];
+let h=`<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/boards/</span><b>${esc(slug(b.name,2)+'-'+hex(b.id,8))}.yaml</b>${lk?`<span class="lock">◉ правит ${esc(lk.holder)} · ещё ${lk.expiresInSec} с</span>`:''}</div>
+<div class="bar"><select data-c="bpick">${DB.boards.map(x=>`<option value="${x.id}" ${x.id===b.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select><div class="cmdline"><b>$</b> tasker board show ${esc(b.name)}${flt.map(c=>" --field '"+condText(c)+"'").join('')}</div>
+<button class="btn" data-a="open" data-p="bedit/${b.id}">✎ Редактор доски</button><button class="btn" data-a="newboard">＋ Доска</button></div>
+<div class="fp"><div class="rw"><span class="lb">фильтр полей</span>${flt.map((c,i)=>`<span class="chip on">${esc(condText(c))} <b data-a="bfdel" data-p="${i}">×</b></span>`).join('')}${condEditor(S.newBc,'bc','bfadd')}</div>
+<div class="rw"><span class="lb">наборы</span><span class="dim">${b.statusSetIds.map(x=>SS(x)?SS(x).name:'?').join(', ')}</span>${out.length?`<a href="#" data-a="outcol" style="margin-left:auto" class="warn">${out.length} ${plural(out.length,'задача','задачи','задач')} вне колонок</a>`:''}</div></div><div class="board">`;
+cols.forEach(k=>{const c=k.c;const lim=S.bshow[b.id+c.id]?1e9:50;h+=`<div class="col" data-col="${c.id}" data-b="${b.id}"><div class="ch"><b>${esc(c.name)}</b> <span class="dim">${k.items.length}</span><div>${c.statusIds.map(x=>`<span class="tag">${esc(ST(x)?ST(x).name:'?')}</span>`).join('')}${c.fieldConditions.map(cd=>`<span class="chip on" style="cursor:default">${esc(condText(cd))}</span>`).join('')}</div></div><div class="cb">`;
+k.items.slice(0,lim).forEach(t=>{const st=ST(t.statusId),pr=FL('f-priority'),has=taskFields(t).some(f=>f.def.id==='f-priority');const l2=lockOf('task',t.id);
+h+=`<div class="kc" draggable="true" data-card="${t.id}" style="border-left-color:${st?st.color:'#888'}"><div>${rl(t)} ${inConflict(t)?'<span class="warn">⚠</span>':''}${l2?` <span class="lock">◉ ${esc(l2.holder)}</span>`:''}<span class="dim" style="float:right">${esc(TY(t.typeId).name)}</span></div><div class="tt">${esc(t.title)}</div>
+<div class="ft">${sdot(st)}<span class="dim">${esc(st.name)}</span>${has?`<select data-c="cardprio" data-p="${t.id}" title="Приоритет"><option value="">—</option>${EN('e-priority').values.map(v=>`<option value="${v.id}" ${t.fields['f-priority']===v.id?'selected':''}>${esc(v.name)}</option>`).join('')}</select>`:''}${t.fields['f-estimate']!=null?`<span class="dim">${t.fields['f-estimate']}</span>`:''}</div></div>`});
+if(k.items.length>lim)h+=`<button class="btn sm" data-a="showall" data-p="${b.id+c.id}">показать все ${k.items.length}</button>`;
+if(!k.items.length)h+='<div class="dim" style="padding:10px;text-align:center">пусто</div>';h+='</div></div>'});
+return h+'</div></div>'}
+const plural=(n,a,b,c)=>{const m=n%10,k=n%100;return m===1&&k!==11?a:m>=2&&m<=4&&(k<10||k>=20)?b:c};
+CHG.bpick=v=>go('#/boards/'+v);
+CHG.bcfield=v=>{S.newBc={fieldId:v,op:'equal',value:''};renderMain()};CHG.bcop=v=>{S.newBc.fieldId=$('#bcf').value;S.newBc.op=v;renderMain()};
+ACT.bfadd=()=>{const c=readCond('bc');if(!c)return;const id=S.active.split('/')[1];(S.bflt[id]=S.bflt[id]||[]).push(c);S.newBc={fieldId:c.fieldId,op:'equal',value:''};cli("board show "+BD(id).name+" --field '"+condText(c)+"'");renderMain()};
+ACT.bfdel=i=>{const id=S.active.split('/')[1];S.bflt[id].splice(+i,1);renderMain()};
+ACT.showall=k=>{S.bshow[k]=true;renderMain()};
+ACT.outcol=()=>{const b=BD(S.active.split('/')[1]);const {out}=boardCols(b);info('Задачи вне колонок','<div class="hint">Статус этих задач не входит ни в одну колонку доски, поэтому карточек у них нет.</div>'+out.map(t=>`<div>${sdot(ST(t.statusId))} ${rl(t)} <span class="dim">${esc(ST(t.statusId).name)} · ${esc(t.title.slice(0,50))}</span></div>`).join(''))};
+CHG.cardprio=(v,el)=>{const t=T(el.dataset.p);const b=BD(S.active.split('/')[1]);const before=b?colOf(b,t):null;const r=setFieldValue(t,'f-priority',v||undefined);
+if(!r.ok){toast(r.msg,'err');render();return}const after=b?colOf(b,t):null;toast(before&&after&&before!==after?refOf(t)+' переехала в «'+after.name+'»':r.msg);render()};
+function dropOn(colEl,tid,commit){const b=BD(colEl.dataset.b),col=b.columns.find(c=>c.id===colEl.dataset.col),t=T(tid);
+if(!commit){const unmet=col.fieldConditions.some(c=>!condOk(t,c));return !unmet}
+const r=moveCard(t,col,b);toast(r.msg,r.ok?'':'err');render()}
+document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('[data-card]');if(c){S.drag=c.dataset.card;e.dataTransfer.setData('text/plain',S.drag);e.dataTransfer.effectAllowed='move';c.classList.add('drag')}});
+document.addEventListener('dragend',()=>{S.drag=null;document.querySelectorAll('.drag,.col.ok,.col.no').forEach(x=>x.classList.remove('drag','ok','no'))});
+document.addEventListener('dragover',e=>{const c=e.target.closest&&e.target.closest('.col');if(!c||!S.drag)return;e.preventDefault();document.querySelectorAll('.col.ok,.col.no').forEach(x=>{if(x!==c)x.classList.remove('ok','no')});const ok=dropOn(c,S.drag,false);c.classList.toggle('ok',ok);c.classList.toggle('no',!ok)});
+document.addEventListener('drop',e=>{const c=e.target.closest&&e.target.closest('.col');if(!c||!S.drag)return;e.preventDefault();const id=S.drag;S.drag=null;dropOn(c,id,true)});
+
+function newBoardDraft(){return {id:'b-'+hex(String(Math.random()),6),name:'Новая доска',statusSetIds:DB.statusSets[0]?[DB.statusSets[0].id]:[],columns:[{id:'c-'+hex(String(Math.random()),5),name:'Колонка 1',statusIds:[],dropStatuses:{},fieldConditions:[]}]}}
+ACT.newboard=()=>{modal('Новая доска','<label>Название</label><input type="text" name="n" autofocus>',[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Название не может быть пустым','err');return false}
+if(DB.boards.some(b=>b.name===n)){toast('Доска с таким названием уже есть','err');return false}const b=newBoardDraft();b.name=n;DB.boards.push(b);cli('board create "'+n+'"');toast('Доска «'+n+'» создана');go('#/boards/'+b.id+'/edit')}}])};
+function bd(id){const b=BD(id);if(!S.bdr[id]){S.bdr[id]=jsonClone(b);S.myLocks['b:'+id]=120}return S.bdr[id]}
+function bsync(id){if(!bdirty(id)){delete S.bdr[id];delete S.myLocks['b:'+id]}}
+function exclusive(a,b){return a.fieldConditions.some(x=>b.fieldConditions.some(y=>{if(x.fieldId!==y.fieldId)return false;const d=defById(x.fieldId);if(d&&d.multiple)return false;
+if(x.operator==='equal'&&y.operator==='equal')return x.value!==y.value;if(x.operator==='equal'&&y.operator==='notEqual'||x.operator==='notEqual'&&y.operator==='equal')return x.value===y.value;
+const p=[x.operator,y.operator].sort().join();return p==='set,unset'||p==='attached,detached'}))}
+function boardError(d){if(!d.name.trim())return 'Название не может быть пустым';if(!d.statusSetIds.length)return 'Выберите хотя бы один набор статусов';if(!d.columns.length)return 'Нужна хотя бы одна колонка';
+for(let i=0;i<d.columns.length;i++)for(let j=i+1;j<d.columns.length;j++){const a=d.columns[i],b=d.columns[j];const sh=a.statusIds.find(s=>b.statusIds.includes(s));if(sh&&!exclusive(a,b))return 'Доска не принимается: статус «'+ST(sh).name+'» в колонках '+a.name+' и '+b.name+' без взаимоисключающих условий'}return null}
+function saveBoard(id){const d=S.bdr[id];if(!d||!bdirty(id))return;if(lockOf('board',id)){toast('Доска правится: '+lockOf('board',id).holder+'. Сохранить нельзя','err');return}
+const e=boardError(d);if(e){S.berr=e;toast(e,'err');renderMain();return}S.berr=null;const i=DB.boards.findIndex(b=>b.id===id);DB.boards[i]=jsonClone(d);delete S.bdr[id];delete S.myLocks['b:'+id];cli('board update "'+d.name+'" --columns '+d.columns.length);toast('Доска «'+d.name+'» сохранена');render()}
+function vBedit(id){const b0=BD(id);if(!b0)return '<div class="pane"><div class="empty">Доска не найдена</div></div>';const d=S.bdr[id]||b0;const lk=lockOf('board',id);const dy=bdirty(id);
+const sts=[];d.statusSetIds.forEach(s=>SS(s)&&SS(s).statusIds.forEach(x=>{if(!sts.includes(x))sts.push(x)}));
+let h=`<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/boards/</span><b>${esc(slug(d.name,2)+'-'+hex(id,8))}.yaml</b>${lk?`<span class="lock">◉ правит ${esc(lk.holder)} · ещё ${lk.expiresInSec} с</span>`:S.myLocks['b:'+id]!==undefined?`<span class="lock me">⚿ вы правите, блокировка продлевается</span>`:''}</div>
+<div class="bar"><button class="btn pri" data-a="savebd" ${!dy||lk?'disabled':''}>Сохранить Ctrl+S</button><button class="btn" data-a="revertbd" ${dy?'':'disabled'}>Отменить</button><button class="btn" data-a="open" data-p="board/${id}">Открыть доску</button>${dy?'<span class="warn">● не сохранено</span>':''}<span class="gap"></span><button class="btn dng sm" data-a="delboard">Удалить доску</button></div>
+${S.berr?`<div class="card-box err">✖ ${esc(S.berr)}</div>`:''}
+<div class="card-box"><div class="fld"><span class="n">name</span><input type="text" data-i="bname" value="${esc(d.name)}"><span></span></div>
+<div class="fld"><span class="n">statusSets</span><span>${DB.statusSets.map(s=>`<label style="margin-right:10px"><input type="checkbox" data-c="bset" data-p="${s.id}" ${d.statusSetIds.includes(s.id)?'checked':''}> ${esc(s.name)}</label>`).join('')}</span><span></span></div></div>`;
+d.columns.forEach((c,i)=>{h+=`<div class="card-box"><div class="bar"><span class="dim">columns[${i}]</span><input type="text" data-i="bcname" data-p="${i}" value="${esc(c.name)}" style="width:200px"><span class="gap"></span><button class="btn sm" data-a="bcup" data-p="${i}" ${i?'':'disabled'}>↑</button><button class="btn sm" data-a="bcdn" data-p="${i}" ${i<d.columns.length-1?'':'disabled'}>↓</button><button class="btn dng sm" data-a="bcdel" data-p="${i}">удалить</button></div>
+<div class="rw fp" style="background:transparent;border:0;padding:0"><span class="dim">статусы:</span> ${sts.map(sid2=>`<label style="margin-right:10px"><input type="checkbox" data-c="bcst" data-p="${i}" data-q="${sid2}" ${c.statusIds.includes(sid2)?'checked':''}> ${sdot(ST(sid2))} ${esc(ST(sid2).name)}</label>`).join('')||'<span class="dim">выберите набор</span>'}</div>
+<div class="rw fp" style="background:transparent;border:0;padding:0"><span class="dim">статус при перетаскивании:</span> ${d.statusSetIds.map(s=>SS(s)).filter(Boolean).map(s=>{const opts=c.statusIds.filter(x=>s.statusIds.includes(x));return `<span>${esc(s.name)} → <select data-c="bdrop" data-p="${i}" data-q="${s.id}"><option value="">авто</option>${opts.map(x=>`<option value="${x}" ${c.dropStatuses[s.id]===x?'selected':''}>${esc(ST(x).name)}</option>`).join('')}</select></span>`}).join('')}</div>
+<div class="rw fp" style="background:transparent;border:0;padding:0"><span class="dim">условия:</span> ${c.fieldConditions.map((cd,j)=>`<span class="chip on">${esc(condText(cd))} <b data-a="bccdel" data-p="${i}" data-q="${j}">×</b></span>`).join('')||'<span class="dim">нет</span>'}</div>
+<div class="rw fp" style="background:transparent;border:0;padding:0">${condEditor(S.bnc[i]||(S.bnc[i]={fieldId:'',op:'equal',value:''}),'bn'+i,'bcadd').replace('data-a="bcadd"','data-a="bcadd" data-p="'+i+'"').replace(/data-c="bn(\d+)field"/,'data-c="bnfield" data-p="$1"').replace(/data-c="bn(\d+)op"/,'data-c="bnop" data-p="$1"')}</div></div>`});
+return h+'<button class="btn" data-a="bcnew">＋ Колонка</button></div>'}
+INP.bname=el=>{const id=S.active.split('/')[1];bd(id).name=el.value;bsync(id);refreshBd()};
+INP.bcname=el=>{const id=S.active.split('/')[1];bd(id).columns[+el.dataset.p].name=el.value;bsync(id);refreshBd()};
+function refreshBd(){renderTabs();renderStatus();const id=S.active.split('/')[1];const bar=document.querySelector('[data-a=savebd]');if(bar){bar.disabled=!bdirty(id)||!!lockOf('board',id)}}
+CHG.bset=(v,el)=>{const id=S.active.split('/')[1];const d=bd(id);const s=el.dataset.p;const i=d.statusSetIds.indexOf(s);i<0?d.statusSetIds.push(s):d.statusSetIds.splice(i,1);
+const all=[];d.statusSetIds.forEach(x=>SS(x).statusIds.forEach(y=>all.push(y)));d.columns.forEach(c=>{c.statusIds=c.statusIds.filter(x=>all.includes(x));Object.keys(c.dropStatuses).forEach(k=>{if(!d.statusSetIds.includes(k))delete c.dropStatuses[k]})});bsync(id);renderMain();refreshBd()};
+CHG.bcst=(v,el)=>{const id=S.active.split('/')[1];const c=bd(id).columns[+el.dataset.p];const s=el.dataset.q;const i=c.statusIds.indexOf(s);i<0?c.statusIds.push(s):c.statusIds.splice(i,1);Object.keys(c.dropStatuses).forEach(k=>{if(!c.statusIds.includes(c.dropStatuses[k]))delete c.dropStatuses[k]});bsync(id);renderMain();refreshBd()};
+CHG.bdrop=(v,el)=>{const id=S.active.split('/')[1];const c=bd(id).columns[+el.dataset.p];if(v)c.dropStatuses[el.dataset.q]=v;else delete c.dropStatuses[el.dataset.q];bsync(id);refreshBd()};
+CHG.bnfield=(v,el)=>{const i=+el.dataset.p;S.bnc[i]={fieldId:v,op:'equal',value:''};renderMain()};
+CHG.bnop=(v,el)=>{const i=+el.dataset.p;S.bnc[i]={fieldId:$('#bn'+i+'f').value,op:v,value:''};renderMain()};
+ACT.bcadd=i=>{const c=readCond('bn'+i);if(!c)return;const id=S.active.split('/')[1];bd(id).columns[+i].fieldConditions.push(c);S.bnc[i]={fieldId:c.fieldId,op:'equal',value:''};bsync(id);renderMain();refreshBd()};
+ACT.bccdel=(i,j)=>{const id=S.active.split('/')[1];bd(id).columns[+i].fieldConditions.splice(+j,1);bsync(id);renderMain();refreshBd()};
+ACT.bcnew=()=>{const id=S.active.split('/')[1];bd(id).columns.push({id:'c-'+hex(String(Math.random()),5),name:'Колонка '+(bd(id).columns.length+1),statusIds:[],dropStatuses:{},fieldConditions:[]});renderMain();refreshBd()};
+ACT.bcdel=i=>{const id=S.active.split('/')[1];bd(id).columns.splice(+i,1);bsync(id);renderMain();refreshBd()};
+ACT.bcup=i=>{const id=S.active.split('/')[1];const a=bd(id).columns;i=+i;[a[i-1],a[i]]=[a[i],a[i-1]];bsync(id);renderMain();refreshBd()};
+ACT.bcdn=i=>{const id=S.active.split('/')[1];const a=bd(id).columns;i=+i;[a[i+1],a[i]]=[a[i],a[i+1]];bsync(id);renderMain();refreshBd()};
+ACT.savebd=()=>saveBoard(S.active.split('/')[1]);
+ACT.revertbd=()=>{const id=S.active.split('/')[1];delete S.bdr[id];delete S.myLocks['b:'+id];S.berr=null;renderMain();refreshBd();toast('Правки отменены','info')};
+ACT.delboard=()=>{const id=S.active.split('/')[1];const b=BD(id);confirmBox('Удалить доску','Удалить доску «'+esc(b.name)+'»? Задачи не затрагиваются.','Удалить',()=>{DB.boards.splice(DB.boards.indexOf(b),1);cli('board delete "'+b.name+'"');['board/','bedit/'].forEach(p=>{const i=S.tabs.indexOf(p+id);if(i>=0)S.tabs.splice(i,1)});delete S.bdr[id];toast('Доска удалена');go('#/boards')},true)};
+
+function vSeries(){const g=conflictGroups();
+let h=`<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/</span><b>series.yaml</b></div><div class="bar"><button class="btn pri" data-a="newseries">＋ Серия</button><div class="cmdline"><b>$</b> tasker series list</div></div>`;
+if(g.length)h+=`<div class="card-box"><b class="warn">⚠ Конфликты номеров (${g.length})</b> <span class="dim">— один номер выдан в разных ветках git</span>${g.map(c=>`<div style="margin-top:4px"><span class="ref">${esc(pfx(c.seriesId)+'-'+c.number)}</span>: ${c.tasks.map(t=>`${rl(t)} <span class="dim">«${esc(t.title.slice(0,32))}…» ${dt(t.createdAt)}</span>`).join(' &nbsp;|&nbsp; ')}</div>`).join('')}<div style="margin-top:8px"><button class="btn pri" data-a="fix" data-p="resolve" data-q="0">Разрешить конфликты номеров</button> <span class="hint">самая ранняя задача сохраняет номер, остальные получают следующие свободные</span></div></div>`;
+else h+='<div class="card-box ok">✔ Здоровье серий: конфликтов номеров нет</div>';
+DB.series.forEach(s=>{const ts=DB.tasks.filter(t=>t.series.some(x=>x.seriesId===s.id)).sort((a,b)=>a.series.find(x=>x.seriesId===s.id).number-b.series.find(x=>x.seriesId===s.id).number);
+h+=`<div class="card-box"><div class="bar"><b class="ref">${esc(s.prefix)}</b><span>${esc(s.name)}</span><span class="dim">· задач ${ts.length} · следующий № ${nextNum(s.id)}</span><span class="gap"></span><button class="btn sm" data-a="renseries" data-p="${s.id}">Переименовать</button><button class="btn sm" data-a="addtoser" data-p="${s.id}">Добавить задачу…</button><button class="btn dng sm" data-a="delseries" data-p="${s.id}">Удалить</button></div>
+<table class="tbl"><tbody>${ts.map(t=>{const n=t.series.find(x=>x.seriesId===s.id);return `<tr><td style="width:100px" class="${dupOf(t,n).length?'warn':''}">${esc(refStr(n))}${dupOf(t,n).length?' ⚠':''}</td><td>${sdot(ST(t.statusId))} <span class="dim">${esc(ST(t.statusId).name)}</span></td><td class="ttl"><a href="${href(t)}" style="color:var(--fg)">${esc(t.title)}</a></td><td style="width:140px"><button class="btn sm" data-a="serrenum" data-p="${t.id}" data-q="${s.id}">№…</button> <button class="btn sm" data-a="serrm" data-p="${t.id}" data-q="${s.id}">убрать</button></td></tr>`}).join('')||'<tr><td class="dim">пусто</td></tr>'}</tbody></table></div>`});
+return h+'</div>'}
+ACT.newseries=()=>{modal('Новая серия','<label>Префикс (латиница и цифры, до 20, регистр важен)</label><input type="text" name="p" autofocus maxlength="30"><label>Название</label><input type="text" name="n">',[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const p=mv('p').trim(),n=mv('n').trim();
+if(!/^[A-Za-z0-9]{1,20}$/.test(p)){toast('Префикс: только латинские буквы и цифры, не больше 20','err');return false}if(DB.series.some(s=>s.prefix===p)){toast('Префикс «'+p+'» уже занят','err');return false}if(!n){toast('Укажите название','err');return false}
+DB.series.push({id:'sr-'+p.toLowerCase(),name:n,prefix:p});cli('series create '+p+' "'+n+'"');toast('Серия '+p+' создана');render()}}])};
+ACT.renseries=id=>{const s=SR(id);modal('Переименовать серию','<label>Название</label><input type="text" name="n" value="'+esc(s.name)+'" autofocus>',[{label:'Отмена'},{label:'Сохранить',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Укажите название','err');return false}s.name=n;cli('series rename '+s.prefix+' "'+n+'"');toast('Серия переименована');render()}}])};
+ACT.delseries=id=>{const s=SR(id);const n=DB.tasks.filter(t=>t.series.some(x=>x.seriesId===id)).length;confirmBox('Удалить серию','Удалить серию <b>'+esc(s.prefix)+'</b>? У '+n+' задач исчезнут ключи '+esc(s.prefix)+'-N (задачи останутся).','Удалить',()=>{DB.tasks.forEach(t=>{t.series=t.series.filter(x=>x.seriesId!==id)});DB.series.splice(DB.series.indexOf(s),1);S.filter.series=S.filter.series.filter(x=>x!==id);cli('series delete '+s.prefix);toast('Серия удалена');render()},true)};
+ACT.addtoser=id=>{modal('Добавить задачу в серию '+pfx(id),'<label>Задача (ключ или название)</label><input type="text" name="q" autofocus><label>Номер (пусто — '+nextNum(id)+')</label><input type="number" name="n">',[{label:'Отмена'},{label:'Добавить',cls:'pri',fn:()=>{const r=findRef(mv('q'));const t=r[0]||DB.tasks.find(x=>x.title.toLowerCase().includes(mv('q').toLowerCase()));if(!t){toast('Задача не найдена','err');return false}
+const x=addToSeries(t,id,parseInt(mv('n'))||0);toast(x.msg,x.ok?'':'err');if(!x.ok)return false;render()}}])};
+ACT.serrm=(tid,sid2)=>{const r=removeFromSeries(T(tid),sid2);toast(r.msg,r.ok?'':'err');render()};
+ACT.serrenum=(tid,sid2)=>{const t=T(tid);modal('Перенумеровать','<label>Новый номер (пусто — следующий свободный: '+nextNum(sid2)+')</label><input type="number" name="n" autofocus>',[{label:'Отмена'},{label:'Применить',cls:'pri',fn:()=>{const v=mv('n');const r=renumber(t,sid2,v?parseInt(v):0);toast(r.msg,r.ok?'':'err');if(!r.ok)return false;render()}}])};
+
+function vSchema(sec){const f={statuses:schStatuses,sets:schSets,types:schTypes,links:schLinks,fields:schFields,enums:schEnums,members:schMembers,project:schProject}[sec];
+if(!f)return '<div class="pane"><div class="empty">Нет такого раздела</div></div>';const m=SCH.find(x=>x[0]===sec);
+return `<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/</span><b>${m[1]}</b><span class="dim">· ${m[2]}</span></div>${f()}</div>`}
+const refList=a=>a.slice(0,6).join(', ')+(a.length>6?' и ещё '+(a.length-6):'');
+function usedMsg(parts){return 'Используется: '+parts.filter(Boolean).join('; ')}
+function statusUsage(id){const sets=DB.statusSets.filter(s=>s.statusIds.includes(id)).map(s=>s.name);const ts=DB.tasks.filter(t=>t.statusId===id).map(refOf);const cols=[];DB.boards.forEach(b=>b.columns.forEach(c=>{if(c.statusIds.includes(id))cols.push(b.name+'/'+c.name)}));
+return {sets,ts,cols,any:sets.length||ts.length||cols.length}}
+function schStatuses(){let h=`<div class="bar"><div class="cmdline"><b>$</b> tasker status list</div></div><table class="tbl"><thead><tr><th></th><th>name</th><th>description</th><th>используется</th><th></th></tr></thead><tbody>`;
+DB.statuses.forEach(s=>{const u=statusUsage(s.id);h+=`<tr><td><input type="color" value="${s.color}" data-c="stcolor" data-p="${s.id}"></td><td><input data-c="stname" data-p="${s.id}" value="${esc(s.name)}" style="width:150px"></td><td><input data-c="stdesc" data-p="${s.id}" value="${esc(s.description)}" style="width:100%"></td><td class="dim">наборов ${u.sets.length} · задач ${u.ts.length}</td><td><button class="btn dng sm" data-a="stdel" data-p="${s.id}">×</button></td></tr>`});
+h+=`<tr><td><input type="color" id="nsc" value="#2684ff"></td><td><input id="nsn" placeholder="новый статус" style="width:150px"></td><td><input id="nsd" placeholder="описание" style="width:100%"></td><td></td><td><button class="btn pri sm" data-a="stadd">＋</button></td></tr></tbody></table>`;return h}
+CHG.stcolor=(v,el)=>{ST(el.dataset.p).color=v;cli('status update "'+ST(el.dataset.p).name+'" --color '+v);toast('Цвет обновлён');render()};
+CHG.stname=(v,el)=>{const s=ST(el.dataset.p);v=v.trim();if(!v){toast('Название не может быть пустым','err');render();return}if(DB.statuses.some(x=>x!==s&&x.name===v)){toast('Статус «'+v+'» уже есть','err');render();return}cli('status update "'+s.name+'" --name "'+v+'"');s.name=v;toast('Переименовано');render()};
+CHG.stdesc=(v,el)=>{ST(el.dataset.p).description=v;cli('status update "'+ST(el.dataset.p).name+'" --description "…"');toast('Описание сохранено')};
+ACT.stadd=()=>{const n=$('#nsn').value.trim();if(!n){toast('Укажите название статуса','err');return}if(DB.statuses.some(s=>s.name===n)){toast('Статус «'+n+'» уже есть','err');return}
+DB.statuses.push({id:'s-'+hex(n,6),name:n,color:$('#nsc').value,description:$('#nsd').value});cli('status create "'+n+'"');toast('Статус «'+n+'» создан');render()};
+ACT.stdel=id=>{const s=ST(id),u=statusUsage(id);if(u.any){toast(usedMsg([u.sets.length&&'наборы «'+u.sets.join('», «')+'»',u.ts.length&&'задачи '+refList(u.ts),u.cols.length&&'колонки '+refList(u.cols)]),'err');return}
+DB.statuses.splice(DB.statuses.indexOf(s),1);cli('status delete "'+s.name+'"');toast('Статус удалён');render()};
+
+function schSets(){let h=`<div class="bar"><div class="cmdline"><b>$</b> tasker status-set list</div><button class="btn pri" data-a="setnew">＋ Набор статусов</button></div>`;
+DB.statusSets.forEach(s=>{const avail=DB.statuses.filter(x=>!s.statusIds.includes(x.id));
+h+=`<div class="card-box"><div class="bar"><input data-c="setname" data-p="${s.id}" value="${esc(s.name)}" style="width:200px"><span class="dim">порядок = путь задачи; можно тащить мышью</span><span class="gap"></span><button class="btn dng sm" data-a="setdel" data-p="${s.id}">Удалить набор</button></div>
+<div>${s.statusIds.map((x,i)=>`<div class="tn" draggable="true" data-sdrag="${s.id}:${i}" style="border:1px solid var(--edge);margin:2px 0;border-radius:3px"><span class="dim">${i+1}</span>${sdot(ST(x))}<span class="tx">${esc(ST(x).name)}</span><span style="margin-left:auto"><button class="sbtn" data-a="setmv" data-p="${s.id}" data-q="${i}:-1">↑</button><button class="sbtn" data-a="setmv" data-p="${s.id}" data-q="${i}:1">↓</button><button class="sbtn" data-a="setrm" data-p="${s.id}" data-q="${x}">×</button></span></div>`).join('')}</div>
+<div class="bar" style="margin-top:6px"><select id="sadd_${s.id}">${avail.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select><button class="btn sm" data-a="setadd" data-p="${s.id}" ${avail.length?'':'disabled'}>＋ статус в набор</button></div></div>`});return h}
+CHG.setname=(v,el)=>{const s=SS(el.dataset.p);v=v.trim();if(!v){toast('Название не может быть пустым','err');render();return}cli('status-set update "'+s.name+'" --name "'+v+'"');s.name=v;toast('Набор переименован');render()};
+ACT.setnew=()=>{modal('Новый набор статусов','<label>Название</label><input type="text" name="n" autofocus>',[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Укажите название','err');return false}DB.statusSets.push({id:'ss-'+hex(n,6),name:n,statusIds:[]});cli('status-set create "'+n+'"');toast('Набор создан');render()}}])};
+ACT.setdel=id=>{const s=SS(id);const ty=DB.taskTypes.filter(t=>t.statusSetId===id).map(t=>t.name),bd2=DB.boards.filter(b=>b.statusSetIds.includes(id)).map(b=>b.name);if(ty.length||bd2.length){toast(usedMsg([ty.length&&'типы «'+ty.join('», «')+'»',bd2.length&&'доски «'+bd2.join('», «')+'»']),'err');return}DB.statusSets.splice(DB.statusSets.indexOf(s),1);cli('status-set delete "'+s.name+'"');toast('Набор удалён');render()};
+ACT.setmv=(id,q)=>{const [i,d]=q.split(':').map(Number);const a=SS(id).statusIds;const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];cli('status-set reorder "'+SS(id).name+'"');renderMain()};
+ACT.setrm=(id,st)=>{const s=SS(id);const used=DB.tasks.filter(t=>t.statusId===st&&TY(t.typeId)&&TY(t.typeId).statusSetId===id).map(refOf);if(used.length){toast(usedMsg(['задачи '+refList(used)+' в статусе «'+ST(st).name+'»']),'err');return}s.statusIds=s.statusIds.filter(x=>x!==st);cli('status-set remove-status "'+s.name+'" "'+ST(st).name+'"');renderMain()};
+ACT.setadd=id=>{const v=$('#sadd_'+id).value;if(!v)return;SS(id).statusIds.push(v);cli('status-set add-status "'+SS(id).name+'" "'+ST(v).name+'"');renderMain()};
+document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('[data-sdrag]');if(c){S.sdrag=c.dataset.sdrag;e.dataTransfer.setData('text/plain',S.sdrag)}});
+document.addEventListener('dragover',e=>{const c=e.target.closest&&e.target.closest('[data-sdrag]');if(c&&S.sdrag&&S.sdrag.split(':')[0]===c.dataset.sdrag.split(':')[0])e.preventDefault()});
+document.addEventListener('drop',e=>{const c=e.target.closest&&e.target.closest('[data-sdrag]');if(!c||!S.sdrag)return;const [id,i]=S.sdrag.split(':'),j=+c.dataset.sdrag.split(':')[1];S.sdrag=null;if(id!==c.dataset.sdrag.split(':')[0])return;const a=SS(id).statusIds;const x=a.splice(+i,1)[0];a.splice(j,0,x);cli('status-set reorder "'+SS(id).name+'"');renderMain()});
+
+function schTypes(){let h=`<div class="bar"><div class="cmdline"><b>$</b> tasker type list</div><button class="btn pri" data-a="tynew">＋ Тип задач</button></div>`;
+DB.taskTypes.forEach(ty=>{const n=DB.tasks.filter(t=>t.typeId===ty.id).length;const avail=DB.fields.filter(f=>!ty.fields.some(x=>x.fieldId===f.id));
+h+=`<div class="card-box"><div class="bar"><input data-c="tyname" data-p="${ty.id}" value="${esc(ty.name)}" style="width:180px"><span class="dim">задач: ${n}</span><span>набор: <select data-c="tyset" data-p="${ty.id}">${DB.statusSets.map(s=>`<option value="${s.id}" ${s.id===ty.statusSetId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></span><span class="gap"></span><button class="btn dng sm" data-a="tydel" data-p="${ty.id}">Удалить тип</button></div>
+<input data-c="tydesc" data-p="${ty.id}" value="${esc(ty.description)}" style="width:100%;margin-bottom:6px" placeholder="описание">
+<table class="tbl"><tbody>${ty.fields.map(x=>{const f=FL(x.fieldId);return `<tr><td style="width:200px">${esc(f.name)} <span class="dim">${f.type}${f.multiple?'[]':''}</span></td><td><label><input type="checkbox" data-c="tyreq" data-p="${ty.id}" data-q="${f.id}" ${x.required?'checked':''}> обязательное</label></td><td style="width:40px"><button class="sbtn" data-a="tyfrm" data-p="${ty.id}" data-q="${f.id}">×</button></td></tr>`}).join('')||'<tr><td class="dim">нет полей</td></tr>'}</tbody></table>
+<div class="bar" style="margin-top:6px"><select id="tyf_${ty.id}">${avail.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('')}</select><button class="btn sm" data-a="tyfadd" data-p="${ty.id}" ${avail.length?'':'disabled'}>＋ поле типа</button></div></div>`});return h}
+CHG.tyname=(v,el)=>{const t=TY(el.dataset.p);v=v.trim();if(!v){toast('Название не может быть пустым','err');render();return}cli('type update "'+t.name+'" --name "'+v+'"');t.name=v;toast('Тип переименован');render()};
+CHG.tydesc=(v,el)=>{TY(el.dataset.p).description=v;cli('type update "'+TY(el.dataset.p).name+'" --description "…"');toast('Описание сохранено')};
+CHG.tyset=(v,el)=>{const t=TY(el.dataset.p);const bad=DB.tasks.filter(x=>x.typeId===t.id&&!SS(v).statusIds.includes(x.statusId)).map(refOf);if(bad.length){toast('Нельзя сменить набор: статус задач '+refList(bad)+' не входит в «'+SS(v).name+'»','err');render();return}t.statusSetId=v;cli('type update "'+t.name+'" --status-set "'+SS(v).name+'"');toast('Набор типа изменён');render()};
+CHG.tyreq=(v,el)=>{const t=TY(el.dataset.p);t.fields.find(x=>x.fieldId===el.dataset.q).required=!!el.checked;cli('type update "'+t.name+'" --field "'+FL(el.dataset.q).name+(el.checked?'" --required':'" --optional'));toast('Сохранено')};
+ACT.tyfadd=id=>{const t=TY(id);const f=$('#tyf_'+id).value;if(!f)return;t.fields.push({fieldId:f,required:false});cli('type update "'+t.name+'" --add-field "'+FL(f).name+'"');renderMain()};
+ACT.tyfrm=(id,fid)=>{const t=TY(id);const hv=DB.tasks.filter(x=>x.typeId===id&&isSet(x.fields[fid]));
+modal('Убрать поле «'+FL(fid).name+'» из типа','<div>У '+hv.length+' задач типа «'+esc(t.name)+'» поле заполнено ('+esc(refList(hv.map(refOf)))+').</div><label><input type="radio" name="m" value="drop" checked> удалить значения</label><label><input type="radio" name="m" value="keep"> оставить как дополнительное поле задач</label>',
+[{label:'Отмена'},{label:'Убрать',cls:'pri',fn:()=>{const keep=mr('m')==='keep';t.fields=t.fields.filter(x=>x.fieldId!==fid);DB.tasks.filter(x=>x.typeId===id).forEach(x=>{if(keep){if(isSet(x.fields[fid])&&!x.extra.includes(fid))x.extra.push(fid)}else delete x.fields[fid]});cli('type update "'+t.name+'" --remove-field "'+FL(fid).name+'" --'+(keep?'keep-values':'drop-values'));toast('Поле убрано из типа');render()}}])};
+ACT.tynew=()=>{modal('Новый тип задач','<label>Название</label><input type="text" name="n" autofocus><label>Набор статусов</label><select name="s">'+DB.statusSets.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')+'</select><label>Описание</label><input type="text" name="d">',
+[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Укажите название','err');return false}if(!mv('s')){toast('Сначала создайте набор статусов','err');return false}if(DB.taskTypes.some(t=>t.name===n)){toast('Тип «'+n+'» уже есть','err');return false}DB.taskTypes.push({id:'tt-'+hex(n,6),name:n,description:mv('d'),statusSetId:mv('s'),fields:[]});cli('type create "'+n+'"');toast('Тип создан');render()}}])};
+ACT.tydel=id=>{const t=TY(id);const n=DB.tasks.filter(x=>x.typeId===id).map(refOf);if(n.length){toast(usedMsg(['задачи '+refList(n)]),'err');return}DB.taskTypes.splice(DB.taskTypes.indexOf(t),1);cli('type delete "'+t.name+'"');toast('Тип удалён');render()};
+
+function schLinks(){let h=`<div class="bar"><div class="cmdline"><b>$</b> tasker link-type list</div></div><table class="tbl"><thead><tr><th>name</th><th>outward</th><th>inward</th><th>циклы</th><th>иерарх.</th><th>связей</th><th></th></tr></thead><tbody>`;
+DB.linkTypes.forEach(l=>{const n=DB.links.filter(x=>x.typeId===l.id).length;h+=`<tr><td><input data-c="ltf" data-p="${l.id}" data-q="name" value="${esc(l.name)}" style="width:140px"></td><td><input data-c="ltf" data-p="${l.id}" data-q="outward" value="${esc(l.outward)}" style="width:130px"></td><td><input data-c="ltf" data-p="${l.id}" data-q="inward" value="${esc(l.inward||'')}" placeholder="— (ненаправленная)" style="width:150px"></td>
+<td><input type="checkbox" data-c="ltb" data-p="${l.id}" data-q="allowCycles" ${l.allowCycles?'checked':''}></td><td><input type="checkbox" data-c="ltb" data-p="${l.id}" data-q="hierarchical" ${l.hierarchical?'checked':''}></td><td class="dim">${n}</td><td><button class="btn dng sm" data-a="ltdel" data-p="${l.id}">×</button></td></tr>`});
+return h+`<tr><td><input id="ln1" placeholder="Имя" style="width:140px"></td><td><input id="ln2" placeholder="исходящая" style="width:130px"></td><td><input id="ln3" placeholder="входящая (пусто = ненапр.)" style="width:150px"></td><td><input type="checkbox" id="ln4"></td><td><input type="checkbox" id="ln5"></td><td></td><td><button class="btn pri sm" data-a="ltadd">＋</button></td></tr></tbody></table>`}
+CHG.ltf=(v,el)=>{const l=LT(el.dataset.p),k=el.dataset.q;v=v.trim();if(k!=='inward'&&!v){toast('Поле не может быть пустым','err');render();return}l[k]=k==='inward'&&!v?null:v;cli('link-type update "'+l.name+'" --'+k+' "'+v+'"');toast('Сохранено');render()};
+CHG.ltb=(v,el)=>{const l=LT(el.dataset.p);l[el.dataset.q]=el.checked;cli('link-type update "'+l.name+'" --'+el.dataset.q+' '+el.checked);toast('Сохранено')};
+ACT.ltadd=()=>{const n=$('#ln1').value.trim(),o=$('#ln2').value.trim(),i=$('#ln3').value.trim();if(!n||!o){toast('Укажите имя и исходящее название','err');return}if(DB.linkTypes.some(l=>l.name===n)){toast('Тип связи «'+n+'» уже есть','err');return}
+DB.linkTypes.push({id:'lt-'+hex(n,6),name:n,outward:o,inward:i||null,allowCycles:$('#ln4').checked,hierarchical:$('#ln5').checked});cli('link-type create "'+n+'"');toast('Тип связи создан');render()};
+ACT.ltdel=id=>{const l=LT(id);const n=DB.links.filter(x=>x.typeId===id).length;if(n){toast('Используется: '+n+' связей этого типа. Сначала удалите связи','err');return}DB.linkTypes.splice(DB.linkTypes.indexOf(l),1);cli('link-type delete "'+l.name+'"');toast('Тип связи удалён');render()};
+
+function fieldUsage(id){const ty=DB.taskTypes.filter(t=>t.fields.some(x=>x.fieldId===id)).map(t=>t.name);const ts=DB.tasks.filter(t=>isSet(t.fields[id])||t.extra.includes(id)).map(refOf);const bs=[];DB.boards.forEach(b=>b.columns.forEach(c=>{if(c.fieldConditions.some(x=>x.fieldId===id))bs.push(b.name+'/'+c.name)}));return {ty,ts,bs,any:ty.length||ts.length||bs.length}}
+function schFields(){let h=`<div class="bar"><div class="cmdline"><b>$</b> tasker field list</div></div><table class="tbl"><thead><tr><th>name</th><th>type</th><th>multiple</th><th>enum</th><th>используется</th><th></th></tr></thead><tbody>`;
+DB.fields.forEach(f=>{const u=fieldUsage(f.id);h+=`<tr><td><input data-c="fname" data-p="${f.id}" value="${esc(f.name)}" style="width:140px"></td><td><select data-c="ftype" data-p="${f.id}">${['string','int','float','bool','date','enum'].map(x=>`<option ${x===f.type?'selected':''}>${x}</option>`).join('')}</select></td><td><input type="checkbox" data-c="fmult" data-p="${f.id}" ${f.multiple?'checked':''}></td>
+<td>${f.type==='enum'?`<select data-c="fenum" data-p="${f.id}">${DB.enums.map(e=>`<option value="${e.id}" ${e.id===f.enumId?'selected':''}>${esc(e.name)}</option>`).join('')}</select>`:'<span class="dim">—</span>'}</td><td class="dim">типов ${u.ty.length} · задач ${u.ts.length} · колонок ${u.bs.length}</td><td><button class="btn dng sm" data-a="fdel" data-p="${f.id}">×</button></td></tr>`});
+return h+`<tr><td><input id="fn1" placeholder="ИмяПоля" style="width:140px"></td><td><select id="fn2" data-c="fnewtype">${['string','int','float','bool','date','enum'].map(x=>`<option>${x}</option>`).join('')}</select></td><td><input type="checkbox" id="fn3"></td><td><select id="fn4">${DB.enums.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></td><td></td><td><button class="btn pri sm" data-a="fadd">＋</button></td></tr></tbody></table><div class="hint">Имя поля: только буквы и цифры. Смена типа поля, заполненного у задач, откроет диалог преобразования.</div>`}
+const validName=n=>/^[\p{L}\p{N}]+$/u.test(n);
+ACT.fadd=()=>{const n=$('#fn1').value.trim(),ty=$('#fn2').value;if(!validName(n)){toast('Имя поля: только буквы и цифры, без пробелов','err');return}if(allDefs().some(d=>d.name.toLowerCase()===n.toLowerCase())){toast('Поле «'+n+'» уже есть','err');return}
+if(ty==='enum'&&!DB.enums.length){toast('Сначала создайте перечисление','err');return}const f={id:'f-'+hex(n,6),name:n,type:ty,multiple:$('#fn3').checked};if(ty==='enum')f.enumId=$('#fn4').value;DB.fields.push(f);cli('field create '+n+' --type '+ty+(f.multiple?' --multiple':''));toast('Поле «'+n+'» создано');render()};
+CHG.fname=(v,el)=>{const f=FL(el.dataset.p);v=v.trim();if(!validName(v)){toast('Имя поля: только буквы и цифры','err');render();return}if(allDefs().some(d=>d!==f&&d.name.toLowerCase()===v.toLowerCase())){toast('Поле «'+v+'» уже есть','err');render();return}cli('field update '+f.name+' --name '+v);f.name=v;toast('Поле переименовано');render()};
+CHG.fmult=(v,el)=>{const f=FL(el.dataset.p);const sel=el.checked;const aff=DB.tasks.filter(t=>isSet(t.fields[f.id]));
+if(!sel&&aff.some(t=>Array.isArray(t.fields[f.id])&&t.fields[f.id].length>1)){modal('Несколько значений → одно','<div>Есть задачи с несколькими значениями поля «'+esc(f.name)+'»:</div>'+aff.filter(t=>Array.isArray(t.fields[f.id])&&t.fields[f.id].length>1).map(t=>'<div>'+esc(refOf(t))+': '+esc(fmtVal(f,t.fields[f.id]))+'</div>').join('')+'<label><input type="radio" name="m" value="first" checked> оставить первое значение</label><label><input type="radio" name="m" value="clear"> очистить поле</label>',
+[{label:'Отмена',fn:()=>{render()}},{label:'Применить',cls:'pri',fn:()=>{aff.forEach(t=>{const v2=t.fields[f.id];if(Array.isArray(v2)){if(mr('m')==='first')t.fields[f.id]=v2[0];else delete t.fields[f.id]}});f.multiple=false;cli('field update '+f.name+' --single --'+(mr('m')==='first'?'keep-first':'clear'));toast('Изменено');render()}}]);return}
+aff.forEach(t=>{const v2=t.fields[f.id];t.fields[f.id]=sel?(Array.isArray(v2)?v2:[v2]):(Array.isArray(v2)?v2[0]:v2)});f.multiple=sel;cli('field update '+f.name+(sel?' --multiple':' --single'));toast('Изменено');render()};
+CHG.fenum=(v,el)=>{const f=FL(el.dataset.p);const aff=DB.tasks.filter(t=>isSet(t.fields[f.id]));if(aff.length){toast('Нельзя сменить перечисление: значения есть у '+aff.length+' задач','err');render();return}f.enumId=v;cli('field update '+f.name+' --enum "'+EN(v).name+'"');toast('Перечисление изменено');render()};
+function convertible(from,to,v){if(to==='string')return true;if(from===to)return true;if(from==='int'&&to==='float')return true;if(from==='float'&&to==='int')return Number.isInteger(+v);if(from==='string'&&(to==='int'||to==='float'))return v!==''&&!isNaN(+v)&&(to==='float'||Number.isInteger(+v));if(from==='enum'&&to==='string')return true;return false}
+CHG.ftype=(v,el)=>{const f=FL(el.dataset.p);const old=f.type;if(v===old)return;const aff=DB.tasks.filter(t=>isSet(t.fields[f.id]));
+const conv=x=>f.type==='enum'?enumName(f.enumId,x):x;
+const bad=aff.filter(t=>[].concat(t.fields[f.id]).some(x=>!convertible(old,v,conv(x))));
+const doChange=(map)=>{aff.forEach(t=>{const cvt=x=>{let y=old==='enum'?enumName(f.enumId,x):x;if(map&&map[x]!==undefined&&map[x]!=='')y=map[x];if(!convertible(old,v,y)&&!(map&&map[x]))return undefined;if(v==='int'||v==='float')return +y;if(v==='bool')return /^(true|да|1)$/i.test(y);return String(y)};
+const val=t.fields[f.id];const arr=Array.isArray(val)?val.map(cvt).filter(x=>x!==undefined):[cvt(val)].filter(x=>x!==undefined);if(!arr.length)delete t.fields[f.id];else t.fields[f.id]=f.multiple?arr:arr[0]});f.type=v;if(v==='enum'){f.enumId=DB.enums[0]&&DB.enums[0].id}else delete f.enumId;cli('field update '+f.name+' --type '+v);toast('Тип поля изменён');render()};
+if(!aff.length){doChange();return}
+const vals=[...new Set(aff.flatMap(t=>[].concat(t.fields[f.id])))];
+modal('Смена типа поля «'+f.name+'»: '+old+' → '+v,'<div>Затронуто задач: <b>'+aff.length+'</b> ('+esc(refList(aff.map(refOf)))+'). Не конвертируются: <b>'+bad.length+'</b>.</div><label><input type="radio" name="m" value="clear" checked> очистить значения, которые не конвертируются</label><label><input type="radio" name="m" value="map"> сопоставить: старое = новое</label><div class="hint">'+vals.slice(0,6).map(x=>'<div>'+esc(old==='enum'?enumName(f.enumId,x):x)+' = <input type="text" data-map="'+esc(x)+'" style="width:140px"></div>').join('')+'</div>',
+[{label:'Отмена',fn:()=>render()},{label:'Преобразовать',cls:'pri',fn:()=>{let map=null;if(mr('m')==='map'){map={};document.querySelectorAll('#modal [data-map]').forEach(i=>{if(i.value)map[i.dataset.map]=i.value})}doChange(map)}}],{wide:true})};
+ACT.fdel=id=>{const f=FL(id),u=fieldUsage(id);if(u.any){toast(usedMsg([u.ty.length&&'типы «'+u.ty.join('», «')+'»',u.ts.length&&'значение у задач '+refList(u.ts),u.bs.length&&'условия колонок '+refList(u.bs)]),'err');return}DB.fields.splice(DB.fields.indexOf(f),1);cli('field delete '+f.name);toast('Поле удалено');render()};
+
+function schEnums(){let h=`<div class="bar"><div class="cmdline"><b>$</b> tasker enum list</div><button class="btn pri" data-a="ennew">＋ Перечисление</button></div>`;
+DB.enums.forEach(e=>{h+=`<div class="card-box"><div class="bar"><input data-c="enname" data-p="${e.id}" value="${esc(e.name)}" style="width:200px"><span class="dim">полей: ${DB.fields.filter(f=>f.enumId===e.id).length}</span><span class="gap"></span><button class="btn dng sm" data-a="endel" data-p="${e.id}">Удалить</button></div>
+${e.values.map(v=>`<div class="fld" style="grid-template-columns:1fr auto"><input data-c="envname" data-p="${e.id}" data-q="${v.id}" value="${esc(v.name)}"><button class="sbtn" data-a="envdel" data-p="${e.id}" data-q="${v.id}">×</button></div>`).join('')}
+<div class="bar"><input id="env_${e.id}" placeholder="новое значение" style="width:200px"><button class="btn sm" data-a="envadd" data-p="${e.id}">＋ значение</button></div></div>`});return h}
+CHG.enname=(v,el)=>{const e=EN(el.dataset.p);v=v.trim();if(!v){toast('Название не может быть пустым','err');render();return}cli('enum update "'+e.name+'" --name "'+v+'"');e.name=v;toast('Переименовано');render()};
+CHG.envname=(v,el)=>{const e=EN(el.dataset.p),x=e.values.find(q=>q.id===el.dataset.q);v=v.trim();if(!v||e.values.some(q=>q!==x&&q.name===v)){toast(v?'Значение «'+v+'» уже есть':'Значение не может быть пустым','err');render();return}cli('enum rename-value "'+e.name+'" "'+x.name+'" "'+v+'"');x.name=v;toast('Значение переименовано');render()};
+ACT.envadd=id=>{const e=EN(id);const v=$('#env_'+id).value.trim();if(!v){toast('Укажите значение','err');return}if(e.values.some(x=>x.name===v)){toast('Значение «'+v+'» уже есть','err');return}e.values.push({id:'ev-'+hex(id+v,6),name:v});cli('enum add-value "'+e.name+'" "'+v+'"');toast('Значение добавлено');render()};
+ACT.envdel=(id,vid)=>{const e=EN(id),v=e.values.find(x=>x.id===vid);const fs=DB.fields.filter(f=>f.enumId===id);const aff=DB.tasks.filter(t=>fs.some(f=>[].concat(t.fields[f.id]).includes(vid)));
+const bs=[];DB.boards.forEach(b=>b.columns.forEach(c=>{if(c.fieldConditions.some(x=>x.value===vid))bs.push(b.name+'/'+c.name)}));
+if(!aff.length&&!bs.length){e.values=e.values.filter(x=>x.id!==vid);cli('enum remove-value "'+e.name+'" "'+v.name+'"');toast('Значение удалено');render();return}
+modal('Удалить значение «'+v.name+'»','<div>Значение используется у '+aff.length+' задач ('+esc(refList(aff.map(refOf)))+')'+(bs.length?' и в условиях колонок '+esc(refList(bs)):'')+'.</div><label><input type="radio" name="m" value="drop" checked> убрать значение из задач</label><label><input type="radio" name="m" value="rep"> заменить другим:</label><select name="r">'+e.values.filter(x=>x.id!==vid).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')+'</select>',
+[{label:'Отмена'},{label:'Удалить',cls:'dng',fn:()=>{const rep=mr('m')==='rep'?mv('r'):null;if(!rep&&bs.length){toast('Значение стоит в условиях колонок досок: выберите замену','err');return false}
+aff.forEach(t=>fs.forEach(f=>{const x=t.fields[f.id];if(x===undefined)return;const arr=[].concat(x).map(y=>y===vid?rep:y).filter(Boolean);const u=[...new Set(arr)];if(!u.length)delete t.fields[f.id];else t.fields[f.id]=f.multiple?u:u[0]}));
+DB.boards.forEach(b=>b.columns.forEach(c=>c.fieldConditions.forEach(x=>{if(x.value===vid)x.value=rep})));
+e.values=e.values.filter(x=>x.id!==vid);cli('enum remove-value "'+e.name+'" "'+v.name+'"'+(rep?' --replace-with "'+e.values.find(x=>x.id===rep).name+'"':' --drop'));toast('Значение удалено');render()}}])};
+ACT.endel=id=>{const e=EN(id);const fs=DB.fields.filter(f=>f.enumId===id).map(f=>f.name);if(fs.length){toast(usedMsg(['поля «'+fs.join('», «')+'»']),'err');return}DB.enums.splice(DB.enums.indexOf(e),1);cli('enum delete "'+e.name+'"');toast('Перечисление удалено');render()};
+ACT.ennew=()=>{modal('Новое перечисление','<label>Название</label><input type="text" name="n" autofocus><label>Значения через запятую</label><input type="text" name="v">',[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Укажите название','err');return false}if(DB.enums.some(e=>e.name===n)){toast('Перечисление «'+n+'» уже есть','err');return false}
+DB.enums.push({id:'e-'+hex(n,6),name:n,values:mv('v').split(',').map(s=>s.trim()).filter(Boolean).map(s=>({id:'ev-'+hex(n+s,6),name:s}))});cli('enum create "'+n+'"');toast('Перечисление создано');render()}}])};
+
+function schMembers(){const p=byId(DB.projects,S.proj);const humans=p.members.filter(m=>U(m)&&U(m).kind==='human');const me=U(DB.me);
+const cand=DB.users.filter(u=>!p.members.includes(u.id)&&(u.kind==='human'||me.admin||u.owner===DB.me));
+return `<div class="bar"><div class="cmdline"><b>$</b> tasker project members</div></div><table class="tbl"><thead><tr><th>участник</th><th>вид</th><th>email / владелец</th><th></th></tr></thead><tbody>${p.members.map(id=>{const u=U(id);if(!u)return '';return `<tr><td>${u.kind==='agent'?'☻':'☺'} ${esc(u.name)}${u.admin?' <span class="tag">admin</span>':''}</td><td class="dim">${u.kind==='agent'?'агент':'человек'}</td><td class="dim">${esc(u.kind==='agent'?'агент '+U(u.owner).name:u.email)}</td><td><button class="btn dng sm" data-a="mrm" data-p="${id}">убрать</button></td></tr>`}).join('')}</tbody></table>
+<div class="bar" style="margin-top:10px"><select id="madd">${cand.map(u=>`<option value="${u.id}">${u.kind==='agent'?'☻ ':''}${esc(u.name)}${u.kind==='agent'?' (агент '+esc(U(u.owner).name)+')':''}</option>`).join('')}</select><button class="btn pri sm" data-a="madd" ${cand.length?'':'disabled'}>＋ добавить</button><span class="hint">${me.admin?'Администратор может добавить любого агента.':'Можно добавить людей и своих агентов.'} Людей в проекте: ${humans.length}</span></div>`}
+ACT.madd=()=>{const id=$('#madd').value;if(!id)return;byId(DB.projects,S.proj).members.push(id);cli('project add-member "'+U(id).name+'"');toast(U(id).name+' добавлен в проект');render()};
+ACT.mrm=id=>{const p=byId(DB.projects,S.proj);const u=U(id);const hs=p.members.filter(m=>U(m)&&U(m).kind==='human');if(u.kind==='human'&&hs.length<=1){toast('Нельзя убрать последнего человека из проекта','err');return}p.members=p.members.filter(m=>m!==id);cli('project remove-member "'+u.name+'"');toast(u.name+' убран из проекта');render()};
+function schProject(){const p=byId(DB.projects,S.proj);return `<div class="card-box"><div class="fld"><span class="n">name</span><input type="text" id="pname" value="${esc(p.name)}"><button class="btn pri sm" data-a="prename">Переименовать</button></div>
+<div class="fld"><span class="n">папка</span><span class="dim">${esc(projDir())}</span><span></span></div><div class="fld"><span class="n">создан</span><span class="dim">${dt(p.createdAt)}</span><span></span></div></div>
+<div class="card-box"><h3 style="margin-top:0;color:var(--red)">Опасная зона</h3><div class="hint">Удаление проекта необратимо: задачи, доски и настройки исчезнут вместе с папкой.</div><div class="bar" style="margin-top:6px"><input id="pdelname" placeholder="введите «${esc(p.name)}» для подтверждения" style="width:320px"><button class="btn dng" data-a="pdel">Удалить проект</button></div></div>`}
+ACT.prename=()=>{const p=byId(DB.projects,S.proj);const n=$('#pname').value.trim();if(!n){toast('Название не может быть пустым','err');return}if(DB.projects.some(x=>x!==p&&x.name===n)){toast('Проект «'+n+'» уже есть','err');return}cli('project rename "'+p.name+'" "'+n+'"');p.name=n;toast('Проект переименован. Папка проекта может остаться под старым именем до следующей синхронизации','info');render()};
+ACT.pdel=()=>{const p=byId(DB.projects,S.proj);if($('#pdelname').value!==p.name){toast('Введите имя проекта «'+p.name+'» точно','err');return}if(DB.projects.length<2){toast('Нельзя удалить единственный проект','err');return}
+const other=DB.projects.find(x=>x.id!==p.id);cli('project delete "'+p.name+'"');DB.projects.splice(DB.projects.indexOf(p),1);delete S.stash[p.id];const keep=jsonClone(S.stash[other.id]||null);S.proj='__gone';switchProjectRaw(other.id);toast('Проект удалён')};
+function switchProjectRaw(id){const n=S.stash[id]||Object.fromEntries(KEYS.map(k=>[k,[]]));KEYS.forEach(k=>DB[k]=n[k]);S.proj=id;S.tabs=[];S.drafts={};S.bdr={};S.myLocks={};S.filter=newFilter();go('#/tasks')}
+
+function vProblems(){const it=problemItems();
+return `<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/</span><b>problems</b></div><div class="bar"><div class="cmdline"><b>$</b> tasker problems</div><b class="${it.length?'err':'ok'}">${it.length?it.length+' проблем':'Проблем нет'}</b>
+<button class="btn" data-a="fix" data-p="resolve" data-q="0">Разрешить конфликты номеров</button><button class="btn" data-a="fix" data-p="clean" data-q="0">Очистить недействительные ссылки</button></div>
+<div class="card-box" style="padding:0">${it.length?it.map(probRow).join(''):'<div class="empty ok">✔ Рабочая область читается без ошибок</div>'}</div>
+<div class="hint">Проблемы появляются после слияния веток git: маркеры конфликта в YAML, файлы новее этой версии Tasker, дубли номеров серий, вторая папка проекта после переименования, циклы связей.</div></div>`}
+ACT.fix=(kind,arg)=>{
+if(kind==='rawopen'){const p=DB.problems[+arg];const cm=/конфликт/i.test(p.reason);info(p.path.split('/').pop(),'<pre class="raw">'+esc(cm?`formatVersion: 10
+id: 3b1f8e60-91c4-4d7a-b1a2-11ab5ea4c0de
+<<<<<<< HEAD
+title: Починить вход по паролю
+statusId: s-doing
+=======
+title: Исправить логин после выхода
+statusId: s-review
+>>>>>>> feature/login-fix
+typeId: tt-bug`:`formatVersion: 11
+id: 8d02c7aa-5f0e-11aa-9a31-0c5d7e2b4f10
+name: Релиз 1.0
+columns: []`)+'</pre>');return}
+if(kind==='ours'||kind==='theirs'){const p=DB.problems[+arg];cli('git checkout --'+kind+' -- '+p.path+' && git add '+p.path);DB.problems.splice(+arg,1);toast('Файл восстановлен: '+(kind==='ours'?'наша':'их')+' версия');render();return}
+if(kind==='ign'){S.ignored[arg]=true;cli('# файл исключён из чтения до обновления Tasker');toast('Файл пропущен');render();return}
+if(kind==='merge2'){const p=DB.problems[+arg];cli('git mv '+p.path+'tasks '+projDir()+'/tasks');DB.problems.splice(+arg,1);toast('Папки проекта объединены');render();return}
+if(kind==='showfiles'){S.side='tasks';S.sideView='files';S.sideOff=false;render();return}
+if(kind==='resolve'){const m=resolveConflicts();if(!m.length)toast('Конфликтов номеров нет','info');else{toast('Номера исправлены: '+m.length);m.forEach(x=>con('<span class="ok">✔</span> '+esc(x)))}render();return}
+if(kind==='opentasks'){const ids=arg.split(',');ids.forEach(i=>{const k='task/'+i;if(!S.tabs.includes(k))S.tabs.push(k)});go(routeOf('task/'+ids[0]));return}
+if(kind==='clean'){if(!S.dangling){toast('Недействительных ссылок нет','info');return}const n=cleanLinks();toast('Удалено недействительных ссылок: '+n);render()}}
+
+function vWelcome(){const steps=[[DB.statuses.length,'Создать статусы','Бэклог, В работе, Готово — цвета и описание','schema/statuses'],[DB.statusSets.length,'Собрать набор статусов','Порядок — путь, по которому идёт задача','schema/sets'],[DB.taskTypes.length,'Завести тип задач','Тип привязан к набору статусов и полям','schema/types'],[DB.boards.length,'Создать доску','Колонки из статусов и условий по полям','boards'],[DB.tasks.length,'Создать первую задачу','Из консоли или списком задач','tasks']];
+const first=steps.findIndex(s=>!s[0]);
+return `<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/</span><b>welcome</b></div><h2>Проект «${esc(projName())}» пока пуст</h2><div class="dim" style="margin-bottom:10px">Пройдите чек-лист: каждый шаг открывает нужный файл настроек. Или создайте типовой набор одной командой.</div>
+<div class="card-box">${steps.map((s,i)=>`<div class="step ${s[0]?'done':''}"><span class="n">${s[0]?'✔':i+1}</span><div class="t"><b>${s[1]}</b><div class="dim">${s[2]}</div></div><button class="btn ${i===first?'pri':''}" data-a="open" data-p="${s[3]==='boards'?'board/'+(DB.boards[0]?DB.boards[0].id:'none'):s[3]}">${s[0]?'Открыть':'Перейти'}</button></div>`).join('')}</div>
+<button class="btn pri" data-a="wquick">Создать типовой набор (статусы, набор, тип «Задача», доска)</button></div>`}
+ACT.wquick=()=>{const mk=(n,c,d)=>{let s=DB.statuses.find(x=>x.name===n);if(!s){s={id:'s-'+hex(n+S.proj,6),name:n,color:c,description:d};DB.statuses.push(s)}return s};
+const a=mk('Бэклог','#8993a4','Ещё не взято в работу'),b=mk('В работе','#f5a623','Делается сейчас'),c=mk('Готово','#36b37e','Сделано');
+const ss={id:'ss-'+hex('s'+S.proj,6),name:'Основной',statusIds:[a.id,b.id,c.id]};DB.statusSets.push(ss);DB.taskTypes.push({id:'tt-'+hex('t'+S.proj,6),name:'Задача',description:'',statusSetId:ss.id,fields:[]});
+DB.boards.push({id:'b-'+hex('b'+S.proj,6),name:'Основная',statusSetIds:[ss.id],columns:[a,b,c].map(x=>({id:'c-'+x.id,name:x.name,statusIds:[x.id],dropStatuses:{},fieldConditions:[]}))});
+DB.series.push({id:'sr-'+hex('r'+S.proj,6),name:S.proj==='p-demo'?'Demo':projName(),prefix:slug(projName(),1).toUpperCase().slice(0,4)||'TSK'});cli('init --defaults');toast('Типовой набор создан');render()};
+
+function vAgents(){const ags=DB.users.filter(u=>u.kind==='agent');let h=`<div class="pane"><div class="crumb"><span class="dim">${esc(projDir())}/</span><b>agents</b></div><div class="bar"><button class="btn pri" data-a="newagent">＋ Агент</button><span class="hint">Агенты — LLM-пользователи, работающие с Tasker через MCP.</span></div>
+<table class="tbl"><thead><tr><th>агент</th><th>владелец</th><th>в проектах</th><th></th></tr></thead><tbody>${ags.map(a=>`<tr><td>☻ ${esc(a.name)}</td><td class="dim">${esc(U(a.owner).name)}</td><td class="dim">${DB.projects.filter(p=>p.members.includes(a.id)).map(p=>p.name).join(', ')||'—'}</td><td><button class="btn sm" data-a="agren" data-p="${a.id}">Переименовать</button> <button class="btn dng sm" data-a="agdel" data-p="${a.id}">Удалить</button></td></tr>`).join('')}</tbody></table>`;
+if(S.mode==='server'){h+=`<h3>tokens</h3><div class="bar"><button class="btn" data-a="newtoken">＋ Токен…</button></div><table class="tbl"><thead><tr><th>агент</th><th>имя</th><th>префикс</th><th>создан</th><th>истекает</th><th>использован</th><th></th></tr></thead><tbody>${DB.agentTokens.map(t=>`<tr class="${t.revokedAt?'dim':''}"><td>${esc(U(t.agentId)?U(t.agentId).name:'?')}</td><td>${esc(t.name)}</td><td>${esc(t.prefix)}…</td><td>${dt(t.createdAt)}</td><td>${t.expiresAt?dt(t.expiresAt):'без срока'}</td><td>${dt(t.lastUsedAt)}</td><td>${t.revokedAt?'<span class="err">отозван</span>':`<button class="btn dng sm" data-a="revoke" data-p="${t.id}">Отозвать</button>`}</td></tr>`).join('')}</tbody></table>
+<h3>подключение</h3><pre class="raw">claude mcp add --transport http tasker ${BASE}/mcp --header "Authorization: Bearer tsk_…"</pre>`}
+else{const dm={ok:['работает','ok'],start:['запускается','warn'],down:['не работает','err'],open:['папка открывается','warn']}[S.daemon];
+h+=`<h3>daemon</h3><div class="card-box"><div class="bar"><b>tasker-mcpd</b> для <span class="ref">${esc(S.ws[S.wsActive])}</span><span class="${dm[1]}">● ${dm[0]}</span><span class="gap"></span><button class="btn" data-a="dmrestart">Перезапустить</button></div><div class="hint">Имитация состояния:</div><div class="bar">${[['ok','работает'],['start','запускается'],['down','не работает'],['open','папка открывается']].map(x=>`<button class="chip ${S.daemon===x[0]?'on':''}" data-a="dmset" data-p="${x[0]}">${x[1]}</button>`).join('')}</div></div>
+<h3>подключение</h3><div class="hint">Токены в Desktop не нужны: агент выбирается заголовком.</div><pre class="raw">claude mcp add --transport http tasker ${'http:'+'//'}127.0.0.1:5719/mcp --header "X-Tasker-Agent: a-claude"</pre>`}
+return h+'</div>'}
+ACT.dmset=v=>{S.daemon=v;render()};ACT.dmrestart=()=>{S.daemon='start';render();setTimeout(()=>{S.daemon='ok';render();toast('Демон перезапущен')},1400)};
+ACT.newagent=()=>{modal('Новый агент','<label>Имя</label><input type="text" name="n" autofocus>'+(U(DB.me).admin?'<label>Владелец</label><select name="o">'+DB.users.filter(u=>u.kind==='human').map(u=>`<option value="${u.id}" ${u.id===DB.me?'selected':''}>${esc(u.name)}</option>`).join('')+'</select>':''),
+[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Укажите имя агента','err');return false}if(DB.users.some(u=>u.name===n)){toast('Имя «'+n+'» занято','err');return false}const id='a-'+hex(n,6);DB.users.push({id,kind:'agent',name:n,owner:mv('o')||DB.me});cli('agent create "'+n+'"');toast('Агент «'+n+'» создан');go('#/agents')}}])};
+ACT.agren=id=>{const a=U(id);modal('Переименовать агента','<label>Имя</label><input type="text" name="n" value="'+esc(a.name)+'" autofocus>',[{label:'Отмена'},{label:'Сохранить',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Укажите имя','err');return false}cli('agent rename "'+a.name+'" "'+n+'"');a.name=n;toast('Переименован');render()}}])};
+ACT.agdel=id=>{const a=U(id);confirmBox('Удалить агента','Удалить агента <b>'+esc(a.name)+'</b>? Токены будут отозваны, из проектов он исчезнет.','Удалить',()=>{DB.users.splice(DB.users.indexOf(a),1);DB.agentTokens=DB.agentTokens.filter(t=>t.agentId!==id);DB.projects.forEach(p=>p.members=p.members.filter(m=>m!==id));cli('agent delete "'+a.name+'"');toast('Агент удалён');render()},true)};
+ACT.newtoken=()=>{const ags=DB.users.filter(u=>u.kind==='agent'&&(U(DB.me).admin||u.owner===DB.me));modal('Новый токен','<label>Агент</label><select name="a">'+ags.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')+'</select><label>Название токена</label><input type="text" name="n" autofocus><label>Срок</label><select name="e"><option value="0">без срока</option><option value="30">30 дней</option><option value="90">90 дней</option><option value="365">год</option></select>',
+[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Укажите название токена','err');return false}const tok='tsk_'+hex(n+Date.now(),32);const d=+mv('e');
+DB.agentTokens.push({id:'t'+(DB.agentTokens.length+1),agentId:mv('a'),name:n,prefix:tok.slice(0,8),createdAt:now(),expiresAt:d?new Date(Date.now()+d*864e5).toISOString():null,lastUsedAt:null,revokedAt:null});cli('agent token create "'+U(mv('a')).name+'" --name "'+n+'"');
+setTimeout(()=>modal('Токен создан — показан один раз','<div class="warn">Скопируйте сейчас: потом будет виден только префикс.</div><pre class="raw" id="tokv">'+esc(tok)+'</pre><button class="btn" data-a="copy" data-p="'+tok+'">Копировать токен</button><div class="hint" style="margin-top:8px">Подключение:</div><pre class="raw">claude mcp add --transport http tasker '+BASE+'/mcp --header "Authorization: Bearer '+esc(tok)+'"</pre>',[{label:'Готово',cls:'pri'}],{wide:true}),0);render()}}])};
+ACT.copy=t=>{try{navigator.clipboard.writeText(t)}catch(e){}toast('Скопировано в буфер')};
+ACT.revoke=id=>{const t=byId(DB.agentTokens,id);confirmBox('Отозвать токен','Отозвать токен «'+esc(t.name)+'» ('+esc(t.prefix)+'…)? Подключения с ним перестанут работать.','Отозвать',()=>{t.revokedAt=now();cli('agent token revoke '+t.prefix);toast('Токен отозван');render()},true)};
+
+function vProfile(){const u=U(DB.me);if(S.mode==='desktop')return `<div class="pane"><div class="crumb"><b>profile</b></div><div class="card-box">В режиме Desktop вход не нужен: вы работаете локально как <b>${esc(u.name)}</b> с папкой <span class="ref">${esc(S.ws[S.wsActive])}</span>.</div></div>`;
+return `<div class="pane"><div class="crumb"><b>profile</b></div><div class="card-box"><h3 style="margin-top:0">Профиль</h3><div class="fld"><span class="n">name</span><input type="text" id="pf_n" value="${esc(u.name)}"><span></span></div><div class="fld"><span class="n">email</span><input type="text" id="pf_e" value="${esc(u.email)}"><span></span></div><button class="btn pri" data-a="pfsave">Сохранить профиль</button></div>
+<div class="card-box"><h3 style="margin-top:0">Смена пароля</h3><div class="fld"><span class="n">текущий</span><input type="password" id="pw0"><span></span></div><div class="fld"><span class="n">новый (≥ 8)</span><input type="password" id="pw1"><span></span></div><div class="fld"><span class="n">повтор</span><input type="password" id="pw2"><span></span></div><div class="hint">Все остальные сессии будут завершены.</div><button class="btn" data-a="pwsave">Сменить пароль</button></div>
+<button class="btn dng" data-a="logout">Выйти</button></div>`}
+ACT.pfsave=()=>{const n=$('#pf_n').value.trim(),e=$('#pf_e').value.trim();if(!n){toast('Укажите имя','err');return}if(!/^\S+@\S+\.\S+$/.test(e)){toast('Некорректный email','err');return}const u=U(DB.me);u.name=n;u.email=e;cli('user update --name "'+n+'"');toast('Профиль сохранён');render()};
+ACT.pwsave=()=>{const a=$('#pw0').value,b=$('#pw1').value,c=$('#pw2').value;if(!a){toast('Введите текущий пароль','err');return}if(b.length<8){toast('Пароль: не меньше 8 символов','err');return}if(b!==c){toast('Пароли не совпадают','err');return}cli('user password');toast('Пароль изменён, другие сессии завершены');$('#pw0').value=$('#pw1').value=$('#pw2').value=''};
+ACT.logout=()=>{S.in=false;closeMenu();renderLogin();toast('Вы вышли','info')};
+function vUsers(){if(S.mode!=='server'||!U(DB.me).admin)return '<div class="pane"><div class="empty">Доступно администратору в режиме Server</div></div>';
+const hs=DB.users.filter(u=>u.kind==='human');return `<div class="pane"><div class="crumb"><b>users</b></div><div class="bar"><button class="btn pri" data-a="newuser">＋ Пользователь</button></div><table class="tbl"><thead><tr><th>имя</th><th>email</th><th>админ</th></tr></thead><tbody>${hs.map(u=>`<tr><td>☺ ${esc(u.name)}${u.id===DB.me?' <span class="tag">вы</span>':''}</td><td class="dim">${esc(u.email)}</td><td><input type="checkbox" data-c="uadm" data-p="${u.id}" ${u.admin?'checked':''}></td></tr>`).join('')}</tbody></table></div>`}
+CHG.uadm=(v,el)=>{const u=U(el.dataset.p);const admins=DB.users.filter(x=>x.admin);if(!el.checked&&(u.id===DB.me||admins.length<=1)){toast(u.id===DB.me?'Нельзя снять права администратора у себя':'Нельзя убрать последнего администратора','err');render();return}u.admin=el.checked;cli('user admin "'+u.name+'" '+(u.admin?'on':'off'));toast('Права обновлены');render()};
+ACT.newuser=()=>{modal('Новый пользователь','<label>Имя</label><input type="text" name="n" autofocus><label>Email</label><input type="email" name="e"><label>Пароль (≥ 8)</label><input type="password" name="p">',[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim(),e=mv('e').trim();if(!n||!/^\S+@\S+\.\S+$/.test(e)){toast('Укажите имя и корректный email','err');return false}if(mv('p').length<8){toast('Пароль: не меньше 8 символов','err');return false}
+if(DB.users.some(u=>u.name===n||u.email===e)){toast('Имя или email уже заняты','err');return false}DB.users.push({id:'u-'+hex(n,6),kind:'human',name:n,email:e,admin:false});cli('user create "'+n+'"');toast('Пользователь создан');render()}}])};
+
+function renderLogin(){const el=$('#login');if(S.mode!=='server'||S.in){el.className='';el.innerHTML='';return}el.className='on';const reg=S.regTab==='reg';
+el.innerHTML=`<div class="lg"><div class="logo ok" style="font-size:16px;margin-bottom:8px">▣ tasker</div><div class="tabs2"><a class="${!reg?'on':''}" data-a="logtab" data-p="login">Вход</a><a class="${reg?'on':''}" data-a="logtab" data-p="reg">Первый запуск: администратор</a></div>
+${reg?'<label>Имя</label><input id="lg_n"><label>Email</label><input id="lg_e">':''}<label>${reg?'Пароль (≥ 8)':'Логин — имя или email'}</label>${reg?'':'<input id="lg_l" value="artem@example.com">'}${reg?'':'<label>Пароль</label>'}<input type="password" id="lg_p" value="${reg?'':'demo12345'}">${reg?'<label>Повтор пароля</label><input type="password" id="lg_p2">':''}
+<div class="err" id="lg_err" style="min-height:18px;margin-top:6px"></div><button class="btn pri" data-a="dologin" style="width:100%">${reg?'Создать администратора':'Войти'}</button><div style="margin-top:10px;text-align:center"><a href="#" data-a="skiplogin">Пропустить → в приложение</a></div></div>`}
+ACT.logtab=v=>{S.regTab=v;renderLogin()};
+ACT.skiplogin=()=>{S.in=true;renderLogin()};
+ACT.dologin=()=>{const e=$('#lg_err');if(S.regTab==='reg'){if(!$('#lg_n').value.trim()||!$('#lg_e').value.trim()){e.textContent='Укажите имя и email';return}if($('#lg_p').value.length<8){e.textContent='Пароль: не меньше 8 символов';return}if($('#lg_p').value!==$('#lg_p2').value){e.textContent='Пароли не совпадают';return}}
+else{if(!$('#lg_l').value.trim()){e.textContent='Укажите имя или email';return}if($('#lg_p').value.length<8){e.textContent='Пароль: не меньше 8 символов';return}}S.in=true;renderLogin();toast('Добро пожаловать, '+U(DB.me).name)};
+
+function closeMenu(){document.querySelectorAll('.menu').forEach(m=>m.remove())}
+ACT.usermenu=(p,q,el)=>{closeMenu();const r=el.getBoundingClientRect();const m=document.createElement('div');m.className='menu';m.style.top=r.bottom+2+'px';m.style.right='10px';
+m.innerHTML=`<div data-a="mn" data-p="profile">Профиль</div>${U(DB.me).admin?'<div data-a="mn" data-p="users">Пользователи</div>':''}<div data-a="mn" data-p="agents">Агенты</div><hr><div data-a="logout">Выйти</div>`;document.body.appendChild(m)};
+ACT.mn=k=>{closeMenu();go('#/'+k)};
+ACT.mode=v=>{S.mode=v;DB.mode=v;if(v==='desktop')S.daemon='ok';S.tabs=S.tabs.filter(k=>!(k==='users'||k==='schema/members'));if(S.active==='users'||S.active==='schema/members'){go('#/tasks')}else render();renderLogin()};
+ACT.ws=i=>{S.wsActive=+i;const pid=i==='0'?'p-tasker':DB.projects.find(p=>p.id!=='p-tasker')?DB.projects.find(p=>p.id!=='p-tasker').id:'p-tasker';if(pid!==S.proj)switchProject(pid);else render()};
+ACT.openfolder=()=>{modal('Открыть папку…','<label>Путь к папке с .tasker</label><input type="text" name="p" value="~/Projects/Another" autofocus>',[{label:'Отмена'},{label:'Открыть',cls:'pri',fn:()=>{const p=mv('p').trim();if(!p){toast('Укажите путь','err');return false}S.ws.push(p);S.wsActive=S.ws.length-1;const id='p-'+hex(p,6);DB.projects.push({id,name:p.split('/').filter(Boolean).pop(),createdAt:now(),members:[DB.me]});S.daemon='open';switchProject(id);setTimeout(()=>{S.daemon='ok';renderStatus();toast('Демон запущен для '+p)},1800)}}])};
+CHG.proj=(v,el)=>{if(v==='__new'){el.value=S.proj;modal('Новый проект','<label>Название</label><input type="text" name="n" autofocus>',[{label:'Отмена'},{label:'Создать',cls:'pri',fn:()=>{const n=mv('n').trim();if(!n){toast('Название не может быть пустым','err');return false}if(DB.projects.some(p=>p.name===n)){toast('Проект «'+n+'» уже есть','err');return false}
+const id='p-'+hex(n,6);DB.projects.push({id,name:n,createdAt:now(),members:[DB.me]});cli('project create "'+n+'"');switchProject(id);toast('Проект «'+n+'» создан — пройдите чек-лист');go('#/welcome')}}]);return}switchProject(v)};
+
+function con(h){S.con.push(h);if(S.con.length>500)S.con.shift();if(S.panel==='console'&&S.panelOpen&&$('#conOut')){$('#conOut').innerHTML=S.con.join('\n');$('#conOut').scrollTop=1e9}}
+function tokenize(s){const out=[];let cur='',q=null,has=false;for(const ch of s){if(q){if(ch===q)q=null;else cur+=ch}else if(ch==='"'||ch==="'"){q=ch;has=true}else if(/\s/.test(ch)){if(cur||has){out.push(cur);cur='';has=false}}else cur+=ch}if(cur||has)out.push(cur);return out}
+const BOOLF=['flat','resolve-conflicts','links','required','multiple'];
+function parseArgs(a){const pos=[],fl={};for(let i=0;i<a.length;i++){const x=a[i];if(x.startsWith('--')){const k=x.slice(2);if(BOOLF.includes(k)||i+1>=a.length||a[i+1].startsWith('--'))(fl[k]=fl[k]||[]).push(true);else (fl[k]=fl[k]||[]).push(a[++i])}else pos.push(x)}return {pos,fl}}
+function cell(c){return typeof c==='object'?c:{t:String(c),c:''}}
+function table(head,rows){const w=head.map((h,i)=>Math.max(h.length,...rows.map(r=>cell(r[i]).t.length)));const ln=(l,m,r)=>'<span class="dim">'+l+w.map(x=>'─'.repeat(x+2)).join(m)+r+'</span>';
+const row=(cs)=>'<span class="dim">│</span>'+cs.map((c,i)=>{const o=cell(c);return ' <span class="'+o.c+'">'+esc(o.t)+'</span>'+' '.repeat(w[i]-o.t.length)+' <span class="dim">│</span>'}).join('');
+return [ln('┌','┬','┐'),row(head.map(h=>({t:h,c:'warn'}))),ln('├','┼','┤'),...rows.map(row),ln('└','┴','┘')].join('\n')}
+const trunc=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
+function stByName(n){const s=DB.statuses.find(x=>x.name.toLowerCase()===String(n).toLowerCase()||x.id===n);if(!s)throw Error('статус «'+n+'» не найден. Есть: '+DB.statuses.map(x=>x.name).join(', '));return s}
+function tyByName(n){const s=DB.taskTypes.find(x=>x.name.toLowerCase()===String(n).toLowerCase()||x.id===n);if(!s)throw Error('тип «'+n+'» не найден. Есть: '+DB.taskTypes.map(x=>x.name).join(', '));return s}
+function srByName(n){const s=DB.series.find(x=>x.prefix===n||x.name===n||x.id===n);if(!s)throw Error('серия «'+n+'» не найдена. Есть: '+DB.series.map(x=>x.prefix).join(', '));return s}
+function taskArg(r){const l=findRef(r);if(!l.length)throw Error('задача «'+r+'» не найдена');if(l.length>1)throw Error('«'+r+'» — конфликт номера: '+l.map(t=>sid(t)+' «'+trunc(t.title,28)+'»').join(' и ')+'. Укажите id или выполните cleanup --resolve-conflicts');return l[0]}
+function parseCondStr(s){let m=s.match(/^(.+?)\s+(set|unset|attached|detached)$/);if(m){const d=defByName(m[1]);if(!d)throw Error('поле «'+m[1].trim()+'» не найдено');return {fieldId:d.id,operator:m[2],value:''}}
+m=s.match(/^(.+?)(>=|<=|!=|=|>|<)(.*)$/);if(!m)throw Error('условие «'+s+'»: ожидается Имя>=3, Имя=Значение или «Имя set»');const d=defByName(m[1]);if(!d)throw Error('поле «'+m[1].trim()+'» не найдено');
+const op={'=':'equal','!=':'notEqual','>':'gt','>=':'gte','<':'lt','<=':'lte'}[m[2]];if(NUMOPS.includes(op)&&!['int','float','date'].includes(d.type))throw Error('оператор '+m[2]+' только для int, float и date');
+let v=m[3].trim();if(d.type==='enum'){const e=EN(d.enumId).values.find(x=>x.name.toLowerCase()===v.toLowerCase()||x.id===v);if(!e)throw Error('значение «'+v+'» не входит в перечисление «'+EN(d.enumId).name+'»');v=e.id}return {fieldId:d.id,operator:op,value:v}}
+function flagsToFilter(fl){const F=newFilter();F.sort=[];F.open=S.filter.open;
+(fl.status||[]).forEach(x=>String(x).split(',').forEach(n=>F.statuses.push(stByName(n.trim()).id)));(fl.type||[]).forEach(x=>String(x).split(',').forEach(n=>F.types.push(tyByName(n.trim()).id)));(fl.series||[]).forEach(x=>String(x).split(',').forEach(n=>F.series.push(srByName(n.trim()).id)));
+(fl.field||[]).forEach(x=>F.conds.push(parseCondStr(String(x))));
+const keys=['status','type','title','created','updated','series',...allDefs().map(d=>d.name)];
+(fl.sort||[]).forEach(x=>String(x).split(',').forEach(k=>{const desc=k.startsWith('-');const n=k.replace(/^[-+]/,'');const kk=keys.find(y=>y.toLowerCase()===n.toLowerCase());if(!kk)throw Error('ключ сортировки «'+n+'» неизвестен. Есть: '+keys.join(', '));F.sort.push({key:kk,dir:desc?-1:1})}));
+if(!F.sort.length)F.sort=[{key:'series',dir:1}];F.flat=!!fl.flat;return F}
+function applyFields(t,list){(list||[]).forEach(x=>{const m=String(x).match(/^(.+?)=(.*)$/);if(!m)throw Error('--field: ожидается Имя=Значение');const d=defByName(m[1]);if(!d)throw Error('поле «'+m[1].trim()+'» не найдено');const v=m[2].trim()===''?undefined:parseVal(d,m[2]);const r=setFieldValue(t,d.id,v,'cli');if(!r.ok)throw Error(r.msg);con('<span class="ok">✔</span> '+esc(r.msg))})}
+const CMDS={
+'help'(){con(`<span class="warn">Команды tasker</span>
+  task list [--status X] [--type X] [--series P] [--field 'Имя>=3'] [--sort -Имя] [--flat]
+  task get TSK-140
+  task update TSK-140 [--status "В работе"] [--title …] [--type …] [--field 'Имя=Значение']
+  task create "Название" --type Фича [--series TSK] [--parent TSK-100] [--field 'Приоритет=Высокий']
+  task link TSK-121 blocks TSK-140      task unlink TSK-121 TSK-140
+  task delete TSK-140
+  board list | board show Основная
+  series list
+  sync                          сверить индекс с файлами
+  cleanup [--resolve-conflicts] очистить ссылки / разрешить конфликты номеров
+  problems | status | clear
+<span class="dim">Операторы условий: = != > >= < <= и «Имя set|unset|attached|detached». Каждая команда обновляет интерфейс.</span>`)},
+'clear'(){S.con=[]},
+'task list'(a){const {fl}=parseArgs(a);const F=flagsToFilter(fl);const keepOpen=S.filter.open;S.filter=F;S.filter.open=keepOpen;if(S.active==='tasks')history.replaceState(null,'','#/tasks'+f2q(F));const r=rows(F);
+con(table(['КЛЮЧ','ТИП','СТАТУС','НАЗВАНИЕ'],r.rows.map(x=>[{t:refOf(x.t)+(inConflict(x.t)?' ⚠':''),c:'ref'},TY(x.t.typeId).name,{t:ST(x.t.statusId).name,c:''},(F.flat?'':'  '.repeat(x.d)+(x.d?'└ ':''))+trunc(x.t.title,56)+(x.rep?' (+)':'')])));con('<span class="ok">Найдено '+r.list.length+'</span>')},
+'task get'(a){const t=taskArg(a[0]||'');if(S.tabs.indexOf('task/'+t.id)<0)S.tabs.push('task/'+t.id);const L=[['id',uuid(t.id)],['ключ',t.series.map(refStr).join(', ')||sid(t)],['название',t.title],['тип',TY(t.typeId).name],['статус',ST(t.statusId).name],['создана',dt(t.createdAt)],['обновлена',dt(t.updatedAt)]];
+taskFields(t).forEach(f=>L.push(['поле '+f.def.name,fmtVal(f.def,t.fields[f.def.id])+(f.required?' *':'')]));
+const ps=parentsOf(t),ks=childrenOf(t);if(ps.length)L.push(['входит в',ps.map(refOf).join(', ')]);if(ks.length)L.push(['включает',ks.map(refOf).join(', ')]);
+DB.links.forEach(l=>{const lt=LT(l.typeId);if(lt.hierarchical)return;if(l.from===t.id)L.push([lt.outward,refOf(T(l.to))]);else if(l.to===t.id)L.push([lt.inward||lt.outward,refOf(T(l.from))])});
+con(L.map(x=>'<span class="yk">'+esc(x[0].padEnd(12))+'</span> '+esc(x[1])).join('\n')+(t.description?'\n<span class="dim">'+esc(t.description)+'</span>':''));go(routeOf('task/'+t.id))},
+'task update'(a){const {pos,fl}=parseArgs(a);const t=taskArg(pos[0]||'');const lf=lockFail(t);if(lf)throw Error(lf.msg);let did=false;
+if(fl.title){const v=String(fl.title[0]).trim();if(!v)throw Error('название не может быть пустым');t.title=v;touch(t);cli('task update '+refOf(t)+' --title "'+v+'"','cli');did=true;con('<span class="ok">✔</span> название обновлено')}
+if(fl.type){const ty=tyByName(fl.type[0]);const ok=SS(ty.statusSetId).statusIds.includes(fl.status?stByName(fl.status[0]).id:t.statusId);if(!ok)throw Error('статус «'+ST(t.statusId).name+'» не входит в набор типа «'+ty.name+'»: добавьте --status');t.typeId=ty.id;touch(t);cli('task update '+refOf(t)+' --type "'+ty.name+'"','cli');did=true;con('<span class="ok">✔</span> тип: '+esc(ty.name))}
+if(fl.status){const r=setStatus(t,stByName(fl.status[0]).id,'cli');if(!r.ok)throw Error(r.msg);did=true;con('<span class="ok">✔</span> '+esc(r.msg))}
+if(fl.field){applyFields(t,fl.field);did=true}
+if(!did)throw Error('нечего обновлять: укажите --status, --title, --type или --field')},
+'task create'(a){const {pos,fl}=parseArgs(a);const ty=fl.type?tyByName(fl.type[0]):DB.taskTypes[0];if(!ty)throw Error('нет типов задач');const fields={};(fl.field||[]).forEach(x=>{const m=String(x).match(/^(.+?)=(.*)$/);const d=m&&defByName(m[1]);if(!d)throw Error('--field: неизвестное поле');fields[d.id]=parseVal(d,m[2])});
+const r=createTask({title:pos[0],typeId:ty.id,seriesIds:(fl.series||[]).flatMap(x=>String(x).split(',')).map(n=>srByName(n.trim()).id),parent:fl.parent&&fl.parent[0],fields},'cli');if(!r.ok)throw Error(r.msg);
+con('<span class="ok">✔</span> создана <span class="ref">'+esc(refOf(r.task))+'</span> '+esc(r.task.title)+' ['+esc(ST(r.task.statusId).name)+']')},
+'task link'(a){const [x,kw,y]=a;if(!y)throw Error('использование: task link TSK-121 blocks TSK-140');const A=taskArg(x),B=taskArg(y);const k=kw.toLowerCase();
+let lt=null,inv=false;DB.linkTypes.forEach(l=>{const names=[l.name.toLowerCase(),lkSide(l),l.outward.toLowerCase(),l.id];if(names.includes(k))lt=lt||l;else if(l.inward&&l.inward.toLowerCase()===k&&!lt){lt=l;inv=true}});
+if(!lt)throw Error('тип связи «'+kw+'» не найден. Есть: '+DB.linkTypes.map(l=>lkSide(l)).join(', '));const r=inv?linkTasks(B,lt.id,A,'cli'):linkTasks(A,lt.id,B,'cli');if(!r.ok)throw Error(r.msg);con('<span class="ok">✔</span> '+esc(r.msg))},
+'task unlink'(a){const A=taskArg(a[0]||''),B=taskArg(a[1]||'');const ls=DB.links.filter(l=>(l.from===A.id&&l.to===B.id)||(l.from===B.id&&l.to===A.id));if(!ls.length)throw Error('связи между '+refOf(A)+' и '+refOf(B)+' нет');ls.forEach(l=>unlinkTasks(l,'cli'));con('<span class="ok">✔</span> связей удалено: '+ls.length)},
+'task delete'(a){const t=taskArg(a[0]||'');const r=deleteTask(t,'cli');if(!r.ok)throw Error(r.msg);S.tabs=S.tabs.filter(k=>k!=='task/'+t.id);con('<span class="ok">✔</span> '+esc(r.msg))},
+'board list'(){con(table(['ДОСКА','КОЛОНКИ','НАБОРЫ'],DB.boards.map(b=>[b.name,b.columns.length,b.statusSetIds.map(x=>SS(x).name).join(', ')+(lockOf('board',b.id)?'  ◉ правит '+lockOf('board',b.id).holder:'')])))},
+'board show'(a){const b=DB.boards.find(x=>x.name.toLowerCase()===(a.join(' ')).toLowerCase()||x.id===a[0]);if(!b)throw Error('доска «'+a.join(' ')+'» не найдена. Есть: '+DB.boards.map(x=>x.name).join(', '));const {cols,out}=boardCols(b);const n=Math.max(0,...cols.map(c=>c.items.length));
+const head=cols.map(c=>c.c.name+' ('+c.items.length+')');const rs=[];for(let i=0;i<n;i++)rs.push(cols.map(c=>c.items[i]?{t:refOf(c.items[i])+' '+trunc(c.items[i].title,20),c:''}:''));
+con(table(head,rs));if(out.length)con('<span class="warn">'+out.length+' '+plural(out.length,'задача','задачи','задач')+' вне колонок</span>');if(!S.tabs.includes('board/'+b.id))S.tabs.push('board/'+b.id);go('#/boards/'+b.id)},
+'series list'(){con(table(['ПРЕФИКС','НАЗВАНИЕ','ЗАДАЧ','СЛЕДУЮЩИЙ'],DB.series.map(s=>[{t:s.prefix,c:'ref'},s.name,DB.tasks.filter(t=>t.series.some(x=>x.seriesId===s.id)).length,nextNum(s.id)])));const g=conflictGroups();if(g.length)con('<span class="warn">⚠ конфликтов номеров: '+g.map(c=>pfx(c.seriesId)+'-'+c.number).join(', ')+'. cleanup --resolve-conflicts</span>')},
+'sync'(){S.sync=Date.now();con('Индекс index-rs.db: сверка по (size, mtime)…\n<span class="ok">✔</span> файлов '+(DB.tasks.length+DB.boards.length+9)+', изменённых 0, новых 0, удалённых 0'+(problemCount()?'\n<span class="warn">проблем в рабочей области: '+problemCount()+' (см. вкладку «Проблемы»)</span>':''));cli('sync','cli')},
+'cleanup'(a){const {fl}=parseArgs(a);if(fl['resolve-conflicts']){const m=resolveConflicts('cli');if(!m.length)con('Конфликтов номеров нет');else{m.forEach(x=>con('<span class="ok">✔</span> '+esc(x)));con('Исправлено: '+m.length)}}else{const n=cleanLinks('cli');con(n?'<span class="ok">✔</span> удалено недействительных ссылок: '+n:'Недействительных ссылок нет')}},
+'problems'(){const it=problemItems();con(it.length?table(['',' ФАЙЛ','ПРОБЛЕМА'],it.map(p=>[{t:p.sev==='error'?'✖':'▲',c:p.sev==='error'?'err':'warn'},trunc(p.file,44),trunc(p.msg,70)])):'<span class="ok">Проблем нет</span>')},
+'status'(){con('рабочая область  '+esc(S.mode==='desktop'?S.ws[S.wsActive]:BASE)+'\nпроект           '+esc(projName())+'\nветка            main\nзадач            '+DB.tasks.length+'\nпроблем          '+problemCount()+'\nMCP              '+(S.mode==='desktop'?'127.0.0.1:5719':HOST+'/mcp'))}};
+function runCmd(line){line=line.trim();if(!line)return;con('<span class="ps">tasker ❯</span> '+esc(line));S.hist.push(line);S.hi=S.hist.length;
+let a;try{a=tokenize(line)}catch(e){con('<span class="err">ошибка разбора</span>');return}if(a[0]==='tasker')a.shift();if(!a.length)return;
+let key=a.slice(0,2).join(' ');let rest=a.slice(2);if(!CMDS[key]){key=a[0];rest=a.slice(1)}
+if(!CMDS[key]){con('<span class="err">tasker: неизвестная команда «'+esc(a.join(' '))+'». Введите help.</span>');return}
+try{CMDS[key](rest);S.sync=Date.now();render()}catch(e){con('<span class="err">ошибка: '+esc(e.message)+'</span>');if(S.panel==='console')renderPanel()}}
+const CMDLIST=['help','clear','task list','task get','task update','task create','task link','task unlink','task delete','board list','board show','series list','sync','cleanup','cleanup --resolve-conflicts','problems','status'];
+function complete(el){const v=el.value;const m=CMDLIST.filter(c=>c.startsWith(v.replace(/^tasker\s+/,'')));if(m.length===1)el.value=m[0]+' ';else if(m.length>1){con('<span class="dim">'+m.join('   ')+'</span>')}}
+
+function palItems(q){q=q.trim();const out=[];const lq=q.toLowerCase();
+if(q.startsWith('>')){out.push({l:'Выполнить в консоли: tasker '+q.slice(1).trim(),run:()=>{openPanel('console');runCmd(q.slice(1))}});return out}
+const exact=findRef(q);exact.forEach(t=>out.push({l:'<span class="ref">'+esc(refOf(t))+'</span> <span class="dim">['+esc(sid(t))+']</span> '+esc(t.title)+(exact.length>1?' <span class="warn">⚠ конфликт номера</span>':''),run:()=>go(routeOf('task/'+t.id))}));
+if(q)DB.tasks.filter(t=>!exact.includes(t)&&(t.series.map(refStr).join(' ')+' '+t.title).toLowerCase().includes(lq)).slice(0,10).forEach(t=>out.push({l:'<span class="ref">'+esc(refOf(t))+'</span> '+esc(t.title),run:()=>go(routeOf('task/'+t.id))}));
+const screens=[['Список задач','#/tasks'+f2q(S.filter)],['Новая задача','new'],['Проблемы','#/problems'],['Серии','#/series'],['Агенты','#/agents'],['Профиль','#/profile'],['Разрешить конфликты номеров','fix'],...DB.boards.map(b=>['Доска «'+b.name+'»','#/boards/'+b.id]),...SCH.map(s=>['Схема: '+s[2],'#/schema/'+s[0]])];
+screens.filter(s=>!q||s[0].toLowerCase().includes(lq)).slice(0,q?6:14).forEach(s=>out.push({l:'<span class="dim">→</span> '+esc(s[0]),run:()=>{if(s[1]==='new'){go('#/tasks'+f2q(S.filter));setTimeout(()=>{const e=$('#qct');if(e)e.focus()},50)}else if(s[1]==='fix')ACT.fix('resolve','0');else go(s[1])}}));return out}
+function openPalette(){S.pal={q:'',i:0};renderPal();const e=$('#palIn');e&&e.focus()}
+function renderPal(){const p=$('#palette');if(!S.pal){p.className='';p.innerHTML='';return}const it=palItems(S.pal.q);S.pal.items=it;if(S.pal.i>=it.length)S.pal.i=0;
+const had=document.activeElement&&document.activeElement.id==='palIn';p.className='on';p.innerHTML=`<div class="pal"><input id="palIn" placeholder="TSK-133, название, раздел… или >команда" value="${esc(S.pal.q)}" autocomplete="off"><div class="res">${it.map((x,i)=>`<div class="it ${i===S.pal.i?'on':''}" data-a="palrun" data-p="${i}">${x.l}</div>`).join('')||'<div class="empty">Ничего не найдено</div>'}</div></div>`;
+const e=$('#palIn');e.focus();e.setSelectionRange(S.pal.q.length,S.pal.q.length)}
+ACT.palette=()=>openPalette();
+ACT.palrun=i=>{const it=S.pal.items[+i];S.pal=null;renderPal();it&&it.run()};
+
+document.addEventListener('click',e=>{if(!e.target.closest('.menu')&&!e.target.closest('[data-a=usermenu]'))closeMenu();
+if(S.pal&&!e.target.closest('.pal')){S.pal=null;renderPal();return}
+const b=e.target.closest('[data-a]');if(!b)return;const f=ACT[b.dataset.a];if(!f)return;if(b.tagName==='A')e.preventDefault();f(b.dataset.p,b.dataset.q,b,e)});
+document.addEventListener('auxclick',e=>{const t=e.target.closest('.tab');if(t&&e.button===1){e.preventDefault();closeTab(t.dataset.p)}});
+document.addEventListener('change',e=>{const el=e.target.closest('[data-c]');if(!el)return;const f=CHG[el.dataset.c];if(f)f(el.type==='checkbox'?el.checked:el.value,el)});
+document.addEventListener('input',e=>{const el=e.target;if(el.id==='palIn'){S.pal.q=el.value;S.pal.i=0;renderPal();return}const d=el.closest&&el.closest('[data-i]');if(!d)return;const f=INP[d.dataset.i];if(f)f(d)});
+document.addEventListener('keydown',e=>{const el=e.target;const mod=e.ctrlKey||e.metaKey;
+if(el.id==='palIn'){if(e.key==='ArrowDown'){e.preventDefault();S.pal.i=Math.min(S.pal.i+1,S.pal.items.length-1);renderPal()}else if(e.key==='ArrowUp'){e.preventDefault();S.pal.i=Math.max(0,S.pal.i-1);renderPal()}else if(e.key==='Enter'){e.preventDefault();ACT.palrun(S.pal.i)}else if(e.key==='Escape'){S.pal=null;renderPal()}return}
+if(el.id==='conIn'){if(e.key==='Enter'){runCmd(el.value);el.value=''}else if(e.key==='ArrowUp'){e.preventDefault();if(S.hi>0)S.hi--;el.value=S.hist[S.hi]||''}else if(e.key==='ArrowDown'){e.preventDefault();if(S.hi<S.hist.length)S.hi++;el.value=S.hist[S.hi]||''}else if(e.key==='Tab'){e.preventDefault();complete(el)}
+else if(e.key==='Escape'){el.blur()}if(e.key!=='Escape'&&!(mod&&e.key.toLowerCase()==='k'))return}
+if(el.id==='qct'&&e.key==='Enter'){ACT.qcreate();return}
+if(e.key==='Escape'){if(S.modal){closeModal();return}if(S.pal){S.pal=null;renderPal();return}closeMenu();return}
+if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();saveKey(S.active||'');return}
+if(mod&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();return}
+if(mod&&e.key.toLowerCase()==='j'){e.preventDefault();S.panelOpen=!S.panelOpen;renderPanel();return}
+if(mod&&e.key==='`'){e.preventDefault();S.panelOpen=true;S.panel='console';renderPanel();const c=$('#conIn');c&&c.focus();return}
+if(mod&&e.key.toLowerCase()==='w'&&S.active){e.preventDefault();closeTab(S.active);return}
+if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(el.tagName)){e.preventDefault();openPalette()}});
+ACT.mclose=()=>closeModal();
+ACT.mbtn=i=>{const b=S.modal.btns[+i];const r=b.fn?b.fn():undefined;if(r!==false)closeModal()};
+document.getElementById('rsz').addEventListener('mousedown',e=>{e.preventDefault();const y0=e.clientY,h0=S.panelH;const mv2=ev=>{S.panelH=Math.max(120,Math.min(window.innerHeight-200,h0+(y0-ev.clientY)));$('#panel').style.height=S.panelH+'px'};const up=()=>{document.removeEventListener('mousemove',mv2);document.removeEventListener('mouseup',up)};document.addEventListener('mousemove',mv2);document.addEventListener('mouseup',up)});
+
+function tick(){DB.locks.forEach(l=>{l.expiresInSec--;if(l.expiresInSec<=0)l.expiresInSec=118});
+Object.keys(S.myLocks).forEach(k=>{S.myLocks[k]--;if(S.myLocks[k]<=30)S.myLocks[k]=120});
+const u=$('#upd');if(u)u.textContent='обновлено '+Math.max(0,Math.round((Date.now()-S.sync)/1000))+' с назад';
+if(Object.keys(S.myLocks).length)renderStatus();
+if(S.active&&S.active.startsWith('task/')&&T(S.active.slice(5))&&(lockOf('task',S.active.slice(5))||S.myLocks[S.active.slice(5)]!==undefined)&&!S.modal){const e=$('#edtool');const t=curTask();if(e&&t)e.innerHTML=edTool(t)}}
+function incoming(){const t=T('k11');if(!t||t.statusId==='s-todo')return;t.statusId='s-todo';touch(t);cli('task update '+refOf(t)+' --status "Туду"','cli');toast('Claude перевёл '+refOf(t)+' в «Туду»','info');con('<span class="dim">[событие] Claude перевёл '+esc(refOf(t))+' в «Туду»</span>');
+S.sync=Date.now();const ae=document.activeElement;if(!S.modal&&!(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)&&ae.closest('#main'))){renderMain()}renderSide();renderTabs()}
+
+window.addEventListener('hashchange',onRoute);
+DB.mode=S.mode;
+S.con=['<span class="ok">tasker 0.9.2</span> · рабочая область '+esc(BASE+'/tasker')+' · ветка main','Введите <span class="warn">help</span>. Пример: <span class="warn">task list --status "В работе" --sort -Приоритет --flat</span>',''];
+['task update TSK-131 --status "В работе"','task update TSK-118 --status "Ревью"','task create "Автодополнение: значения полей-перечислений" --type Фича --series TSK','task link TSK-121 blocks TSK-140'].forEach((c,i)=>S.journal.push({t:['08:12:44','08:30:02','07:00:15','07:41:09'][i],via:i%2?'gui':'cli',cmd:c}));
+S.sync=Date.now()-3000;
+if(!location.hash||location.hash==='#')location.hash='#/tasks';
+renderLogin();onRoute();
+setInterval(tick,1000);
+setTimeout(incoming,20000);
+</script>
+</body>
+</html>
