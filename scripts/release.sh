@@ -150,7 +150,10 @@ case "$(uname -m)" in
 esac
 
 HOST_MUSL=false
-if [ "$HOST_OS" = linux ] && { ldd --version 2>&1 | grep -qi musl; }; then HOST_MUSL=true; fi
+if [ "$HOST_OS" = linux ]; then
+  case "$(ldd --version 2>&1 || true)" in *musl*|*Musl*|*MUSL*) HOST_MUSL=true ;; esac
+  if compgen -G '/lib/ld-musl-*' >/dev/null; then HOST_MUSL=true; fi
+fi
 
 os_of() {
   case "$1" in osx-*) echo macos ;; linux-*) echo linux ;; win-*) echo windows ;; esac
