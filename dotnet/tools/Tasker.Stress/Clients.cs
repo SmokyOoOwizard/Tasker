@@ -128,7 +128,7 @@ public abstract class StressClient(string name, string kind, StressContext ctx, 
 
         watch.Stop();
         var outcome = Classify(result.Ok, result.Text);
-        if (outcome == Outcome.Error && Ctx.ExpectDown && Kind == "mcp" && (result.Text.StartsWith("exception:") || result.Text.StartsWith("HTTP") || result.Text.Contains("is not available: opening")))
+        if (outcome == Outcome.Error && Ctx.ExpectDown && Kind == "mcp" && (result.Text.StartsWith("exception:") || result.Text.StartsWith("HTTP") || result.Text.Contains("is not available: opening") || result.Text.Contains("An error occurred invoking")))
             outcome = Outcome.Down;
         Ctx.Recorder.Add(new Sample(Ctx.Scenario, Name, Kind, op, outcome, watch.Elapsed.TotalMilliseconds, outcome == Outcome.Ok ? null : Trim(result.Text)));
         JsonNode? json = null;

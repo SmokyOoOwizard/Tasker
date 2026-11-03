@@ -982,7 +982,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "parents", "Parents");
     tui.pick("Parents", "", "Add a parent");
-    tui.pick("Parent task", "plain task", "GLD-1  Plain task");
+    tui.pick("Parent task", "plain task", "Plain task");
     tui.pick("Hierarchical link type of the parent", "parent", "Parent/Child");
     tui.done("Updated task 'New bug 2'");
     let run = get(&root, &workspace, &["task", "links", &reference]);
@@ -992,7 +992,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     tui.pick("Task", "new bug", "New bug 2");
     tui.pick("What to change", "parents", "Parents");
     tui.pick("Parents", DOWN, "Remove a parent");
-    tui.pick("Parent to remove", "plain", "GLD-1  Plain task");
+    tui.pick("Parent to remove", "plain", "Plain task");
     tui.done("Updated task 'New bug 2'");
     let run = get(&root, &workspace, &["task", "links", &reference]);
     assert!(!run.stdout.contains("GLD-1"), "{}", run.stdout);
@@ -1003,7 +1003,7 @@ fn task_flows_cover_fields_series_parents_links_status_and_deletion() {
     tui.pick("What to change", "links", "Links");
     tui.pick("Links", "", "Link to another task");
     tui.pick("How this task relates to the other one", "blocks", "blocks");
-    tui.pick("The other task", "gld-2  007", "GLD-2  007");
+    tui.pick("The other task", "gld-2", "GLD-2");
     tui.done("Linked:");
     let run = get(&root, &workspace, &["task", "links", &reference]);
     assert!(run.stdout.contains("blocks  GLD-2"), "{}", run.stdout);
@@ -1091,14 +1091,57 @@ fn browse_shows_filtered_task_lists_cards_boards_and_other_lists() {
     tui.submit_form("Task filters");
     let screen = tui.wait_for("Ctrl+F filters");
     assert!(screen.contains("  Done") && !screen.contains("Backlog"), "{screen}");
+    assert!(
+        screen.lines().any(|l| {
+            let at = |text: &str| l.find(text);
+            at("Plain task").is_some() && at("GLD-1") < at("Done") && at("Done") < at("Задача") && at("Задача") < at("Plain task")
+        }),
+        "{screen}"
+    );
     tui.send("\x06");
     let screen = tui.wait_for("Task filters");
     assert!(screen.contains("Statuses          Done"), "{screen}");
     tui.submit_form("Task filters");
-    tui.wait_for("Ctrl+F filters");
-    tui.pick("Task", "plain task", "GLD-1  Plain task");
+    tui.wait_for("Ctrl+L columns");
+    tui.send("\x0c");
+    tui.wait_for("┌ Extra columns ");
+    tui.mark("prio", "Priority", 1);
+    tui.send(ENTER);
+    tui.wait_for("Extra columns     Priority");
+    tui.submit_form("Task filters");
+    let screen = tui.wait_for("Ctrl+L columns");
+    assert!(
+        screen.lines().any(|l| {
+            let at = |text: &str| l.find(text);
+            at("Bug done").is_some() && at("BUG-3") < at("Done") && at("Done") < at("Bug ") && at("High") < at("Bug done")
+        }),
+        "{screen}"
+    );
+    tui.pick("Task", "plain task", "Plain task");
     let screen = tui.view("title:        Plain task");
     assert!(screen.contains("Updated description"), "{screen}");
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "task", "Task");
+    tui.pick("Tasks: what to show", "card", "Card of a task");
+    tui.submit_form("Task filters");
+    let screen = tui.wait_for("Grandchild");
+    assert!(
+        screen.lines().any(|l| l.contains("│      GLD-5") && l.contains("Child one"))
+            && screen.lines().any(|l| l.contains("│          GLD-57") && l.contains("Grandchild")),
+        "{screen}"
+    );
+    tui.pick("Task", "bug with all", "Bug with all fields");
+    tui.wait_for("↑↓ linked task");
+    tui.send(DOWN);
+    tui.send(ENTER);
+    tui.wait_for("title:        Bug with own fields");
+    tui.wait_for("Linked task");
+    tui.send(ESC);
+    let screen = tui.wait_for("title:        Bug with all fields");
+    assert!(!screen.contains("Linked task"), "{screen}");
+    tui.send("q");
+    tui.wait_for("What to do");
 
     tui.pick("What to do", "", "Browse");
     tui.pick("Browse what", "board", "Board");
@@ -1212,6 +1255,34 @@ fn a_view_refreshes_itself_esc_returns_to_the_previous_step_and_f_changes_one_se
     );
     tui.send(ESC);
     tui.view("GLD-1");
+
+    tui.pick("What to do", "", "Browse");
+    tui.pick("Browse what", "task", "Task");
+    tui.pick("Tasks: what to show", "card", "Card of a task");
+    tui.submit_form("Task filters");
+    tui.wait_for("refreshes every 1 s");
+    let run = tasker(
+        &root,
+        &[
+            "task",
+            "create",
+            "Fresh in the list",
+            "--type",
+            "Bug",
+            "--field",
+            "Priority=High",
+            "-w",
+            &ws(&workspace),
+            "-p",
+            "Golden",
+        ],
+    );
+    assert_eq!(run.code, 0, "{}", run.stderr);
+    tui.wait_for("Fresh in the list");
+    tui.send(ESC);
+    tui.send(ESC);
+    tui.send(ESC);
+    tui.send(ESC);
     assert_eq!(tui.quit(), 0);
     std::fs::remove_dir_all(&root).unwrap();
 }
