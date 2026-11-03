@@ -236,7 +236,7 @@ public partial class GoldenMcpTests
         private string Placeholders(string text)
         {
             foreach (var (from, to) in Replacements)
-                text = text.Replace(from, to);
+                text = to == GoldenPaths.Root ? GoldenPaths.Rooted(text, from) : text.Replace(from, to);
             return text;
         }
 

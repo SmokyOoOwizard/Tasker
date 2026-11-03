@@ -47,7 +47,7 @@ internal static class PowerShellProfileFiles
         if (exists && !File.Exists(path + BackupSuffix))
         {
             File.Copy(path, path + BackupSuffix);
-            report.AppendLine($"  backup:    {path}{BackupSuffix} (the file as it was before)");
+            report.Append($"  backup:    {path}{BackupSuffix} (the file as it was before)\n");
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);

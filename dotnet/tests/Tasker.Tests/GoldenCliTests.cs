@@ -79,15 +79,17 @@ public partial class GoldenCliTests
             error = WallClock().Replace(error, "<TIME>");
         }
 
+        output = GoldenPaths.Rooted(output, root);
+        error = GoldenPaths.Rooted(error, root);
         if (Updating)
         {
-            File.WriteAllText(at + ".out", output.Replace(root, "<ROOT>"), Utf8);
-            File.WriteAllText(at + ".err", error.Replace(root, "<ROOT>"), Utf8);
+            File.WriteAllText(at + ".out", output, Utf8);
+            File.WriteAllText(at + ".err", error, Utf8);
             File.WriteAllText(at + ".code", code + "\n", Utf8);
         }
 
-        var expectedOut = Read(at + ".out").Replace("<ROOT>", root);
-        var expectedErr = Read(at + ".err").Replace("<ROOT>", root);
+        var expectedOut = Read(at + ".out");
+        var expectedErr = Read(at + ".err");
         var expectedCode = int.Parse(Read(at + ".code").Trim() is { Length: > 0 } text ? text : "0");
         if (output != expectedOut || error != expectedErr || code != expectedCode)
         {

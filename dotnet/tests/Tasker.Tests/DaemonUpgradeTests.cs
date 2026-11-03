@@ -80,7 +80,39 @@ public class DaemonUpgradeTests : IDisposable
         }
     }
 
-    private async Task<DaemonStatus> StatusOf() => (await _daemon.Status())!;
+    private async Task<DaemonStatus> StatusOf() =>
+        await _daemon.Status() ?? throw new InvalidOperationException("tasker mcp status has no daemon: " + await Diagnose());
+
+    private static async Task<string> Diagnose()
+    {
+        var running = DaemonFiles.IsRunning();
+        if (DaemonFiles.ReadInfo() is not { } info)
+            return $"lock held {running}, no {DaemonFiles.InfoFile}";
+        var where = $"lock held {running}, pid {info.Pid}, port {info.Port}";
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"http://127.0.0.1:{info.Port}/daemon/status");
+            request.Headers.Add(DaemonClient.ControlHeader, info.Token);
+            var watch = Stopwatch.StartNew();
+            using var response = await http.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+            string parsed;
+            try
+            {
+                parsed = System.Text.Json.JsonSerializer.Deserialize<DaemonStatus>(body, Tasker.Core.TaskerJson.Options) is null ? "null" : "ok";
+            }
+            catch (System.Text.Json.JsonException e)
+            {
+                parsed = e.Message;
+            }
+            return $"{where}: HTTP {(int)response.StatusCode} in {watch.ElapsedMilliseconds} ms, parse {parsed}: {body}";
+        }
+        catch (Exception e)
+        {
+            return $"{where}: {e.GetType().Name}: {e.Message}";
+        }
+    }
 
     // ---- клиент: поток вызовов по общему HttpClient (соединения живут долго, как у агента) ----
 
@@ -271,7 +303,14 @@ public class DaemonUpgradeTests : IDisposable
     private async Task<DaemonStatus> WaitStatus(Func<DaemonStatus, bool> condition)
     {
         DaemonStatus? last = null;
-        await Eventually(async () => (last = await _daemon.Status()) is { } s && condition(s));
+        try
+        {
+            await Eventually(async () => (last = await _daemon.Status()) is { } s && condition(s));
+        }
+        catch (TimeoutException) when (last == null)
+        {
+            throw new TimeoutException("tasker mcp status has no daemon: " + await Diagnose());
+        }
         return last!;
     }
 
