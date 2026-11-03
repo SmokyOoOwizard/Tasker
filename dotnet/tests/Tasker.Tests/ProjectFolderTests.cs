@@ -163,28 +163,30 @@ public class ProjectFolderTests : IDisposable
         await writer.Resolve<IStatusStorage>().Add(status);
 
         using var stop = new CancellationTokenSource();
+        var count = 0;
         var reads = Task.Run(async () =>
         {
-            var count = 0;
             var readProjects = reader.Resolve<IProjectStorage>();
             var readStatuses = reader.Resolve<IStatusStorage>();
             while (!stop.IsCancellationRequested)
             {
                 Assert.NotNull(await readProjects.GetById(project.Id));
                 Assert.NotNull(await readStatuses.GetById(project.Id, status.Id));
-                count++;
+                Interlocked.Increment(ref count);
             }
-            return count;
         });
 
-        for (var i = 0; i < 30; i++)
+        var renames = 0;
+        while (renames < 30 || (Volatile.Read(ref count) < 3 && renames < 300))
         {
-            version = (await projects.Update(project with { Name = $"Name {i}" }, version))!;
-            await writer.Resolve<IStatusStorage>().Add(NewStatus(project.Id, $"Status {i}"));
+            version = (await projects.Update(project with { Name = $"Name {renames}" }, version))!;
+            await writer.Resolve<IStatusStorage>().Add(NewStatus(project.Id, $"Status {renames}"));
+            renames++;
         }
         await stop.CancelAsync();
-        Assert.True(await reads > 0);
-        Assert.Equal([$"name-29-{Id8(project.Id)}"], Folders());
-        Assert.Equal(31, (await writer.Resolve<IStatusStorage>().GetRange(project.Id, new Page(0, 100))).TotalCount);
+        await reads;
+        Assert.True(count >= 3, $"the reader made only {count} reads during {renames} renames");
+        Assert.Equal([$"name-{renames - 1}-{Id8(project.Id)}"], Folders());
+        Assert.Equal(renames + 1, (await writer.Resolve<IStatusStorage>().GetRange(project.Id, new Page(0, 100))).TotalCount);
     }
 }
