@@ -41,7 +41,8 @@ pf=()
 tag="$image"
 if [ -n "$platform" ]; then pf=(--platform "$platform"); tag="$image-${platform//\//-}"; fi
 
-# Образ: sdk + то, чего в нём нет, а тестам нужно (VCS — для хуков, python3 — чужая блокировка, procps — ps).
+# Образ: sdk + то, чего в нём нет, а тестам нужно (VCS — для хуков, python3 — чужая блокировка, procps — ps, clang, zlib1g-dev и
+# libsqlite3-dev — сборка консоли NativeAOT установщиком из исходников).
 # Тесты идут НЕ от root: root игнорирует права доступа к файлам (тест отката замены на лету снимает права с .tasker), а systemd --user
 # и обычная установка тоже работают от пользователя. Контейнер запускается с --init: без init-процесса (PID 1) умершие дочерние
 # процессы демона остаются зомби, и проверки «процесс завершился» не проходят.
@@ -49,7 +50,7 @@ if ! docker image inspect "$tag" >/dev/null 2>&1; then
   echo ">> сборка образа $tag"
   docker build "${pf[@]+"${pf[@]}"}" -t "$tag" - <<DOCKERFILE
 FROM $base
-RUN apt-get update && apt-get install -y --no-install-recommends git python3 procps ca-certificates curl build-essential && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends git python3 procps ca-certificates curl build-essential clang zlib1g-dev libsqlite3-dev && rm -rf /var/lib/apt/lists/*
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 RUN useradd -m -u 1500 -s /bin/bash tester && mkdir -p /home/tester/.nuget /work && chown -R tester:tester /home/tester /work
 USER tester
