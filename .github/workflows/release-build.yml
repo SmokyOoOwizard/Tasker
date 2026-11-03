@@ -1,6 +1,7 @@
 # Сборка релиза Tasker (.NET: консоль tasker — NativeAOT, демон tasker-mcpd — один файл с рантаймом) на всех платформах.
-# Архивы — scripts/release.sh --rid <RID> на машине своей ОС и архитектуры (Windows — в Git Bash, Linux musl — в контейнере Alpine)
-# — остаются артефактами прогона; релизы и теги этот workflow не создаёт и никуда ничего не публикует. Тесты — .NET tests.
+# Архивы — scripts/release.sh --rid <RID> на машине своей ОС и архитектуры (Windows — в Git Bash, Linux musl x64 — в контейнере Alpine,
+# Linux musl arm64 — через --builder docker: JavaScript-действия GitHub не работают в Alpine на arm64) — остаются артефактами прогона;
+# релизы и теги этот workflow не создаёт и никуда ничего не публикует. Тесты — .NET tests.
 name: Release build
 
 on:
@@ -41,7 +42,7 @@ jobs:
           - { rid: linux-x64, os: ubuntu-22.04 }
           - { rid: linux-arm64, os: ubuntu-22.04-arm }
           - { rid: linux-musl-x64, os: ubuntu-latest, container: 'mcr.microsoft.com/dotnet/sdk:10.0-alpine' }
-          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, container: 'mcr.microsoft.com/dotnet/sdk:10.0-alpine' }
+          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, builder: docker }
           - { rid: win-x64, os: windows-latest }
           - { rid: win-arm64, os: windows-11-arm }
     runs-on: ${{ matrix.os }}
@@ -62,10 +63,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: packages of the Linux runner
-        if: ${{ !matrix.container && startsWith(matrix.rid, 'linux-') }}
+        if: ${{ !matrix.container && !matrix.builder && startsWith(matrix.rid, 'linux-') }}
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev libsqlite3-dev
       - name: scripts/release.sh --rid ${{ matrix.rid }}
-        run: scripts/release.sh --rid '${{ matrix.rid }}' --builder dotnet --out dist
+        run: scripts/release.sh --rid '${{ matrix.rid }}' --builder '${{ matrix.builder || 'dotnet' }}' --out dist
       - name: run the built programs
         run: |
           set -euo pipefail
@@ -78,16 +79,21 @@ jobs:
           esac
           ls -la "check/$name" "check/$name/app"
           cat "check/$name/release.txt"
+          export TASKER_HOME="$PWD/check/home"
           run=()
-          case "${{ matrix.rid }}" in osx-x64) run=(arch -x86_64) ;; esac
+          case "${{ matrix.rid }}" in
+            osx-x64) run=(arch -x86_64) ;;
+            linux-musl-arm64) run=(docker run --rm -v "$PWD:$PWD" -w "$PWD" -e TASKER_HOME mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine
+              sh -c 'apk add --no-cache sqlite-libs >/dev/null && exec "$@"' sh) ;;
+          esac
           if [ "${{ matrix.rid }}" = osx-x64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then echo "no Rosetta: not run"; exit 0; fi
           shown="$("${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" --version | tr -d '\r')"
           echo "tasker --version: $shown"
           [ "$shown" = "$version" ]
           "${run[@]+"${run[@]}"}" "check/$name/app/tasker-mcpd$exe" --help > /dev/null
           mkdir -p check/ws
-          TASKER_HOME="$PWD/check/home" "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project create Smoke -w check/ws
-          TASKER_HOME="$PWD/check/home" "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project list -w check/ws
+          "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project create Smoke -w check/ws
+          "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project list -w check/ws
           case "${{ matrix.rid }}" in
             linux-*) file "check/$name/app/tasker"; (ldd "check/$name/app/tasker" || true) ;;
           esac
