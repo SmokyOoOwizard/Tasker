@@ -65,6 +65,9 @@ public static class ConfigsParser
             if (!seen.TryAdd(assembly.FullName!, assembly))
                 continue;
 
+            if (!System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported)
+                continue;
+
             foreach (var reference in assembly.GetReferencedAssemblies().Where(x => x.Name?.StartsWith("Tasker", StringComparison.Ordinal) == true))
                 queue.Enqueue(Assembly.Load(reference));
         }

@@ -16,7 +16,7 @@ using Tasker.Core.Tasks;
 using Tasker.Core.TaskSeries;
 using Tasker.Core.Users;
 using Tasker.Core.Workspace;
-using Tasker.Daemon;
+using Tasker.Mcp;
 using Tasker.Web.Auth;
 
 namespace Tasker.Web;
@@ -61,25 +61,24 @@ internal static class TaskerApi
                     ? await workspace.GetProblems(Page.Of(offset, limit), ct)
                     : Page.Of(offset, limit).Apply(Array.Empty<WorkspaceProblem>())));
 
-            // MCP этой рабочей области: его обслуживает демон tasker-mcpd (десктоп своего MCP не поднимает). Состояние демона, адрес
-            // (общий для всех областей) и имя этой области для агента (аргумент workspace), если демон её открыл.
+            // Адрес MCP и имя этой рабочей области для агента (аргумент workspace). Адрес общий для всех областей. Если работает
+            // демон MCP, десктоп свой MCP не поднимает: адрес — у демона (если область ему разрешена); иначе — постоянный порт десктопа.
             root.MapGet("/workspace/mcp", async Task<IResult> (HttpContext context, IServiceProvider services, CancellationToken ct) =>
             {
+                const string agentHeader = McpRegistration.AgentHeader;
                 var feature = context.Features.Get<Workspaces.WorkspaceFeature>();
-                var mcp = feature != null && services.GetService<IDaemonMcp>() is { } daemon
-                    ? await daemon.Find(feature.Location, ct)
-                    : new WorkspaceMcp(DaemonState.Stopped, null, null, null, null, null);
+                var external = feature != null && services.GetService<IExternalMcp>() is { } finder
+                    ? await finder.Find(feature.Location, ct)
+                    : null;
 
-                return Results.Ok(new
+                if (external is { DaemonRunning: true })
                 {
-                    daemon = mcp.Daemon,
-                    port = mcp.Port,
-                    url = mcp.Url,
-                    workspace = mcp.Workspace,
-                    workspaceState = mcp.WorkspaceState,
-                    error = mcp.Error,
-                    agentHeader = DaemonClient.AgentHeader
-                });
+                    return Results.Ok(new { url = external.Url, workspace = external.Workspace, agentHeader, source = "daemon", allowed = external.Url != null });
+                }
+
+                return Results.Ok(services.GetService<LocalMcpAddress>()?.Port is { } port
+                    ? new { url = (string?)McpRegistration.LocalUrl(port), workspace = feature?.Key, agentHeader, source = (string?)"desktop", allowed = true }
+                    : new { url = (string?)null, workspace = (string?)null, agentHeader, source = (string?)null, allowed = false });
             });
         }
 

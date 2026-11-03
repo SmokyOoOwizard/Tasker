@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(PublishAot)' == 'true' and '$(AotRootTasker)' != 'false'">
+    <TrimmerRootAssembly Include="Tasker.Core" />
+    <TrimmerRootAssembly Include="Tasker.Configs" />
+    <TrimmerRootAssembly Include="Tasker.Global" />
+    <TrimmerRootAssembly Include="Tasker.Storage.Files" />
+    <TrimmerRootAssembly Include="Tasker.Storage.Db" Condition="'$(NoDb)' != 'true'" />
+    <TrimmerRootAssembly Include="Tasker.Daemon" />
+  </ItemGroup>
+</Project>

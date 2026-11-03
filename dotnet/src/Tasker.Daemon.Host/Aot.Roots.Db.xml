@@ -1,0 +1,5 @@
+<linker>
+  <assembly fullname="Tasker.Storage.Db">
+    <type fullname="Tasker.Storage.Db.Configs.Tasker.DbConfigs" preserve="all" />
+  </assembly>
+</linker>

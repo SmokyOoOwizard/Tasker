@@ -16,6 +16,8 @@ namespace Tasker.Core;
 /// </summary>
 public static class TaskerJson
 {
+    public static readonly List<IJsonTypeInfoResolver> GeneratedResolvers = [];
+
     /// <summary>Общий экземпляр, неизменяемый после первого использования. Для вариантов (например, с отступами) — <c>new(Options)</c>.</summary>
     public static JsonSerializerOptions Options { get; } = Configure(new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
@@ -24,6 +26,9 @@ public static class TaskerJson
     /// </summary>
     public static JsonSerializerOptions Configure(JsonSerializerOptions options)
     {
+        foreach (var resolver in GeneratedResolvers)
+            if (!options.TypeInfoResolverChain.Contains(resolver))
+                options.TypeInfoResolverChain.Insert(0, resolver);
         options.Encoder = RelaxedEncoder.Instance;
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         // Обязателен для SDK MCP: он делает опции неизменяемыми и требует резолвер.

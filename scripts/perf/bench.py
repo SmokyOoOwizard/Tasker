@@ -121,7 +121,7 @@ def noise_line(tag):
 
 # ----------------------------------------------------------------------------- calls
 
-PROFILE = re.compile(r"^\[profile\] (\S+) ([\d.]+)$", re.M)
+PROFILE = re.compile(r"^\[profile\] (\S+) ([\d.]+)(?: \d+)?$", re.M)
 COUNT = re.compile(r"^\[count\] (\S+) (\d+) ([\d.]+)$", re.M)
 
 
@@ -187,6 +187,9 @@ def cmd_calls(a):
             for k, v in out[name]["phases"].items():
                 print(f"    {k:22} {v:7.1f} ms")
         print(noise_line("end"))
+        if env.mode == "daemon":
+            out["daemon_rss_mb"] = rss_mb(env)
+            print("daemon rss, MB:", out["daemon_rss_mb"])
     finally:
         env.close()
     if a.json:
@@ -252,8 +255,10 @@ def cmd_degrade(a):
 def rss_mb(env):
     try:
         info = json.load(open(os.path.join(env.home, "mcp", "daemon.json")))
-        out = subprocess.run(["ps", "-o", "rss=", "-p", str(info["Pid"] if "Pid" in info else info["pid"])], capture_output=True, text=True).stdout
-        return int(out.strip()) // 1024
+        pids = [str(info["Pid"] if "Pid" in info else info["pid"])]
+        pids += subprocess.run(["pgrep", "-P", pids[0]], capture_output=True, text=True).stdout.split()
+        out = subprocess.run(["ps", "-o", "rss=", "-p", ",".join(pids)], capture_output=True, text=True).stdout
+        return sum(int(x) for x in out.split()) // 1024
     except Exception as e:
         return f"? ({e})"
 

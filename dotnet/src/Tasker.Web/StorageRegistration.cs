@@ -2,8 +2,10 @@ using Autofac;
 using Autofac.Builder;
 using Tasker.Core;
 using Serilog;
+#if !NO_DB
 using Tasker.Storage.Db;
 using Tasker.Storage.Db.Configs.Tasker;
+#endif
 using Tasker.Storage.Files;
 using Tasker.Storage.Files.Configs.Tasker;
 
@@ -17,6 +19,7 @@ internal enum StorageKind
 
 internal static class StorageRegistration
 {
+#if !NO_DB
     /// <summary>
     /// Задана папка — файлы; иначе БД (Postgres, файл SQLite или SQLite в памяти — см. <see cref="DbStorageModule"/>).
     /// Задано и то и другое — ошибка при старте, а не молчаливый выбор одного из них.
@@ -66,9 +69,12 @@ internal static class StorageRegistration
         builder.RegisterModule(new DbStorageModule(db));
     }
 
+#endif
+
     /// <summary>
-    /// Десктоп: хранилище есть только в контейнере рабочей области, но эндпоинты получают интерфейсы хранилищ
-    /// параметрами, и при старте ASP.NET спрашивает у корневого контейнера, сервис ли это. Регистрируем в корне заглушки: сервис есть, но разрешить его вне области
+    /// Десктоп: хранилище есть только в контейнере рабочей области, но эндпоинты и инструменты MCP
+    /// получают интерфейсы хранилищ параметрами, и при старте ASP.NET и SDK MCP спрашивают у корневого
+    /// контейнера, сервис ли это. Регистрируем в корне заглушки: сервис есть, но разрешить его вне области
     /// нельзя; в контейнере области их перекрывают настоящие регистрации.
     /// </summary>
     public static void RegisterWorkspaceStoragePlaceholders(this ContainerBuilder builder)

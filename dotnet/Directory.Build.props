@@ -13,4 +13,8 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(NoDb)' == 'true'">
+    <DefineConstants>$(DefineConstants);NO_DB</DefineConstants>
+  </PropertyGroup>
+
 </Project>

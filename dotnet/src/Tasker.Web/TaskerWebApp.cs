@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Tasker.Configs;
 using Tasker.Core;
+#if !NO_DB
 using Tasker.Storage.Db.Configs.Tasker;
+#endif
 using Tasker.Storage.Files.Configs.Tasker;
 using Tasker.Web.Auth;
 using Tasker.Web.Configs.Tasker;
@@ -37,8 +39,13 @@ public static class TaskerWebApp
             (log ?? Log.Logger).Warning("{Warning:l}", warning);
 
         var files = configs.Get<FilesConfigs>();
+#if NO_DB
+        if (mode == TaskerMode.Server)
+            throw new InvalidOperationException("This build has no database storage");
+#else
         var db = configs.Get<DbConfigs>();
         StorageRegistration.Validate(mode, files, db);
+#endif
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -55,8 +62,14 @@ public static class TaskerWebApp
             x.RegisterModule<CoreModule>();
             x.RegisterModule<WebModule>();
             // Десктоп: хранилище не общее, а своё у каждой открытой рабочей области (см. WorkspaceRegistry).
+#if !NO_DB
             if (mode == TaskerMode.Server)
                 x.RegisterStorage(files, db);
+#else
+            if (false)
+            {
+            }
+#endif
             else
                 x.RegisterWorkspaceStoragePlaceholders();
             x.RegisterTaskerMode(mode, configs.Get<AuthConfigs>());

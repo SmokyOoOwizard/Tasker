@@ -1,0 +1,9 @@
+<linker>
+  <assembly fullname="Tasker.Web">
+    <type fullname="Tasker.Web.Configs.Tasker.AuthConfigs" preserve="all" />
+  </assembly>
+  <assembly fullname="Tasker.Mcp">
+    <type fullname="Tasker.Mcp.Configs.Tasker.McpConfigs" preserve="all" />
+    <namespace fullname="Tasker.Mcp.Tools" preserve="all" />
+  </assembly>
+</linker>
