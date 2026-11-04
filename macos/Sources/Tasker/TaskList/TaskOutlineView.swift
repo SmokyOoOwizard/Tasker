@@ -114,6 +114,14 @@ final class TaskOutlineView: NSOutlineView {
     }
 }
 
+final class TaskClipView: NSClipView {
+    override func constrainBoundsRect(_ proposedBounds: NSRect) -> NSRect {
+        var rect = super.constrainBoundsRect(proposedBounds)
+        rect.origin.y = max(rect.origin.y, 0)
+        return rect
+    }
+}
+
 struct TaskOutline: NSViewRepresentable {
     let model: TaskListModel
     let localizer: Localizer
@@ -152,6 +160,7 @@ struct TaskOutline: NSViewRepresentable {
         outline.setAccessibilityLabel(localizer.string(.taskListTitle))
 
         let scroll = NSScrollView()
+        scroll.contentView = TaskClipView()
         scroll.documentView = outline
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true

@@ -286,6 +286,8 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
         #expect(store.preferences(for: project).expanded == [epic.id])
         outline.collapseItem(model.roots[0])
         #expect(store.preferences(for: project).expanded.isEmpty)
+        let clip = try #require((window.contentView as? NSScrollView)?.contentView)
+        #expect(clip.constrainBoundsRect(NSRect(x: 0, y: -40, width: 800, height: 400)).origin.y == 0)
         coordinator.detach()
     }
 
