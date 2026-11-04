@@ -1,0 +1,23 @@
+formatVersion: 10
+id: b4a1a400-55b4-42cc-9dc2-8c3befb3bb81
+title: 'Подписка workspaceChanges оформляется позже, чем клиент получает «connected»: тест блокировок падает в CI'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+createdAt: 2026-11-04T04:36:33.8810620+00:00
+updatedAt: 2026-11-04T04:36:43.6549320+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 210
+links:
+- typeId: 5ae2ca99-b66c-233d-902e-db9a37b115c0
+  taskId: 12642a78-5c23-45d6-a89f-d91d148fd59a
+description: |-
+  Проблема
+  После TSK-208 тест EditLockInterfaceTests.Sqlite_lock_requests_do_not_trigger_the_catch_all_unknown_event регулярно падает в CI (Windows, на task/tsk-208 и task/tsk-184 ещё и Ubuntu) с OperationCanceledException: тест 15 секунд ждёт событие unknown и не дожидается.
+
+  Причина
+  1. Сервер пишет «: connected» до того, как начинается чтение потока событий, а подписчик WorkspaceEvents.Watch (итератор) регистрируется только при первом MoveNext. События, опубликованные между «connected» и регистрацией, теряются.
+  2. Тест создаёт задачу до подписки, а её событие unknown выходит через 150 мс склейки: на медленном CI подписка успевает позже.
+
+  Что сделать
+  Регистрировать подписчика сразу при выполнении подписки (до ответа «connected»), в тесте подписываться до создания задачи.
