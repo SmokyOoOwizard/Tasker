@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http.Json;
 using System.Net.Sockets;
+using System.Text.Json.Nodes;
 using Tasker.Daemon;
 using Xunit;
 
@@ -113,6 +115,40 @@ public class DaemonTests : IDisposable
         // И наоборот: то, что создал агент через MCP, видит CLI.
         await _daemon.CallTool(key, "create_project", new { name = "FromAgent" });
         Assert.Contains("FromAgent", (await TaskerProcess.Run("project", "list", "-w", folder)).Out);
+    }
+
+    [Fact]
+    public async Task Workspace_api_serves_graphql_rest_and_the_change_subscription()
+    {
+        await _daemon.Workspace("a", "Alpha");
+        var status = await _daemon.Start();
+        var apiBase = $"http://127.0.0.1:{status.Port}/w/{KeyOf(status.Workspaces[0])}/api";
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+        var (code, body) = await GraphReads.Query(http, apiBase, "{ projects { totalCount data { name } } }");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Assert.Equal("Alpha", body!["data"]!["projects"]!["data"]![0]!["name"]!.GetValue<string>());
+
+        using var subscription = await GraphReads.Subscribe(http, apiBase);
+        Assert.Equal("text/event-stream", subscription.Content.Headers.ContentType?.MediaType);
+        using var reader = new StreamReader(await subscription.Content.ReadAsStreamAsync());
+        Assert.Equal(": connected", await reader.ReadLineAsync());
+
+        using var created = await http.PostAsJsonAsync($"{apiBase}/projects", new { name = "Beta" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var projectId = (await created.Content.ReadFromJsonAsync<JsonNode>())!["id"]!.GetValue<string>();
+
+        JsonNode? change = null;
+        using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        while (change == null && await reader.ReadLineAsync(wait.Token) is { } line)
+            change = GraphReads.Change(line);
+        Assert.Equal("project", change!["entity"]!.GetValue<string>());
+        Assert.Equal(projectId, change["projectId"]!.GetValue<string>());
+
+        using var missing = await http.PostAsJsonAsync($"{apiBase}/nope", new { });
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        using var noWorkspace = await http.PostAsJsonAsync($"http://127.0.0.1:{status.Port}/api/projects", new { name = "Gamma" });
+        Assert.Equal(HttpStatusCode.NotFound, noWorkspace.StatusCode);
     }
 
     [Fact]

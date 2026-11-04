@@ -74,6 +74,35 @@ scripts/macos-build.sh release
 
 В коде строки берутся через `@Environment(\.localizer)`: `l.string(.sectionTasks)`, `l.taskCount(5)`, `l.date(...)`, `l.number(...)`. Язык по умолчанию — системный (русский, если в системе русский, иначе английский). Внизу боковой панели кнопка с текущим языком (RU или EN) открывает список: «Как в системе», «Русский», «English». Выбор применяется сразу, а системные пункты меню macOS обновятся после перезапуска.
 
+## Клиент API
+
+Пакет `TaskerAPI` (Swift Package, подключён к приложению в `project.yml`) — клиент демона и сервера. Чтение идёт через GraphQL, живые изменения — через GraphQL-подписку, изменения — через REST.
+
+- `TaskerEndpoint.local(port:workspace:)` — демон в режиме Local (`http://127.0.0.1:<порт>/w/<область>`, без входа); `TaskerEndpoint.server(_:session:)` — сервер, вход по JWT. `RESTClient.signIn(baseURL:login:password:)` возвращает `ServerSession`: она подставляет access-токен в GraphQL и REST, заранее обновляет истекающий, после ответа 401 обновляет его один раз и повторяет запрос, а при отказе в обновлении забывает сессию.
+- `TaskerAPIClient(endpoint:)` собирает всё вместе: `graphQL.fetch(_:cachePolicy:)`, `graphQL.watch(_:)` (поток значений, который следит за кэшем), `graphQL.subscribe(_:reconnect:)` и `workspaceChanges()` (подписка с переподключением, по событиям сбрасывает затронутое в кэше), `rest.perform { try await $0.createProject(...) }`.
+- Нормализованный кэш `NormalizedCache`: одна запись на сущность (`__typename` + `id`), общая для всех запросов. Генератор сам добавляет эти поля в запросы.
+- Ошибки сведены в `TaskerAPIError`: `conflict` (`modified` — изменено другим, `locked` — правит `heldBy`, `inUse`, `unsupportedFormat`), `notFound`, `forbidden`, `unauthenticated`, `badRequest` — с текстом сервера; ошибки GraphQL без кода — `graphQL([...])`; `timedOut`, `network`. Отмена задачи даёт `CancellationError`.
+
+Запросы GraphQL лежат в `TaskerAPI/GraphQL/*.graphql`. Скрипт `scripts/gen-graphql-client.py` проверяет их по `graphql/schema.graphql` (поля, аргументы, типы переменных, фрагменты) и создаёт Swift-типы в `Sources/TaskerAPI/Generated/GraphQL/`. REST-клиент создаётся из `docs/api/openapi.json` (без `executeGraphQL`) генератором swift-openapi-generator: `scripts/gen-openapi-client.sh` пишет его в `Sources/TaskerAPI/Generated/REST/`.
+
+```bash
+python3 scripts/gen-graphql-client.py
+```
+
+```bash
+scripts/gen-openapi-client.sh
+```
+
+С флагом `--check` скрипты падают, если сгенерированный код разошёлся со схемой; их выполняет CI (`.github/workflows/macos-api-client.yml`).
+
+Тесты пакета (`swift test --package-path macos/TaskerAPI`, они же входят в `scripts/macos-build.sh test`) работают на фикстурах. Проверка на запущенном демоне включается переменными окружения:
+
+```bash
+TASKER_LIVE_PORT=5719 TASKER_LIVE_WORKSPACE=<область> swift test --package-path macos/TaskerAPI --filter LiveDaemonTests
+```
+
+Тест создаёт в области временный проект и удаляет его.
+
 ## Иконка
 
 Исходники иконок в `Design/icon/`: `icon-dark.svg` для тёмной темы и `icon-light.svg` для светлой. Растровые копии лежат в `Sources/Tasker/Assets.xcassets`: набор `AppIcon` (светлая, все размеры macOS) и наборы `IconDark`/`IconLight`, между которыми приложение переключает иконку в Dock вслед за темой системы.

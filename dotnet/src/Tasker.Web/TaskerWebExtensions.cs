@@ -61,7 +61,7 @@ public static class TaskerWebExtensions
     }
 
     /// <summary>
-    /// Демон MCP (<c>tasker-mcpd</c>, создан с <c>localMcp: true</c>): только MCP рабочих областей — один адрес <c>/mcp</c>, область — аргумент вызова — без REST и фронтенда.
+    /// Демон MCP (<c>tasker-mcpd</c>, создан с <c>localMcp: true</c>): MCP рабочих областей — один адрес <c>/mcp</c>, область — аргумент вызова.
     /// Работает как десктоп (режим Local): без токена, только запросы с этой машины, от имени локального агента области.
     /// </summary>
     /// <param name="mapExtra">Дополнительные маршруты хоста (управление демоном) — они не привязаны к рабочей области.</param>
@@ -69,9 +69,15 @@ public static class TaskerWebExtensions
     {
         app.UseLoopbackOnly();
         app.UseWorkspaces();
+        app.UseSqliteChangeEvents();
+        app.Use(TaskerApi.HandleErrors);
         app.UseRouting();
 
         app.MapGet("/api/health", () => Results.Ok(new { status = "ok", mode = "McpDaemon" }));
+        var api = app.MapGroup("/api");
+        api.MapTaskerApi(TaskerMode.Local);
+        api.MapTaskerGraph();
+        api.Map("{*path}", () => Results.NotFound(new ApiError("Not found"))).ExcludeFromDescription();
         mapExtra?.Invoke(app);
         app.MapTaskerMcp(requireAgentToken: false);
 

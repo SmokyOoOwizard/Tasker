@@ -1,0 +1,41 @@
+name: macOS API client
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'graphql/**'
+      - 'docs/api/openapi.json'
+      - 'macos/TaskerAPI/**'
+      - 'macos/Tools/OpenAPIGenerator/**'
+      - 'scripts/gen-graphql-client.py'
+      - 'scripts/gen-openapi-client.sh'
+      - '.github/workflows/macos-api-client.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'graphql/**'
+      - 'docs/api/openapi.json'
+      - 'macos/TaskerAPI/**'
+      - 'macos/Tools/OpenAPIGenerator/**'
+      - 'scripts/gen-graphql-client.py'
+      - 'scripts/gen-openapi-client.sh'
+      - '.github/workflows/macos-api-client.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  graphql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -I scripts/gen-graphql-client.py --check
+
+  swift:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/gen-openapi-client.sh --check
+      - run: swift test --package-path macos/TaskerAPI

@@ -1,0 +1,72 @@
+query ProjectTasks($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $sort: String, $offset: Int, $limit: Int) {
+  project(id: $projectId) {
+    id
+    tasks(statusIds: $statusIds, typeIds: $typeIds, sort: $sort, offset: $offset, limit: $limit, descriptionLength: 0) {
+      totalCount
+      offset
+      limit
+      data {
+        ...TaskListFields
+      }
+    }
+  }
+}
+
+query Task($projectId: UUID!, $id: UUID!) {
+  project(id: $projectId) {
+    id
+    task(id: $id) {
+      id
+      projectId
+      title
+      description
+      typeId
+      statusId
+      seriesNumbers {
+        seriesId
+        number
+      }
+      createdAt
+      updatedAt
+      version
+      fieldViews {
+        fieldId
+        name
+        type
+        multiple
+        required
+        source
+        values
+        texts
+      }
+      linkViews {
+        typeId
+        typeName
+        direction
+        name
+        task {
+          id
+          title
+          statusId
+        }
+      }
+    }
+  }
+}
+
+fragment TaskListFields on TaskListItem {
+  id
+  projectId
+  title
+  typeId
+  statusId
+  seriesNumbers {
+    seriesId
+    number
+  }
+  createdAt
+  updatedAt
+  version
+  parentIds
+  childCount
+}

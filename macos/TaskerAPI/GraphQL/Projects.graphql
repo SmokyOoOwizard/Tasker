@@ -1,0 +1,32 @@
+query Projects($offset: Int, $limit: Int) {
+  projects(offset: $offset, limit: $limit) {
+    totalCount
+    offset
+    limit
+    data {
+      ...ProjectFields
+    }
+  }
+}
+
+query Project($id: UUID!) {
+  project(id: $id) {
+    ...ProjectFields
+    stats {
+      tasks
+      boards
+      statuses
+      statusSets
+      taskTypes
+      series
+      linkTypes
+    }
+  }
+}
+
+fragment ProjectFields on Project {
+  id
+  name
+  createdAt
+  version
+}

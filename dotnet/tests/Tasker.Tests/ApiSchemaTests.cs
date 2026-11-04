@@ -70,6 +70,31 @@ public class ApiSchemaTests
     }
 
     [Fact]
+    public async Task Path_parameters_match_the_path()
+    {
+        var document = JsonNode.Parse(await Generated.Value)!;
+        var mismatched = new List<string>();
+        foreach (var (path, item) in (JsonObject)document["paths"]!)
+        {
+            var expected = System.Text.RegularExpressions.Regex.Matches(path, @"\{(\w+)\}").Select(x => x.Groups[1].Value).Order().ToArray();
+            foreach (var (method, node) in (JsonObject)item!)
+            {
+                if (method == "servers")
+                    continue;
+                var declared = (node!["parameters"] as JsonArray ?? [])
+                    .Where(x => x!["in"]!.GetValue<string>() == "path")
+                    .Select(x => x!["name"]!.GetValue<string>())
+                    .Order()
+                    .ToArray();
+                if (!expected.SequenceEqual(declared))
+                    mismatched.Add($"{method} {path}");
+            }
+        }
+
+        Assert.Empty(mismatched);
+    }
+
+    [Fact]
     public async Task Operations_have_unique_ids_and_references_resolve()
     {
         var document = JsonNode.Parse(await Generated.Value)!;

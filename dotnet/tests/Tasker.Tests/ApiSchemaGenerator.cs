@@ -204,6 +204,7 @@ internal static class ApiSchemaGenerator
                     operation["security"] = new JsonArray(new JsonObject { ["bearerAuth"] = new JsonArray() }, new JsonObject());
                 else if (set.Contains("local") && !set.Contains("daemon"))
                     operation.Remove("security");
+                PathParameters(operation, path);
                 Order(operation);
             }
 
@@ -323,6 +324,40 @@ internal static class ApiSchemaGenerator
             sorted[key] = value?.DeepClone();
         return sorted;
     }
+
+    private static void PathParameters(JsonObject operation, string path)
+    {
+        var declared = (operation["parameters"] as JsonArray)?.Select(x => x!.DeepClone()).ToList() ?? [];
+        var inPath = Regex.Matches(path, @"\{(\w+)\}").Select(x => x.Groups[1].Value).ToArray();
+        if (inPath.All(name => declared.Any(x => IsPathParameter(x, name))))
+            return;
+
+        var parameters = new JsonArray();
+        foreach (var name in inPath)
+            parameters.Add(declared.FirstOrDefault(x => IsPathParameter(x, name)) ?? new JsonObject
+            {
+                ["name"] = name,
+                ["in"] = "path",
+                ["required"] = true,
+                ["schema"] = new JsonObject { ["type"] = "string", ["format"] = "uuid" }
+            });
+        foreach (var parameter in declared.Where(x => x["in"]?.GetValue<string>() != "path"))
+            parameters.Add(parameter);
+
+        var properties = operation.ToArray();
+        operation.Clear();
+        foreach (var (key, value) in properties)
+        {
+            if (key == "parameters")
+                continue;
+            operation[key] = value?.DeepClone();
+            if (key == "operationId")
+                operation["parameters"] = parameters;
+        }
+    }
+
+    private static bool IsPathParameter(JsonNode parameter, string name) =>
+        parameter["in"]?.GetValue<string>() == "path" && parameter["name"]?.GetValue<string>() == name;
 
     private static void Order(JsonObject operation)
     {

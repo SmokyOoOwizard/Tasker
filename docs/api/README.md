@@ -19,3 +19,5 @@ TASKER_GOLDEN_UPDATE=1 dotnet test dotnet/tests/Tasker.Tests --filter "FullyQual
 ```
 
 Новый маршрут без аннотации ответа тест пропустит, но в схеме у него не будет типа успешного ответа: добавьте `.RespondsOk<T>("имя")` и т. п.
+
+Из схемы собирается REST-клиент приложения для macOS (`macos/TaskerAPI`). После обновления файла пересоздайте его командой `scripts/gen-openapi-client.sh`, а после изменения `graphql/schema.graphql` — командой `python3 scripts/gen-graphql-client.py`. Иначе проверка `macOS API client` в CI упадёт.
