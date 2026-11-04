@@ -87,13 +87,19 @@ internal sealed class GlobalOptions(TextWriter output, TextWriter error, TextRea
             {
                 MaxWidth = MaxWidth(parse),
                 IsQuiet = parse.GetValue(Quiet),
-                Input = input ?? Console.In,
+                Input = input ?? TerminalInput(),
                 IsInteractive = interactive ?? !Console.IsInputRedirected
             };
             await action(context);
             PerfTrace.Mark("action");
             return context.ExitCode;
         });
+
+    private static TextReader TerminalInput() =>
+        OperatingSystem.IsWindows() || Console.IsInputRedirected
+            ? Console.In
+            : new StreamReader(new FileStream(new Microsoft.Win32.SafeHandles.SafeFileHandle(0, ownsHandle: false), FileAccess.Read, bufferSize: 0),
+                ConsoleSetup.Utf8, detectEncodingFromByteOrderMarks: false);
 
     /// <summary>Команда без рабочей области (настройки, демон): только вывод и обработка ошибок.</summary>
     public Task<int> RunPlain(ParseResult parse, CancellationToken ct, Func<Context, Task> action) =>
@@ -103,7 +109,7 @@ internal sealed class GlobalOptions(TextWriter output, TextWriter error, TextRea
             {
                 MaxWidth = MaxWidth(parse),
                 IsQuiet = parse.GetValue(Quiet),
-                Input = input ?? Console.In,
+                Input = input ?? TerminalInput(),
                 IsInteractive = interactive ?? !Console.IsInputRedirected
             };
             await action(context);

@@ -55,7 +55,7 @@ jobs:
       - name: packages of the Alpine container
         if: matrix.container
         shell: sh
-        run: apk add --no-cache bash git tar python3 file clang build-base zlib-dev sqlite-dev
+        run: apk add --no-cache bash git tar python3 file clang build-base zlib-dev sqlite-dev sqlite-static
       - run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -83,8 +83,7 @@ jobs:
           run=()
           case "${{ matrix.rid }}" in
             osx-x64) run=(arch -x86_64) ;;
-            linux-musl-arm64) run=(docker run --rm -v "$PWD:$PWD" -w "$PWD" -e TASKER_HOME mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine
-              sh -c 'apk add --no-cache sqlite-libs >/dev/null && exec "$@"' sh) ;;
+            linux-musl-arm64) run=(docker run --rm -v "$PWD:$PWD" -w "$PWD" -e TASKER_HOME mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine) ;;
           esac
           if [ "${{ matrix.rid }}" = osx-x64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then echo "no Rosetta: not run"; exit 0; fi
           shown="$("${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" --version | tr -d '\r')"
@@ -95,7 +94,9 @@ jobs:
           "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project create Smoke -w check/ws
           "${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" project list -w check/ws
           case "${{ matrix.rid }}" in
-            linux-*) file "check/$name/app/tasker"; (ldd "check/$name/app/tasker" || true) ;;
+            linux-*)
+              file "check/$name/app/tasker"; (ldd "check/$name/app/tasker" || true)
+              if readelf -d "check/$name/app/tasker" | grep -q libsqlite3; then echo "tasker needs libsqlite3: SQLite must be linked in"; exit 1; fi ;;
           esac
       - uses: actions/upload-artifact@v4
         with:

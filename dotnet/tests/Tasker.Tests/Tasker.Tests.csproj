@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Веб-слой (десктоп, сервер) и клиент демона для десктопа проверяются в процессе тестов. -->
+    <!-- Веб-слой (сервер, локальный режим) и демон проверяются в процессе тестов. -->
     <ProjectReference Include="..\..\src\Tasker.Web\Tasker.Web.csproj" />
     <ProjectReference Include="..\..\src\Tasker.Cli\Tasker.Cli.csproj" />
     <ProjectReference Include="..\..\src\Tasker.Daemon.Host\Tasker.Daemon.Host.csproj" />
@@ -16,6 +16,14 @@
     <ProjectReference Include="..\..\tools\Tasker.Stress\Tasker.Stress.csproj" />
   </ItemGroup>
 
+
+  <Target Name="CopyTaskerPrograms" AfterTargets="Build">
+    <ItemGroup>
+      <_TaskerProgramFile Include="$(MSBuildThisFileDirectory)..\..\src\Tasker.Daemon.Host\bin\$(Configuration)\$(TargetFramework)\**\*" />
+      <_TaskerProgramFile Include="$(MSBuildThisFileDirectory)..\..\src\Tasker.Cli\bin\$(Configuration)\$(TargetFramework)\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_TaskerProgramFile)" DestinationFiles="@(_TaskerProgramFile->'$(OutDir)programs\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />

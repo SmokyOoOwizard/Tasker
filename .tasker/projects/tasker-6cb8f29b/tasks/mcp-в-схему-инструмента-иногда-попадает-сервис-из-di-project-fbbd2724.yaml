@@ -1,0 +1,16 @@
+formatVersion: 10
+id: fbbd2724-0274-4b54-8427-9c20f75eeced
+title: 'MCP: в схему инструмента иногда попадает сервис из DI (projects: object)'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+createdAt: 2026-11-03T22:38:58.4245410+00:00
+updatedAt: 2026-11-03T22:38:58.4245410+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 205
+description: |-
+  Тест McpInputSchemaTests.Tools_list_matches_the_golden_snapshot_… падает плавающе при параллельном прогоне с другими тестами Mcp/Server: в inputSchema какого-то инструмента появляется "projects": {"type": "object"} — параметр ProjectService, который внедряется из DI.
+
+  Причина: RuntimeMethodInfo кэширует ParameterInfo[] без блокировки. Когда несколько хостов в одном процессе впервые одновременно создают один и тот же инструмент, разные вызовы GetParameters() могут вернуть разные объекты ParameterInfo. Microsoft.Extensions.AI (AIFunctionFactory) запоминает, какие параметры исключить из схемы, в словаре с ключом ParameterInfo, а схему строит по повторному GetParameters(). Поиск по ссылке промахивается, и сервис попадает в схему. ToolServices.IsService при этом отвечает верно.
+
+  Готово, когда: сервисы исключаются из схемы по типу параметра (IncludeParameter), а не по ссылке на ParameterInfo; набор тестов Mcp|Server проходит 10 прогонов подряд.

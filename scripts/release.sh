@@ -29,6 +29,7 @@
 #   install.sh, install.ps1                         скрипты установки отдельно (чтобы запускать их, не распаковывая архив)
 
 set -euo pipefail
+export MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0 UseSharedCompilation=false
 
 usage() {
   cat <<'USAGE'
@@ -305,7 +306,7 @@ publish_docker() {
   docker run --rm -v "$REPO":/src:ro -v "$dest":/out -v tasker-release-nuget:/root/.nuget/packages \
     -e TASKER_VERSION="$VERSION" -e RID="$rid" mcr.microsoft.com/dotnet/sdk:10.0-alpine sh -c '
       set -e
-      apk add --no-cache clang build-base zlib-dev sqlite-dev >/dev/null
+      apk add --no-cache clang build-base zlib-dev sqlite-dev sqlite-static >/dev/null
       cp -r /src /work
       dotnet publish /work/dotnet/src/Tasker.Cli -c Release -r "$RID" -p:PublishAot=true -p:TaskerVersion="$TASKER_VERSION" -o /tmp/cli --nologo -v quiet
       dotnet publish /work/dotnet/src/Tasker.Daemon.Host -c Release -r "$RID" --self-contained true -p:PublishSingleFile=true \

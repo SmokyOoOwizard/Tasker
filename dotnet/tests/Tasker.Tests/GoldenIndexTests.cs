@@ -182,7 +182,7 @@ public class GoldenIndexTests
 
             string actual;
             using (var connection = Open(file))
-                actual = DotSchema(connection);
+                actual = DotSchema(connection).ReplaceLineEndings("\n");
             var schemaFile = Path.Combine(Golden, "sqlite", "schema.sql");
             if (Updating)
                 File.WriteAllText(schemaFile, actual, Utf8);

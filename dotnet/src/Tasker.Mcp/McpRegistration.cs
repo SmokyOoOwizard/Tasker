@@ -66,11 +66,12 @@ public static class McpRegistration
         {
             services.AddSingleton(sp =>
             {
+                var tools = new ToolServices(sp);
                 var tool = McpServerTool.Create(method, target: null, new McpServerToolCreateOptions
                 {
-                    Services = new ToolServices(sp),
+                    Services = tools,
                     SerializerOptions = TaskerJson.Options,
-                    SchemaCreateOptions = NestedRequired.SchemaOptions
+                    SchemaCreateOptions = NestedRequired.SchemaOptions with { IncludeParameter = x => !tools.IsService(x.ParameterType) }
                 });
                 DefaultProject.MakeOptional(tool.ProtocolTool);
                 if (workspaceArgument)

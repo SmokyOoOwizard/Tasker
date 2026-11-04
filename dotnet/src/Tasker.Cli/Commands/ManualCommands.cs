@@ -83,10 +83,10 @@ internal static class ManualCommands
 
         var text = new StringBuilder(query == null
             ? $"Tasker manual ({language}): 'tasker manual <topic>' shows a recipe, 'tasker manual <word>' searches\n"
-            : $"Several topics match '{query}':\n").AppendLine();
+            : $"Several topics match '{query}':\n").Append('\n');
         var width = pages.Max(x => x.Id.Length);
         foreach (var page in pages)
-            text.AppendLine($"  {page.Id.PadRight(width)}  {page.Title}{(page.Language == language ? "" : $" [{page.Language}]")}");
+            text.Append($"  {page.Id.PadRight(width)}  {page.Title}{(page.Language == language ? "" : $" [{page.Language}]")}\n");
         ctx.Print(new { query, language, languages = catalog.Languages, topics = pages.Select(Info).ToArray() }, text.ToString().TrimEnd());
     }
 }
