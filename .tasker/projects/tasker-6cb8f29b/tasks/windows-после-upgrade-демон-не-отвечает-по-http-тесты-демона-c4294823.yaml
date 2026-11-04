@@ -2,9 +2,9 @@ formatVersion: 10
 id: c4294823-b429-4cf3-ab17-33b559a5f92e
 title: 'Windows: после upgrade демон не отвечает по HTTP, тесты демона падают в CI'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-04T02:47:57.6929930+00:00
-updatedAt: 2026-11-04T02:50:04.0216880+00:00
+updatedAt: 2026-11-04T13:09:12.3065840+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 209
