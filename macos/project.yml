@@ -1,0 +1,51 @@
+name: Tasker
+options:
+  bundleIdPrefix: com.technotronika
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    MARKETING_VERSION: ${TASKER_VERSION}
+    CURRENT_PROJECT_VERSION: ${TASKER_BUILD}
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  Tasker:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/Tasker
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.technotronika.tasker
+        PRODUCT_NAME: Tasker
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Tasker
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_NSHumanReadableCopyright: Technotronika
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+  TaskerTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/TaskerTests
+    dependencies:
+      - target: Tasker
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.technotronika.tasker.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Tasker:
+    build:
+      targets:
+        Tasker: all
+        TaskerTests: [test]
+    test:
+      targets:
+        - TaskerTests
