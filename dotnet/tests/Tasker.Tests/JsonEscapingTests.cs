@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -92,10 +93,16 @@ public class JsonEscapingTests : IDisposable
         await using var lease = await app.Services.GetRequiredService<WorkspaceRegistry>().Open(WorkspaceLocation.Files(folder));
 
         using var http = new HttpClient();
-        var projectId = JsonNode.Parse(await http.GetStringAsync($"{address}{lease.BasePath}/api/projects"))!["data"]![0]!["id"];
-        var rest = await http.GetStringAsync($"{address}{lease.BasePath}/api/projects/{projectId}/tasks");
+        var api = $"{address}{lease.BasePath}/api";
+        var projectId = (await GraphReads.Get(http, api, "/projects")).Body!["data"]![0]!["id"]!.GetValue<string>();
+        using var response = await http.PostAsJsonAsync(api + "/graphql", new
+        {
+            query = "query($id: UUID!) { project(id: $id) { tasks { data { title description } } } }",
+            variables = new { id = projectId }
+        });
+        var rest = await response.Content.ReadAsStringAsync();
         AssertRaw(rest);
-        Assert.Equal(3, JsonNode.Parse(rest)!["data"]!.AsArray().Count);
+        Assert.Equal(3, JsonNode.Parse(rest)!["data"]!["project"]!["tasks"]!["data"]!.AsArray().Count);
 
         // Размер: тот же ответ со стандартным кодировщиком (\uXXXX) заметно больше.
         var escaped = JsonNode.Parse(rest)!.ToJsonString(new JsonSerializerOptions());

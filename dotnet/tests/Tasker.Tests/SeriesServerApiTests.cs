@@ -41,6 +41,9 @@ public class SeriesServerApiTests : IAsyncLifetime
 
     private async Task<(HttpStatusCode Status, JsonNode? Body)> Send(HttpMethod method, string path, string? token, object? body = null)
     {
+        if (method == HttpMethod.Get)
+            return await GraphReads.Get(_http, new Uri(_http.BaseAddress!, "/api").ToString(), path, token);
+
         using var request = new HttpRequestMessage(method, path);
         if (token != null)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

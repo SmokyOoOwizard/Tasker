@@ -91,7 +91,7 @@ internal sealed class ApiHost : IAsyncDisposable
         return (response.StatusCode, text.Length == 0 ? null : JsonNode.Parse(text));
     }
 
-    public Task<(HttpStatusCode Status, JsonNode? Body)> Get(string path) => Send(HttpMethod.Get, path);
+    public Task<(HttpStatusCode Status, JsonNode? Body)> Get(string path) => GraphReads.Get(_http, BaseUrl, path);
     public Task<(HttpStatusCode Status, JsonNode? Body)> Post(string path, object? body = null) => Send(HttpMethod.Post, path, body ?? new { });
     public Task<(HttpStatusCode Status, JsonNode? Body)> Patch(string path, object body) => Send(HttpMethod.Patch, path, body);
     public Task<(HttpStatusCode Status, JsonNode? Body)> Delete(string path) => Send(HttpMethod.Delete, path);
@@ -610,7 +610,7 @@ public class SeriesApiTests
             while (true)
             {
                 var line = await reader.ReadLineAsync(timeout.Token) ?? throw new Xunit.Sdk.XunitException("the event stream ended");
-                if (line.StartsWith("data:") && JsonNode.Parse(line["data:".Length..])! is { } change && match(change))
+                if (GraphReads.Change(line) is { } change && match(change))
                     return change;
             }
         }
@@ -626,7 +626,7 @@ public class SeriesApiTests
     private static async Task<EventStream> Subscribe(ApiHost api)
     {
         var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        var response = await http.GetAsync(api.BaseUrl + "/events", HttpCompletionOption.ResponseHeadersRead);
+        var response = await GraphReads.Subscribe(http, api.BaseUrl);
         var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
         Assert.StartsWith(": connected", await reader.ReadLineAsync());
         return new EventStream(http, response, reader);

@@ -1,13 +1,11 @@
 using Tasker.Storage.Files.Workspaces;
 using System.Collections.Concurrent;
-using System.Text.Json;
+using System.Runtime.CompilerServices;
 using Tasker.Core;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Serilog;
 using Tasker.Core.Workspace;
 using Tasker.Storage.Files;
@@ -29,12 +27,11 @@ public sealed record WorkspaceChange(string Entity, Guid? ProjectId, Guid? Id);
 /// откуда бы они ни пришли, а событие приходит, когда списки уже их показывают.</item>
 /// <item>SQLite: снаружи БД не следим — событие <c>unknown</c> после каждого успешного изменяющего запроса к области.</item>
 /// </list>
-/// Одинаковые события за <see cref="Debounce"/> склеиваются. Клиенты получают их потоком SSE: <c>GET /w/{key}/api/events</c>.
+/// Одинаковые события за <see cref="Debounce"/> склеиваются. Клиенты получают их подпиской GraphQL <c>workspaceChanges</c>: <c>POST /w/{key}/api/graphql</c>.
 /// </summary>
 public sealed class WorkspaceEvents : IDisposable
 {
     private static readonly TimeSpan Debounce = TimeSpan.FromMilliseconds(150);
-    private static readonly TimeSpan Heartbeat = TimeSpan.FromSeconds(20);
     
     // Столько файлов сразу (checkout, полная сверка) — проще сказать «перечитайте всё».
     private const int ManyFiles = 200;
@@ -63,12 +60,9 @@ public sealed class WorkspaceEvents : IDisposable
     /// <summary>Блокировку на время правки взяли или сняли: вкладкам перечитать блокировку сущности <paramref name="id"/>.</summary>
     public void PublishLock(Guid id) => Publish(new WorkspaceChange("lock", null, id));
 
-    /// <summary>Поток SSE до отключения клиента, закрытия рабочей области или остановки приложения.</summary>
-    public async Task Stream(HttpContext context, CancellationToken workspaceClosing)
+    public async IAsyncEnumerable<WorkspaceChange> Watch(CancellationToken workspaceClosing, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        // Без остановки приложения хост ждал бы открытые потоки до конца ShutdownTimeout.
-        var appStopping = context.RequestServices.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, workspaceClosing, appStopping);
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(workspaceClosing, ct);
         var channel = Channel.CreateBounded<WorkspaceChange>(new BoundedChannelOptions(1000)
         {
             FullMode = BoundedChannelFullMode.DropOldest
@@ -77,33 +71,20 @@ public sealed class WorkspaceEvents : IDisposable
 
         try
         {
-            var response = context.Response;
-            response.Headers.ContentType = "text/event-stream";
-            response.Headers.CacheControl = "no-cache";
-            await response.WriteAsync(": connected\n\n", stop.Token);
-            await response.Body.FlushAsync(stop.Token);
-
-            while (!stop.IsCancellationRequested)
+            while (true)
             {
-                using var wait = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
-                wait.CancelAfter(Heartbeat);
+                WorkspaceChange change;
                 try
                 {
-                    var change = await channel.Reader.ReadAsync(wait.Token);
-                    await response.WriteAsync($"data: {JsonSerializer.Serialize(change, TaskerJson.Options)}\n\n", stop.Token);
+                    change = await channel.Reader.ReadAsync(stop.Token);
                 }
-                catch (OperationCanceledException) when (!stop.IsCancellationRequested)
+                catch (OperationCanceledException)
                 {
-                    // Комментарий SSE раз в Heartbeat: соединение не считается простаивающим.
-                    await response.WriteAsync(": ping\n\n", stop.Token);
+                    yield break;
                 }
 
-                await response.Body.FlushAsync(stop.Token);
+                yield return change;
             }
-        }
-        catch (OperationCanceledException)
-        {
-            // Клиент отключился или область закрылась.
         }
         finally
         {
@@ -195,14 +176,6 @@ internal sealed class WorkspaceLockNotifier(WorkspaceEvents events) : Tasker.Cor
 
 internal static class WorkspaceEventsEndpoint
 {
-    /// <summary>Десктоп: <c>GET /api/events</c> внутри рабочей области — поток SSE <see cref="WorkspaceChange"/>.</summary>
-    public static void MapWorkspaceEvents(this IEndpointRouteBuilder api) =>
-        api.MapGet("/events", (HttpContext context) =>
-        {
-            var workspace = context.Features.Get<WorkspaceFeature>()!;
-            return context.RequestServices.GetRequiredService<WorkspaceEvents>().Stream(context, workspace.Closing);
-        });
-
     /// <summary>
     /// Рабочая область в SQLite: после успешного изменяющего запроса — событие <c>unknown</c>
     /// (изменения в файлах ловит <see cref="FileSystemWatcher"/>, здесь их не дублируем).
@@ -216,6 +189,7 @@ internal static class WorkspaceEventsEndpoint
                 && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)
                 // Блокировки правки данных не меняют и о себе сообщают отдельным событием lock.
                 && context.Request.Path.Value?.EndsWith("/lock", StringComparison.Ordinal) != true
+                && context.Request.Path.Value?.EndsWith(Graph.GraphSetup.Path, StringComparison.Ordinal) != true
                 && context.Response.StatusCode is >= 200 and < 300)
             {
                 context.RequestServices.GetRequiredService<WorkspaceEvents>().Publish(new WorkspaceChange("unknown", null, null));
