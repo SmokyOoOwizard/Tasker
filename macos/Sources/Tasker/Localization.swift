@@ -27,9 +27,9 @@ enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 
     var labelKey: L10nKey {
         switch self {
-        case .system: .settingsLanguageSystem
-        case .ru: .settingsLanguageRu
-        case .en: .settingsLanguageEn
+        case .system: .languageSystem
+        case .ru: .languageRu
+        case .en: .languageEn
         }
     }
 

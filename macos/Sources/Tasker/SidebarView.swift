@@ -18,6 +18,7 @@ struct SidebarView: View {
             }
             DesignDivider().padding(.vertical, DesignSpacing.gap6)
             ProfileButton()
+            LanguageMenu()
         }
         .padding(.horizontal, DesignSpacing.sidebarPadX)
         .padding(.bottom, DesignSpacing.sidebarPadY)
@@ -164,5 +165,48 @@ private struct ProfileButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+    }
+}
+
+private struct LanguageMenu: View {
+    @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
+    @Environment(\.localizer) private var l
+
+    var body: some View {
+        let current = AppLanguage(storedValue: storedLanguage)
+        Menu {
+            ForEach(AppLanguage.allCases) { option in
+                Button {
+                    storedLanguage = option.rawValue
+                } label: {
+                    if option == current {
+                        Label(l.string(option.labelKey), systemImage: "checkmark")
+                    } else {
+                        Text(l.string(option.labelKey))
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(l.language.rawValue.uppercased())
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8))
+            }
+            .font(.design(DesignTypography.captionSize))
+            .foregroundStyle(DesignColor.tx.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 1)
+            .background(DesignColor.sel.color, in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(DesignColor.line2.color, lineWidth: DesignLayout.borderWidth))
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(l.string(.sidebarLanguage))
+        .padding(.horizontal, DesignSpacing.rowPadX)
+        .padding(.top, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

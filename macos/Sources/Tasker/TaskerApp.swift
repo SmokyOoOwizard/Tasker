@@ -17,9 +17,5 @@ struct TaskerApp: App {
         .commands {
             NavigationCommands()
         }
-        Settings {
-            SettingsView()
-                .localized()
-        }
     }
 }

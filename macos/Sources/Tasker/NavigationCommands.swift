@@ -20,12 +20,6 @@ struct NavigationCommands: Commands {
                 showAbout()
             }
         }
-        CommandGroup(replacing: .appSettings) {
-            SettingsLink {
-                Text(l.string(.menuSettings))
-            }
-            .keyboardShortcut(",", modifiers: .command)
-        }
         CommandGroup(replacing: .sidebar) {
             Button(sidebarVisible ? l.string(.sidebarHide) : l.string(.sidebarShow)) {
                 sidebarVisible.toggle()
