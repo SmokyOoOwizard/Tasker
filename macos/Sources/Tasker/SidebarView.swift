@@ -66,7 +66,7 @@ private struct SearchField: View {
     var body: some View {
         Button {} label: {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
+                MockupIconView(icon: .search)
                 Text(Strings.searchPlaceholder)
                 Spacer(minLength: 0)
                 Text(Strings.searchShortcut)
@@ -96,7 +96,7 @@ private struct SidebarRow: View {
             selection = section
         } label: {
             HStack(spacing: 9) {
-                Image(systemName: section.symbol)
+                MockupIconView(icon: section.icon)
                     .frame(width: 16)
                 Text(section.title)
                 Spacer(minLength: 0)
@@ -125,7 +125,7 @@ private struct ProfileButton: View {
                     .foregroundStyle(.secondary)
                 Text(Strings.profile)
                 Spacer(minLength: 0)
-                Image(systemName: "ellipsis")
+                MockupIconView(icon: .more)
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 8)

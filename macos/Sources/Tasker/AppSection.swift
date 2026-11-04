@@ -20,12 +20,12 @@ enum AppSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var symbol: String {
+    var icon: MockupIcon {
         switch self {
-        case .tasks: "list.bullet"
-        case .boards: "rectangle.split.3x1"
-        case .settings: "gearshape"
-        case .admin: "checkmark.shield"
+        case .tasks: .list
+        case .boards: .board
+        case .settings: .gear
+        case .admin: .shield
         }
     }
 

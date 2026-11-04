@@ -5,8 +5,7 @@ struct SectionContentView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: section.symbol)
-                .font(.system(size: 32, weight: .light))
+            MockupIconView(icon: section.icon, size: 36)
                 .foregroundStyle(.tertiary)
             Text(section.title)
                 .font(.system(size: 22, weight: .semibold))
