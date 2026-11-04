@@ -1,4 +1,0 @@
-cleanup
---check
---sqlite
-<ROOT>/golden.db

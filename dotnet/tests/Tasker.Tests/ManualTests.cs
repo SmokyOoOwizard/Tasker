@@ -5,8 +5,7 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>
-/// Справочник <c>tasker manual</c> как команда: список тем, поиск, язык, <c>--json</c>, работа без рабочей области. Каталог страниц и то,
-/// что команды в примерах существуют, проверяют модульные тесты Rust (<c>commands/manual.rs</c>, <c>app.rs</c>).
+/// Справочник <c>tasker manual</c> как команда: список тем, поиск, язык, <c>--json</c>, работа без рабочей области.
 /// </summary>
 public class ManualTests
 {

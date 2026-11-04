@@ -39,12 +39,12 @@ internal static class StorageRegistration
         if (mode == TaskerMode.Server)
         {
             if (Resolve(files, db) == StorageKind.Files)
-                throw new InvalidOperationException("Tasker.Server requires a database: file storage is available only in Tasker.Desktop");
+                throw new InvalidOperationException("Tasker.Server requires a database: file storage is available only in the local mode");
             return;
         }
 
         if (!string.IsNullOrWhiteSpace(db.PostgresConnectionString))
-            throw new InvalidOperationException("PostgreSQL is available only in Tasker.Server: Tasker.Desktop works with folders (--files) and SQLite files (--sqlite)");
+            throw new InvalidOperationException("PostgreSQL is available only in Tasker.Server: the local mode works with folders (--files) and SQLite files (--sqlite)");
     }
 
     // Остальной код видит только интерфейсы хранилищ — какая реализация за ними, решается здесь.

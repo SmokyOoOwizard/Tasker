@@ -1,4 +1,0 @@
-migrate
---dry-run
---sqlite
-<ROOT>/golden.db

@@ -1,7 +1,0 @@
-task-type
-list
---json
---sqlite
-<ROOT>/golden.db
--p
-Golden

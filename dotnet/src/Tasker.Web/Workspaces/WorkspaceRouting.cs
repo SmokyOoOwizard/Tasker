@@ -27,6 +27,7 @@ internal static class WorkspaceRouting
     public static void UseWorkspaces(this IApplicationBuilder app)
     {
         var registry = app.ApplicationServices.GetRequiredService<WorkspaceRegistry>();
+        var localMcp = app.ApplicationServices.GetService<Tasker.Mcp.IMcpWorkspaces>() != null;
 
         app.Use(async (context, next) =>
         {
@@ -42,6 +43,13 @@ internal static class WorkspaceRouting
                 }
 
                 await next(context);
+                return;
+            }
+
+            if (localMcp && rest.StartsWithSegments(Tasker.Mcp.McpRegistration.Path))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                await context.Response.WriteAsJsonAsync(new { error = $"MCP has no per-workspace address: use {Tasker.Mcp.McpRegistration.Path} and pass the folder in the 'workspace' argument of the tool" });
                 return;
             }
 

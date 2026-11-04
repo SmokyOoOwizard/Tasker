@@ -1,8 +1,0 @@
-task
-get
-GLD-999
---json
---sqlite
-<ROOT>/golden.db
--p
-Golden

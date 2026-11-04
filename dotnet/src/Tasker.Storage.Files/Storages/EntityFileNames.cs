@@ -40,7 +40,7 @@ internal static partial class EntityFileNames
         var pendingDash = false;
         var length = 0;
 
-        foreach (var rune in (name ?? "").Normalize(NormalizationForm.FormC).EnumerateRunes())
+        foreach (var rune in UnicodeNfc.Normalize(name ?? "").EnumerateRunes())
         {
             if (!Rune.IsLetterOrDigit(rune))
             {
@@ -62,7 +62,7 @@ internal static partial class EntityFileNames
         // Поэлементное приведение к нижнему регистру не должно оставить текст не в форме NFC (имена сравнивают как NFC).
         // Имя «<slug>-<id8>.yaml» безопасно и для Windows: в нём только буквы, цифры и дефисы, оно не кончается точкой или пробелом,
         // а зарезервированные имена (CON, NUL…) с ним не совпадают из-за суффикса «-<id8>» (WindowsNames).
-        return builder.Length == 0 ? emptySlug : builder.ToString().Normalize(NormalizationForm.FormC);
+        return builder.Length == 0 ? emptySlug : UnicodeNfc.Normalize(builder.ToString());
     }
 
     /// <summary>Имя файла с расширением: <c>исправить-вход-3f2a9c1e.yaml</c>.</summary>
@@ -93,5 +93,5 @@ internal static partial class EntityFileNames
 
     /// <summary>Совпадает ли имя файла с тем, каким оно должно быть у этой сущности (без учёта формы Unicode: файловые системы её меняют).</summary>
     public static bool IsCurrent(string fileName, string? name, Guid id, string emptySlug) =>
-        string.Equals(fileName.Normalize(NormalizationForm.FormC), FileName(name, id, emptySlug), StringComparison.Ordinal);
+        string.Equals(UnicodeNfc.Normalize(fileName), FileName(name, id, emptySlug), StringComparison.Ordinal);
 }

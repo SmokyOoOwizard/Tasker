@@ -17,7 +17,7 @@ public static class TaskerWebApp
     /// <summary>
     /// Настройки — группы <see cref="AConfigs"/> из переменных окружения и аргументов командной строки
     /// Все группы регистрируются в Autofac как есть.
-    /// Autofac: общие регистрации в модулях Core/Web, хост (Server/Desktop) добавляет свой модуль.
+    /// Autofac: общие регистрации в модулях Core/Web, хост (Server/Daemon) добавляет свой модуль.
     /// </summary>
     /// <param name="configure">Хост может дописать значения по умолчанию после разбора.</param>
     /// <param name="log">Куда писать предупреждения о незнакомых настройках; по умолчанию — <see cref="Log.Logger"/>.</param>
@@ -25,7 +25,8 @@ public static class TaskerWebApp
         string[] args,
         TaskerMode mode,
         Action<AConfigs[]>? configure = null,
-        ILogger? log = null
+        ILogger? log = null,
+        bool localMcp = false
     )
         where THostModule : Module, new()
     {
@@ -59,11 +60,11 @@ public static class TaskerWebApp
                 x.RegisterStorage(files, db);
             else
                 x.RegisterWorkspaceStoragePlaceholders();
-            x.RegisterTaskerMode(mode, configs.Get<AuthConfigs>());
+            x.RegisterTaskerMode(mode, configs.Get<AuthConfigs>(), localMcp);
             x.RegisterModule<THostModule>();
         });
 
-        builder.Services.AddTaskerMode(mode);
+        builder.Services.AddTaskerMode(mode, localMcp);
 
         // Логирование ASP.NET Core идёт в Serilog (Log.Logger, настроенный хостом).
         builder.Services.AddSerilog();

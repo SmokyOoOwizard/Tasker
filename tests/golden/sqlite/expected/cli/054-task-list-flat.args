@@ -1,8 +1,0 @@
-task
-list
---all
---flat
---sqlite
-<ROOT>/golden.db
--p
-Golden

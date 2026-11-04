@@ -5,7 +5,7 @@ namespace Tasker.Tests;
 
 /// <summary>
 /// Обрезка строк списков консолью по ширине (<c>--truncate</c>, <c>--width</c>, <c>TASKER_WIDTH</c>, <c>COLUMNS</c> и <c>LINES</c> под
-/// watch). Вывод тут — не терминал: обрезка по ширине окна терминала по умолчанию проверена модульными тестами Rust (<c>terminal.rs</c>).
+/// watch). Вывод тут — не терминал, поэтому ширина задаётся явно.
 /// </summary>
 public class TruncateTests
 {

@@ -57,10 +57,17 @@ public record MigrationReport(
 /// Каждый файл сущности хранит <c>formatVersion</c>. Старые файлы Tasker читает всегда (приводя к текущему формату в памяти),
 /// а пишет всегда в текущем; эта миграция переписывает на диске те, которые никто не менял. Работает под блокировкой записи.
 /// </summary>
+public record ProjectFoldersReport(MigrationRename[] Renamed, MigrationRename[] Merged, MigrationProblem[] Problems)
+{
+    public bool IsEmpty => Renamed.Length == 0 && Merged.Length == 0 && Problems.Length == 0;
+}
+
 public interface IFileMigration
 {
     /// <summary>Версия формата, которую пишет этот Tasker.</summary>
     int CurrentFormat { get; }
 
     Task<MigrationReport> Run(MigrationOptions options, CancellationToken ct = default);
+
+    Task<ProjectFoldersReport> TidyProjectFolders(bool dryRun, Guid? project, CancellationToken ct = default);
 }

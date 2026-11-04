@@ -4,7 +4,7 @@ Installs the tasker command line tool and the MCP server (tasker-mcpd) for the c
 
 .DESCRIPTION
 Windows 10 version 1809 or newer, Windows PowerShell 5.1 or PowerShell 7. No administrator rights are needed and nothing else
-has to be installed: the build is two programs (tasker.exe and tasker-mcpd.exe). macOS and Linux: scripts/install.sh.
+has to be installed: the build is the programs tasker.exe and tasker-mcpd.exe (with the SQLite library next to them). macOS and Linux: scripts/install.sh.
 
 Where the files come from (one of; default: the release this script came with, that is the app folder next to it):
   -From PATH    a release archive (.zip) or a folder with the ready build (tasker.exe, tasker-mcpd.exe inside it or in its app folder)
@@ -406,8 +406,8 @@ function Invoke-Main {
         try {
             Write-Host ('Installing tasker from ' + $sourceText + ' (' + $rid + ')...')
             New-Item -ItemType Directory -Path $staging -Force | Out-Null
-            # only the two programs (a folder like rust\target\release has intermediate cargo files too)
-            foreach ($name in @('tasker.exe', 'tasker-mcpd.exe')) { Copy-Item -LiteralPath (Join-Path $buildSource $name) -Destination $staging -Force }
+            Get-ChildItem -LiteralPath $buildSource -File | Where-Object { $_.Name -in @('tasker.exe', 'tasker-mcpd.exe') -or $_.Extension -eq '.dll' } |
+                ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $staging -Force }
             # a download is marked as coming from the internet: remove the mark so that SmartScreen/PowerShell do not ask again
             Get-ChildItem -LiteralPath $staging -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
 

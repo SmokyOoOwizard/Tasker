@@ -86,10 +86,10 @@ public sealed class Stand : IAsyncDisposable
     public Stand(StressOptions options)
     {
         _options = options;
-        // Консоль tasker (Rust); демон tasker-mcpd она находит рядом с собой.
+        // Консоль tasker; демон tasker-mcpd она находит рядом с собой.
         _tasker = System.IO.Path.GetFullPath(options.Tasker ?? System.IO.Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "tasker.exe" : "tasker"));
         if (!File.Exists(_tasker))
-            throw new FileNotFoundException($"tasker not found: {_tasker} (build the stand: it builds tasker and tasker-mcpd with cargo; or pass --tasker)");
+            throw new FileNotFoundException($"tasker not found: {_tasker} (build the stand: it puts tasker and tasker-mcpd next to itself; or pass --tasker)");
 
         Root = System.IO.Path.Combine(options.Dir ?? System.IO.Path.GetTempPath(), "tasker-stress-" + Guid.NewGuid().ToString("N")[..10]);
         Directory.CreateDirectory(Root);

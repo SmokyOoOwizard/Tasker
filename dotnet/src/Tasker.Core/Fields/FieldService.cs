@@ -55,8 +55,13 @@ public class FieldService(
             return null;
 
         var all = await fields.GetAll(projectId, ct);
-        if (Guid.TryParse(text, out var id) && all.FirstOrDefault(x => x.Id == id) is { } byId)
-            return byId;
+        if (Guid.TryParse(text, out var id))
+        {
+            if (all.FirstOrDefault(x => x.Id == id) is { } byId)
+                return byId;
+            if (await fields.GetById(projectId, id, ct) is { } read)
+                return read;
+        }
 
         var byName = all.Where(x => string.Equals(x.Name, text, StringComparison.OrdinalIgnoreCase)).ToArray();
         return byName.Length switch

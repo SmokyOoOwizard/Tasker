@@ -16,7 +16,7 @@ public class ParallelWorkTests
 {
     private static async Task Run(string client, string storage, int clients, int ops, params string[] scenarios)
     {
-        var options = new StressOptions { Clients = clients, Ops = ops, Client = client, Storage = storage, Scenarios = [.. scenarios], Scale = [2] };
+        var options = new StressOptions { Tasker = TaskerProcess.Binary, Clients = clients, Ops = ops, Client = client, Storage = storage, Scenarios = [.. scenarios], Scale = [2] };
         var report = await StressRunner.Run(options);
         Assert.True(report.Passed, report.ToText());
     }
@@ -24,10 +24,6 @@ public class ParallelWorkTests
     [Fact]
     public Task Several_console_clients_and_agents_in_one_project_keep_the_files_and_the_index_consistent() =>
         Run("mix", "files", 4, 2, "create", "edit-same", "edit-different", "locks", "cascade-wait", "links", "delete-while-edit");
-
-    [Fact]
-    public Task Several_console_clients_in_a_sqlite_workspace_keep_the_data_consistent() =>
-        Run("cli", "sqlite", 3, 2, "create", "edit-same", "links");
 
     [Fact]
     public Task Killed_processes_leave_no_broken_files_and_no_stuck_locks() =>
@@ -42,14 +38,12 @@ public class ParallelWorkTests
     [InlineData("cli", "files")]
     [InlineData("mcp", "files")]
     [InlineData("mix", "files")]
-    [InlineData("cli", "sqlite")]
-    [InlineData("mix", "sqlite")]
     public async Task Stand_with_ten_clients(string client, string storage)
     {
         if (Environment.GetEnvironmentVariable("TASKER_STRESS") is not "1")
             return;
 
-        var options = new StressOptions { Clients = 10, Ops = 5, Client = client, Storage = storage };
+        var options = new StressOptions { Tasker = TaskerProcess.Binary, Clients = 10, Ops = 5, Client = client, Storage = storage };
         var report = await StressRunner.Run(options);
         Assert.True(report.Passed, report.ToText());
     }

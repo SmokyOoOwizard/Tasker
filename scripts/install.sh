@@ -1,12 +1,12 @@
 #!/bin/bash
 # Устанавливает консольную утилиту tasker и демон MCP (tasker-mcpd) в каталог пользователя на macOS и Linux, чтобы команда `tasker`
-# была доступна из любого места. Права администратора не нужны, ставить ничего не нужно: это два исполняемых файла (Rust).
+# была доступна из любого места. Права администратора не нужны, ставить ничего не нужно: это две программы (.NET: консоль собрана NativeAOT, демон — один файл с рантаймом).
 # (Windows: scripts/install.ps1.)
 #
 #   install.sh                                  из распакованного релиза (рядом со скриптом лежит каталог app/)
 #   install.sh --from ФАЙЛ.tar.gz | КАТАЛОГ     из архива релиза или каталога с готовой сборкой
 #   install.sh --url АДРЕС.tar.gz               скачать архив релиза (рядом должен лежать АДРЕС.tar.gz.sha256)
-#   install.sh --from-source                    собрать из исходников репозитория (нужен Rust: cargo), для разработчиков
+#   install.sh --from-source                    собрать из исходников репозитория (нужен .NET SDK 10), для разработчиков
 #   install.sh --uninstall                      удалить
 #   прочее: [--prefix DIR] [--no-completion] [--no-autostart] [--add-to-path] [--restart] [--no-verify]
 #           [--no-daemon]   (только с --from-source)
@@ -28,6 +28,7 @@
 # <файл>.tasker-backup; --no-completion файл не трогает; --uninstall убирает блок и скрипты. Остальное содержимое файла не меняется.
 
 set -euo pipefail
+export MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0 UseSharedCompilation=false
 
 usage() {
   cat <<'USAGE'
@@ -37,7 +38,7 @@ Installs the tasker command line tool and the MCP server (tasker-mcpd) for the c
 Where the files come from (one of; default: the release this script came with, i.e. the app/ folder next to it):
   --from PATH             a release archive (.tar.gz) or a folder with the ready build (tasker, tasker-mcpd inside it or in its app/)
   --url URL               download a release archive; URL.sha256 next to it is checked
-  --from-source           build from the repository sources (needs Rust 1.85+: cargo): for developers
+  --from-source           build from the repository sources (needs the .NET SDK 10): for developers
 
 Options:
   --prefix DIR            install under DIR (default: ~/.local): DIR/share/tasker/app and DIR/bin/tasker
@@ -193,8 +194,8 @@ COMPLETION_BEGIN="# >>> tasker completion >>>"
 COMPLETION_END="# <<< tasker completion <<<"
 COMPLETION_BACKUP_SUFFIX=".tasker-backup"
 
-# Оболочки с автодополнением. Новая оболочка (fish) — это скрипт в rust/crates/tasker-cli/completion,
-# ветка в shell() из rust/crates/tasker-cli/src/commands/completion.rs и по ветке в completion_file, completion_rc и completion_block ниже.
+# Оболочки с автодополнением. Новая оболочка (fish) — это скрипт в dotnet/src/Tasker.Cli/Completion/Shells,
+# строка в dotnet/src/Tasker.Cli/Completion/Shells.cs и по ветке в completion_file, completion_rc и completion_block ниже.
 COMPLETION_SHELLS=(zsh bash)
 
 # Имя файла скрипта оболочки $1 в $COMPLETIONS_DIR.
@@ -480,7 +481,7 @@ BUILD_SOURCE=""   # каталог готовой сборки; пуст — с�
 if [ "$FROM_SOURCE" = true ]; then
   REPO=""
   if [ -n "$SCRIPT_DIR" ]; then REPO="$(cd "$SCRIPT_DIR/.." && pwd)"; fi
-  [ -n "$REPO" ] && [ -f "$REPO/rust/Cargo.toml" ] || fail "--from-source needs this script inside the repository (cannot find rust/Cargo.toml)"
+  [ -n "$REPO" ] && [ -f "$REPO/dotnet/src/Tasker.Cli/Tasker.Cli.csproj" ] || fail "--from-source needs this script inside the repository (cannot find dotnet/src/Tasker.Cli)"
 elif [ -n "$URL" ]; then
   command -v curl >/dev/null 2>&1 || fail "curl is required for --url"
   ARCHIVE="$TEMP_DIR/$(basename "${URL%%\?*}")"
@@ -514,7 +515,7 @@ else
   # Без параметров: релиз, с которым пришёл скрипт (в каталоге релиза лежат install.sh и app/).
   if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/app/tasker" ]; then
     BUILD_SOURCE="$SCRIPT_DIR/app"
-  elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../rust/Cargo.toml" ]; then
+  elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../dotnet/src/Tasker.Cli/Tasker.Cli.csproj" ]; then
     fail "this is a repository, not a release: use --from-source to build and install from it (or --from / --url for a release)"
   else
     fail "nothing to install: run this script from an unpacked release, or pass --from FILE|DIR, --url ADDRESS (or --from-source in the repository)"
@@ -525,31 +526,46 @@ if [ -n "$BUILD_SOURCE" ]; then
   check_release_platform "$BUILD_SOURCE"
   [ -f "$BUILD_SOURCE/tasker-mcpd" ] || fail "$BUILD_SOURCE has no tasker-mcpd: the MCP server is a part of every release"
   echo "Installing tasker from ${URL:-${FROM:-$BUILD_SOURCE}} ($RID)..."
-  # Только две программы — из каталога вроде rust/target/release не тянутся промежуточные файлы cargo.
   cp -p "$BUILD_SOURCE/tasker" "$BUILD_SOURCE/tasker-mcpd" "$STAGING/"
+  for file in "$BUILD_SOURCE"/*.so "$BUILD_SOURCE"/*.dylib; do
+    [ -f "$file" ] && cp -p "$file" "$STAGING/"
+  done
   chmod +x "$STAGING/tasker" "$STAGING/tasker-mcpd" 2>/dev/null || true
   # Архив, скачанный браузером, помечен «карантином» macOS: Gatekeeper не даст запустить программу без подписи разработчика.
   if [ "$OS" = osx ]; then
     xattr -dr com.apple.quarantine "$STAGING" 2>/dev/null || true
   fi
 else
-  command -v cargo >/dev/null 2>&1 || fail "Rust is required to build: https://rustup.rs (or your package manager: brew install rust, apt install cargo)"
+  command -v dotnet >/dev/null 2>&1 || fail ".NET SDK 10 is required to build: https://dotnet.microsoft.com/download"
+  DOTNET_MAJOR="$(dotnet --version | cut -d. -f1)"
+  [ "$DOTNET_MAJOR" -ge 10 ] 2>/dev/null || fail ".NET SDK 10 or newer is required (found $(dotnet --version))"
 
-  # Номер — файл VERSION, к нему build.rs добавляет коммит (build metadata): сборка из исходников отличима от релиза.
-  PACKAGES=(-p tasker-cli)
-  [ "$WITH_DAEMON" = false ] || PACKAGES+=(-p tasker-mcpd)
-  echo "Building tasker for $RID (cargo, release)..."
-  # Собирается в rust/target (кэш для следующих сборок), в установку копируются только готовые программы — рабочая установка
-  # не пострадает, если сборка упадёт.
-  (cd "$REPO/rust" && cargo build --release --locked "${PACKAGES[@]}") || fail "the build failed (see the output above)"
-  BUILT_DIR="${CARGO_TARGET_DIR:-target}"
-  case "$BUILT_DIR" in /*) ;; *) BUILT_DIR="$REPO/rust/$BUILT_DIR" ;; esac
-  BUILT_DIR="$BUILT_DIR/release"
-  [ -x "$BUILT_DIR/tasker" ] || fail "the build did not produce the tasker executable"
-  cp -p "$BUILT_DIR/tasker" "$STAGING/"
+  # К номеру из файла VERSION добавляется коммит (build metadata): сборка из исходников отличима от релиза.
+  BASE_VERSION="$(tr -d '[:space:]' < "$REPO/VERSION" 2>/dev/null || true)"
+  COMMIT="$(git -C "$REPO" describe --always --dirty --abbrev=7 2>/dev/null || true)"
+  VERSION="${BASE_VERSION:-0.0.0}${COMMIT:++$COMMIT}"
+  [ "$OS" = osx ] && export PATH="/usr/bin:$PATH"
+
+  echo "Building tasker $VERSION for $RID (NativeAOT, Release)..."
+  # Собираем во временную папку — рабочая установка не пострадает, если сборка упадёт.
+  # --disable-build-servers: после установки не остаются фоновые серверы MSBuild и компилятора.
+  dotnet publish "$REPO/dotnet/src/Tasker.Cli" -c Release -r "$RID" -p:PublishAot=true -p:InformationalVersion="$VERSION" \
+    -o "$TEMP_DIR/cli" --nologo -v quiet --disable-build-servers \
+    || fail "the build failed (see the output above)"
+  for file in "$TEMP_DIR/cli/tasker" "$TEMP_DIR/cli"/*.so "$TEMP_DIR/cli"/*.dylib; do
+    [ -f "$file" ] && cp -p "$file" "$STAGING/"
+  done
+  [ -x "$STAGING/tasker" ] || fail "the build did not produce the tasker executable"
+
   if [ "$WITH_DAEMON" = true ]; then
-    [ -x "$BUILT_DIR/tasker-mcpd" ] || fail "the build did not produce the tasker-mcpd executable"
-    cp -p "$BUILT_DIR/tasker-mcpd" "$STAGING/"
+    echo "Building the MCP server (tasker-mcpd)..."
+    # Демон — отдельная программа с ASP.NET Core; EmbedFrontend=false: ему фронтенд не нужен.
+    dotnet publish "$REPO/dotnet/src/Tasker.Daemon.Host" -c Release -r "$RID" --self-contained true -p:PublishSingleFile=true \
+      -p:IncludeNativeLibrariesForSelfExtract=true -p:EmbedFrontend=false -p:InformationalVersion="$VERSION" \
+      -o "$TEMP_DIR/daemon" --nologo -v quiet --disable-build-servers \
+      || fail "the MCP server build failed (see the output above)"
+    [ -x "$TEMP_DIR/daemon/tasker-mcpd" ] || fail "the build did not produce the tasker-mcpd executable"
+    cp -p "$TEMP_DIR/daemon/tasker-mcpd" "$STAGING/"
   fi
 fi
 

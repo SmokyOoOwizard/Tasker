@@ -245,6 +245,32 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
     /// сущности, поэтому по имени его не найти, а id в индексе — из содержимого. Подсказка, а не истина: индекс мог отстать,
     /// поэтому вызывающий проверяет, что файл есть, и ищет по имени, если нет (<see cref="ProjectDirectory.FindFiles"/>).
     /// </summary>
+    public async Task<string[]> UnreadablePaths(IndexKind kind, Guid projectId, string key, CancellationToken ct = default)
+    {
+        await EnsureReady();
+        var relatives = await Cache(async connection =>
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT path FROM files WHERE kind = @kind AND error IS NOT NULL AND project_id = @project ORDER BY path";
+            command.Parameters.AddWithValue("@kind", kind.ToString());
+            command.Parameters.AddWithValue("@project", Key(projectId));
+            var found = new List<string>();
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                found.Add(reader.GetString(0));
+            return found;
+        }, ct);
+
+        var lower = key.ToLowerInvariant();
+        var folders = new ProjectFolders(directory);
+        return relatives
+            .Where(relative => WorkspaceLayout.Classify(relative, folders) is { } layout && (layout.Id is { } id
+                ? Key(id).StartsWith(lower, StringComparison.Ordinal)
+                : layout.IdPrefix is { } prefix && lower.Length >= prefix.Length && lower[..prefix.Length] == prefix))
+            .Select(relative => Path.Combine(directory.Root, relative.Replace('/', Path.DirectorySeparatorChar)))
+            .ToArray();
+    }
+
     public async Task<string?> EntityPath(IndexKind kind, Guid projectId, Guid id, CancellationToken ct = default)
     {
         await EnsureReady();

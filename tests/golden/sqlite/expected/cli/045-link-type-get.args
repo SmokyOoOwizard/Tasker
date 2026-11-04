@@ -1,7 +1,0 @@
-link-type
-get
-Depends
---sqlite
-<ROOT>/golden.db
--p
-Golden

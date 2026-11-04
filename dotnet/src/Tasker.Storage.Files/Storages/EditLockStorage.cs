@@ -15,7 +15,7 @@ namespace Tasker.Storage.Files.Storages;
 /// </summary>
 internal class EditLockStorage(TaskerDirectory directory) : IEditLockStorage
 {
-    private record LockFile(string Holder, string HolderName, DateTimeOffset AcquiredAt, DateTimeOffset ExpiresAt, Guid? ProjectId = null);
+    internal record LockFile(string Holder, string HolderName, DateTimeOffset AcquiredAt, DateTimeOffset ExpiresAt, Guid? ProjectId = null);
 
     public async Task<EditLock?> Get(LockedEntity entity, Guid id, DateTimeOffset now, CancellationToken ct = default)
     {
@@ -93,7 +93,7 @@ internal class EditLockStorage(TaskerDirectory directory) : IEditLockStorage
         try
         {
             await using var stream = new FileStream(PathOf(entity, id), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            var file = await JsonSerializer.DeserializeAsync<LockFile>(stream, cancellationToken: ct);
+            var file = await JsonSerializer.DeserializeAsync(stream, LockFileJson.Default.LockFile, ct);
             return file == null ? null : new EditLock(entity, id, new EditHolder(file.Holder, file.HolderName), file.AcquiredAt, file.ExpiresAt, file.ProjectId);
         }
         catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException or JsonException)
@@ -109,7 +109,10 @@ internal class EditLockStorage(TaskerDirectory directory) : IEditLockStorage
         var temp = $"{path}.{Guid.NewGuid():N}.tmp";
 
         await File.WriteAllTextAsync(temp, JsonSerializer.Serialize(
-            new LockFile(held.Holder.Key, held.Holder.Name, held.AcquiredAt, held.ExpiresAt, held.ProjectId)), ct);
+            new LockFile(held.Holder.Key, held.Holder.Name, held.AcquiredAt, held.ExpiresAt, held.ProjectId), LockFileJson.Default.LockFile), ct);
         AtomicFile.Move(temp, path, overwrite: true);
     }
 }
+
+[System.Text.Json.Serialization.JsonSerializable(typeof(EditLockStorage.LockFile))]
+internal sealed partial class LockFileJson : System.Text.Json.Serialization.JsonSerializerContext;

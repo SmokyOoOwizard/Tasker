@@ -15,7 +15,7 @@ namespace Tasker.Tests;
 
 /// <summary>
 /// <c>inputSchema</c> инструментов MCP .NET (сервер, вход по токену агента, в процессе теста): совпадает с эталоном
-/// <c>tests/golden/expected/mcp/tools-list.json</c>, по которому сверяется и Rust-демон (<c>tasker-mcpd/tests/mcp.rs</c>), с поправкой на то,
+/// <c>tests/golden/expected/mcp/tools-list.json</c>, по которому сверяется и демон <c>tasker-mcpd</c>, с поправкой на то,
 /// что у сервера одна область — нет <c>list_workspaces</c> и аргумента <c>workspace</c>; во вложенных объектах (<c>columns[]</c>, <c>fields[]</c>…)
 /// в <c>required</c> только то, без чего не обойтись: вызов без необязательных вложенных свойств проходит.
 /// </summary>
@@ -126,7 +126,7 @@ public class McpInputSchemaTests : IAsyncLifetime
         schema["required"]?.AsArray().Select(x => x!.GetValue<string>()).ToArray() ?? [];
 
     [Fact]
-    public async Task Tools_list_matches_the_golden_snapshot_shared_with_the_rust_daemon_except_the_workspace_argument()
+    public async Task Tools_list_matches_the_golden_snapshot_shared_with_the_daemon_except_the_workspace_argument()
     {
         var actual = ByName((await Rpc("tools/list"))["tools"]!);
         var expected = ByName(JsonNode.Parse(await File.ReadAllTextAsync(GoldenToolsList()))!["result"]!["tools"]!);

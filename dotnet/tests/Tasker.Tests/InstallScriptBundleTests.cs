@@ -307,7 +307,7 @@ public partial class InstallScriptTests
 
         // Новая сборка поверх: каталог заменён целиком, посторонних файлов не осталось; из каталога сборки берутся только две программы.
         var build = Bundle("build");
-        File.WriteAllText(Path.Combine(build, "app", "tasker.d"), "cargo leftovers");
+        File.WriteAllText(Path.Combine(build, "app", "tasker.pdb"), "build leftovers");
         Directory.CreateDirectory(Path.Combine(build, "app", "deps"));
         var upgraded = await Run(["--prefix", Prefix, "--from", Path.Combine(build, "app"), "--no-autostart"], home, environment: StubEnvironment());
         Assert.True(upgraded.Code == 0, upgraded.Out + upgraded.Err);

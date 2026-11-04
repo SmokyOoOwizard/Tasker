@@ -42,7 +42,7 @@ public static class ProjectTools
         McpCall.Run(() => users.GetRange(null, Page.Of(offset, limit), ct));
 
     [McpServerTool(Name = "list_project_members", ReadOnly = true)]
-    [Description("Lists members of a project (server only: in the desktop app every project is open to everyone). Paged: offset/limit (limit 1-200, default 50); the result has totalCount.")]
+    [Description("Lists members of a project (server only: locally every project is open to everyone). Paged: offset/limit (limit 1-200, default 50); the result has totalCount.")]
     public static Task<ListDto<User>> ListProjectMembers(
         IServiceProvider services, ProjectService projects, Guid projectId,
         int offset = 0, int limit = Page.DefaultLimit, CancellationToken ct = default) =>
@@ -56,7 +56,7 @@ public static class ProjectTools
 
     [McpServerTool(Name = "list_workspace_problems", ReadOnly = true)]
     [Description(
-        "Desktop app with file storage only: lists .tasker files that could not be read (unresolved git merge conflicts, " +
+        "File storage only: lists .tasker files that could not be read (unresolved git merge conflicts, " +
         "invalid YAML, id not matching the file name). Their entities are hidden from all lists until the file is fixed; " +
         "the files are plain YAML, and a fixed file shows up in lists again by itself. " +
         "Also lists a second folder of a project (projects/<folder>, left by a git merge after the project was renamed): " +
@@ -67,7 +67,7 @@ public static class ProjectTools
         McpCall.Run(async () =>
         {
             var workspace = services.GetService<IWorkspaceIndex>()
-                ?? throw new ModelContextProtocol.McpException("[invalid] Workspace problems exist only in the desktop app with file storage");
+                ?? throw new ModelContextProtocol.McpException("[invalid] Workspace problems exist only with file storage");
             return await workspace.GetProblems(Page.Of(offset, limit), ct);
         });
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
@@ -10,7 +11,7 @@ namespace Tasker.Web;
 
 /// <summary>
 /// Общий веб-слой: API и встроенный фронтенд.
-/// Подключается одинаково и в Tasker.Server, и в Tasker.Desktop.
+/// Подключается одинаково на сервере (Tasker.Server) и в локальном режиме.
 /// </summary>
 public static class TaskerWebExtensions
 {
@@ -46,7 +47,7 @@ public static class TaskerWebExtensions
             api.MapWorkspaceEvents();
 
         if (mode == TaskerMode.Server)
-            app.MapTaskerMcp();
+            app.MapTaskerMcp(requireAgentToken: true);
 
         // Неизвестный путь под /api — 404 JSON-клиенту. Без этого GET попадал бы в SPA-fallback
         // (200 с index.html), а POST/PATCH/DELETE — в 405 от него же.
@@ -54,6 +55,24 @@ public static class TaskerWebExtensions
 
         // SPA: все неизвестные не-API маршруты отдают index.html фронтенда.
         app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = frontend });
+
+        return app;
+    }
+
+    /// <summary>
+    /// Демон MCP (<c>tasker-mcpd</c>, создан с <c>localMcp: true</c>): только MCP рабочих областей — один адрес <c>/mcp</c>, область — аргумент вызова — без REST и фронтенда.
+    /// Работает как десктоп (режим Local): без токена, только запросы с этой машины, от имени локального агента области.
+    /// </summary>
+    /// <param name="mapExtra">Дополнительные маршруты хоста (управление демоном) — они не привязаны к рабочей области.</param>
+    public static WebApplication MapTaskerMcpHost(this WebApplication app, Action<IEndpointRouteBuilder>? mapExtra = null)
+    {
+        app.UseLoopbackOnly();
+        app.UseWorkspaces();
+        app.UseRouting();
+
+        app.MapGet("/api/health", () => Results.Ok(new { status = "ok", mode = "McpDaemon" }));
+        mapExtra?.Invoke(app);
+        app.MapTaskerMcp(requireAgentToken: false);
 
         return app;
     }

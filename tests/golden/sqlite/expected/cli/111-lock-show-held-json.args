@@ -1,9 +1,0 @@
-lock
-show
-task
-GLD-1
---json
---sqlite
-<ROOT>/golden.db
--p
-Golden

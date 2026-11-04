@@ -13,33 +13,33 @@ using Tasker.Web.Workspaces;
 
 namespace Tasker.Web.Auth;
 
-/// <summary>Всё, что отличается у сервера и десктопа: вход, текущий пользователь, доступ к проектам, MCP (только на сервере).</summary>
+/// <summary>Всё, что отличается у сервера, десктопа и демона MCP: вход, текущий пользователь, доступ к проектам, MCP.</summary>
 internal static class ModeRegistration
 {
     /// <summary>Сервисы ASP.NET Core — до Build().</summary>
-    public static void AddTaskerMode(this IServiceCollection services, TaskerMode mode)
+    public static void AddTaskerMode(this IServiceCollection services, TaskerMode mode, bool localMcp)
     {
         // Общие настройки JSON (TaskerJson): enum строками, Unicode без \uXXXX.
         services.ConfigureHttpJsonOptions(o => TaskerJson.Configure(o.SerializerOptions));
 
-        // Текущий пользователь берётся из запроса; на десктопе входа нет, и REST идёт ни от чьего имени.
+        // Текущий пользователь берётся из запроса; на десктопе входа нет, у демона это локальный агент MCP области.
         services.AddHttpContextAccessor();
 
-        if (mode != TaskerMode.Server)
-            return;
+        if (mode == TaskerMode.Server)
+        {
+            // JWT людей — схема по умолчанию для REST; токен агента — отдельная схема только для /mcp.
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+            services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+                .Configure<TokenService>((bearer, tokens) => tokens.Configure(bearer));
+            services.AddAuthorization();
+        }
 
-        // JWT людей — схема по умолчанию для REST; токен агента — отдельная схема только для /mcp.
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
-        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-            .Configure<TokenService>((bearer, tokens) => tokens.Configure(bearer));
-        services.AddAuthorization();
-
-        // Десктоп своего MCP не поднимает: локальный MCP — у демона tasker-mcpd.
-        services.AddTaskerMcp();
+        if (mode == TaskerMode.Server || localMcp)
+            services.AddTaskerMcp(requireAgentToken: mode == TaskerMode.Server);
     }
 
     /// <summary>Регистрации Autofac.</summary>
-    public static void RegisterTaskerMode(this ContainerBuilder builder, TaskerMode mode, AuthConfigs auth)
+    public static void RegisterTaskerMode(this ContainerBuilder builder, TaskerMode mode, AuthConfigs auth, bool localMcp)
     {
         builder.RegisterInstance(new TaskerHost(mode));
         builder.RegisterType<HttpCurrentUser>().As<ICurrentUser>().InstancePerLifetimeScope();
@@ -49,6 +49,9 @@ internal static class ModeRegistration
             builder.RegisterInstance(new UserOptions(RequireCredentials: false));
             builder.RegisterType<OpenProjectAccess>().As<IProjectAccess>().SingleInstance();
             builder.RegisterType<WorkspaceRegistry>().AsSelf().SingleInstance();
+            // Демон: область MCP — аргумент вызова, какие области доступны агентам, знает реестр.
+            if (localMcp)
+                builder.RegisterType<McpWorkspaceCatalog>().AsSelf().As<IMcpWorkspaces>().SingleInstance();
             return;
         }
 

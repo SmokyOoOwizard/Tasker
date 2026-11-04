@@ -1,7 +1,0 @@
-status-set
-get
-Extended
---sqlite
-<ROOT>/golden.db
--p
-Golden

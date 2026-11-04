@@ -17,7 +17,19 @@ namespace Tasker.Core;
 /// Сколько колонок досок затронуто (условие на удалённое значение перечисления убрано или заменено, см. <see cref="Fields.RemovedEnumValues"/>).
 /// В JSON <c>affectedColumns</c> появляется, только когда оно не 0.
 /// </param>
-public record CascadeResult<T>(T Value, int AffectedTasks, int AffectedColumns = 0);
+public record CascadeResult<T>(T Value, int AffectedTasks, int AffectedColumns = 0) : ICascadeResult
+{
+    object? ICascadeResult.Value => Value;
+    Type ICascadeResult.ValueType => typeof(T);
+}
+
+public interface ICascadeResult
+{
+    object? Value { get; }
+    Type ValueType { get; }
+    int AffectedTasks { get; }
+    int AffectedColumns { get; }
+}
 
 /// <summary>Пишет сущность плоско, с добавленным полем <c>affectedTasks</c> (имя — по политике имён настроек сериализации).</summary>
 internal sealed class CascadeResultConverterFactory : JsonConverterFactory

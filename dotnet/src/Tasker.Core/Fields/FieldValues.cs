@@ -6,7 +6,7 @@ namespace Tasker.Core.Fields;
 /// Значения полей: проверка по типу и приведение к каноническому тексту, в котором они хранятся (и в файлах, и в БД).
 /// Канонический вид один у всех клиентов: «007» и «7» — одно значение, «TRUE» и «true» — одно.
 /// </summary>
-internal static class FieldValues
+public static class FieldValues
 {
     public const int MaxStringLength = 2000;
     public const string DateFormat = "yyyy-MM-dd";

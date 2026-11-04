@@ -12,7 +12,6 @@
 --quiet
 --series
 --sort
---sqlite
 --status
 --truncate
 --type

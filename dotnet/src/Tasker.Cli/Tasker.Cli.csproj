@@ -1,0 +1,94 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>tasker</AssemblyName>
+    <!-- Скорость старта (TSK-92): процесс живёт доли секунды. Инструментирование PGO нижнего яруса JIT тут только тормозит; фоновая
+         сборка мусора не нужна (поток и его инициализация на каждый запуск). -->
+    <TieredPGO>false</TieredPGO>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.12" />
+  </ItemGroup>
+
+  <!-- Страницы справочника `tasker manual`: Manual/<язык>/<тема>.md встраиваются в сборку как manual/<язык>/<тема>.md. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Manual\**\*.md" LogicalName="manual/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Скрипты автодополнения оболочек: их печатает `tasker completion <оболочка>`. Новая оболочка — новый файл и строка в Completion/Shells.cs. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Completion\Shells\*" LogicalName="Shells/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(PublishAot)' == 'true' and !$(RuntimeIdentifier.StartsWith('linux'))">
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(PublishAot)' == 'true' and $(RuntimeIdentifier.StartsWith('osx'))">
+    <DirectPInvoke Include="e_sqlite3" />
+    <NativeLibrary Include="-lsqlite3" />
+    <NativeLibrary Include="$(IntermediateOutputPath)sqlite_stubs.o" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(PublishAot)' == 'true' and $(RuntimeIdentifier.StartsWith('linux'))">
+    <DirectPInvoke Include="e_sqlite3" />
+    <NativeLibrary Include="-l:libsqlite3.a" />
+  </ItemGroup>
+
+  <Target Name="DropBundledSqlite" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(PublishAot)' == 'true' and ($(RuntimeIdentifier.StartsWith('osx')) or $(RuntimeIdentifier.StartsWith('linux')))">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)' == 'libe_sqlite3'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CompileSqliteStubs" BeforeTargets="PrepareForPublish" Condition="'$(PublishAot)' == 'true' and $(RuntimeIdentifier.StartsWith('osx'))">
+    <PropertyGroup>
+      <_SqliteStubsArch Condition="$(RuntimeIdentifier.EndsWith('arm64'))">arm64</_SqliteStubsArch>
+      <_SqliteStubsArch Condition="'$(_SqliteStubsArch)' == ''">x86_64</_SqliteStubsArch>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec Command="clang -c -O2 -arch $(_SqliteStubsArch) -mmacosx-version-min=12.0 &quot;$(MSBuildThisFileDirectory)Native/sqlite_stubs.c&quot; -o &quot;$(IntermediateOutputPath)sqlite_stubs.o&quot;" />
+  </Target>
+
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
+    <TrimmerRootAssembly Include="tasker" />
+    <TrimmerRootAssembly Include="Tasker.Storage.Files" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tasker.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tasker.Core\Tasker.Core.csproj" />
+    <ProjectReference Include="..\Tasker.Daemon\Tasker.Daemon.csproj" />
+    <ProjectReference Include="..\Tasker.Global\Tasker.Global.csproj" />
+    <ProjectReference Include="..\Tasker.Storage.Files\Tasker.Storage.Files.csproj" />
+  </ItemGroup>
+
+  <!-- Демон (tasker-mcpd) — отдельная программа: консольной утилите веб-слой не нужен, поэтому ссылки на него нет (ссылка на
+       exe-проект тянула бы в публикацию и его запускатель). Для разработки (dotnet run, отладка) собираем демон и кладём рядом
+       с tasker.dll: tasker ищет его в своём каталоге. В публикацию (dotnet publish, задан RuntimeIdentifier) это не попадает:
+       скрипт установки публикует демон отдельно. -->
+  <Target Name="CopyDaemonHostForDevelopment" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
+    <MSBuild Projects="..\Tasker.Daemon.Host\Tasker.Daemon.Host.csproj" Targets="Build" Properties="Configuration=$(Configuration)" />
+    <PropertyGroup>
+      <DaemonHostOutput>$(MSBuildThisFileDirectory)..\Tasker.Daemon.Host\bin\$(Configuration)\$(TargetFramework)\</DaemonHostOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <DaemonHostFiles Include="$(DaemonHostOutput)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DaemonHostFiles)" DestinationFolder="$(OutDir)%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

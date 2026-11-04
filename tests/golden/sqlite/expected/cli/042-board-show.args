@@ -1,7 +1,0 @@
-board
-show
-Main board
---sqlite
-<ROOT>/golden.db
--p
-Golden

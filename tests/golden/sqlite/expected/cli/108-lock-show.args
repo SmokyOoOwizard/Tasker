@@ -1,8 +1,0 @@
-lock
-show
-task
-GLD-1
---sqlite
-<ROOT>/golden.db
--p
-Golden

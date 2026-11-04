@@ -23,7 +23,7 @@ public class CoreModule(bool lazy) : Module
 
     protected override void Load(ContainerBuilder builder)
     {
-        // Log.Logger настраивает хост (Tasker.Server / Tasker.Desktop) в Program.
+        // Log.Logger настраивает хост (Tasker.Server / Tasker.Daemon.Host) в Program.
         builder.Register<ILogger>(_ => Log.Logger);
         builder.RegisterInstance(TimeProvider.System);
 

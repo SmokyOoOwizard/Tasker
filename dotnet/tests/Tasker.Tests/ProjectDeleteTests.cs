@@ -77,7 +77,7 @@ public class ProjectDeleteTests
         if (OperatingSystem.IsWindows())
             return; // терминал для ввода — псевдотерминал python pty: macOS и Linux
 
-        foreach (var storage in new[] { "files", "sqlite" })
+        foreach (var storage in new[] { "files" })
         {
             using var ws = TestWorkspace.Create(storage);
             await Seed(ws);

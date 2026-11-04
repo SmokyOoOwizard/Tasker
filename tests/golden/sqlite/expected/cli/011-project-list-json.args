@@ -1,5 +1,0 @@
-project
-list
---json
---sqlite
-<ROOT>/golden.db

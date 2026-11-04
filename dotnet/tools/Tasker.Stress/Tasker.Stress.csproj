@@ -14,7 +14,9 @@
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
-  <!-- Клиенты-консоль и демон — настоящие процессы Rust-программ tasker и tasker-mcpd: они собираются и кладутся рядом со стендом. -->
-  <Import Project="..\RustBinaries.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Tasker.Cli\Tasker.Cli.csproj" />
+    <ProjectReference Include="..\..\src\Tasker.Daemon.Host\Tasker.Daemon.Host.csproj" />
+  </ItemGroup>
 
 </Project>

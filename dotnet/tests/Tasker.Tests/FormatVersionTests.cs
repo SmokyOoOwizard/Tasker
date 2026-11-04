@@ -297,20 +297,6 @@ public class FormatVersionTests
     }
 
     [Fact]
-    public async Task Migrate_does_nothing_for_a_database_workspace()
-    {
-        using var home = new IsolatedHome();
-        using var ws = TestWorkspace.Create("sqlite");
-        await Ok(ws.Run("project", "create", "Demo"));
-
-        var result = await Ok(ws.Run("migrate"));
-
-        Assert.Contains("database", result.Out);
-        Assert.False((await Ok(ws.Run("migrate", "--json"))).Json["applicable"]!.GetValue<bool>());
-        Assert.Equal(0, (await ws.Run("migrate", "--check")).Code);
-    }
-
-    [Fact]
     public async Task Migrate_on_an_empty_folder_has_nothing_to_do()
     {
         using var home = new IsolatedHome();

@@ -12,7 +12,6 @@ Options:
   --to <to>                    The new number (must be free). Default: the next free number (the maximum + 1)
   -?, -h, --help               Show help and usage information
   -w, --workspace <workspace>  Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
-  --sqlite <sqlite>            SQLite file with the workspace instead of a folder
   -p, --project <Tasker>       Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
   --json                       Print the result as JSON
   -q, --quiet                  Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention
