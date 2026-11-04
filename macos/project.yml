@@ -12,12 +12,17 @@ settings:
     MARKETING_VERSION: ${TASKER_VERSION}
     CURRENT_PROJECT_VERSION: ${TASKER_BUILD}
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+packages:
+  TaskerAPI:
+    path: TaskerAPI
 targets:
   Tasker:
     type: application
     platform: macOS
     sources:
       - Sources/Tasker
+    dependencies:
+      - package: TaskerAPI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.technotronika.tasker
@@ -50,3 +55,4 @@ schemes:
     test:
       targets:
         - TaskerTests
+        - package: TaskerAPI/TaskerAPITests

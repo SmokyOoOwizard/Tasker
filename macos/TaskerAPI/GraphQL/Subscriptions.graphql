@@ -1,0 +1,7 @@
+subscription WorkspaceChanges {
+  workspaceChanges {
+    entity
+    projectId
+    id
+  }
+}

@@ -1,0 +1,1 @@
+{"accessToken":"access-2","accessTokenExpiresAt":"2030-01-01T00:00:00Z","refreshToken":"refresh-2","refreshTokenExpiresAt":"2030-02-01T00:00:00Z","user":{"id":"8d3c2c7e-5e0b-4b8a-9a43-1f5d2a3b4c5d","username":"alice","kind":"human","ownerId":null,"email":"alice@example.com","isAdmin":true,"createdAt":"2026-01-01T00:00:00Z","version":"1","isAgent":false}}

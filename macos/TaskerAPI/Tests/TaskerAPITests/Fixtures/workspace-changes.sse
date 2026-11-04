@@ -1,0 +1,13 @@
+: connected
+
+: ping
+
+event: next
+data: {"data":{"workspaceChanges":{"__typename":"WorkspaceChange","entity":"task","projectId":"6cb8f29b-d6d5-4987-a61d-745df39b1ded","id":"19509c26-992a-475d-8946-91e3cb71f1d2"}}}
+
+event: next
+data: {"data":{"workspaceChanges":{"__typename":"WorkspaceChange","entity":"unknown","projectId":null,"id":null}}}
+
+event: complete
+data:
+

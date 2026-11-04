@@ -1,0 +1,1 @@
+{"errors":[{"message":"The field `nope` does not exist on the type `Query`.","locations":[{"line":1,"column":3}],"extensions":{"type":"Query","field":"nope","responseName":"nope","specifiedBy":"https://spec.graphql.org/October2021/#sec-Field-Selections-on-Objects-Interfaces-and-Unions-Types"}}]}
