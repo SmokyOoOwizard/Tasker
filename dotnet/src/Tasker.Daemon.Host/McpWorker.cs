@@ -43,6 +43,9 @@ internal static class McpWorker
     internal static TimeSpan DrainTimeout =>
         int.TryParse(AppEnvironment.Get("TASKER_MCP_DRAIN_TIMEOUT_MS"), out var ms) && ms > 0 ? TimeSpan.FromMilliseconds(ms) : TimeSpan.FromSeconds(60);
 
+    internal static bool PolledAccept =>
+        OperatingSystem.IsWindows() || string.Equals(AppEnvironment.Get("TASKER_MCP_ACCEPT"), "poll", StringComparison.OrdinalIgnoreCase);
+
     /// <returns>Код выхода: 0 — остановлен штатно, 1 — не запустился.</returns>
     /// <param name="listenFd">Дескриптор слушающего сокета из <c>--listen-fd</c> (Unix); null — сокет придёт в <c>hello</c> (Windows).</param>
     public static async Task<int> Run(int? listenFd, bool console, TextWriter error, CancellationToken ct = default)
@@ -77,7 +80,9 @@ internal static class McpWorker
                 k.Limits.MinRequestBodyDataRate = null;
             });
             builder.Services.Replace(ServiceDescriptor.Singleton<IConnectionListenerFactory>(sp =>
-                new GatedListenerFactory(ActivatorUtilities.CreateInstance<SocketTransportFactory>(sp), gate)));
+                new GatedListenerFactory(PolledAccept
+                    ? ActivatorUtilities.CreateInstance<PolledListenerFactory>(sp)
+                    : ActivatorUtilities.CreateInstance<SocketTransportFactory>(sp), gate)));
             builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
             var state = new DaemonRuntimeState(port, port)
