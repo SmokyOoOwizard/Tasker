@@ -55,7 +55,14 @@ public static class GraphSetup
     public static async Task<string> Print(CancellationToken ct = default) =>
         (await BuildSchema(ct)).ToString().ReplaceLineEndings("\n").TrimEnd() + "\n";
 
-    public static void MapTaskerGraph(this IEndpointRouteBuilder api) => api.MapPost(Path, Execute);
+    public static void MapTaskerGraph(this IEndpointRouteBuilder api) =>
+        api.MapPost(Path, (Delegate)(Func<HttpContext, Task>)Execute)
+            .Accepts<GraphQLRequest>("application/json")
+            .Produces<GraphQLResponse>(StatusCodes.Status200OK)
+            .Produces<GraphQLResponse>(StatusCodes.Status200OK, "text/event-stream")
+            .Produces<GraphQLResponse>(StatusCodes.Status400BadRequest)
+            .Produces<GraphQLResponse>(StatusCodes.Status401Unauthorized)
+            .WithName("executeGraphQL");
 
     private static async Task Execute(HttpContext http)
     {

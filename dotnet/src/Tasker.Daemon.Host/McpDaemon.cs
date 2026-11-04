@@ -175,7 +175,8 @@ public static class McpDaemon
             {
             }
             return Results.Ok(state.Snapshot(current));
-        });
+        })
+            .RespondsControl<DaemonStatus>("getDaemonStatus");
 
         // Сверить индекс области с файлами сейчас — после git pull, checkout и т. п. Возвращается, когда кэш актуален.
         routes.MapPost("/daemon/sync", async (HttpContext context, SyncRequest? request, CancellationToken ct) =>
@@ -183,15 +184,16 @@ public static class McpDaemon
             if (!Authorized(context))
                 return Results.Unauthorized();
             if (request is not { Path.Length: > 0 })
-                return Results.BadRequest(new { error = "Body {\"kind\", \"path\"} is required" });
+                return Results.BadRequest(new ControlError("Body {\"kind\", \"path\"} is required"));
 
             var location = request.Kind == Tasker.Storage.Files.Workspaces.WorkspaceKind.Files
                 ? Tasker.Storage.Files.Workspaces.WorkspaceLocation.Files(request.Path)
                 : Tasker.Storage.Files.Workspaces.WorkspaceLocation.Sqlite(request.Path);
             return await sync.Sync(location, ct) is { } result
                 ? Results.Ok(result)
-                : Results.NotFound(new { error = $"The daemon does not serve {location.Path}" });
-        });
+                : Results.NotFound(new ControlError($"The daemon does not serve {location.Path}"));
+        })
+            .RespondsControl<SyncResult>("syncDaemonWorkspace", StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
         routes.MapPost("/daemon/stop", (HttpContext context, IHostApplicationLifetime lifetime) =>
         {
@@ -203,8 +205,9 @@ public static class McpDaemon
                 hooks.Stop();
             else
                 lifetime.StopApplication();
-            return Results.Ok(new { stopping = true });
-        });
+            return Results.Ok(new StopResponse(true));
+        })
+            .RespondsControl<StopResponse>("stopDaemon");
 
         // Заменить рабочий процесс на лету: новый поднимается рядом, старый заканчивает начатое. Решает супервизор.
         routes.MapPost("/daemon/upgrade", async (HttpContext context, UpgradeRequest? request, CancellationToken ct) =>
@@ -212,15 +215,16 @@ public static class McpDaemon
             if (!Authorized(context))
                 return Results.Unauthorized();
             if (hooks.Upgrade == null)
-                return Results.Conflict(new { error = "The MCP server runs as a single process and cannot be replaced on the fly: restart it" });
+                return Results.Conflict(new ControlError("The MCP server runs as a single process and cannot be replaced on the fly: restart it"));
             if (request is not { File.Length: > 0 })
-                return Results.BadRequest(new { error = "Body {\"file\", \"arguments\", \"timeoutSeconds\"} is required" });
+                return Results.BadRequest(new ControlError("Body {\"file\", \"arguments\", \"timeoutSeconds\"} is required"));
             if (!File.Exists(request.File))
                 return Results.Ok(new UpgradeResult(false, $"The program of the new server process is not found: {request.File}"));
 
             Log.Information("Upgrade requested: {File} {Arguments}", request.File, string.Join(' ', request.Arguments));
             return Results.Ok(await hooks.Upgrade(request, ct));
-        });
+        })
+            .RespondsControl<UpgradeResult>("upgradeDaemon", StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         // Готов принимать вызовы: все области открыты (или не открылись) и процесс не закрывается. Иначе 503 с Retry-After.
         routes.MapGet("/ready", () =>
@@ -228,13 +232,17 @@ public static class McpDaemon
             var workspaces = state.Snapshot().Workspaces;
             var ready = workspaces.All(x => x.State != WorkspaceState.Opening) && hooks.Drain is not { Draining: true };
             return ready
-                ? Results.Ok(new { ready = true, pid = Environment.ProcessId })
-                : Results.Json(new { ready = false, opening = workspaces.Count(x => x.State == WorkspaceState.Opening), draining = hooks.Drain?.Draining ?? false },
+                ? Results.Ok(new ReadyResponse(true, Environment.ProcessId))
+                : Results.Json(new NotReadyResponse(false, workspaces.Count(x => x.State == WorkspaceState.Opening), hooks.Drain?.Draining ?? false),
                     statusCode: StatusCodes.Status503ServiceUnavailable);
-        });
+        })
+            .WithName("getDaemonReady")
+            .Produces<ReadyResponse>(StatusCodes.Status200OK)
+            .Produces<NotReadyResponse>(StatusCodes.Status503ServiceUnavailable);
 
         // Процесс жив и отвечает (в отличие от /ready не говорит, открыты ли области).
-        routes.MapGet("/health", () => Results.Ok(new { status = "ok", mode = "McpDaemon", pid = Environment.ProcessId }));
+        routes.MapGet("/health", () => Results.Ok(new DaemonHealth("ok", "McpDaemon", Environment.ProcessId)))
+            .RespondsOk<DaemonHealth>("getDaemonHealth");
     }
 
     // Файл журнала общий для супервизора и рабочих процессов (на время замены их два): shared — без исключительной блокировки.
