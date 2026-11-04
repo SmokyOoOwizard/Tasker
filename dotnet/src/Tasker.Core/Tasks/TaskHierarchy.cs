@@ -9,10 +9,11 @@ namespace Tasker.Core.Tasks;
 public record TaskTreeItem : TaskListItem
 {
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembers]
-    public TaskTreeItem(TaskListItem task, int depth, bool repeated) : base(task)
+    public TaskTreeItem(TaskListItem task, int depth, bool repeated, int treeChildCount = 0) : base(task)
     {
         Depth = depth;
         Repeated = repeated;
+        TreeChildCount = treeChildCount;
     }
 
     /// <summary>Уровень вложенности: 0 — верхний уровень (задача без родителя в результате), 1 — её дочерняя задача и так далее.</summary>
@@ -23,6 +24,8 @@ public record TaskTreeItem : TaskListItem
     /// консоль помечает такую строку суффиксом <c>(+)</c>. В «найдено» она не входит: считаются уникальные задачи.
     /// </summary>
     public bool Repeated { get; init; }
+
+    public int TreeChildCount { get; init; }
 }
 
 /// <summary>
@@ -70,6 +73,18 @@ public sealed class TaskHierarchy
 
     public int ChildCount(Guid id) => children.TryGetValue(id, out var list) ? list.Length : 0;
 
+    public List<Guid> ChildrenOf(Guid id, IReadOnlyDictionary<Guid, int> position) =>
+        (children.GetValueOrDefault(id) ?? []).Where(x => x != id && position.ContainsKey(x)).OrderBy(x => position[x]).ToList();
+
+    public int ShownChildCount(Guid id, IReadOnlyDictionary<Guid, int> position) =>
+        (children.GetValueOrDefault(id) ?? []).Count(x => x != id && position.ContainsKey(x));
+
+    private Guid? PrimaryParent(Guid id, IReadOnlyDictionary<Guid, int> position)
+    {
+        var found = ParentsOf(id).Where(x => x != id && position.ContainsKey(x)).ToArray();
+        return found.Length == 0 ? null : found.MinBy(x => position[x]);
+    }
+
     /// <summary>
     /// Верхний уровень результата <paramref name="ordered"/> (id найденных задач в порядке списка): задачи без родителя среди найденных. Родитель, не прошедший
     /// фильтр, не считается: ребёнок, чей эпик не подошёл, тоже на верхнем уровне. Задачи, замкнутые в цикл родителей (слияние git может его
@@ -114,20 +129,24 @@ public sealed class TaskHierarchy
     /// списка, им же упорядочены дети), и так до <see cref="MaxDepth"/> уровней. Задача с несколькими родителями показывается под каждым вместе с поддеревом
     /// (повторы помечены), задача не повторяется внутри своей ветки (защита от цикла), повторы после <see cref="MaxRows"/> строк идут без поддерева.
     /// </summary>
-    public List<(Guid Id, int Depth, bool Repeated)> Rows(IEnumerable<Guid> roots, IReadOnlyDictionary<Guid, int> position)
+    public List<(Guid Id, int Depth, bool Repeated)> Rows(
+        IEnumerable<Guid> roots, IReadOnlyDictionary<Guid, int> position, int levels = MaxDepth, Guid? under = null)
     {
         var rows = new List<(Guid, int, bool)>();
         var seen = new HashSet<Guid>();
         var path = new HashSet<Guid>();
+        var depthLimit = Math.Clamp(levels, 1, MaxDepth);
+        if (under is { } parent)
+            path.Add(parent);
         foreach (var root in roots)
             Walk(root, 0);
         return rows;
 
         void Walk(Guid id, int depth)
         {
-            var repeated = !seen.Add(id);
+            var repeated = !seen.Add(id) || (depth == 0 && under is { } owner && PrimaryParent(id, position) != owner);
             rows.Add((id, depth, repeated));
-            if (depth + 1 >= MaxDepth || (repeated && rows.Count >= MaxRows))
+            if (depth + 1 >= depthLimit || (repeated && rows.Count >= MaxRows))
                 return;
 
             var kids = (children.GetValueOrDefault(id) ?? []).Where(x => position.ContainsKey(x) && !path.Contains(x) && x != id).OrderBy(x => position[x]).ToArray();

@@ -6,7 +6,7 @@ struct SectionContentView: View {
 
     var body: some View {
         if section == .tasks {
-            LiveOverviewView()
+            TaskListSection()
         } else if section == .boards {
             ProjectScope {
                 placeholder

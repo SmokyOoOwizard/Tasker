@@ -56,11 +56,10 @@ import TaskerAPI
         #expect(LiveToastMessage(update(.other(entity: "status"), author: claude), ownAuthorKey: ChangeAuthor.localKey) == nil)
     }
 
-    @Test func formatsUpdatedAgo() {
-        #expect(LiveStatusText.text(connection: .live, lastUpdate: at, now: at.addingTimeInterval(12.4), ru) == "обновлено 12 с назад")
-        #expect(LiveStatusText.text(connection: .live, lastUpdate: at, now: at.addingTimeInterval(125), en) == "updated 2 min ago")
-        #expect(LiveStatusText.text(connection: .offline, lastUpdate: at, now: at, ru) == "нет связи с демоном")
-        #expect(LiveStatusText.text(connection: .connecting, lastUpdate: nil, now: at, en) == "connecting…")
+    @Test func showsConnectionOnlyWhenItIsNotLive() {
+        #expect(LiveStatusText.text(connection: .live, ru) == nil)
+        #expect(LiveStatusText.text(connection: .offline, ru) == "нет связи с демоном")
+        #expect(LiveStatusText.text(connection: .connecting, en) == "connecting…")
     }
 
     @Test func tracksConnectionAndAnnouncesReconnection() async {
@@ -68,7 +67,6 @@ import TaskerAPI
         let client = TaskerAPIClient(endpoint: .local(port: 1, workspace: "w"))
         await live.handle(.connected(reconnected: false, at: at), client: client)
         #expect(live.connection == .live)
-        #expect(live.lastUpdate == at)
         #expect(live.toasts.isEmpty)
 
         await live.handle(.disconnected, client: client)
@@ -79,7 +77,7 @@ import TaskerAPI
         #expect(live.toasts.map(\.message) == [.reconnected])
 
         await live.handle(.update(LiveUpdate(change: .other(entity: "status"), author: nil, receivedAt: at.addingTimeInterval(9))), client: client)
-        #expect(live.lastUpdate == at.addingTimeInterval(9))
+        #expect(live.revision == 2)
         #expect(live.toasts.count == 1)
     }
 

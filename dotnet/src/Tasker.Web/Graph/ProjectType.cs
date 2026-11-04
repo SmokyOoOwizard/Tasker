@@ -81,9 +81,12 @@ internal sealed class ProjectType : ObjectType<Project>
                 x.Parent<Project>().Id, x.TaskFilter(), x.FieldFilters(), x.Page(), x.DescriptionLength(), x.RequestAborted, x.Sort()));
 
         descriptor.Read("taskTree").TaskFilters()
+            .Argument("parentId", x => x.Type<UuidType>())
+            .Argument("levels", x => x.Type<IntType>())
             .Returns<TaskTreeListType>()
             .Resolve(async x => await x.Service<TaskService>().ListTree(
-                x.Parent<Project>().Id, x.TaskFilter(), x.FieldFilters(), x.Page(), x.DescriptionLength(), x.RequestAborted, x.Sort()));
+                x.Parent<Project>().Id, x.TaskFilter(), x.FieldFilters(), x.Page(), x.DescriptionLength(), x.RequestAborted, x.Sort(),
+                x.ArgumentValue<Guid?>("parentId"), x.ArgumentValue<int?>("levels") ?? TaskHierarchy.MaxDepth));
 
         descriptor.Read("resolveTasks")
             .Argument("ref", x => x.Type<NonNullType<StringType>>())

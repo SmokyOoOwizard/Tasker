@@ -20,9 +20,12 @@ struct TopBarView: View {
                 .font(.designEmphasis(DesignTypography.baseSize))
             Text(l.string(.breadcrumbSeparator))
                 .foregroundStyle(DesignColor.dim.color)
-            Text(l.string(section.titleKey))
+            Text(l.string(section == .tasks ? .taskListTitle : section.titleKey))
                 .font(.designEmphasis(DesignTypography.baseSize))
             Spacer(minLength: 0)
+            if section == .tasks {
+                TaskListTopActions()
+            }
             LiveStatusLabel()
         }
         .padding(.leading, DesignSpacing.pagePadX)

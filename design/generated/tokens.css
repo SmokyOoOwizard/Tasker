@@ -20,6 +20,10 @@
   --qo: #e0a23b;
   --on-acc: #ffffff;
   --shadow-popup: 0px 16px 48px rgba(0,0,0,0.55);
+  --tbp: 24%;
+  --tbb: #14151a;
+  --tfp: 57.99999999999999%;
+  --tfb: #ffffff;
 }
 [data-theme=light] {
   --bg: #faf8f4;
@@ -42,6 +46,10 @@
   --qo: #b45309;
   --on-acc: #ffffff;
   --shadow-popup: 0px 16px 48px rgba(60,50,30,0.16);
+  --tbp: 17%;
+  --tbb: #ffffff;
+  --tfp: 62%;
+  --tfb: #000000;
 }
 :root {
   --radius-xs: 2px;
@@ -54,6 +62,7 @@
   --radius-panel: 10px;
   --radius-dialog: 12px;
   --radius-pill: 999px;
+  --radius-tag: 5px;
   --space-gap2: 2px;
   --space-gap6: 6px;
   --space-gap8: 8px;
@@ -80,6 +89,15 @@
   --layout-status-icon-box: 14px;
   --layout-status-dot: 8px;
   --layout-toast-max-width: 560px;
+  --layout-tree-indent: 22px;
+  --layout-twisty-width: 16px;
+  --layout-status-button: 22px;
+  --layout-ref-min-width: 66px;
+  --layout-date-min-width: 52px;
+  --layout-tag-height: 19px;
+  --layout-tag-pad-x: 7px;
+  --layout-row-selection-bar: 2px;
+  --layout-group-row-height: 34px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-size-base: 13px;
@@ -96,4 +114,12 @@
   --font-weight-bold: 700;
   --font-weight-emphasis: 550;
   --line-height: 1.45;
+  --tag-0: #8993a4;
+  --tag-1: #2684ff;
+  --tag-2: #f5a623;
+  --tag-3: #de350b;
+  --tag-4: #9b59b6;
+  --tag-5: #36b37e;
+  --tag-6: #e0568a;
+  --tag-7: #17a2b8;
 }

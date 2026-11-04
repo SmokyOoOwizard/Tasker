@@ -159,18 +159,23 @@ public static class GraphReads
     private static Field Described(string name, Dictionary<string, StringValues> query) =>
         Paged(name, query, ("descriptionLength", Number(query, "descriptionLength")));
 
-    private static Field Tasks(string name, Dictionary<string, StringValues> query) =>
-        Described(name, query) with
+    private static Field Tasks(string name, Dictionary<string, StringValues> query)
+    {
+        var args = new Dictionary<string, object?>(Described(name, query).Args)
         {
-            Args = new(Described(name, query).Args)
-            {
-                ["statusIds"] = Many(query, "statusId"),
-                ["typeIds"] = Many(query, "typeId"),
-                ["seriesIds"] = Many(query, "seriesId"),
-                ["field"] = Many(query, "field"),
-                ["sort"] = query.TryGetValue("sort", out var sort) ? sort.ToString() : null
-            }
+            ["statusIds"] = Many(query, "statusId"),
+            ["typeIds"] = Many(query, "typeId"),
+            ["seriesIds"] = Many(query, "seriesId"),
+            ["field"] = Many(query, "field"),
+            ["sort"] = query.TryGetValue("sort", out var sort) ? sort.ToString() : null
         };
+        if (name == "taskTree")
+        {
+            args["parentId"] = query.TryGetValue("parentId", out var parent) ? parent.ToString() : null;
+            args["levels"] = Number(query, "levels");
+        }
+        return Described(name, query) with { Args = args };
+    }
 
     private static Field ColumnTasks(string boardId, string columnId, Dictionary<string, StringValues> query) =>
         new("columnTasks", new(Described("columnTasks", query).Args)

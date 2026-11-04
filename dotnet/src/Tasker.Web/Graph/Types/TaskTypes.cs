@@ -102,6 +102,7 @@ internal sealed class TaskTreeItemType : ObjectType<TaskTreeItem>
         TaskListItemType.Describe(descriptor);
         descriptor.Field(x => x.Depth);
         descriptor.Field(x => x.Repeated);
+        descriptor.Field(x => x.TreeChildCount);
     }
 }
 

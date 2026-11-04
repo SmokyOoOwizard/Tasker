@@ -70,3 +70,148 @@ fragment TaskListFields on TaskListItem {
   parentIds
   childCount
 }
+
+query TaskListPage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $offset: Int, $limit: Int) {
+  project(id: $projectId) {
+    id
+    tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, offset: $offset, limit: $limit, descriptionLength: 0) {
+      totalCount
+      offset
+      limit
+      data {
+        ...TaskRowFields
+      }
+    }
+  }
+}
+
+query TaskTreePage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $parentId: UUID, $levels: Int, $offset: Int, $limit: Int) {
+  project(id: $projectId) {
+    id
+    taskTree(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, parentId: $parentId, levels: $levels, offset: $offset, limit: $limit, descriptionLength: 0) {
+      totalCount
+      topLevelCount
+      offset
+      limit
+      data {
+        ...TaskTreeRowFields
+      }
+    }
+  }
+}
+
+query TaskListCount($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!]) {
+  project(id: $projectId) {
+    id
+    tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, limit: 1, descriptionLength: 0) {
+      totalCount
+    }
+  }
+}
+
+query TaskListVocabulary($projectId: UUID!) {
+  project(id: $projectId) {
+    id
+    statuses(limit: 200, descriptionLength: 0) {
+      data {
+        id
+        name
+        color
+      }
+    }
+    statusSets(limit: 200) {
+      data {
+        id
+        name
+        statusIds
+      }
+    }
+    taskTypes(limit: 200, descriptionLength: 0) {
+      data {
+        id
+        name
+        statusSetId
+      }
+    }
+    seriesList(limit: 200) {
+      data {
+        id
+        prefix
+      }
+    }
+    fields(limit: 200) {
+      data {
+        id
+        name
+        type
+        multiple
+        enumId
+      }
+    }
+    enums(limit: 200) {
+      data {
+        id
+        name
+        values {
+          id
+          name
+        }
+      }
+    }
+  }
+}
+
+fragment TaskRowFields on TaskListItem {
+  id
+  projectId
+  title
+  typeId
+  statusId
+  seriesNumbers {
+    seriesId
+    number
+  }
+  createdAt
+  updatedAt
+  version
+  parentIds
+  childCount
+  fields {
+    fieldId
+    values
+    own {
+      name
+      type
+      enumId
+    }
+  }
+}
+
+fragment TaskTreeRowFields on TaskTreeItem {
+  id
+  projectId
+  title
+  typeId
+  statusId
+  seriesNumbers {
+    seriesId
+    number
+  }
+  createdAt
+  updatedAt
+  version
+  parentIds
+  childCount
+  fields {
+    fieldId
+    values
+    own {
+      name
+      type
+      enumId
+    }
+  }
+  depth
+  repeated
+  treeChildCount
+}

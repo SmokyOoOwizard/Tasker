@@ -361,13 +361,13 @@ public partial class TaskService(
     /// </summary>
     public async Task<TaskTreeList> ListTree(
         Guid projectId, TaskFilter? filter, IEnumerable<string>? fieldFilters, Page page, int descriptionLength = DescriptionPreview.Full,
-        CancellationToken ct = default, string? sort = null)
+        CancellationToken ct = default, string? sort = null, Guid? parentId = null, int levels = TaskHierarchy.MaxDepth)
     {
         DescriptionPreview.Check(descriptionLength);
         filter = await ListFilter(projectId, filter, fieldFilters, sort, ct);
         var hierarchy = await LoadHierarchy(projectId, ct);
 
-        if (hierarchy.IsEmpty)
+        if (hierarchy.IsEmpty && parentId == null)
         {
             var flat = await tasks.GetRange(projectId, filter, page, ct);
             return new TaskTreeList
@@ -378,12 +378,12 @@ public partial class TaskService(
         }
 
         var ordered = await tasks.GetIds(projectId, filter, ct);
-        var top = hierarchy.TopLevel(ordered);
         var position = new Dictionary<Guid, int>(ordered.Length);
         for (var i = 0; i < ordered.Length; i++)
             position[ordered[i]] = i;
+        var level = parentId is { } parent ? hierarchy.ChildrenOf(parent, position) : hierarchy.TopLevel(ordered);
 
-        var rows = hierarchy.Rows(top.Skip(page.Offset).Take(page.Limit), position);
+        var rows = hierarchy.Rows(level.Skip(page.Offset).Take(page.Limit), position, levels, parentId);
         var loaded = new Dictionary<Guid, TaskItem>();
         foreach (var chunk in rows.Select(x => x.Id).Distinct().Chunk(500))
         {
@@ -394,9 +394,10 @@ public partial class TaskService(
         var items = (await Preview(projectId, loaded.Values, descriptionLength, hierarchy, ct)).ToDictionary(x => x.Id);
         return new TaskTreeList
         {
-            TotalCount = ordered.Length, TopLevelCount = top.Count, Offset = page.Offset, Limit = page.Limit,
+            TotalCount = ordered.Length, TopLevelCount = level.Count, Offset = page.Offset, Limit = page.Limit,
             // Задачу, удалённую между запросами, пропускаем вместе с её строкой.
-            Data = rows.Where(x => items.ContainsKey(x.Id)).Select(x => new TaskTreeItem(items[x.Id], x.Depth, x.Repeated)).ToArray()
+            Data = rows.Where(x => items.ContainsKey(x.Id))
+                .Select(x => new TaskTreeItem(items[x.Id], x.Depth, x.Repeated, hierarchy.ShownChildCount(x.Id, position))).ToArray()
         };
     }
 

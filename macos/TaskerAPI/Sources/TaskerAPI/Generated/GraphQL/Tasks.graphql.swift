@@ -40,6 +40,140 @@ public struct TaskListFields: Hashable, Sendable, Decodable {
     }
 }
 
+public struct TaskRowFields: Hashable, Sendable, Decodable {
+    public var id: UUID
+    public var projectId: UUID
+    public var title: String
+    public var typeId: UUID
+    public var statusId: UUID
+    public var seriesNumbers: [SeriesNumbers]
+    public var createdAt: Date
+    public var updatedAt: Date
+    public var version: String
+    public var parentIds: [UUID]
+    public var childCount: Int
+    public var fields: [Fields]
+
+    public init(id: UUID, projectId: UUID, title: String, typeId: UUID, statusId: UUID, seriesNumbers: [SeriesNumbers], createdAt: Date, updatedAt: Date, version: String, parentIds: [UUID], childCount: Int, fields: [Fields]) {
+        self.id = id
+        self.projectId = projectId
+        self.title = title
+        self.typeId = typeId
+        self.statusId = statusId
+        self.seriesNumbers = seriesNumbers
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.version = version
+        self.parentIds = parentIds
+        self.childCount = childCount
+        self.fields = fields
+    }
+
+    public struct SeriesNumbers: Hashable, Sendable, Decodable {
+        public var seriesId: UUID
+        public var number: Int
+
+        public init(seriesId: UUID, number: Int) {
+            self.seriesId = seriesId
+            self.number = number
+        }
+    }
+
+    public struct Fields: Hashable, Sendable, Decodable {
+        public var fieldId: UUID
+        public var values: [String]
+        public var own: Own?
+
+        public init(fieldId: UUID, values: [String], own: Own?) {
+            self.fieldId = fieldId
+            self.values = values
+            self.own = own
+        }
+
+        public struct Own: Hashable, Sendable, Decodable {
+            public var name: String
+            public var type: FieldType
+            public var enumId: UUID?
+
+            public init(name: String, type: FieldType, enumId: UUID?) {
+                self.name = name
+                self.type = type
+                self.enumId = enumId
+            }
+        }
+    }
+}
+
+public struct TaskTreeRowFields: Hashable, Sendable, Decodable {
+    public var id: UUID
+    public var projectId: UUID
+    public var title: String
+    public var typeId: UUID
+    public var statusId: UUID
+    public var seriesNumbers: [SeriesNumbers]
+    public var createdAt: Date
+    public var updatedAt: Date
+    public var version: String
+    public var parentIds: [UUID]
+    public var childCount: Int
+    public var fields: [Fields]
+    public var depth: Int
+    public var repeated: Bool
+    public var treeChildCount: Int
+
+    public init(id: UUID, projectId: UUID, title: String, typeId: UUID, statusId: UUID, seriesNumbers: [SeriesNumbers], createdAt: Date, updatedAt: Date, version: String, parentIds: [UUID], childCount: Int, fields: [Fields], depth: Int, repeated: Bool, treeChildCount: Int) {
+        self.id = id
+        self.projectId = projectId
+        self.title = title
+        self.typeId = typeId
+        self.statusId = statusId
+        self.seriesNumbers = seriesNumbers
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.version = version
+        self.parentIds = parentIds
+        self.childCount = childCount
+        self.fields = fields
+        self.depth = depth
+        self.repeated = repeated
+        self.treeChildCount = treeChildCount
+    }
+
+    public struct SeriesNumbers: Hashable, Sendable, Decodable {
+        public var seriesId: UUID
+        public var number: Int
+
+        public init(seriesId: UUID, number: Int) {
+            self.seriesId = seriesId
+            self.number = number
+        }
+    }
+
+    public struct Fields: Hashable, Sendable, Decodable {
+        public var fieldId: UUID
+        public var values: [String]
+        public var own: Own?
+
+        public init(fieldId: UUID, values: [String], own: Own?) {
+            self.fieldId = fieldId
+            self.values = values
+            self.own = own
+        }
+
+        public struct Own: Hashable, Sendable, Decodable {
+            public var name: String
+            public var type: FieldType
+            public var enumId: UUID?
+
+            public init(name: String, type: FieldType, enumId: UUID?) {
+                self.name = name
+                self.type = type
+                self.enumId = enumId
+            }
+        }
+    }
+}
+
 public struct ProjectTasksQuery: GraphQLQuery {
     public static let operationName = "ProjectTasks"
     public static let document = """
@@ -385,6 +519,722 @@ public struct TaskQuery: GraphQLQuery {
                             self.id = id
                             self.title = title
                             self.statusId = statusId
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+public struct TaskListPageQuery: GraphQLQuery {
+    public static let operationName = "TaskListPage"
+    public static let document = """
+    query TaskListPage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $offset: Int, $limit: Int) {
+      project(id: $projectId) {
+        __typename
+        id
+        tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, offset: $offset, limit: $limit, descriptionLength: 0) {
+          __typename
+          totalCount
+          offset
+          limit
+          data {
+            __typename
+            id
+            ...TaskRowFields
+          }
+        }
+      }
+    }
+    fragment TaskRowFields on TaskListItem {
+      __typename
+      id
+      projectId
+      title
+      typeId
+      statusId
+      seriesNumbers {
+        __typename
+        seriesId
+        number
+      }
+      createdAt
+      updatedAt
+      version
+      parentIds
+      childCount
+      fields {
+        __typename
+        fieldId
+        values
+        own {
+          __typename
+          name
+          type
+          enumId
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("tasks", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "sort": .variable("sort"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("totalCount"),
+                GraphQLField("offset"),
+                GraphQLField("limit"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("projectId"),
+                    GraphQLField("title"),
+                    GraphQLField("typeId"),
+                    GraphQLField("statusId"),
+                    GraphQLField("seriesNumbers", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("seriesId"),
+                        GraphQLField("number")
+                    ]),
+                    GraphQLField("createdAt"),
+                    GraphQLField("updatedAt"),
+                    GraphQLField("version"),
+                    GraphQLField("parentIds"),
+                    GraphQLField("childCount"),
+                    GraphQLField("fields", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("fieldId"),
+                        GraphQLField("values"),
+                        GraphQLField("own", selections: [
+                            GraphQLField("__typename"),
+                            GraphQLField("name"),
+                            GraphQLField("type"),
+                            GraphQLField("enumId")
+                        ])
+                    ])
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var statusIds: [UUID]?
+    public var typeIds: [UUID]?
+    public var seriesIds: [UUID]?
+    public var field: [String]?
+    public var sort: String?
+    public var offset: Int?
+    public var limit: Int?
+
+    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil, sort: String? = nil, offset: Int? = nil, limit: Int? = nil) {
+        self.projectId = projectId
+        self.statusIds = statusIds
+        self.typeIds = typeIds
+        self.seriesIds = seriesIds
+        self.field = field
+        self.sort = sort
+        self.offset = offset
+        self.limit = limit
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        if let statusIds { result["statusIds"] = statusIds.graphQLValue }
+        if let typeIds { result["typeIds"] = typeIds.graphQLValue }
+        if let seriesIds { result["seriesIds"] = seriesIds.graphQLValue }
+        if let field { result["field"] = field.graphQLValue }
+        if let sort { result["sort"] = sort.graphQLValue }
+        if let offset { result["offset"] = offset.graphQLValue }
+        if let limit { result["limit"] = limit.graphQLValue }
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var tasks: Tasks
+
+            public init(id: UUID, tasks: Tasks) {
+                self.id = id
+                self.tasks = tasks
+            }
+
+            public struct Tasks: Hashable, Sendable, Decodable {
+                public var totalCount: Int
+                public var offset: Int
+                public var limit: Int
+                public var data: [TaskRowFields]
+
+                public init(totalCount: Int, offset: Int, limit: Int, data: [TaskRowFields]) {
+                    self.totalCount = totalCount
+                    self.offset = offset
+                    self.limit = limit
+                    self.data = data
+                }
+            }
+        }
+    }
+}
+
+public struct TaskTreePageQuery: GraphQLQuery {
+    public static let operationName = "TaskTreePage"
+    public static let document = """
+    query TaskTreePage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $parentId: UUID, $levels: Int, $offset: Int, $limit: Int) {
+      project(id: $projectId) {
+        __typename
+        id
+        taskTree(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, parentId: $parentId, levels: $levels, offset: $offset, limit: $limit, descriptionLength: 0) {
+          __typename
+          totalCount
+          topLevelCount
+          offset
+          limit
+          data {
+            __typename
+            id
+            ...TaskTreeRowFields
+          }
+        }
+      }
+    }
+    fragment TaskTreeRowFields on TaskTreeItem {
+      __typename
+      id
+      projectId
+      title
+      typeId
+      statusId
+      seriesNumbers {
+        __typename
+        seriesId
+        number
+      }
+      createdAt
+      updatedAt
+      version
+      parentIds
+      childCount
+      fields {
+        __typename
+        fieldId
+        values
+        own {
+          __typename
+          name
+          type
+          enumId
+        }
+      }
+      depth
+      repeated
+      treeChildCount
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("taskTree", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "sort": .variable("sort"), "parentId": .variable("parentId"), "levels": .variable("levels"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("totalCount"),
+                GraphQLField("topLevelCount"),
+                GraphQLField("offset"),
+                GraphQLField("limit"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("projectId"),
+                    GraphQLField("title"),
+                    GraphQLField("typeId"),
+                    GraphQLField("statusId"),
+                    GraphQLField("seriesNumbers", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("seriesId"),
+                        GraphQLField("number")
+                    ]),
+                    GraphQLField("createdAt"),
+                    GraphQLField("updatedAt"),
+                    GraphQLField("version"),
+                    GraphQLField("parentIds"),
+                    GraphQLField("childCount"),
+                    GraphQLField("fields", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("fieldId"),
+                        GraphQLField("values"),
+                        GraphQLField("own", selections: [
+                            GraphQLField("__typename"),
+                            GraphQLField("name"),
+                            GraphQLField("type"),
+                            GraphQLField("enumId")
+                        ])
+                    ]),
+                    GraphQLField("depth"),
+                    GraphQLField("repeated"),
+                    GraphQLField("treeChildCount")
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var statusIds: [UUID]?
+    public var typeIds: [UUID]?
+    public var seriesIds: [UUID]?
+    public var field: [String]?
+    public var sort: String?
+    public var parentId: UUID?
+    public var levels: Int?
+    public var offset: Int?
+    public var limit: Int?
+
+    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil, sort: String? = nil, parentId: UUID? = nil, levels: Int? = nil, offset: Int? = nil, limit: Int? = nil) {
+        self.projectId = projectId
+        self.statusIds = statusIds
+        self.typeIds = typeIds
+        self.seriesIds = seriesIds
+        self.field = field
+        self.sort = sort
+        self.parentId = parentId
+        self.levels = levels
+        self.offset = offset
+        self.limit = limit
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        if let statusIds { result["statusIds"] = statusIds.graphQLValue }
+        if let typeIds { result["typeIds"] = typeIds.graphQLValue }
+        if let seriesIds { result["seriesIds"] = seriesIds.graphQLValue }
+        if let field { result["field"] = field.graphQLValue }
+        if let sort { result["sort"] = sort.graphQLValue }
+        if let parentId { result["parentId"] = parentId.graphQLValue }
+        if let levels { result["levels"] = levels.graphQLValue }
+        if let offset { result["offset"] = offset.graphQLValue }
+        if let limit { result["limit"] = limit.graphQLValue }
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var taskTree: TaskTree
+
+            public init(id: UUID, taskTree: TaskTree) {
+                self.id = id
+                self.taskTree = taskTree
+            }
+
+            public struct TaskTree: Hashable, Sendable, Decodable {
+                public var totalCount: Int
+                public var topLevelCount: Int
+                public var offset: Int
+                public var limit: Int
+                public var data: [TaskTreeRowFields]
+
+                public init(totalCount: Int, topLevelCount: Int, offset: Int, limit: Int, data: [TaskTreeRowFields]) {
+                    self.totalCount = totalCount
+                    self.topLevelCount = topLevelCount
+                    self.offset = offset
+                    self.limit = limit
+                    self.data = data
+                }
+            }
+        }
+    }
+}
+
+public struct TaskListCountQuery: GraphQLQuery {
+    public static let operationName = "TaskListCount"
+    public static let document = """
+    query TaskListCount($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!]) {
+      project(id: $projectId) {
+        __typename
+        id
+        tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, limit: 1, descriptionLength: 0) {
+          __typename
+          totalCount
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("tasks", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "limit": .value(.int(1)), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("totalCount")
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var statusIds: [UUID]?
+    public var typeIds: [UUID]?
+    public var seriesIds: [UUID]?
+    public var field: [String]?
+
+    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil) {
+        self.projectId = projectId
+        self.statusIds = statusIds
+        self.typeIds = typeIds
+        self.seriesIds = seriesIds
+        self.field = field
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        if let statusIds { result["statusIds"] = statusIds.graphQLValue }
+        if let typeIds { result["typeIds"] = typeIds.graphQLValue }
+        if let seriesIds { result["seriesIds"] = seriesIds.graphQLValue }
+        if let field { result["field"] = field.graphQLValue }
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var tasks: Tasks
+
+            public init(id: UUID, tasks: Tasks) {
+                self.id = id
+                self.tasks = tasks
+            }
+
+            public struct Tasks: Hashable, Sendable, Decodable {
+                public var totalCount: Int
+
+                public init(totalCount: Int) {
+                    self.totalCount = totalCount
+                }
+            }
+        }
+    }
+}
+
+public struct TaskListVocabularyQuery: GraphQLQuery {
+    public static let operationName = "TaskListVocabulary"
+    public static let document = """
+    query TaskListVocabulary($projectId: UUID!) {
+      project(id: $projectId) {
+        __typename
+        id
+        statuses(limit: 200, descriptionLength: 0) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            color
+          }
+        }
+        statusSets(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            statusIds
+          }
+        }
+        taskTypes(limit: 200, descriptionLength: 0) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            statusSetId
+          }
+        }
+        seriesList(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            prefix
+          }
+        }
+        fields(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            type
+            multiple
+            enumId
+          }
+        }
+        enums(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            values {
+              __typename
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("statuses", arguments: ["limit": .value(.int(200)), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("color")
+                ])
+            ]),
+            GraphQLField("statusSets", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("statusIds")
+                ])
+            ]),
+            GraphQLField("taskTypes", arguments: ["limit": .value(.int(200)), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("statusSetId")
+                ])
+            ]),
+            GraphQLField("seriesList", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("prefix")
+                ])
+            ]),
+            GraphQLField("fields", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("type"),
+                    GraphQLField("multiple"),
+                    GraphQLField("enumId")
+                ])
+            ]),
+            GraphQLField("enums", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("values", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("id"),
+                        GraphQLField("name")
+                    ])
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+
+    public init(projectId: UUID) {
+        self.projectId = projectId
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var statuses: Statuses
+            public var statusSets: StatusSets
+            public var taskTypes: TaskTypes
+            public var seriesList: SeriesList
+            public var fields: Fields
+            public var enums: Enums
+
+            public init(id: UUID, statuses: Statuses, statusSets: StatusSets, taskTypes: TaskTypes, seriesList: SeriesList, fields: Fields, enums: Enums) {
+                self.id = id
+                self.statuses = statuses
+                self.statusSets = statusSets
+                self.taskTypes = taskTypes
+                self.seriesList = seriesList
+                self.fields = fields
+                self.enums = enums
+            }
+
+            public struct Statuses: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var color: String
+
+                    public init(id: UUID, name: String, color: String) {
+                        self.id = id
+                        self.name = name
+                        self.color = color
+                    }
+                }
+            }
+
+            public struct StatusSets: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var statusIds: [UUID]
+
+                    public init(id: UUID, name: String, statusIds: [UUID]) {
+                        self.id = id
+                        self.name = name
+                        self.statusIds = statusIds
+                    }
+                }
+            }
+
+            public struct TaskTypes: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var statusSetId: UUID
+
+                    public init(id: UUID, name: String, statusSetId: UUID) {
+                        self.id = id
+                        self.name = name
+                        self.statusSetId = statusSetId
+                    }
+                }
+            }
+
+            public struct SeriesList: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var prefix: String
+
+                    public init(id: UUID, prefix: String) {
+                        self.id = id
+                        self.prefix = prefix
+                    }
+                }
+            }
+
+            public struct Fields: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var type: FieldType
+                    public var multiple: Bool
+                    public var enumId: UUID?
+
+                    public init(id: UUID, name: String, type: FieldType, multiple: Bool, enumId: UUID?) {
+                        self.id = id
+                        self.name = name
+                        self.type = type
+                        self.multiple = multiple
+                        self.enumId = enumId
+                    }
+                }
+            }
+
+            public struct Enums: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var values: [Values]
+
+                    public init(id: UUID, name: String, values: [Values]) {
+                        self.id = id
+                        self.name = name
+                        self.values = values
+                    }
+
+                    public struct Values: Hashable, Sendable, Decodable {
+                        public var id: UUID
+                        public var name: String
+
+                        public init(id: UUID, name: String) {
+                            self.id = id
+                            self.name = name
                         }
                     }
                 }

@@ -437,7 +437,74 @@ public class TaskHierarchyTests
         Assert.Equal(1, hierarchy.ChildCount(shared));
     }
 
+    [Fact]
+    public void Children_of_a_task_are_one_level_in_list_order_and_other_parents_mark_them_repeated()
+    {
+        var (first, second, shared, own, outside) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var hierarchy = new TaskHierarchy([
+            new LinkEdge(first, shared), new LinkEdge(second, shared), new LinkEdge(second, own), new LinkEdge(own, outside), new LinkEdge(second, second)]);
+        var ordered = new[] { first, second, own, shared };
+        var position = ordered.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
+
+        Assert.Equal([own, shared], hierarchy.ChildrenOf(second, position));
+        Assert.Equal(2, hierarchy.ShownChildCount(second, position));
+        Assert.Equal(0, hierarchy.ShownChildCount(own, position));
+
+        var underSecond = hierarchy.Rows(hierarchy.ChildrenOf(second, position), position, 1, second);
+        Assert.Equal([(own, 0, false), (shared, 0, true)], underSecond.Select(x => (x.Id, x.Depth, x.Repeated)).ToArray());
+        var underFirst = hierarchy.Rows(hierarchy.ChildrenOf(first, position), position, 1, first);
+        Assert.Equal([(shared, 0, false)], underFirst.Select(x => (x.Id, x.Depth, x.Repeated)).ToArray());
+
+        var roots = hierarchy.Rows(hierarchy.TopLevel(ordered), position, 1);
+        Assert.Equal([(first, 0, false), (second, 0, false)], roots.Select(x => (x.Id, x.Depth, x.Repeated)).ToArray());
+    }
+
     // ---- REST ----
+
+    [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
+    public async Task Tree_by_levels_gives_the_top_level_alone_and_parentId_pages_the_children_with_their_counts(string storage)
+    {
+        await using var api = await ApiHost.Start(storage);
+        async Task<string> Make(string title) => (await api.Post(api.P("/tasks"), new { title, typeId = api.TypeId })).Body!["id"]!.GetValue<string>();
+
+        var epic = await Make("Epic");
+        var first = await Make("First");
+        var second = await Make("Second");
+        var grandchild = await Make("Grandchild");
+        var other = await Make("Other");
+        var types = (await api.Get(api.P("/link-types"))).Body!["data"]!.AsArray();
+        var parentType = types.Single(x => x!["name"]!.GetValue<string>() == "Parent/Child")!["id"]!.GetValue<string>();
+        foreach (var (from, to) in new[] { (epic, first), (epic, second), (first, grandchild), (other, second) })
+            Assert.Equal(System.Net.HttpStatusCode.OK, (await api.Post(api.P($"/tasks/{from}/links"), new { typeId = parentType, targetId = to })).Status);
+
+        string[] Ids(JsonNode page) => page["data"]!.AsArray().Select(x => x!["id"]!.GetValue<string>()).ToArray();
+        int[] Counts(JsonNode page) => page["data"]!.AsArray().Select(x => x!["treeChildCount"]!.GetValue<int>()).ToArray();
+
+        var top = (await api.Get(api.P("/tasks?flat=false&levels=1"))).Body!;
+        Assert.Equal(5, top["totalCount"]!.GetValue<int>());
+        Assert.Equal(2, top["topLevelCount"]!.GetValue<int>());
+        Assert.Equal([epic, other], Ids(top));
+        Assert.Equal([2, 1], Counts(top));
+
+        var children = (await api.Get(api.P($"/tasks?flat=false&levels=1&parentId={epic}"))).Body!;
+        Assert.Equal(2, children["topLevelCount"]!.GetValue<int>());
+        Assert.Equal([first, second], Ids(children));
+        Assert.Equal([1, 0], Counts(children));
+        Assert.All(children["data"]!.AsArray(), x => Assert.Equal(0, x!["depth"]!.GetValue<int>()));
+        Assert.All(children["data"]!.AsArray(), x => Assert.False(x!["repeated"]!.GetValue<bool>()));
+
+        var page = (await api.Get(api.P($"/tasks?flat=false&levels=1&parentId={epic}&offset=1&limit=1"))).Body!;
+        Assert.Equal([second], Ids(page));
+
+        var underOther = (await api.Get(api.P($"/tasks?flat=false&levels=1&parentId={other}"))).Body!;
+        Assert.Equal([second], Ids(underOther));
+        Assert.True(underOther["data"]!.AsArray()[0]!["repeated"]!.GetValue<bool>());
+
+        var full = (await api.Get(api.P("/tasks?flat=false"))).Body!;
+        Assert.Equal([epic, first, grandchild, second, other, second], Ids(full));
+        Assert.Equal([2, 1, 0, 0, 1, 0], Counts(full));
+    }
+
 
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Rest_list_is_flat_with_parentIds_and_childCount_and_flat_false_gives_the_tree(string storage)

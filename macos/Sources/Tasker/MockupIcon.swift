@@ -8,6 +8,10 @@ enum MockupIcon: Sendable {
     case search
     case more
     case check
+    case up
+    case down
+    case x
+    case inbox
 }
 
 struct MockupIconShape: Shape {
@@ -61,6 +65,31 @@ struct MockupIconShape: Shape {
             path.move(to: p(3, 8.5))
             path.addLine(to: p(6.2, 11.5))
             path.addLine(to: p(13, 4.5))
+        case .up:
+            path.move(to: p(4, 9.5))
+            path.addLine(to: p(8, 5.5))
+            path.addLine(to: p(12, 9.5))
+        case .down:
+            path.move(to: p(4, 6.5))
+            path.addLine(to: p(8, 10.5))
+            path.addLine(to: p(12, 6.5))
+        case .x:
+            line(&path, 4, 4, 12, 12)
+            line(&path, 12, 4, 4, 12)
+        case .inbox:
+            path.move(to: p(2.5, 9.5))
+            path.addLine(to: p(4, 3.5))
+            path.addLine(to: p(12, 3.5))
+            path.addLine(to: p(13.5, 9.5))
+            path.addLine(to: p(13.5, 12.5))
+            path.addLine(to: p(2.5, 12.5))
+            path.closeSubpath()
+            path.move(to: p(2.5, 9.5))
+            path.addLine(to: p(5.5, 9.5))
+            path.addLine(to: p(6.5, 11))
+            path.addLine(to: p(9.5, 11))
+            path.addLine(to: p(10.5, 9.5))
+            path.addLine(to: p(13.5, 9.5))
         }
         return path
     }
