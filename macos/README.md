@@ -61,6 +61,19 @@ scripts/macos-build.sh release
 
 В коде используются `DesignColor.<имя>.color`, `DesignRadius`, `DesignSpacing`, `DesignLayout`, `DesignTypography` и `StatusIconView(name:color:)`. Системные цвета и числа, вписанные вручную, в видах не применяются.
 
+## Строки и языки
+
+Интерфейс на русском и английском. Все строки лежат в `design/strings.json`: ключ вида `section.tasks`, у каждого два перевода (`ru`, `en`). Подстановки пишутся как `{0}`, множественные формы как `{0#задача|задачи|задач}` (у русского три формы, у английского две) — так же, как в словаре макета `docs/mockups/web/main-design.html`. Строки, которые есть и в макете, обязаны переводиться одинаково.
+
+Скрипт `scripts/gen-strings.py` создаёт из файла:
+
+- `macos/Sources/Tasker/Generated/Localizable.xcstrings` — String Catalog;
+- `macos/Sources/Tasker/Generated/L10nKey.swift` — перечисление ключей.
+
+После правки `strings.json` запустите `python3 scripts/gen-strings.py`. Команда `python3 scripts/gen-strings.py --check` падает, если нет перевода, не совпадают подстановки или формы, перевод разошёлся с макетом, сгенерированные файлы устарели или в коде Swift вписана строка интерфейса (`Text("…")`, кириллица и т. п.); её выполняет CI (`.github/workflows/design-strings.yml`).
+
+В коде строки берутся через `@Environment(\.localizer)`: `l.string(.sectionTasks)`, `l.taskCount(5)`, `l.date(...)`, `l.number(...)`. Язык по умолчанию — системный (русский, если в системе русский, иначе английский); в настройках (⌘,) его можно сменить: «Как в системе / Русский / English». Выбор применяется сразу, а системные пункты меню macOS обновятся после перезапуска.
+
 ## Иконка
 
 Исходники иконок в `Design/icon/`: `icon-dark.svg` для тёмной темы и `icon-light.svg` для светлой. Растровые копии лежат в `Sources/Tasker/Assets.xcassets`: набор `AppIcon` (светлая, все размеры macOS) и наборы `IconDark`/`IconLight`, между которыми приложение переключает иконку в Dock вслед за темой системы.

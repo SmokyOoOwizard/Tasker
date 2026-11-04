@@ -1,0 +1,30 @@
+name: Design strings
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'design/strings.json'
+      - 'docs/mockups/web/main-design.html'
+      - 'macos/Sources/Tasker/**'
+      - 'scripts/gen-strings.py'
+      - '.github/workflows/design-strings.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'design/strings.json'
+      - 'docs/mockups/web/main-design.html'
+      - 'macos/Sources/Tasker/**'
+      - 'scripts/gen-strings.py'
+      - '.github/workflows/design-strings.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -I scripts/gen-strings.py --check

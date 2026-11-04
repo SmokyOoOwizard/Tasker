@@ -1,0 +1,32 @@
+{
+  "strings": {
+    "app.name": {"ru": "Tasker", "en": "Tasker"},
+    "app.logoLetter": {"ru": "T", "en": "T"},
+    "app.credits": {"ru": "Трекер задач рядом с кодом.", "en": "A task tracker next to your code."},
+    "breadcrumb.separator": {"ru": "/", "en": "/"},
+    "section.tasks": {"ru": "Задачи", "en": "Tasks"},
+    "section.boards": {"ru": "Доски", "en": "Boards"},
+    "section.settings": {"ru": "Настройки", "en": "Settings"},
+    "section.admin": {"ru": "Админ-панель", "en": "Admin panel"},
+    "sidebar.project": {"ru": "Проект", "en": "Project"},
+    "sidebar.search": {"ru": "Поиск и команды", "en": "Search and commands"},
+    "sidebar.searchShortcut": {"ru": "⌘K", "en": "⌘K"},
+    "sidebar.profile": {"ru": "Профиль", "en": "Profile"},
+    "sidebar.show": {"ru": "Показать боковую панель", "en": "Show sidebar"},
+    "sidebar.hide": {"ru": "Скрыть боковую панель", "en": "Hide sidebar"},
+    "menu.sections": {"ru": "Разделы", "en": "Sections"},
+    "menu.about": {"ru": "О программе {0}", "en": "About {0}"},
+    "menu.settings": {"ru": "Настройки…", "en": "Settings…"},
+    "placeholder.hint": {"ru": "Раздел появится в следующих версиях", "en": "This section will appear in a future version"},
+    "placeholder.version": {"ru": "Версия {0}", "en": "Version {0}"},
+    "count.tasks": {"ru": "{0} {0#задача|задачи|задач}", "en": "{0} {0#task|tasks}"},
+    "settings.language.title": {"ru": "Язык интерфейса", "en": "Interface language"},
+    "settings.language.hint": {"ru": "По умолчанию — язык системы. Выбор запоминается в приложении.", "en": "By default the system language is used. Your choice is remembered in the app."},
+    "settings.language.system": {"ru": "Как в системе", "en": "System"},
+    "settings.language.ru": {"ru": "Русский", "en": "Русский"},
+    "settings.language.en": {"ru": "English", "en": "English"},
+    "settings.language.restart": {"ru": "Системные пункты меню обновятся после перезапуска приложения.", "en": "System menu items update after the app restarts."},
+    "settings.preview.title": {"ru": "Пример форматов", "en": "Format preview"},
+    "settings.preview.sample": {"ru": "{0} · {1} · {2}", "en": "{0} · {1} · {2}"}
+  }
+}
