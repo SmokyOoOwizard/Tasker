@@ -12,6 +12,12 @@ enum MockupIcon: Sendable {
     case down
     case x
     case inbox
+    case plus
+    case trash
+    case back
+    case chevronDown
+    case warn
+    case lock
 }
 
 struct MockupIconShape: Shape {
@@ -76,6 +82,40 @@ struct MockupIconShape: Shape {
         case .x:
             line(&path, 4, 4, 12, 12)
             line(&path, 12, 4, 4, 12)
+        case .plus:
+            line(&path, 8, 3, 8, 13)
+            line(&path, 3, 8, 13, 8)
+        case .trash:
+            line(&path, 3, 4.5, 13, 4.5)
+            path.move(to: p(6.5, 4.5))
+            path.addLine(to: p(6.5, 3))
+            path.addLine(to: p(9.5, 3))
+            path.addLine(to: p(9.5, 4.5))
+            path.move(to: p(4.5, 4.5))
+            path.addLine(to: p(5, 13))
+            path.addLine(to: p(11, 13))
+            path.addLine(to: p(11.5, 4.5))
+        case .back:
+            path.move(to: p(10, 3.5))
+            path.addLine(to: p(5.5, 8))
+            path.addLine(to: p(10, 12.5))
+        case .chevronDown:
+            path.move(to: p(3.5, 6))
+            path.addLine(to: p(8, 10.5))
+            path.addLine(to: p(12.5, 6))
+        case .warn:
+            path.move(to: p(8, 2.5))
+            path.addLine(to: p(14, 13))
+            path.addLine(to: p(2, 13))
+            path.closeSubpath()
+            line(&path, 8, 6.5, 8, 9.5)
+            line(&path, 8, 11.2, 8, 11.21)
+        case .lock:
+            path.addPath(box(3.5, 7, 9, 6.5))
+            path.move(to: p(5.5, 7))
+            path.addLine(to: p(5.5, 5))
+            path.addArc(center: p(8, 5), radius: 2.5 * k, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
+            path.addLine(to: p(10.5, 7))
         case .inbox:
             path.move(to: p(2.5, 9.5))
             path.addLine(to: p(4, 3.5))

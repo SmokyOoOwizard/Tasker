@@ -34,6 +34,7 @@ query Task($projectId: UUID!, $id: UUID!) {
         name
         type
         multiple
+        enumId
         required
         source
         values
@@ -48,6 +49,10 @@ query Task($projectId: UUID!, $id: UUID!) {
           id
           title
           statusId
+          seriesNumbers {
+            seriesId
+            number
+          }
         }
       }
     }
@@ -131,12 +136,27 @@ query TaskListVocabulary($projectId: UUID!) {
         id
         name
         statusSetId
+        fields {
+          fieldId
+          required
+        }
       }
     }
     seriesList(limit: 200) {
       data {
         id
+        name
         prefix
+      }
+    }
+    linkTypes(limit: 200) {
+      data {
+        id
+        name
+        outwardName
+        inwardName
+        hierarchical
+        isSymmetric
       }
     }
     fields(limit: 200) {
@@ -214,4 +234,39 @@ fragment TaskTreeRowFields on TaskTreeItem {
   depth
   repeated
   treeChildCount
+}
+
+query ResolveTaskRef($projectId: UUID!, $ref: String!) {
+  project(id: $projectId) {
+    id
+    resolveTasks(ref: $ref) {
+      id
+      title
+      statusId
+      typeId
+      seriesNumbers {
+        seriesId
+        number
+      }
+    }
+  }
+}
+
+query TaskSearchPage($projectId: UUID!, $offset: Int, $limit: Int) {
+  project(id: $projectId) {
+    id
+    tasks(offset: $offset, limit: $limit, descriptionLength: 0) {
+      totalCount
+      data {
+        id
+        title
+        statusId
+        typeId
+        seriesNumbers {
+          seriesId
+          number
+        }
+      }
+    }
+  }
 }

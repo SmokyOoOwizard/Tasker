@@ -80,9 +80,24 @@ struct TaskListVocabulary: Hashable, Sendable {
         var color: String
     }
 
+    struct TypeField: Hashable, Sendable {
+        var fieldId: UUID
+        var required: Bool
+    }
+
     struct TaskType: Hashable, Sendable {
         var name: String
         var statusSetId: UUID
+        var fields: [TypeField] = []
+    }
+
+    struct LinkType: Hashable, Sendable {
+        var id: UUID
+        var name: String
+        var outwardName: String
+        var inwardName: String
+        var hierarchical: Bool
+        var isSymmetric: Bool
     }
 
     struct Field: Hashable, Sendable {
@@ -103,8 +118,12 @@ struct TaskListVocabulary: Hashable, Sendable {
     var types: [UUID: TaskType] = [:]
     var typeOrder: [UUID] = []
     var prefixes: [UUID: String] = [:]
+    var seriesNames: [UUID: String] = [:]
+    var seriesOrder: [UUID] = []
+    var linkTypes: [LinkType] = []
     var fields: [Field] = []
     var enums: [UUID: [EnumValue]] = [:]
+    var enumNames: [UUID: String] = [:]
 
     static let empty = TaskListVocabulary()
 
@@ -207,10 +226,16 @@ extension TaskListVocabulary {
     init(_ project: TaskListVocabularyQuery.Data.Project) {
         statuses = project.statuses.data.map { Status(id: $0.id, name: $0.name, color: $0.color) }
         statusSets = Dictionary(project.statusSets.data.map { ($0.id, $0.statusIds) }, uniquingKeysWith: { first, _ in first })
-        types = Dictionary(project.taskTypes.data.map { ($0.id, TaskType(name: $0.name, statusSetId: $0.statusSetId)) }, uniquingKeysWith: { first, _ in first })
+        types = Dictionary(project.taskTypes.data.map { ($0.id, TaskType(name: $0.name, statusSetId: $0.statusSetId, fields: $0.fields.map { TypeField(fieldId: $0.fieldId, required: $0.required) })) }, uniquingKeysWith: { first, _ in first })
         typeOrder = project.taskTypes.data.map(\.id)
         prefixes = Dictionary(project.seriesList.data.map { ($0.id, $0.prefix) }, uniquingKeysWith: { first, _ in first })
+        seriesNames = Dictionary(project.seriesList.data.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        seriesOrder = project.seriesList.data.map(\.id)
+        linkTypes = project.linkTypes.data.map {
+            LinkType(id: $0.id, name: $0.name, outwardName: $0.outwardName, inwardName: $0.inwardName, hierarchical: $0.hierarchical, isSymmetric: $0.isSymmetric)
+        }
         fields = project.fields.data.map { Field(id: $0.id, name: $0.name, type: $0.type, multiple: $0.multiple, enumId: $0.enumId) }
+        enumNames = Dictionary(project.enums.data.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         enums = Dictionary(project.enums.data.map { ($0.id, $0.values.map { EnumValue(id: $0.id.uuidString, name: $0.name) }) }, uniquingKeysWith: { first, _ in first })
     }
 }

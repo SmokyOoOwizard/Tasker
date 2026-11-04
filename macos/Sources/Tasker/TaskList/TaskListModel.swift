@@ -87,6 +87,8 @@ final class TaskListModel {
     @ObservationIgnored var onNotice: ((String) -> Void)?
     @ObservationIgnored var onOpen: ((TaskRow) -> Void)?
     @ObservationIgnored var onPeek: ((TaskRow) -> Void)?
+    @ObservationIgnored var onSelect: ((TaskRow) -> Void)?
+    @ObservationIgnored var onEscape: (() -> Bool)?
 
     @ObservationIgnored private let source: any TaskListSource
     @ObservationIgnored private let settings: TaskListSettings?
@@ -595,6 +597,14 @@ final class TaskListModel {
 
     func open(_ node: TaskNode) {
         if let row = node.row { onOpen?(row) }
+    }
+
+    func selectionChanged(_ node: TaskNode) {
+        if let row = node.row { onSelect?(row) }
+    }
+
+    func escape() -> Bool {
+        onEscape?() ?? false
     }
 
     func peek(_ node: TaskNode) {

@@ -5,6 +5,7 @@ final class TaskOutlineView: NSOutlineView {
     var mode: TaskListMode = .groups
     var onOpen: ((Int) -> Void)?
     var onPeek: ((Int) -> Void)?
+    var onEscape: (() -> Bool)?
     var onStatus: ((Int) -> Void)?
     var onToggleGroup: ((Int) -> Void)?
     var contextMenu: ((Int) -> NSMenu?)?
@@ -83,6 +84,8 @@ final class TaskOutlineView: NSOutlineView {
             move(by: -1)
         case "s":
             if selectedRow >= 0 { onStatus?(selectedRow) }
+        case "\u{1b}":
+            if onEscape?() != true { super.keyDown(with: event) }
         case " ":
             if selectedRow >= 0 { onPeek?(selectedRow) }
         case "\r", "\u{3}":
@@ -197,6 +200,7 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
         outline.doubleAction = #selector(doubleClicked)
         outline.onOpen = { [weak self] row in self?.open(row) }
         outline.onPeek = { [weak self] row in self?.peek(row) }
+        outline.onEscape = { [weak self] in self?.model.escape() ?? false }
         outline.onStatus = { [weak self] row in self?.showStatusMenu(row) }
         outline.onToggleGroup = { [weak self] row in self?.toggle(row) }
         outline.contextMenu = { [weak self] row in self?.menu(row) }
@@ -325,6 +329,11 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
     @objc private func doubleClicked() {
         guard let outline, outline.clickedRow >= 0 else { return }
         if node(outline.clickedRow)?.kind == .task { open(outline.clickedRow) }
+    }
+
+    func outlineViewSelectionDidChange(_ notification: Notification) {
+        guard suppress == 0, let outline, let node = node(outline.selectedRow), node.kind == .task else { return }
+        model.selectionChanged(node)
     }
 
     private func open(_ row: Int) {

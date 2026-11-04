@@ -333,6 +333,7 @@ public struct TaskQuery: GraphQLQuery {
             name
             type
             multiple
+            enumId
             required
             source
             values
@@ -349,6 +350,11 @@ public struct TaskQuery: GraphQLQuery {
               id
               title
               statusId
+              seriesNumbers {
+                __typename
+                seriesId
+                number
+              }
             }
           }
         }
@@ -381,6 +387,7 @@ public struct TaskQuery: GraphQLQuery {
                     GraphQLField("name"),
                     GraphQLField("type"),
                     GraphQLField("multiple"),
+                    GraphQLField("enumId"),
                     GraphQLField("required"),
                     GraphQLField("source"),
                     GraphQLField("values"),
@@ -396,7 +403,12 @@ public struct TaskQuery: GraphQLQuery {
                         GraphQLField("__typename"),
                         GraphQLField("id"),
                         GraphQLField("title"),
-                        GraphQLField("statusId")
+                        GraphQLField("statusId"),
+                        GraphQLField("seriesNumbers", selections: [
+                            GraphQLField("__typename"),
+                            GraphQLField("seriesId"),
+                            GraphQLField("number")
+                        ])
                     ])
                 ])
             ])
@@ -478,16 +490,18 @@ public struct TaskQuery: GraphQLQuery {
                     public var name: String
                     public var type: FieldType
                     public var multiple: Bool
+                    public var enumId: UUID?
                     public var required: Bool
                     public var source: TaskFieldSource
                     public var values: [String]
                     public var texts: [String]
 
-                    public init(fieldId: UUID, name: String, type: FieldType, multiple: Bool, required: Bool, source: TaskFieldSource, values: [String], texts: [String]) {
+                    public init(fieldId: UUID, name: String, type: FieldType, multiple: Bool, enumId: UUID?, required: Bool, source: TaskFieldSource, values: [String], texts: [String]) {
                         self.fieldId = fieldId
                         self.name = name
                         self.type = type
                         self.multiple = multiple
+                        self.enumId = enumId
                         self.required = required
                         self.source = source
                         self.values = values
@@ -514,11 +528,23 @@ public struct TaskQuery: GraphQLQuery {
                         public var id: UUID
                         public var title: String
                         public var statusId: UUID
+                        public var seriesNumbers: [SeriesNumbers]
 
-                        public init(id: UUID, title: String, statusId: UUID) {
+                        public init(id: UUID, title: String, statusId: UUID, seriesNumbers: [SeriesNumbers]) {
                             self.id = id
                             self.title = title
                             self.statusId = statusId
+                            self.seriesNumbers = seriesNumbers
+                        }
+
+                        public struct SeriesNumbers: Hashable, Sendable, Decodable {
+                            public var seriesId: UUID
+                            public var number: Int
+
+                            public init(seriesId: UUID, number: Int) {
+                                self.seriesId = seriesId
+                                self.number = number
+                            }
                         }
                     }
                 }
@@ -967,6 +993,11 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
             id
             name
             statusSetId
+            fields {
+              __typename
+              fieldId
+              required
+            }
           }
         }
         seriesList(limit: 200) {
@@ -974,7 +1005,20 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
           data {
             __typename
             id
+            name
             prefix
+          }
+        }
+        linkTypes(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            outwardName
+            inwardName
+            hierarchical
+            isSymmetric
           }
         }
         fields(limit: 200) {
@@ -1032,7 +1076,12 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                     GraphQLField("__typename"),
                     GraphQLField("id"),
                     GraphQLField("name"),
-                    GraphQLField("statusSetId")
+                    GraphQLField("statusSetId"),
+                    GraphQLField("fields", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("fieldId"),
+                        GraphQLField("required")
+                    ])
                 ])
             ]),
             GraphQLField("seriesList", arguments: ["limit": .value(.int(200))], selections: [
@@ -1040,7 +1089,20 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                 GraphQLField("data", selections: [
                     GraphQLField("__typename"),
                     GraphQLField("id"),
+                    GraphQLField("name"),
                     GraphQLField("prefix")
+                ])
+            ]),
+            GraphQLField("linkTypes", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("outwardName"),
+                    GraphQLField("inwardName"),
+                    GraphQLField("hierarchical"),
+                    GraphQLField("isSymmetric")
                 ])
             ]),
             GraphQLField("fields", arguments: ["limit": .value(.int(200))], selections: [
@@ -1095,15 +1157,17 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
             public var statusSets: StatusSets
             public var taskTypes: TaskTypes
             public var seriesList: SeriesList
+            public var linkTypes: LinkTypes
             public var fields: Fields
             public var enums: Enums
 
-            public init(id: UUID, statuses: Statuses, statusSets: StatusSets, taskTypes: TaskTypes, seriesList: SeriesList, fields: Fields, enums: Enums) {
+            public init(id: UUID, statuses: Statuses, statusSets: StatusSets, taskTypes: TaskTypes, seriesList: SeriesList, linkTypes: LinkTypes, fields: Fields, enums: Enums) {
                 self.id = id
                 self.statuses = statuses
                 self.statusSets = statusSets
                 self.taskTypes = taskTypes
                 self.seriesList = seriesList
+                self.linkTypes = linkTypes
                 self.fields = fields
                 self.enums = enums
             }
@@ -1159,11 +1223,23 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                     public var id: UUID
                     public var name: String
                     public var statusSetId: UUID
+                    public var fields: [Fields]
 
-                    public init(id: UUID, name: String, statusSetId: UUID) {
+                    public init(id: UUID, name: String, statusSetId: UUID, fields: [Fields]) {
                         self.id = id
                         self.name = name
                         self.statusSetId = statusSetId
+                        self.fields = fields
+                    }
+
+                    public struct Fields: Hashable, Sendable, Decodable {
+                        public var fieldId: UUID
+                        public var required: Bool
+
+                        public init(fieldId: UUID, required: Bool) {
+                            self.fieldId = fieldId
+                            self.required = required
+                        }
                     }
                 }
             }
@@ -1177,11 +1253,39 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
 
                 public struct DataItem: Hashable, Sendable, Decodable {
                     public var id: UUID
+                    public var name: String
                     public var prefix: String
 
-                    public init(id: UUID, prefix: String) {
+                    public init(id: UUID, name: String, prefix: String) {
                         self.id = id
+                        self.name = name
                         self.prefix = prefix
+                    }
+                }
+            }
+
+            public struct LinkTypes: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var outwardName: String
+                    public var inwardName: String
+                    public var hierarchical: Bool
+                    public var isSymmetric: Bool
+
+                    public init(id: UUID, name: String, outwardName: String, inwardName: String, hierarchical: Bool, isSymmetric: Bool) {
+                        self.id = id
+                        self.name = name
+                        self.outwardName = outwardName
+                        self.inwardName = inwardName
+                        self.hierarchical = hierarchical
+                        self.isSymmetric = isSymmetric
                     }
                 }
             }
@@ -1235,6 +1339,229 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                         public init(id: UUID, name: String) {
                             self.id = id
                             self.name = name
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+public struct ResolveTaskRefQuery: GraphQLQuery {
+    public static let operationName = "ResolveTaskRef"
+    public static let document = """
+    query ResolveTaskRef($projectId: UUID!, $ref: String!) {
+      project(id: $projectId) {
+        __typename
+        id
+        resolveTasks(ref: $ref) {
+          __typename
+          id
+          title
+          statusId
+          typeId
+          seriesNumbers {
+            __typename
+            seriesId
+            number
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("resolveTasks", arguments: ["ref": .variable("ref")], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("id"),
+                GraphQLField("title"),
+                GraphQLField("statusId"),
+                GraphQLField("typeId"),
+                GraphQLField("seriesNumbers", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("seriesId"),
+                    GraphQLField("number")
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var ref: String
+
+    public init(projectId: UUID, ref: String) {
+        self.projectId = projectId
+        self.ref = ref
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        result["ref"] = ref.graphQLValue
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var resolveTasks: [ResolveTasks]
+
+            public init(id: UUID, resolveTasks: [ResolveTasks]) {
+                self.id = id
+                self.resolveTasks = resolveTasks
+            }
+
+            public struct ResolveTasks: Hashable, Sendable, Decodable {
+                public var id: UUID
+                public var title: String
+                public var statusId: UUID
+                public var typeId: UUID
+                public var seriesNumbers: [SeriesNumbers]
+
+                public init(id: UUID, title: String, statusId: UUID, typeId: UUID, seriesNumbers: [SeriesNumbers]) {
+                    self.id = id
+                    self.title = title
+                    self.statusId = statusId
+                    self.typeId = typeId
+                    self.seriesNumbers = seriesNumbers
+                }
+
+                public struct SeriesNumbers: Hashable, Sendable, Decodable {
+                    public var seriesId: UUID
+                    public var number: Int
+
+                    public init(seriesId: UUID, number: Int) {
+                        self.seriesId = seriesId
+                        self.number = number
+                    }
+                }
+            }
+        }
+    }
+}
+
+public struct TaskSearchPageQuery: GraphQLQuery {
+    public static let operationName = "TaskSearchPage"
+    public static let document = """
+    query TaskSearchPage($projectId: UUID!, $offset: Int, $limit: Int) {
+      project(id: $projectId) {
+        __typename
+        id
+        tasks(offset: $offset, limit: $limit, descriptionLength: 0) {
+          __typename
+          totalCount
+          data {
+            __typename
+            id
+            title
+            statusId
+            typeId
+            seriesNumbers {
+              __typename
+              seriesId
+              number
+            }
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("tasks", arguments: ["offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("totalCount"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("title"),
+                    GraphQLField("statusId"),
+                    GraphQLField("typeId"),
+                    GraphQLField("seriesNumbers", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("seriesId"),
+                        GraphQLField("number")
+                    ])
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var offset: Int?
+    public var limit: Int?
+
+    public init(projectId: UUID, offset: Int? = nil, limit: Int? = nil) {
+        self.projectId = projectId
+        self.offset = offset
+        self.limit = limit
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        if let offset { result["offset"] = offset.graphQLValue }
+        if let limit { result["limit"] = limit.graphQLValue }
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var tasks: Tasks
+
+            public init(id: UUID, tasks: Tasks) {
+                self.id = id
+                self.tasks = tasks
+            }
+
+            public struct Tasks: Hashable, Sendable, Decodable {
+                public var totalCount: Int
+                public var data: [DataItem]
+
+                public init(totalCount: Int, data: [DataItem]) {
+                    self.totalCount = totalCount
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var title: String
+                    public var statusId: UUID
+                    public var typeId: UUID
+                    public var seriesNumbers: [SeriesNumbers]
+
+                    public init(id: UUID, title: String, statusId: UUID, typeId: UUID, seriesNumbers: [SeriesNumbers]) {
+                        self.id = id
+                        self.title = title
+                        self.statusId = statusId
+                        self.typeId = typeId
+                        self.seriesNumbers = seriesNumbers
+                    }
+
+                    public struct SeriesNumbers: Hashable, Sendable, Decodable {
+                        public var seriesId: UUID
+                        public var number: Int
+
+                        public init(seriesId: UUID, number: Int) {
+                            self.seriesId = seriesId
+                            self.number = number
                         }
                     }
                 }
