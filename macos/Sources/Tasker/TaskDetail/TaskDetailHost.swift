@@ -67,35 +67,46 @@ struct TaskCardScreen: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Button {
-                    navigator.closeCard()
-                } label: {
-                    Text(l.string(.sectionTasks))
-                        .foregroundStyle(DesignColor.mut.color)
-                        .padding(.horizontal, 4)
-                        .frame(height: 24)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                ForEach(Array(navigator.history.enumerated()), id: \.offset) { index, id in
-                    Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
-                    Button {
-                        navigator.jump(toHistory: index)
-                    } label: {
-                        Text(verbatim: navigator.labels[id] ?? "…")
-                            .font(.design(DesignTypography.monoSize, mono: true))
-                            .foregroundStyle(DesignColor.mut.color)
-                            .padding(.horizontal, 4)
-                            .frame(height: 24)
-                            .contentShape(Rectangle())
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: DesignSpacing.gap8) {
+                            Button {
+                                navigator.closeCard()
+                            } label: {
+                                Text(l.string(.sectionTasks))
+                                    .foregroundStyle(DesignColor.mut.color)
+                                    .padding(.horizontal, 4)
+                                    .frame(height: 24)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            ForEach(Array(navigator.history.enumerated()), id: \.offset) { index, id in
+                                Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
+                                Button {
+                                    navigator.jump(toHistory: index)
+                                } label: {
+                                    Text(verbatim: navigator.labels[id] ?? "…")
+                                        .font(.design(DesignTypography.monoSize, mono: true))
+                                        .foregroundStyle(DesignColor.mut.color)
+                                        .padding(.horizontal, 4)
+                                        .frame(height: 24)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
+                            Text(verbatim: model.readyReference ?? navigator.labels[task] ?? "…")
+                                .font(.design(DesignTypography.monoSize, mono: true))
+                                .onAppear { register(model) }
+                                .onChange(of: model.revision) { register(model) }
+                            Color.clear.frame(width: 1, height: 1).id("crumbs-end")
+                        }
+                        .fixedSize()
                     }
-                    .buttonStyle(.plain)
+                    .onAppear { proxy.scrollTo("crumbs-end", anchor: .trailing) }
+                    .onChange(of: navigator.history) { proxy.scrollTo("crumbs-end", anchor: .trailing) }
+                    .onChange(of: navigator.card) { proxy.scrollTo("crumbs-end", anchor: .trailing) }
                 }
-                Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
-                Text(verbatim: model.readyReference ?? navigator.labels[task] ?? "…")
-                    .font(.design(DesignTypography.monoSize, mono: true))
-                    .onAppear { register(model) }
-                    .onChange(of: model.revision) { register(model) }
                 Spacer(minLength: 0)
             }
             .font(.design(DesignTypography.baseSize))
