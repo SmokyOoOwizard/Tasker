@@ -87,7 +87,8 @@ struct MainColumn: View {
     let compact: Bool
     let open: (UUID) -> Void
     @Environment(\.localizer) private var l
-    @State private var linking: LinkPickerPreset?
+    @State private var linkingAny = false
+    @State private var linkingSubtask = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -96,9 +97,6 @@ struct MainColumn: View {
                 .padding(.top, DesignSpacing.gap10)
             hierarchy
             links
-        }
-        .popover(item: $linking, arrowEdge: .bottom) { preset in
-            LinkPicker(model: model, preset: preset) { linking = nil }
         }
     }
 
@@ -115,7 +113,10 @@ struct MainColumn: View {
         let children = model.children
         let progress = model.childProgress
         SectionHeader(title: l.string(.taskDetailHierarchy)) {
-            GhostButton(title: l.string(.taskDetailSubtask), icon: .plus) { linking = .subtask }
+            GhostButton(title: l.string(.taskDetailSubtask), icon: .plus) { linkingSubtask = true }
+                .popover(isPresented: $linkingSubtask, arrowEdge: .bottom) {
+                    LinkPicker(model: model, preset: .subtask) { linkingSubtask = false }
+                }
         }
         if !parents.isEmpty {
             subtitle(Text(l.string(.taskDetailPartOf)))
@@ -152,7 +153,10 @@ struct MainColumn: View {
     @ViewBuilder
     private var links: some View {
         SectionHeader(title: l.string(.taskDetailLinks)) {
-            GhostButton(title: l.string(.taskDetailLink), icon: .plus) { linking = .any }
+            GhostButton(title: l.string(.taskDetailLink), icon: .plus) { linkingAny = true }
+                .popover(isPresented: $linkingAny, arrowEdge: .bottom) {
+                    LinkPicker(model: model, preset: .any) { linkingAny = false }
+                }
         }
         let groups = model.linkGroups
         if groups.isEmpty {
@@ -566,7 +570,9 @@ struct LinkPicker: View {
 
     private var results: [TaskLinkedBrief] {
         let text = query.trimmingCharacters(in: .whitespaces)
-        let base = all.filter { $0.id != model.taskId }
+        let chosen = side ?? sides.first
+        let linked = Set((model.detail?.links ?? []).filter { $0.typeId == chosen?.typeId }.map(\.task.id))
+        let base = all.filter { $0.id != model.taskId && !linked.contains($0.id) }
         guard !text.isEmpty else { return Array(base.prefix(50)) }
         return Array(base.filter {
             model.vocabulary.reference($0.seriesNumbers, id: $0.id).localizedCaseInsensitiveContains(text) || $0.title.localizedCaseInsensitiveContains(text)
@@ -585,7 +591,7 @@ struct LinkPicker: View {
             .padding(.horizontal, DesignSpacing.toastPadX)
             .padding(.top, DesignSpacing.gap6)
             TextField(l.string(.taskDetailLinkSearch), text: $query)
-                .textFieldStyle(.plain)
+                .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .padding(.horizontal, DesignSpacing.toastPadX)
                 .padding(.vertical, DesignSpacing.gap10)
@@ -626,9 +632,10 @@ struct LinkPicker: View {
         }
         .font(.design(DesignTypography.baseSize))
         .frame(width: 400)
-        .onAppear {
+        .onAppear { side = sides.first }
+        .task {
+            try? await Task.sleep(for: .milliseconds(150))
             focused = true
-            side = sides.first
         }
         .task {
             all = (try? await model.source.search(project: model.project)) ?? []
