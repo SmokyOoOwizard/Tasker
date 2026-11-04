@@ -19,9 +19,11 @@ struct LiveWorkspaceAddress: Hashable, Sendable {
         self.name = name
     }
 
-    init?(status: DaemonStatus) {
-        guard let workspace = status.workspaces.first(where: { $0.state == "open" && $0.key != nil }), let key = workspace.key else { return nil }
-        self.init(port: status.port, key: key, name: URL(fileURLWithPath: workspace.path).lastPathComponent)
+    init?(status: DaemonStatus, path: String? = nil) {
+        guard let workspace = status.workspaces.first(where: { workspace in
+            workspace.state == "open" && workspace.key != nil && (path.map { WorkspacePath.same($0, workspace.path) } ?? true)
+        }), let key = workspace.key else { return nil }
+        self.init(port: status.port, key: key, name: WorkspacePath.name(workspace.path))
     }
 }
 
@@ -38,6 +40,7 @@ final class LiveWorkspace {
     private(set) var connection: LiveConnection = .connecting
     private(set) var lastUpdate: Date?
     private(set) var toasts: [LiveToast] = []
+    private(set) var projects: [ProjectFields]?
 
     @ObservationIgnored private let makeClient: (LiveWorkspaceAddress) -> TaskerAPIClient
     @ObservationIgnored private let reconnect: ReconnectPolicy
@@ -45,6 +48,7 @@ final class LiveWorkspace {
     @ObservationIgnored private let toastDuration: Duration
     @ObservationIgnored private let ownAuthorKey: String
     @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var projectsTask: Task<Void, Never>?
     @ObservationIgnored private var everConnected = false
 
     static let maxToasts = 3
@@ -65,10 +69,20 @@ final class LiveWorkspace {
 
     func follow(_ state: DaemonConnectionState) {
         guard case .running(let status) = state else { return }
-        guard let address = LiveWorkspaceAddress(status: status) else {
+        follow(LiveWorkspaceAddress(status: status))
+    }
+
+    func follow(_ state: DaemonConnectionState, selected path: String?) {
+        guard case .running(let status) = state else { return }
+        follow(path.flatMap { LiveWorkspaceAddress(status: status, path: $0) })
+    }
+
+    private func follow(_ address: LiveWorkspaceAddress?) {
+        guard let address else {
             stop()
-            address = nil
+            self.address = nil
             client = nil
+            projects = nil
             return
         }
         guard address != self.address else { return }
@@ -83,14 +97,22 @@ final class LiveWorkspace {
         connection = .connecting
         everConnected = false
         lastUpdate = nil
+        projects = nil
         task = Task { [weak self] in
             await self?.run(client)
+        }
+        projectsTask = Task { [weak self] in
+            await LiveQuery.follow(client, ProjectsQuery(limit: 200)) { data in
+                self?.projects = data.projects.data
+            }
         }
     }
 
     func stop() {
         task?.cancel()
         task = nil
+        projectsTask?.cancel()
+        projectsTask = nil
     }
 
     func dismiss(_ id: UUID) {
