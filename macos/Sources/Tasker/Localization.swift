@@ -104,6 +104,10 @@ struct Localizer: Sendable {
         value.formatted(.dateTime.day().month(.abbreviated).locale(locale))
     }
 
+    func dateTime(_ value: Date) -> String {
+        value.formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(locale))
+    }
+
     func number(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(0...2)).locale(locale))
     }

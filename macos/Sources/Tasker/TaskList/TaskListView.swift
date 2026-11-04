@@ -4,20 +4,48 @@ import TaskerAPI
 struct TaskListSection: View {
     @Environment(LiveWorkspace.self) private var live
     @Environment(ProjectSelection.self) private var selection
+    @State private var navigator = TaskNavigator()
 
     var body: some View {
         ProjectScope {
             if let client = live.client, let project = selection.current {
-                TaskListScreen(client: client, project: project)
+                TaskWorkArea(client: client, project: project, navigator: navigator)
                     .id(project.id)
             }
         }
+        .onChange(of: selection.current?.id) { navigator.reset() }
+    }
+}
+
+struct TaskWorkArea: View {
+    let client: TaskerAPIClient
+    let project: ProjectFields
+    let navigator: TaskNavigator
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ZStack {
+                TaskListScreen(client: client, project: project, navigator: navigator)
+                    .opacity(navigator.card == nil ? 1 : 0)
+                    .allowsHitTesting(navigator.card == nil)
+                    .accessibilityHidden(navigator.card != nil)
+                if let card = navigator.card {
+                    TaskCardScreen(client: client, project: project.id, task: card, navigator: navigator)
+                }
+            }
+            if navigator.card == nil, let peek = navigator.peek {
+                TaskPeekPanel(client: client, project: project.id, task: peek, navigator: navigator)
+                    .transition(.move(edge: .trailing))
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: navigator.peek)
     }
 }
 
 struct TaskListScreen: View {
     let client: TaskerAPIClient
     let project: ProjectFields
+    let navigator: TaskNavigator
     @Environment(LiveWorkspace.self) private var live
     @Environment(TaskListSettings.self) private var settings
     @Environment(\.localizer) private var l
@@ -38,6 +66,14 @@ struct TaskListScreen: View {
             let model = TaskListModel(project: project.id, source: GraphQLTaskListSource(client: client), settings: settings)
             model.localizer = l
             model.onNotice = { [live] text in live.show(.notice(text)) }
+            model.onOpen = { [navigator] row in navigator.open(row.id) }
+            model.onPeek = { [navigator] row in navigator.togglePeek(row.id) }
+            model.onSelect = { [navigator] row in if navigator.peek != nil { navigator.showPeek(row.id) } }
+            model.onEscape = { [navigator] in
+                guard navigator.peek != nil else { return false }
+                navigator.closePeek()
+                return true
+            }
             self.model = model
             model.start()
         }
