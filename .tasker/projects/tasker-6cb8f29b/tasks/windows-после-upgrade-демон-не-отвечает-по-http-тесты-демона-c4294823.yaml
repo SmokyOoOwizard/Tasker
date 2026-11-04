@@ -1,0 +1,20 @@
+formatVersion: 10
+id: c4294823-b429-4cf3-ab17-33b559a5f92e
+title: 'Windows: после upgrade демон не отвечает по HTTP, тесты демона падают в CI'
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+createdAt: 2026-11-04T02:47:57.6929930+00:00
+updatedAt: 2026-11-04T02:50:04.0216880+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 209
+description: |-
+  Что происходит
+  В CI (.NET tests, windows-latest) на main и на всех PR стабильно падают 4 теста: DaemonUpgradeTests.A_call_in_progress_is_finished_by_the_old_process_and_both_are_shown_in_the_status, A_server_started_as_one_process_is_restarted_by_upgrade_and_is_seamless_afterwards, A_worker_that_crashes_is_started_again_by_the_supervisor и ParallelWorkTests.The_daemon_replaced_on_the_fly_under_load_loses_no_call_and_no_write. На macOS и Linux они проходят.
+
+  Симптом: после замены процесса демона (upgrade, перезапуск упавшего worker) новый процесс держит блокировку и порт, но не отвечает по HTTP — tasker mcp status ждёт 10 секунд и падает: «tasker mcp status has no daemon: lock held True, pid …, port …: TaskCanceledException … HttpClient.Timeout of 10 seconds». Сценарий upgrade стенда тоже падает («upgrade — crashed»).
+
+  Пример прогона: 41755764911 (main, 0cac9fb).
+
+  Что сделать
+  Найти причину (передача слушающего сокета между процессами на Windows, ListenerHandoff / Supervisor в Tasker.Daemon.Host), исправить, добиться стабильно зелёного Windows-прогона.

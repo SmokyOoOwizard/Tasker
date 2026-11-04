@@ -347,7 +347,7 @@ public class EditLockInterfaceTests
         public static async Task<Events> Subscribe(ApiHost api)
         {
             var events = new Events();
-            events._response = await events._http.GetAsync(api.BaseUrl + "/events", HttpCompletionOption.ResponseHeadersRead);
+            events._response = await GraphReads.Subscribe(events._http, api.BaseUrl);
             events._reader = new StreamReader(await events._response.Content.ReadAsStreamAsync());
             Assert.StartsWith(": connected", await events._reader.ReadLineAsync());
             _ = Task.Run(events.Pump);
@@ -360,8 +360,8 @@ public class EditLockInterfaceTests
             {
                 while (await _reader.ReadLineAsync(_stop.Token) is { } line)
                 {
-                    if (line.StartsWith("data:"))
-                        _queue.Writer.TryWrite(JsonNode.Parse(line["data:".Length..])!);
+                    if (GraphReads.Change(line) is { } change)
+                        _queue.Writer.TryWrite(change);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException or IOException)

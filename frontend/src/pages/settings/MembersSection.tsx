@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { api, getAll } from '../../api'
+import { api } from '../../api'
 import { useSession, type User } from '../../auth'
 import Avatar from '../../components/Avatar'
 import { IconTrash } from '../../components/Icons'
@@ -8,19 +8,21 @@ import { IconButton } from '../../components/ui'
 import { useAction } from '../../hooks/useAction'
 import { useLoad } from '../../hooks/useLoad'
 import { useProjects } from '../../projects'
+import { loadMembers, loadUsers } from '../../reads'
 
 /**
  * Участники проекта (только сервер): люди и агенты. Проект видят только участники и админы.
  * Добавить можно любого человека и своего агента (админ — любого агента); последнего человека убрать нельзя.
  */
-function MembersSection({ base }: { base: string }) {
+function MembersSection({ projectId }: { projectId: string }) {
+  const base = `/projects/${projectId}`
   const me = useSession()?.user
   const projects = useProjects()
   const navigate = useNavigate()
   const { data, error: loadError, reload } = useLoad(async () => {
-    const [members, users] = await Promise.all([getAll<User>(`${base}/members`), getAll<User>('/users')])
+    const [members, users] = await Promise.all([loadMembers(projectId), loadUsers()])
     return { members, users }
-  }, [base])
+  }, [projectId])
   const { busy, error, run } = useAction(reload)
   const [userId, setUserId] = useState('')
 

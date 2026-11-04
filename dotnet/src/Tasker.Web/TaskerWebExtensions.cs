@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 using Tasker.Mcp;
+using Tasker.Web.Graph;
 using Tasker.Web.Workspaces;
 
 namespace Tasker.Web;
@@ -44,8 +45,7 @@ public static class TaskerWebExtensions
         api.MapGet("/health", () => Results.Ok(new HealthStatus("ok", mode.ToString())))
             .RespondsOk<HealthStatus>("getHealth");
         api.MapTaskerApi(mode);
-        if (mode == TaskerMode.Local)
-            api.MapWorkspaceEvents();
+        api.MapTaskerGraph();
 
         if (mode == TaskerMode.Server)
             app.MapTaskerMcp(requireAgentToken: true);

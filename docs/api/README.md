@@ -1,6 +1,6 @@
 # OpenAPI-схема REST API Tasker
 
-`openapi.json` — полное описание REST API: сервера (режим Server, вход по JWT), локального демона (режим Local, без входа, адрес `/w/{workspace}/api/…`) и управляющих маршрутов демона (`/daemon/*`, `/ready`, `/health`, секрет в заголовке `X-Tasker-Control`). У каждой операции в `x-tasker-modes` указано, где она есть. Живые события `GET /api/events` (SSE) описаны в операции `streamWorkspaceEvents` и схеме `WorkspaceChange`.
+`openapi.json` — полное описание REST API: сервера (режим Server, вход по JWT), локального демона (режим Local, без входа, адрес `/w/{workspace}/api/…`) и управляющих маршрутов демона (`/daemon/*`, `/ready`, `/health`, секрет в заголовке `X-Tasker-Control`). У каждой операции в `x-tasker-modes` указано, где она есть. Чтение данных и живые изменения идут через GraphQL: операция `executeGraphQL` (`POST /api/graphql`, подписка отвечает потоком `text/event-stream`), схема GraphQL лежит в `graphql/schema.graphql`.
 
 Схема — вход для генераторов клиентов (Swift: swift-openapi-generator, C#: NSwag/Kiota). Версия OpenAPI — 3.0.
 

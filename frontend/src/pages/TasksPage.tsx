@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
-import { api, getAll } from '../api'
+import { api } from '../api'
 import { LockBadge } from '../components/LockBadge'
 import { StatusChip } from '../components/ui'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLocks } from '../hooks/useLocks'
-import type { Page, Status, StatusSet, Task, TaskType } from '../types'
+import { loadProjectSettings, loadTasks } from '../reads'
+import type { Status, Task, TaskType } from '../types'
 import '../styles/forms.css'
 import '../styles/settings.css'
 
@@ -17,29 +18,22 @@ function TasksPage() {
   const { projectId } = useParams()
   const base = `/projects/${projectId}`
   const [shown, setShown] = useState(pageSize)
-  const locks = useLocks(base)
+  const locks = useLocks(projectId!)
 
-  const settings = useLoad(async () => {
-    const [statuses, statusSets, taskTypes] = await Promise.all([
-      getAll<Status>(`${base}/statuses`),
-      getAll<StatusSet>(`${base}/status-sets`),
-      getAll<TaskType>(`${base}/task-types`),
-    ])
-    return { statuses, statusSets, taskTypes }
-  }, [base])
+  const settings = useLoad(() => loadProjectSettings(projectId!), [projectId])
 
   // Первые `shown` задач: при «Показать ещё» и перезагрузке список перечитывается целиком, чтобы не было дыр и повторов.
   const tasks = useLoad(async () => {
     const items: Task[] = []
     let total = 0
     do {
-      const page = await api<Page<Task>>(`${base}/tasks?offset=${items.length}&limit=${Math.min(200, shown - items.length)}`)
+      const page = await loadTasks(projectId!, items.length, Math.min(200, shown - items.length))
       items.push(...page.data)
       total = page.totalCount
       if (page.data.length === 0) break
     } while (items.length < Math.min(shown, total))
     return { items, total }
-  }, [base, shown])
+  }, [projectId, shown])
 
   const reload = () => {
     tasks.reload()

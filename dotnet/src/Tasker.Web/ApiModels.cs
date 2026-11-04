@@ -24,3 +24,9 @@ public sealed record WorkspaceMcpInfo(
     WorkspaceState? WorkspaceState,
     string? Error,
     string AgentHeader);
+
+public sealed record GraphQLRequest(string Query, string? OperationName, Dictionary<string, object?>? Variables);
+
+public sealed record GraphQLError(string Message, object[]? Path, Dictionary<string, object?>? Extensions);
+
+public sealed record GraphQLResponse(Dictionary<string, object?>? Data, GraphQLError[]? Errors);

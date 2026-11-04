@@ -1,0 +1,599 @@
+schema {
+  query: Query
+  subscription: Subscription
+}
+
+type Query {
+  registration: Registration!
+  me: User!
+  users(offset: Int, limit: Int): UserPage!
+  user(id: UUID!): User
+  agents(offset: Int, limit: Int): UserPage!
+  agent(id: UUID!): User
+  agentTokens(agentId: UUID!, offset: Int, limit: Int): AgentTokenPage
+  projects(offset: Int, limit: Int): ProjectPage!
+  project(id: UUID!): Project
+  workspaceProblems(offset: Int, limit: Int): WorkspaceProblemPage!
+  workspaceMcp: WorkspaceMcp!
+}
+
+type Subscription {
+  workspaceChanges: WorkspaceChange!
+}
+
+type AgentToken {
+  id: UUID!
+  agentId: UUID!
+  name: String!
+  prefix: String!
+  createdAt: DateTime!
+  expiresAt: DateTime
+  lastUsedAt: DateTime
+  revokedAt: DateTime
+}
+
+type AgentTokenPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [AgentToken!]!
+}
+
+type Board {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  statusSetIds: [UUID!]!
+  columns: [BoardColumn!]!
+  version: String!
+}
+
+type BoardColumn {
+  id: UUID!
+  name: String!
+  statusIds: [UUID!]!
+  fieldConditions: [ColumnFieldFilter!]!
+  dropStatuses: [DropStatus!]!
+}
+
+type BoardPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [Board!]!
+}
+
+type ColumnFieldFilter {
+  fieldId: UUID!
+  operator: FieldOperator!
+  value: String
+}
+
+type DropStatus {
+  statusSetId: UUID!
+  statusId: UUID!
+}
+
+type FieldDefinition {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  type: FieldType!
+  multiple: Boolean!
+  enumId: UUID
+  version: String!
+}
+
+type FieldDefinitionPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [FieldDefinition!]!
+}
+
+type FieldEnum {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  values: [FieldEnumValue!]!
+  version: String!
+}
+
+type FieldEnumPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [FieldEnum!]!
+}
+
+type FieldEnumValue {
+  id: UUID!
+  name: String!
+}
+
+type LinkedTask {
+  id: UUID!
+  title: String!
+  statusId: UUID!
+  seriesNumbers: [TaskSeriesNumber!]!
+}
+
+type LinkType {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  outwardName: String!
+  inwardName: String!
+  version: String!
+  allowCycles: Boolean!
+  hierarchical: Boolean!
+  isSymmetric: Boolean!
+}
+
+type LinkTypePage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [LinkType!]!
+}
+
+type LockInfo {
+  entity: LockedEntity!
+  id: UUID!
+  holder: String!
+  mine: Boolean!
+  acquiredAt: DateTime!
+  expiresAt: DateTime!
+}
+
+type LockInfoPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [LockInfo!]!
+}
+
+type NumberConflict {
+  seriesId: UUID!
+  number: Int!
+  taskIds: [UUID!]!
+}
+
+type OwnField {
+  name: String!
+  type: FieldType!
+  required: Boolean!
+  multiple: Boolean!
+  enumId: UUID
+}
+
+type PrefixConflict {
+  prefix: String!
+  seriesIds: [UUID!]!
+}
+
+type Project {
+  id: UUID!
+  name: String!
+  createdAt: DateTime!
+  version: String!
+  stats: ProjectStats!
+  statuses(offset: Int, limit: Int, descriptionLength: Int): StatusListItemPage!
+  status(id: UUID!): Status
+  statusSets(offset: Int, limit: Int): StatusSetPage!
+  statusSet(id: UUID!): StatusSet
+  taskTypes(offset: Int, limit: Int, descriptionLength: Int): TaskTypeListItemPage!
+  taskType(id: UUID!): TaskType
+  fields(offset: Int, limit: Int): FieldDefinitionPage!
+  field(id: UUID!): FieldDefinition
+  enums(offset: Int, limit: Int): FieldEnumPage!
+  enum(id: UUID!): FieldEnum
+  linkTypes(offset: Int, limit: Int): LinkTypePage!
+  linkType(id: UUID!): LinkType
+  tasks(
+    statusIds: [UUID!]
+    typeIds: [UUID!]
+    seriesIds: [UUID!]
+    field: [String!]
+    sort: String
+    offset: Int
+    limit: Int
+    descriptionLength: Int
+  ): TaskListItemPage!
+  taskTree(
+    statusIds: [UUID!]
+    typeIds: [UUID!]
+    seriesIds: [UUID!]
+    field: [String!]
+    sort: String
+    offset: Int
+    limit: Int
+    descriptionLength: Int
+  ): TaskTreeList!
+  resolveTasks(ref: String!): [TaskItem!]!
+  task(id: UUID!): TaskDetails
+  taskLinks(id: UUID!): [TaskLinkView!]
+  seriesList(offset: Int, limit: Int): SeriesPage!
+  series(id: UUID!): Series
+  seriesHealth: SeriesHealth!
+  boards(offset: Int, limit: Int): BoardPage!
+  board(id: UUID!): Board
+  columnTasks(
+    boardId: UUID!
+    columnId: UUID!
+    field: [String!]
+    sort: String
+    offset: Int
+    limit: Int
+    descriptionLength: Int
+  ): TaskListItemPage
+  locks(offset: Int, limit: Int): LockInfoPage!
+  lock(entity: LockedEntity!, id: UUID!): LockInfo
+  members(offset: Int, limit: Int): UserPage!
+}
+
+type ProjectPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [Project!]!
+}
+
+type ProjectStats {
+  tasks: Int!
+  boards: Int!
+  statuses: Int!
+  statusSets: Int!
+  taskTypes: Int!
+  series: Int!
+  linkTypes: Int!
+}
+
+type Registration {
+  open: Boolean!
+}
+
+type Series {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  prefix: String!
+  version: String!
+}
+
+type SeriesHealth {
+  numberConflicts: [NumberConflict!]!
+  prefixConflicts: [PrefixConflict!]!
+  tasksWithInvalidSeries: Int!
+  unreadableSeriesFiles: Int!
+  needsAttention: Boolean!
+}
+
+type SeriesPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [Series!]!
+}
+
+type Status {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  color: String!
+  description: String!
+  version: String!
+}
+
+type StatusListItem {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  color: String!
+  description: String!
+  version: String!
+  descriptionTruncated: Boolean!
+  descriptionLength: Int!
+}
+
+type StatusListItemPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [StatusListItem!]!
+}
+
+type StatusSet {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  statusIds: [UUID!]!
+  version: String!
+}
+
+type StatusSetPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [StatusSet!]!
+}
+
+type TaskDetails {
+  id: UUID!
+  projectId: UUID!
+  title: String!
+  description: String
+  typeId: UUID!
+  statusId: UUID!
+  seriesNumbers: [TaskSeriesNumber!]!
+  links: [TaskLink!]!
+  fields: [TaskField!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: String!
+  fieldViews: [TaskFieldView!]!
+  linkViews: [TaskLinkView!]!
+  linkCount: Int!
+}
+
+type TaskField {
+  fieldId: UUID!
+  values: [String!]!
+  own: OwnField
+}
+
+type TaskFieldView {
+  fieldId: UUID!
+  name: String!
+  type: FieldType!
+  multiple: Boolean!
+  enumId: UUID
+  required: Boolean!
+  source: TaskFieldSource!
+  values: [String!]!
+  texts: [String!]!
+}
+
+type TaskItem {
+  id: UUID!
+  projectId: UUID!
+  title: String!
+  description: String
+  typeId: UUID!
+  statusId: UUID!
+  seriesNumbers: [TaskSeriesNumber!]!
+  links: [TaskLink!]!
+  fields: [TaskField!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: String!
+}
+
+type TaskLink {
+  typeId: UUID!
+  targetId: UUID!
+}
+
+type TaskLinkView {
+  typeId: UUID!
+  typeName: String!
+  direction: LinkDirection!
+  name: String!
+  task: LinkedTask!
+}
+
+type TaskListItem {
+  id: UUID!
+  projectId: UUID!
+  title: String!
+  description: String
+  typeId: UUID!
+  statusId: UUID!
+  seriesNumbers: [TaskSeriesNumber!]!
+  links: [TaskLink!]!
+  fields: [TaskField!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: String!
+  descriptionTruncated: Boolean!
+  descriptionLength: Int!
+  linksCount: Int!
+  parentIds: [UUID!]!
+  childCount: Int!
+}
+
+type TaskListItemPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [TaskListItem!]!
+}
+
+type TaskSeriesNumber {
+  seriesId: UUID!
+  number: Int!
+}
+
+type TaskTreeItem {
+  id: UUID!
+  projectId: UUID!
+  title: String!
+  description: String
+  typeId: UUID!
+  statusId: UUID!
+  seriesNumbers: [TaskSeriesNumber!]!
+  links: [TaskLink!]!
+  fields: [TaskField!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: String!
+  descriptionTruncated: Boolean!
+  descriptionLength: Int!
+  linksCount: Int!
+  parentIds: [UUID!]!
+  childCount: Int!
+  depth: Int!
+  repeated: Boolean!
+}
+
+type TaskTreeList {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [TaskTreeItem!]!
+  topLevelCount: Int!
+}
+
+type TaskType {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  description: String!
+  statusSetId: UUID!
+  fields: [TaskTypeField!]!
+  version: String!
+}
+
+type TaskTypeField {
+  fieldId: UUID!
+  required: Boolean!
+}
+
+type TaskTypeListItem {
+  id: UUID!
+  projectId: UUID!
+  name: String!
+  description: String!
+  statusSetId: UUID!
+  fields: [TaskTypeField!]!
+  version: String!
+  descriptionTruncated: Boolean!
+  descriptionLength: Int!
+}
+
+type TaskTypeListItemPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [TaskTypeListItem!]!
+}
+
+type User {
+  id: UUID!
+  username: String!
+  kind: UserKind!
+  ownerId: UUID
+  email: String
+  isAdmin: Boolean!
+  createdAt: DateTime!
+  version: String!
+  isAgent: Boolean!
+}
+
+type UserPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [User!]!
+}
+
+type WorkspaceChange {
+  entity: String!
+  projectId: UUID
+  id: UUID
+}
+
+type WorkspaceMcp {
+  daemon: DaemonState!
+  port: Int
+  url: String
+  workspace: String
+  workspaceState: WorkspaceState
+  error: String
+  agentHeader: String!
+}
+
+type WorkspaceProblem {
+  path: String!
+  error: String!
+}
+
+type WorkspaceProblemPage {
+  totalCount: Int!
+  offset: Int!
+  limit: Int!
+  data: [WorkspaceProblem!]!
+}
+
+enum DaemonState {
+  stopped
+  starting
+  running
+  failed
+}
+
+enum FieldOperator {
+  equal
+  notEqual
+  greater
+  greaterOrEqual
+  less
+  lessOrEqual
+  set
+  unset
+  attached
+  detached
+}
+
+enum FieldType {
+  string
+  int
+  float
+  bool
+  date
+  enum
+}
+
+enum LinkDirection {
+  outward
+  inward
+}
+
+enum LockedEntity {
+  project
+  task
+  taskType
+  status
+  statusSet
+  board
+  series
+  user
+  linkType
+  field
+  enum
+}
+
+enum TaskFieldSource {
+  type
+  extra
+  own
+}
+
+enum UserKind {
+  human
+  agent
+}
+
+enum WorkspaceState {
+  opening
+  open
+  failed
+}
+
+"The `DateTime` scalar type represents a date and time with time zone offset information."
+scalar DateTime
+  @specifiedBy(url: "https://scalars.graphql.org/chillicream/date-time.html")
+
+"The `UUID` scalar type represents a Universally Unique Identifier (UUID) as defined by RFC 9562."
+scalar UUID
+  @specifiedBy(url: "https://scalars.graphql.org/chillicream/uuid.html")

@@ -6,7 +6,6 @@ using Tasker.Core;
 using Tasker.Core.Agents;
 using Tasker.Core.Auth;
 using Tasker.Core.Boards;
-using Tasker.Core.Dto;
 using Tasker.Core.Fields;
 using Tasker.Core.Links;
 using Tasker.Core.Locks;
@@ -15,8 +14,6 @@ using Tasker.Core.Statuses;
 using Tasker.Core.Tasks;
 using Tasker.Core.TaskSeries;
 using Tasker.Core.Users;
-using Tasker.Core.Workspace;
-using Tasker.Daemon;
 using Tasker.Web.Auth;
 
 namespace Tasker.Web;
@@ -27,7 +24,6 @@ namespace Tasker.Web;
 /// Изменение — PATCH (поля null не меняются), удаление — DELETE (204; 409, если сущность используется).
 /// Оба требуют версию, которую видел клиент: PATCH — в теле (<c>version</c>), DELETE — в <c>?version=</c>.
 /// Если запись уже изменил кто-то другой — 409 с кодом <c>modified</c> (см. Tasker.Core.Versioning).
-/// Списки — страницами <c>{totalCount, offset, limit, data}</c>: <c>?offset=&amp;limit=</c>, limit до <see cref="Page.MaxLimit"/>.
 /// </summary>
 internal static class TaskerApi
 {
@@ -57,46 +53,9 @@ internal static class TaskerApi
         MapUsers(root, mode);
         MapAgents(root, mode);
 
-        // Файлы .tasker, которые не удалось прочитать (например, конфликт слияния git): их сущностей нет в списках.
-        // Есть только при хранении в файлах; иначе список пустой.
-        if (mode != TaskerMode.Server)
-        {
-            root.MapGet("/workspace/problems", async (IServiceProvider services, int? offset, int? limit, CancellationToken ct) =>
-                Results.Ok(services.GetService<IWorkspaceIndex>() is { } workspace
-                    ? await workspace.GetProblems(Page.Of(offset, limit), ct)
-                    : Page.Of(offset, limit).Apply(Array.Empty<WorkspaceProblem>())))
-                .RespondsOk<ListDto<WorkspaceProblem>>("listWorkspaceProblems");
-
-            // MCP этой рабочей области: его обслуживает демон tasker-mcpd (десктоп своего MCP не поднимает). Состояние демона, адрес
-            // (общий для всех областей) и имя этой области для агента (аргумент workspace), если демон её открыл.
-            root.MapGet("/workspace/mcp", async Task<IResult> (HttpContext context, IServiceProvider services, CancellationToken ct) =>
-            {
-                var feature = context.Features.Get<Workspaces.WorkspaceFeature>();
-                var mcp = feature != null && services.GetService<IDaemonMcp>() is { } daemon
-                    ? await daemon.Find(feature.Location, ct)
-                    : new WorkspaceMcp(DaemonState.Stopped, null, null, null, null, null);
-
-                return Results.Ok(new WorkspaceMcpInfo(mcp.Daemon, mcp.Port, mcp.Url, mcp.Workspace, mcp.WorkspaceState, mcp.Error, DaemonClient.AgentHeader));
-            })
-                .RespondsOk<WorkspaceMcpInfo>("getWorkspaceMcp");
-        }
-
-        root.MapGet("/projects", async (ProjectService service, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<Project>>("listProjects");
-
         root.MapPost("/projects", async (ProjectService service, CreateProject command, CancellationToken ct) =>
             Created(await service.Create(command, ct)))
             .RespondsCreated<Project>("createProject");
-
-        root.MapGet("/projects/{projectId:guid}", async (ProjectService service, Guid projectId, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, ct)))
-            .RespondsOk<Project>("getProject");
-
-        // Сколько чего в проекте (для подтверждения удаления). Недоступный проект — 404, как и сам проект.
-        root.MapGet("/projects/{projectId:guid}/stats", async (ProjectService service, Guid projectId, CancellationToken ct) =>
-            OkOrNotFound(await service.GetStats(projectId, ct)))
-            .RespondsOk<ProjectStats>("getProjectStats");
 
         root.MapPatch("/projects/{projectId:guid}", async (ProjectService service, Guid projectId, UpdateProject command, CancellationToken ct) =>
             OkOrNotFound(await service.Update(projectId, command, ct)))
@@ -113,16 +72,7 @@ internal static class TaskerApi
         if (mode == TaskerMode.Server)
             MapMembers(project);
 
-        // description — необязательное описание статуса (в POST/PATCH и в ответах; пустая строка в PATCH очищает). ?descriptionLength= в списке — как в /tasks:
-        // не задан или -1 — полное, 0 — без описания, N — первые N символов (descriptionTruncated, descriptionLength — полная длина); меньше -1 — 400.
-        project.MapGet("/statuses", async (StatusService service, Guid projectId, int? offset, int? limit, int? descriptionLength, CancellationToken ct) =>
-            Results.Ok(await service.List(projectId, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct)))
-            .RespondsOk<ListDto<StatusListItem>>("listStatuses");
-
-        project.MapGet("/statuses/{id:guid}", async (IStatusStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)))
-            .RespondsOk<Status>("getStatus");
-
+        // description — необязательное описание статуса (в POST/PATCH и в ответах; пустая строка в PATCH очищает).
         project.MapPost("/statuses", async (StatusService service, Guid projectId, CreateStatus command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
             .RespondsCreated<Status>("createStatus");
@@ -134,14 +84,6 @@ internal static class TaskerApi
         project.MapDelete("/statuses/{id:guid}", async (StatusService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
             NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
             .RespondsNoContent("deleteStatus");
-
-        project.MapGet("/status-sets", async (IStatusSetStorage storage, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<StatusSet>>("listStatusSets");
-
-        project.MapGet("/status-sets/{id:guid}", async (IStatusSetStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)))
-            .RespondsOk<StatusSet>("getStatusSet");
 
         project.MapPost("/status-sets", async (StatusSetService service, Guid projectId, CreateStatusSet command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
@@ -155,15 +97,7 @@ internal static class TaskerApi
             NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
             .RespondsNoContent("deleteStatusSet");
 
-        // description — как у статусов; ?descriptionLength= в списке — так же.
-        project.MapGet("/task-types", async (TaskTypeService service, Guid projectId, int? offset, int? limit, int? descriptionLength, CancellationToken ct) =>
-            Results.Ok(await service.List(projectId, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct)))
-            .RespondsOk<ListDto<TaskTypeListItem>>("listTaskTypes");
-
-        project.MapGet("/task-types/{id:guid}", async (ITaskTypeStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)))
-            .RespondsOk<TaskType>("getTaskType");
-
+        // description — как у статусов.
         project.MapPost("/task-types", async (TaskTypeService service, Guid projectId, CreateTaskType command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
             .RespondsCreated<TaskType>("createTaskType");
@@ -183,14 +117,6 @@ internal static class TaskerApi
         // если значения нельзя сохранить как есть — 409 in_use с числом задач, пока в теле нет choice {clearUnconvertible, several: keepFirst|clear,
         // mapping: [{from, to}]}.
         // Поле, которое подключено к типу или записано у задачи, и перечисление, на которое ссылаются поля, удалить нельзя (409 in_use).
-        project.MapGet("/fields", async (FieldService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<FieldDefinition>>("listFields");
-
-        project.MapGet("/fields/{id:guid}", async (FieldService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, id, ct)))
-            .RespondsOk<FieldDefinition>("getField");
-
         project.MapPost("/fields", async (FieldService service, Guid projectId, CreateField command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
             .RespondsCreated<FieldDefinition>("createField");
@@ -206,14 +132,6 @@ internal static class TaskerApi
         // PATCH заменяет список значений целиком; удаляемое значение, выбранное у задач, — только с выбором в теле:
         // removed {clear: true} или removed {reassignTo: <id оставшегося значения>}; без выбора — 409 in_use с числом задач.
         // Ответ — перечисление и affectedTasks (число переписанных задач).
-        project.MapGet("/enums", async (FieldEnumService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<FieldEnum>>("listFieldEnums");
-
-        project.MapGet("/enums/{id:guid}", async (FieldEnumService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, id, ct)))
-            .RespondsOk<FieldEnum>("getFieldEnum");
-
         project.MapPost("/enums", async (FieldEnumService service, Guid projectId, CreateFieldEnum command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
             .RespondsCreated<FieldEnum>("createFieldEnum");
@@ -228,14 +146,6 @@ internal static class TaskerApi
 
         // Типы связей между задачами (Blocks, Duplicate… — по умолчанию как в Jira): у каждого два названия, по одному на сторону связи.
         // В проекте без типов они создаются при первом обращении.
-        project.MapGet("/link-types", async (LinkTypeService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<LinkType>>("listLinkTypes");
-
-        project.MapGet("/link-types/{id:guid}", async (LinkTypeService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, id, ct)))
-            .RespondsOk<LinkType>("getLinkType");
-
         project.MapPost("/link-types", async (LinkTypeService service, Guid projectId, CreateLinkType command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
             .RespondsCreated<LinkType>("createLinkType");
@@ -248,33 +158,6 @@ internal static class TaskerApi
         project.MapDelete("/link-types/{id:guid}", async (LinkTypeService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
             NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
             .RespondsNoContent("deleteLinkType");
-
-        // ?statusId=, ?typeId=, ?seriesId= (серия: задачи, у которых есть номер в ней): можно повторять (?statusId=A&statusId=B) — значения одного параметра по ИЛИ, разные параметры
-        // (статус, тип, серия, field) по И; одно значение работает как раньше (TaskFilter.Of). ?field=Имя=значение (можно повторять, условия по И): условие по полю каталога или собственному полю задач (то же имя и тип) —
-        // = и != (любой тип), > >= < <= (int, float, date; в URL знаки кодируются), Имя:set|unset|attached|detached (TaskService.ParseFieldFilters).
-        // Неверное имя, оператор или значение — 400. ?sort=: порядок — ключи через запятую, «-» перед ключом — по убыванию
-        // (status,-updated,Имя поля; TaskService.ParseSort); задачи без значения — в конце, равные — по времени создания; неверный ключ — 400. ?descriptionLength=: описание в записях списка — -1 или не задан: полное (как раньше),
-        // 0: без описания, N: первые N символов (descriptionTruncated, descriptionLength — полная длина, linksCount — число связей); меньше -1 — 400.
-        // Иерархия (иерархические типы связей, TaskService.ListTree): в каждой записи parentIds (id родителей) и childCount (число дочерних); список по умолчанию плоский,
-        // чтобы не менять клиентов. ?flat=false — строки деревом: эпик, под ним его дочерние (у записи depth и repeated — повтор под вторым родителем), offset/limit — по верхнему
-        // уровню (поддеревья целиком), totalCount — уникальные задачи, topLevelCount — задачи верхнего уровня.
-        project.MapGet("/tasks", async (TaskService service, Guid projectId, Guid[]? statusId, Guid[]? typeId, Guid[]? seriesId, string[]? field, int? offset, int? limit, int? descriptionLength, string? sort, bool? flat, CancellationToken ct) =>
-            flat == false
-                ? Results.Ok(await service.ListTree(projectId, TaskFilter.Of(typeId, statusId, seriesId), field, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct, sort))
-                : Results.Ok(await service.List(projectId, TaskFilter.Of(typeId, statusId, seriesId), field, Page.Of(offset, limit),
-                    DescriptionPreview.Check(descriptionLength), ct, sort)))
-            .RespondsOk<ListDto<TaskListItem>>("listTasks");
-
-        // Задачи по ссылке: Guid или «ПРЕФИКС-номер» (TSK-5). При дубликате номера — несколько. Неверная ссылка — 400.
-        // Маршрут литеральный, а {id:guid} слова «resolve» не примет, так что они не пересекаются.
-        project.MapGet("/tasks/resolve", async (TaskService service, Guid projectId, string? @ref, CancellationToken ct) =>
-            Results.Ok(await service.Resolve(projectId, @ref ?? "", ct)))
-            .RespondsOk<TaskItem[]>("resolveTasks");
-
-        // Одна задача — вместе с видом её полей (fieldViews: определения, источник, названия значений enum) и связями с обеих сторон (linkViews, linkCount); в списках их нет.
-        project.MapGet("/tasks/{id:guid}", async (TaskService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.Describe(projectId, id, ct)))
-            .RespondsOk<TaskDetails>("getTask");
 
         // Значения полей и дополнительные/собственные поля — в теле: fields {values, addFields, newOwnFields, removeFields}.
         project.MapPost("/tasks", async (TaskService service, Guid projectId, CreateTask command, CancellationToken ct) =>
@@ -305,13 +188,8 @@ internal static class TaskerApi
                 OkOrNotFound(await service.Renumber(projectId, id, seriesId, command.To, command.Version, ct)))
             .RespondsOk<TaskItem>("renumberTask");
 
-        // Связи задачи: GET — все, и исходящие, и входящие, с названием типа со стороны этой задачи («blocks» / «is blocked by»).
-        // POST добавляет исходящую связь, DELETE (?typeId=&targetId=) убирает; version — версия этой задачи, необязательна.
+        // Связи задачи: POST добавляет исходящую связь, DELETE (?typeId=&targetId=) убирает; version — версия этой задачи, необязательна.
         // Возвращают изменённую задачу. Связи только внутри проекта; задача-цель при этом не меняется.
-        project.MapGet("/tasks/{id:guid}/links", async (TaskLinkService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetLinks(projectId, id, ct)))
-            .RespondsOk<TaskLinkView[]>("getTaskLinks");
-
         project.MapPost("/tasks/{id:guid}/links", async (TaskLinkService service, Guid projectId, Guid id, AddTaskLink command, CancellationToken ct) =>
             OkOrNotFound(await service.Add(projectId, id, command.TypeId, command.TargetId, command.Version, ct)))
             .RespondsOk<TaskItem>("addTaskLink");
@@ -319,19 +197,6 @@ internal static class TaskerApi
         project.MapDelete("/tasks/{id:guid}/links", async (TaskLinkService service, Guid projectId, Guid id, Guid typeId, Guid targetId, string? version, CancellationToken ct) =>
             OkOrNotFound(await service.Remove(projectId, id, typeId, targetId, version, ct)))
             .RespondsOk<TaskItem>("removeTaskLink");
-
-        // Серии проекта. /series/health — литерал, {id:guid} его не перехватывает.
-        project.MapGet("/series", async (ISeriesStorage storage, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<Series>>("listSeriesList");
-
-        project.MapGet("/series/health", async (SeriesHealthService health, Guid projectId, CancellationToken ct) =>
-            Results.Ok(await health.Check(projectId, ct)))
-            .RespondsOk<SeriesHealth>("getSeriesHealth");
-
-        project.MapGet("/series/{id:guid}", async (ISeriesStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)))
-            .RespondsOk<Series>("getSeries");
 
         project.MapPost("/series", async (SeriesService service, Guid projectId, CreateSeries command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
@@ -346,14 +211,6 @@ internal static class TaskerApi
             NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
             .RespondsNoContent("deleteSeries");
 
-        project.MapGet("/boards", async (IBoardStorage storage, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<Board>>("listBoards");
-
-        project.MapGet("/boards/{id:guid}", async (IBoardStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)))
-            .RespondsOk<Board>("getBoard");
-
         project.MapPost("/boards", async (BoardService service, Guid projectId, CreateBoard command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))
             .RespondsCreated<Board>("createBoard");
@@ -366,12 +223,6 @@ internal static class TaskerApi
             NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
             .RespondsNoContent("deleteBoard");
 
-        // Задачи колонки грузятся постранично и отдельно для каждой колонки. ?field=… — срез по полям, ?sort=… — порядок внутри колонки, ?descriptionLength= — усечение описаний, как в /tasks.
-        project.MapGet("/boards/{id:guid}/columns/{columnId:guid}/tasks",
-            async (BoardService boards, Guid projectId, Guid id, Guid columnId, string[]? field, int? offset, int? limit, int? descriptionLength, string? sort, CancellationToken ct) =>
-                OkOrNotFound(await boards.GetColumnTasks(projectId, id, columnId, Page.Of(offset, limit), ct, field, DescriptionPreview.Check(descriptionLength), sort)))
-            .RespondsOk<ListDto<TaskListItem>>("listBoardColumnTasks");
-
         // Перенос задачи в колонку: статус берётся из правила переноса колонки. Возвращает изменённую задачу.
         project.MapPost("/boards/{id:guid}/columns/{columnId:guid}/move",
             async (BoardService boards, Guid projectId, Guid id, Guid columnId, MoveTask command, CancellationToken ct) =>
@@ -383,17 +234,12 @@ internal static class TaskerApi
 
     /// <summary>
     /// Блокировка на время правки (см. Tasker.Core.Locks): <c>POST …/lock</c> берёт её или продлевает свою,
-    /// <c>GET</c> показывает, <c>DELETE</c> снимает свою (204, даже если снимать было нечего).
+    /// <c>DELETE</c> снимает свою (204, даже если снимать было нечего).
     /// Занято другим — 409 с кодом <c>locked</c> и <c>heldBy</c>. Для проекта — <c>/projects/{id}/lock</c>.
     /// Пока блокировку держит другой, изменить и удалить сущность нельзя; свободную можно, и без блокировки.
     /// </summary>
     private static void MapLocks(RouteGroupBuilder project)
     {
-        // Все действующие блокировки проекта — для индикаторов «правит Иван» в списках.
-        project.MapGet("/locks", async (EntityLockService locks, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(Page.Of(offset, limit).Apply(await locks.GetByProject(projectId, ct))))
-            .RespondsOk<ListDto<LockInfo>>("listProjectLocks");
-
         MapLock(project, "/lock", LockedEntity.Project);
         MapLock(project, "/tasks/{id:guid}/lock", LockedEntity.Task);
         MapLock(project, "/task-types/{id:guid}/lock", LockedEntity.TaskType);
@@ -422,10 +268,6 @@ internal static class TaskerApi
             OkOrNotFound(await locks.Acquire(projectId, entity, IdOf(http, entity), ct)))
             .RespondsOk<LockInfo>("acquire" + name + "Lock");
 
-        project.MapGet(pattern, async (HttpContext http, EntityLockService locks, CancellationToken ct) =>
-            OkOrNotFound(await locks.Get(entity, IdOf(http, entity), ct)))
-            .RespondsOk<LockInfo>("get" + name + "Lock");
-
         project.MapDelete(pattern, async (HttpContext http, EntityLockService locks, CancellationToken ct) =>
         {
             await locks.Release(entity, IdOf(http, entity), ct);
@@ -437,11 +279,6 @@ internal static class TaskerApi
     /// <summary>Вход (только сервер). Регистрация открыта, только пока на сервере нет ни одного пользователя.</summary>
     private static void MapAuth(IEndpointRouteBuilder anonymous, IEndpointRouteBuilder secured)
     {
-        // Экран входа: показывать ли форму регистрации первого админа.
-        anonymous.MapGet("/auth/registration", async (IUserStorage users, CancellationToken ct) =>
-            Results.Ok(new AuthRegistration(await users.Count(ct: ct) == 0)))
-            .RespondsOk<AuthRegistration>("getRegistration");
-
         anonymous.MapPost("/auth/register", async (AuthService auth, RegisterUser command, CancellationToken ct) =>
             Created(await auth.Register(command, ct)))
             .RespondsCreated<AuthSession>("register");
@@ -465,10 +302,6 @@ internal static class TaskerApi
             return Results.NoContent();
         })
             .RespondsNoContent("logout");
-
-        secured.MapGet("/auth/me", async (UserService users, CancellationToken ct) =>
-            Results.Ok(await users.GetCurrent(ct)))
-            .RespondsOk<User>("getCurrentUser");
     }
 
     private static IResult Unauthorized(string error) =>
@@ -480,14 +313,6 @@ internal static class TaskerApi
     /// </summary>
     private static void MapUsers(IEndpointRouteBuilder root, TaskerMode mode)
     {
-        root.MapGet("/users", async (IUserStorage storage, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(null, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<User>>("listUsers");
-
-        root.MapGet("/users/{id:guid}", async (IUserStorage storage, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(id, ct)))
-            .RespondsOk<User>("getUser");
-
         root.MapPost("/users", async (UserService service, CreateUser command, CancellationToken ct) =>
             Created(await service.Create(command, ct)))
             .RespondsCreated<User>("createUser");
@@ -515,14 +340,6 @@ internal static class TaskerApi
     /// </summary>
     private static void MapAgents(IEndpointRouteBuilder root, TaskerMode mode)
     {
-        root.MapGet("/agents", async (AgentService agents, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await agents.GetRange(Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<User>>("listAgents");
-
-        root.MapGet("/agents/{id:guid}", async (AgentService agents, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await agents.GetById(id, ct)))
-            .RespondsOk<User>("getAgent");
-
         root.MapPost("/agents", async (AgentService agents, CreateAgent command, CancellationToken ct) =>
             Created(await agents.Create(command, ct)))
             .RespondsCreated<User>("createAgent");
@@ -537,10 +354,6 @@ internal static class TaskerApi
 
         if (mode != TaskerMode.Server)
             return;
-
-        root.MapGet("/agents/{id:guid}/tokens", async (AgentService agents, Guid id, int? offset, int? limit, CancellationToken ct) =>
-            OkOrNotFound(await agents.GetTokens(id, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<AgentToken>>("listAgentTokens");
 
         // Значение токена — только в этом ответе: сохраняется лишь его хэш.
         root.MapPost("/agents/{id:guid}/tokens", async (AgentService agents, Guid id, CreateAgentToken command, CancellationToken ct) =>
@@ -557,10 +370,6 @@ internal static class TaskerApi
     /// <summary>Участники проекта (только сервер). Доступ к проекту уже проверен фильтром группы.</summary>
     private static void MapMembers(IEndpointRouteBuilder project)
     {
-        project.MapGet("/members", async (ProjectMemberService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
-            .RespondsOk<ListDto<User>>("listProjectMembers");
-
         project.MapPost("/members", async (ProjectMemberService service, Guid projectId, AddProjectMember command, CancellationToken ct) =>
             Created(await service.Add(projectId, command, ct)))
             .RespondsCreated<User>("addProjectMember");
@@ -607,7 +416,7 @@ internal static class TaskerApi
         }
     }
 
-    private static string ConflictCodeName(ConflictCode code) => code switch
+    internal static string ConflictCodeName(ConflictCode code) => code switch
     {
         ConflictCode.InUse => "in_use",
         ConflictCode.Modified => "modified",

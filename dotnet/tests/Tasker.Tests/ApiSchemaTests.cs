@@ -66,7 +66,7 @@ public class ApiSchemaTests
             .ToArray();
 
         Assert.All(routes, route => Assert.Contains(route, described));
-        Assert.True(routes.Length > 100, $"only {routes.Length} routes found");
+        Assert.True(routes.Length > 60, $"only {routes.Length} routes found");
     }
 
     [Fact]

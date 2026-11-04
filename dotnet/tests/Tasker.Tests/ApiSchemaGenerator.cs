@@ -26,9 +26,6 @@ internal static class ApiSchemaGenerator
 
     private sealed record Surface(JsonObject Document, string[] Routes, HashSet<string> Secured);
 
-    public static readonly string[] WorkspaceEntities =
-        ["project", "task", "taskType", "linkType", "field", "enum", "status", "statusSet", "board", "series", "user", "lock", "unknown"];
-
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     public static async Task<string> Build()
@@ -78,11 +75,6 @@ internal static class ApiSchemaGenerator
             {
                 switch (operation.OperationId)
                 {
-                    case "listTasks":
-                        var tree = await context.GetOrCreateSchemaAsync(typeof(TaskTreeList), null, ct);
-                        var flat = operation.Responses!["200"].Content!["application/json"];
-                        flat.Schema = new OpenApiSchema { OneOf = [flat.Schema!, tree] };
-                        break;
                     case "updateTaskType":
                         await Cascade(operation, context, typeof(TaskType), ct);
                         break;
@@ -278,7 +270,7 @@ internal static class ApiSchemaGenerator
             }
         };
 
-        Hoist(document);
+        Deduplicate(document["paths"]!, (JsonObject)document["components"]!["schemas"]!, null, top: true);
         RequireResponseProperties(document);
         Finish(document);
         Prune(document);
@@ -288,7 +280,7 @@ internal static class ApiSchemaGenerator
     private const string Description =
         "REST API of Tasker. The same API is served by the Tasker server (Server mode, JWT sign-in) and by the local daemon (Local mode, no sign-in, loopback only; every request is addressed to one workspace through the /w/{workspace} prefix). " +
         "x-tasker-modes on an operation lists where it exists: server, local, daemon (control interface of the daemon, which has its own address and secret). " +
-        "Lists are pages {totalCount, offset, limit, data}. PATCH changes only the fields that are sent (null or absent keep the value) and needs the version the client saw; DELETE takes it in the version query parameter. " +
+        "Data is read through GraphQL (operation executeGraphQL, schema graphql/schema.graphql); this REST API changes data (POST, PATCH, DELETE), signs in, reports health and controls the daemon. PATCH changes only the fields that are sent (null or absent keep the value) and needs the version the client saw; DELETE takes it in the version query parameter. " +
         "Errors are {error}; a conflict (409) also carries code: in_use (the entity is used), modified (someone changed it first: reload and retry), locked (someone is editing it, heldBy says who) or unsupported_format.";
 
     private static string Tag(string path)
@@ -457,22 +449,6 @@ internal static class ApiSchemaGenerator
             schema[key] = value;
     }
 
-    private static void Hoist(JsonObject document)
-    {
-        var schemas = (JsonObject)document["components"]!["schemas"]!;
-        var listTasks = (JsonObject)document["paths"]!["/api/projects/{projectId}/tasks"]!["get"]!["responses"]!["200"]!["content"]!["application/json"]!["schema"]!;
-        var tree = (JsonObject)((JsonArray)listTasks["oneOf"]!)[1]!;
-        var items = (JsonObject)tree["properties"]!["data"]!["items"]!;
-        tree["properties"]!["data"]!["items"] = new JsonObject { ["$ref"] = "#/components/schemas/TaskTreeItem" };
-        schemas["TaskTreeItem"] = items.DeepClone();
-        schemas["TaskTreeList"] = tree.DeepClone();
-        ((JsonArray)listTasks["oneOf"]!)[1] = new JsonObject { ["$ref"] = "#/components/schemas/TaskTreeList" };
-
-        foreach (var name in new[] { "TaskTreeItem", "TaskTreeList" })
-            Deduplicate(schemas[name]!, schemas, name, top: true);
-        Deduplicate(document["paths"]!, schemas, null, top: true);
-    }
-
     private static void Deduplicate(JsonNode node, JsonObject schemas, string? self, bool top)
     {
         switch (node)
@@ -587,28 +563,25 @@ internal static class ApiSchemaGenerator
             code["description"] = "in_use: the entity is used elsewhere; modified: someone changed it since the client read it; locked: someone is editing it (heldBy); unsupported_format: the data was written by a newer version of Tasker.";
         }
 
-        if (schemas["WorkspaceChange"] is JsonObject change)
-        {
-            var entity = (JsonObject)change["properties"]!["entity"]!;
-            entity["enum"] = new JsonArray(WorkspaceEntities.Select(x => (JsonNode)x).ToArray());
-            entity["description"] =
-                "What changed: project, task, taskType, linkType, field, enum, status, statusSet, board, series, user; lock (a lock on the entity with this id was taken or released; the kind is not given); " +
-                "unknown (something changed: reload everything).";
-        }
-
         foreach (var (_, item) in (JsonObject)document["paths"]!)
         {
             foreach (var (method, node) in (JsonObject)item!)
             {
-                if (method == "servers" || node is not JsonObject operation || operation["operationId"]?.GetValue<string>() != "streamWorkspaceEvents")
+                if (method == "servers" || node is not JsonObject operation || operation["operationId"]?.GetValue<string>() != "executeGraphQL")
                     continue;
 
-                operation["summary"] = "Live changes of the workspace (Server-Sent Events)";
+                var content = (JsonObject)operation["responses"]!["200"]!["content"]!;
+                if (!content.ContainsKey("application/json"))
+                {
+                    content["application/json"] = content["text/event-stream"]!.DeepClone();
+                    ((JsonObject)operation["responses"]!["200"]!)["description"] = "A query result (application/json) or a subscription stream (text/event-stream)";
+                }
+
+                operation["summary"] = "GraphQL endpoint: all reads and live changes";
                 operation["description"] =
-                    "A stream of text/event-stream, kept open until the client disconnects or the workspace closes. Each event is one line `data: <WorkspaceChange as JSON>` followed by an empty line; there are no named events. " +
-                    "Lines starting with a colon are comments to ignore: `: connected` right after the connection opens and `: ping` every 20 seconds while idle. " +
-                    "Equal events within 150 ms are merged. Treat an event as a hint to reload what it names (entity, projectId, id); after a reconnect reload everything, events are not replayed.";
-                ((JsonObject)operation["responses"]!["200"]!)["description"] = "The event stream";
+                    "Reads go through GraphQL, not GET (schema: graphql/schema.graphql). Body: {query, operationName, variables}. A query returns application/json {data, errors}; an error answers 400, or 401 when sign-in is needed (Server mode). " +
+                    "A subscription (workspaceChanges, the replacement of the old GET /events) answers text/event-stream: each result is one `data: <GraphQLResponse as JSON>` line followed by an empty line, lines starting with a colon are comments to ignore (`: connected` right after the connection opens, `: ping` every 20 seconds while idle). " +
+                    "Treat a change as a hint to reload what it names; after a reconnect reload everything, events are not replayed.";
             }
         }
     }

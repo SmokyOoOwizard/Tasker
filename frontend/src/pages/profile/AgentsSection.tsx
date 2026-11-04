@@ -1,27 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { api, getAll } from '../../api'
+import { api } from '../../api'
 import { useSession, type User } from '../../auth'
 import Avatar from '../../components/Avatar'
 import { IconEdit, IconTrash } from '../../components/Icons'
 import { IconButton, RenameForm } from '../../components/ui'
 import { useAction } from '../../hooks/useAction'
 import { useLoad } from '../../hooks/useLoad'
+import { loadAgents, loadAgentTokens, loadUsers, loadWorkspaceMcp, type LocalMcp } from '../../reads'
 import type { AgentToken } from '../../types'
 import { isDesktop } from '../../workspace'
-
-/**
- * Десктоп: MCP обслуживает демон tasker-mcpd. Его состояние, общий адрес MCP (null — демон не работает или ещё не открыл эту папку),
- * имя этой папки для агента (аргумент workspace инструментов) и заголовок, которым выбирается агент.
- */
-type LocalMcp = {
-  daemon: 'running' | 'starting' | 'stopped' | 'failed'
-  port: number | null
-  url: string | null
-  workspace: string | null
-  workspaceState: 'open' | 'opening' | 'failed' | null
-  error: string | null
-  agentHeader: string
-}
 
 /** Что с демоном MCP и этой папкой у него: текст и ошибка ли это. */
 function daemonState(mcp: LocalMcp): { text: string; error: boolean } {
@@ -47,10 +34,10 @@ function AgentsSection() {
   const me = useSession()?.user
   const { data, error: loadError, reload } = useLoad(async () => {
     const [agents, users, mcp] = await Promise.all([
-      getAll<User>('/agents'),
+      loadAgents(),
       // Админ видит чужих агентов — показываем, чей агент.
-      me?.isAdmin ? getAll<User>('/users') : [],
-      isDesktop ? api<LocalMcp>('/workspace/mcp') : null,
+      me?.isAdmin ? loadUsers() : [],
+      isDesktop ? loadWorkspaceMcp() : null,
     ])
     return { agents, users, mcp }
   }, [me?.isAdmin])
@@ -183,7 +170,7 @@ const lifetimes = [
 function Tokens({ agent }: { agent: User }) {
   // Время загрузки — чтобы определить истёкшие токены, не вызывая Date.now() при рендере.
   const { data, error: loadError, reload } = useLoad(
-    async () => ({ tokens: await getAll<AgentToken>(`/agents/${agent.id}/tokens`), loadedAt: Date.now() }),
+    async () => ({ tokens: await loadAgentTokens(agent.id), loadedAt: Date.now() }),
     [agent.id],
   )
   const tokens = data?.tokens

@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react'
-import { getAll } from '../api'
 import { useLoad } from '../hooks/useLoad'
 import { ProjectsContext } from '../projects'
-import type { Project } from '../types'
+import { loadProjects } from '../reads'
 
 function ProjectsProvider({ children }: { children: ReactNode }) {
-  const projects = useLoad(() => getAll<Project>('/projects'), [])
+  const projects = useLoad(() => loadProjects(), [])
   return <ProjectsContext.Provider value={projects}>{children}</ProjectsContext.Provider>
 }
 

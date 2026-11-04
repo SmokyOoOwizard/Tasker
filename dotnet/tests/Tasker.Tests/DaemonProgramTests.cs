@@ -106,7 +106,7 @@ public class WorkspaceMcpEndpointTests : IAsyncLifetime
             var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
 
             using var http = new HttpClient();
-            var json = JsonNode.Parse(await http.GetStringAsync($"{address}{lease.BasePath}/api/workspace/mcp"))!;
+            var json = (await GraphReads.Get(http, $"{address}{lease.BasePath}/api", "/workspace/mcp")).Body!;
             if (also != null)
                 await also(address);
             return (json, address);
