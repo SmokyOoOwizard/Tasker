@@ -67,7 +67,16 @@ struct TaskCardScreen: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Text(l.string(.sectionTasks)).foregroundStyle(DesignColor.mut.color)
+                Button {
+                    navigator.closeCard()
+                } label: {
+                    Text(l.string(.sectionTasks))
+                        .foregroundStyle(DesignColor.mut.color)
+                        .padding(.horizontal, 4)
+                        .frame(height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
                 Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
                 Text(verbatim: model.reference).font(.design(DesignTypography.monoSize, mono: true))
                 Spacer(minLength: 0)
