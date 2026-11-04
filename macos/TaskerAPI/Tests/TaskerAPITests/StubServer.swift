@@ -132,7 +132,7 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
         defer { stream.close() }
         var data = Data()
         var buffer = [UInt8](repeating: 0, count: 4096)
-        while stream.hasBytesAvailable {
+        while true {
             let count = stream.read(&buffer, maxLength: buffer.count)
             if count <= 0 { break }
             data.append(buffer, count: count)
