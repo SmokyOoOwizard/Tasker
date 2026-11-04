@@ -201,8 +201,8 @@ public class EditLockInterfaceTests
     public async Task Sqlite_lock_requests_do_not_trigger_the_catch_all_unknown_event()
     {
         await using var api = await ApiHost.Start("sqlite");
-        var id = (await NewTask(api))["id"]!.GetValue<string>();
         using var events = await Events.Subscribe(api);
+        var id = (await NewTask(api))["id"]!.GetValue<string>();
 
         // Создание задачи ещё отдаёт свой unknown (с задержкой склейки событий): дожидаемся его и забываем.
         await events.Next(x => x["entity"]!.GetValue<string>() == "unknown");

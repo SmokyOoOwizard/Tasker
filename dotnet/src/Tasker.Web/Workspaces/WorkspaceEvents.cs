@@ -1,6 +1,5 @@
 using Tasker.Storage.Files.Workspaces;
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 using Tasker.Core;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.Builder;
@@ -60,15 +59,20 @@ public sealed class WorkspaceEvents : IDisposable
     /// <summary>Блокировку на время правки взяли или сняли: вкладкам перечитать блокировку сущности <paramref name="id"/>.</summary>
     public void PublishLock(Guid id) => Publish(new WorkspaceChange("lock", null, id));
 
-    public async IAsyncEnumerable<WorkspaceChange> Watch(CancellationToken workspaceClosing, [EnumeratorCancellation] CancellationToken ct = default)
+    public IAsyncEnumerable<WorkspaceChange> Watch(CancellationToken workspaceClosing, CancellationToken ct = default)
     {
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(workspaceClosing, ct);
+        var stop = CancellationTokenSource.CreateLinkedTokenSource(workspaceClosing, ct);
         var channel = Channel.CreateBounded<WorkspaceChange>(new BoundedChannelOptions(1000)
         {
             FullMode = BoundedChannelFullMode.DropOldest
         });
         _subscribers.TryAdd(channel, 0);
+        stop.Token.Register(() => _subscribers.TryRemove(channel, out _));
+        return Read(channel, stop);
+    }
 
+    private async IAsyncEnumerable<WorkspaceChange> Read(Channel<WorkspaceChange> channel, CancellationTokenSource stop)
+    {
         try
         {
             while (true)
@@ -89,6 +93,7 @@ public sealed class WorkspaceEvents : IDisposable
         finally
         {
             _subscribers.TryRemove(channel, out _);
+            stop.Dispose();
         }
     }
 
