@@ -1,0 +1,31 @@
+# Проверка, что сгенерированные файлы (Swift, Color assets, CSS) совпадают с design/tokens.json.
+name: Design tokens
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'design/**'
+      - 'macos/Sources/Tasker/Generated/**'
+      - 'macos/Sources/Tasker/Assets.xcassets/Tokens/**'
+      - 'scripts/gen-design-tokens.py'
+      - '.github/workflows/design-tokens.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'design/**'
+      - 'macos/Sources/Tasker/Generated/**'
+      - 'macos/Sources/Tasker/Assets.xcassets/Tokens/**'
+      - 'scripts/gen-design-tokens.py'
+      - '.github/workflows/design-tokens.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -I scripts/gen-design-tokens.py --check

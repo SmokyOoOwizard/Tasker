@@ -6,28 +6,28 @@ struct TopBarView: View {
     let toggleSidebar: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: DesignSpacing.gap10) {
             if !sidebarVisible {
                 Button(action: toggleSidebar) {
                     Image(systemName: "sidebar.left")
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DesignColor.mut.color)
                 .help(Strings.showSidebar)
             }
             Text(Strings.appName)
-                .fontWeight(.medium)
+                .font(.designEmphasis(DesignTypography.baseSize))
             Text("/")
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(DesignColor.dim.color)
             Text(section.title)
-                .fontWeight(.medium)
+                .font(.designEmphasis(DesignTypography.baseSize))
             Spacer(minLength: 0)
         }
-        .padding(.leading, sidebarVisible ? 20 : 80)
-        .padding(.trailing, 20)
-        .frame(height: 44)
+        .padding(.leading, sidebarVisible ? DesignSpacing.pagePadX : 80)
+        .padding(.trailing, DesignSpacing.pagePadX)
+        .frame(height: DesignLayout.topBarHeight)
         .overlay(alignment: .bottom) {
-            Divider()
+            DesignDivider()
         }
     }
 }

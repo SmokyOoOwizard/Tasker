@@ -49,6 +49,18 @@ scripts/macos-build.sh release
 
 Собирает релизную версию.
 
+## Токены дизайна
+
+Цвета двух тем, радиусы, отступы, размеры шрифтов, тени и контуры значков статусов лежат в `design/tokens.json` (значения взяты из `docs/mockups/web/main-design.html`). Скрипт `scripts/gen-design-tokens.py` создаёт из него:
+
+- `macos/Sources/Tasker/Generated/DesignTokens.swift` — константы и описание значков статусов;
+- `macos/Sources/Tasker/Assets.xcassets/Tokens/` — цвета для светлой и тёмной темы;
+- `design/generated/tokens.css` — CSS-переменные (во фронтенд пока не подключены).
+
+После правки `tokens.json` запустите `python3 scripts/gen-design-tokens.py`. Команда `python3 scripts/gen-design-tokens.py --check` падает, если сгенерированные файлы разошлись с источником; её выполняет CI (`.github/workflows/design-tokens.yml`).
+
+В коде используются `DesignColor.<имя>.color`, `DesignRadius`, `DesignSpacing`, `DesignLayout`, `DesignTypography` и `StatusIconView(name:color:)`. Системные цвета и числа, вписанные вручную, в видах не применяются.
+
 ## Иконка
 
 Исходники иконок в `Design/icon/`: `icon-dark.svg` для тёмной темы и `icon-light.svg` для светлой. Растровые копии лежат в `Sources/Tasker/Assets.xcassets`: набор `AppIcon` (светлая, все размеры macOS) и наборы `IconDark`/`IconLight`, между которыми приложение переключает иконку в Dock вслед за темой системы.

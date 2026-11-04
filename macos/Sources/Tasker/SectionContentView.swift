@@ -6,15 +6,15 @@ struct SectionContentView: View {
     var body: some View {
         VStack(spacing: 8) {
             MockupIconView(icon: section.icon, size: 36)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(DesignColor.dim.color)
             Text(section.title)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.design(DesignTypography.pageTitleSize, weight: DesignTypography.semiboldWeight))
             Text(Strings.placeholderHint)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(.design(DesignTypography.baseSize))
+                .foregroundStyle(DesignColor.mut.color)
             Text(Strings.version(AppInfo.version))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                .font(.design(DesignTypography.captionSize))
+                .foregroundStyle(DesignColor.dim.color)
                 .padding(.top, 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

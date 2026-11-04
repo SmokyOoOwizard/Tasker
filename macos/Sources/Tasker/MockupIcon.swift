@@ -13,7 +13,7 @@ struct MockupIconShape: Shape {
     let icon: MockupIcon
 
     func path(in rect: CGRect) -> Path {
-        let k = rect.width / 16
+        let k = rect.width / DesignLayout.iconBox
         func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.minX + x * k, y: rect.minY + y * k) }
         func line(_ path: inout Path, _ x1: CGFloat, _ y1: CGFloat, _ x2: CGFloat, _ y2: CGFloat) {
             path.move(to: p(x1, y1))
@@ -67,7 +67,7 @@ struct MockupIconView: View {
 
     var body: some View {
         MockupIconShape(icon: icon)
-            .stroke(style: StrokeStyle(lineWidth: icon == .more ? 2.4 * size / 16 : 1.4 * size / 16, lineCap: .round, lineJoin: .round))
+            .stroke(style: StrokeStyle(lineWidth: icon == .more ? 2.4 * size / DesignLayout.iconBox : DesignLayout.iconStroke * size / DesignLayout.iconBox, lineCap: .round, lineJoin: .round))
             .frame(width: size, height: size)
     }
 }
