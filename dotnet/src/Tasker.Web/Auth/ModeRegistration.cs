@@ -35,8 +35,7 @@ internal static class ModeRegistration
             services.AddAuthorization();
         }
 
-        if (!localMcp)
-            services.AddTaskerGraph();
+        services.AddTaskerGraph();
 
         if (mode == TaskerMode.Server || localMcp)
             services.AddTaskerMcp(requireAgentToken: mode == TaskerMode.Server);
