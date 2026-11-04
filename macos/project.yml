@@ -21,6 +21,11 @@ targets:
     platform: macOS
     sources:
       - Sources/Tasker
+      - path: build/daemon/tasker-mcpd
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Helpers
     dependencies:
       - package: TaskerAPI
     settings:
