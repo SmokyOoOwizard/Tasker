@@ -2,9 +2,9 @@ formatVersion: 10
 id: b375b18a-fe3b-4cd0-a348-55d428e5df39
 title: 'macOS: живые обновления через события демона'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-03T21:32:14.6050290+00:00
-updatedAt: 2026-11-04T03:11:48.2290170+00:00
+updatedAt: 2026-11-04T13:51:28.4665480+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 187
