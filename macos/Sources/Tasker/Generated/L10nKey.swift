@@ -37,8 +37,6 @@ enum L10nKey: String, CaseIterable, Sendable {
     case daemonUnreachable = "daemon.unreachable"
     case daemonStartFailed = "daemon.startFailed"
     case daemonUpdateFailed = "daemon.updateFailed"
-    case liveUpdatedSeconds = "live.updatedSeconds"
-    case liveUpdatedMinutes = "live.updatedMinutes"
     case liveConnecting = "live.connecting"
     case liveOffline = "live.offline"
     case toastMoved = "toast.moved"

@@ -36,8 +36,6 @@
     "daemon.unreachable": {"ru": "Демон не отвечает. Журнал: {0}", "en": "The daemon is not responding. Log: {0}"},
     "daemon.startFailed": {"ru": "Не удалось запустить демон: {0}", "en": "Could not start the daemon: {0}"},
     "daemon.updateFailed": {"ru": "Не удалось обновить демон: {0}", "en": "Could not update the daemon: {0}"},
-    "live.updatedSeconds": {"ru": "обновлено {0} с назад", "en": "updated {0} s ago"},
-    "live.updatedMinutes": {"ru": "обновлено {0} мин назад", "en": "updated {0} min ago"},
     "live.connecting": {"ru": "подключение…", "en": "connecting…"},
     "live.offline": {"ru": "нет связи с демоном", "en": "no connection to the daemon"},
     "toast.moved": {"ru": "{0} перевёл {1} в «{2}»", "en": "{0} moved {1} to “{2}”"},

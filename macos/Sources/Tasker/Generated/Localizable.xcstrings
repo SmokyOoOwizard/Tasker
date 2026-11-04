@@ -439,40 +439,6 @@
         }
       }
     },
-    "live.updatedMinutes" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "updated %@ min ago"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "обновлено %@ мин назад"
-          }
-        }
-      }
-    },
-    "live.updatedSeconds" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "updated %@ s ago"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "обновлено %@ с назад"
-          }
-        }
-      }
-    },
     "menu.about" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -36,25 +36,16 @@ struct LiveStatusLabel: View {
     @Environment(\.localizer) private var l
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
+        if let text = LiveStatusText.text(connection: live.connection, l) {
             HStack(spacing: DesignSpacing.gap6) {
                 Circle()
-                    .fill(color.color)
+                    .fill(live.connection == .offline ? DesignColor.red.color : DesignColor.amber.color)
                     .frame(width: DesignLayout.statusDot, height: DesignLayout.statusDot)
-                Text(LiveStatusText.text(connection: live.connection, lastUpdate: live.lastUpdate, now: context.date, l))
-                    .monospacedDigit()
+                Text(text)
             }
             .font(.design(DesignTypography.captionSize))
             .foregroundStyle(DesignColor.dim.color)
-        }
-        .help(live.address.map(\.name) ?? "")
-    }
-
-    private var color: DesignColor {
-        switch live.connection {
-        case .live: .green
-        case .connecting: .amber
-        case .offline: .red
+            .help(live.address.map(\.name) ?? "")
         }
     }
 }

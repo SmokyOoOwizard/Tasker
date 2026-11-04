@@ -93,16 +93,11 @@ enum LiveToastMessage: Equatable, Sendable {
 }
 
 enum LiveStatusText {
-    static func text(connection: LiveConnection, lastUpdate: Date?, now: Date, _ l: Localizer) -> String {
+    static func text(connection: LiveConnection, _ l: Localizer) -> String? {
         switch connection {
-        case .connecting:
-            return l.string(.liveConnecting)
-        case .offline:
-            return l.string(.liveOffline)
-        case .live:
-            let seconds = max(0, Int(now.timeIntervalSince(lastUpdate ?? now)))
-            if seconds < 60 { return l.string(.liveUpdatedSeconds, String(seconds)) }
-            return l.string(.liveUpdatedMinutes, String(seconds / 60))
+        case .connecting: l.string(.liveConnecting)
+        case .offline: l.string(.liveOffline)
+        case .live: nil
         }
     }
 }
