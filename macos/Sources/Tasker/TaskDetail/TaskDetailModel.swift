@@ -47,6 +47,10 @@ final class TaskDetailModel {
         return vocabulary.reference(detail.seriesNumbers, id: detail.id)
     }
 
+    var readyReference: String? {
+        detail == nil ? nil : reference
+    }
+
     var statusOptions: [TaskListVocabulary.Status] {
         guard let detail else { return [] }
         return vocabulary.statusOptions(forType: detail.typeId)

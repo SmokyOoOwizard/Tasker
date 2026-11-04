@@ -82,7 +82,7 @@ struct TaskCardScreen: View {
                     Button {
                         navigator.jump(toHistory: index)
                     } label: {
-                        Text(verbatim: navigator.labels[id] ?? "#" + id.uuidString.lowercased().prefix(8))
+                        Text(verbatim: navigator.labels[id] ?? "…")
                             .font(.design(DesignTypography.monoSize, mono: true))
                             .foregroundStyle(DesignColor.mut.color)
                             .padding(.horizontal, 4)
@@ -92,10 +92,10 @@ struct TaskCardScreen: View {
                     .buttonStyle(.plain)
                 }
                 Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
-                Text(verbatim: model.reference)
+                Text(verbatim: model.readyReference ?? navigator.labels[task] ?? "…")
                     .font(.design(DesignTypography.monoSize, mono: true))
-                    .onAppear { navigator.label(task, model.reference) }
-                    .onChange(of: model.reference) { navigator.label(task, model.reference) }
+                    .onAppear { register(model) }
+                    .onChange(of: model.revision) { register(model) }
                 Spacer(minLength: 0)
             }
             .font(.design(DesignTypography.baseSize))
@@ -112,6 +112,16 @@ struct TaskCardScreen: View {
         }
         .onAppear { focused = true }
         .onChange(of: task) { focused = true }
+    }
+}
+
+extension TaskCardScreen {
+    fileprivate func register(_ model: TaskDetailModel) {
+        guard let detail = model.detail else { return }
+        navigator.label(detail.id, model.reference)
+        for link in detail.links {
+            navigator.label(link.task.id, model.vocabulary.reference(link.task.seriesNumbers, id: link.task.id))
+        }
     }
 }
 
