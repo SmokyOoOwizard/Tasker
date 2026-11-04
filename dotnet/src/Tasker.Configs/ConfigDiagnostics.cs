@@ -34,7 +34,8 @@ public static class ConfigDiagnostics
         "TASKER_MCP_DRAIN_QUIET_MS",
         "TASKER_MCP_DRAIN_TIMEOUT_MS",
         "TASKER_MCP_SUPERVISOR",
-        "TASKER_MCP_HANDOFF"
+        "TASKER_MCP_HANDOFF",
+        "TASKER_MCP_ACCEPT"
     ];
 
     // Аргументы самого ASP.NET Core и хоста: они не настройки Tasker, но и не опечатки.
