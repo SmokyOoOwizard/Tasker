@@ -116,6 +116,18 @@ struct TaskListVocabulary: Hashable, Sendable {
         statuses.first { $0.id == id }
     }
 
+    var orderedStatuses: [Status] {
+        var place: [UUID: Int] = [:]
+        for ids in statusSets.values {
+            for (index, id) in ids.enumerated() { place[id] = min(place[id] ?? index, index) }
+        }
+        return statuses.enumerated().sorted { lhs, rhs in
+            let left = place[lhs.element.id] ?? Int.max
+            let right = place[rhs.element.id] ?? Int.max
+            return left == right ? lhs.offset < rhs.offset : left < right
+        }.map(\.element)
+    }
+
     func statusOptions(forType typeId: UUID) -> [Status] {
         guard let set = types[typeId].flatMap({ statusSets[$0.statusSetId] }) else { return statuses }
         let byId = statusById

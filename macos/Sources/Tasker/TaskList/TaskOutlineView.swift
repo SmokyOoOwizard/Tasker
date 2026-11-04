@@ -284,7 +284,13 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
         outline.updateHover()
         let visible = outline.rows(in: scroll.contentView.documentVisibleRect)
         model.visibleCount = loadedOrdinal(of: visible.location + visible.length - 1)
-        if outline.numberOfRows == 0 || visible.location + visible.length >= outline.numberOfRows - 60 {
+        let end = visible.location + visible.length + 60
+        if model.mode == .groups {
+            for group in model.roots where outline.isItemExpanded(group) {
+                let last = group.children?.last.map { outline.row(forItem: $0) } ?? outline.row(forItem: group)
+                if last >= 0, last <= end { model.loadMore(group: group) }
+            }
+        } else if outline.numberOfRows == 0 || end >= outline.numberOfRows {
             model.loadMore()
         }
     }

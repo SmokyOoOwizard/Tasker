@@ -110,7 +110,13 @@ final class TaskListModel {
     var mode: TaskListMode { preferences.mode }
 
     var request: TaskListRequest {
-        TaskListRequest(filter: filter, sort: mode == .groups ? TaskSort.grouped(preferences.sort) : preferences.sort)
+        TaskListRequest(filter: filter, sort: preferences.sort)
+    }
+
+    func request(group status: UUID) -> TaskListRequest {
+        var value = request
+        value.filter.statusIds = [status]
+        return value
     }
 
     var hasMore: Bool { loadedCount < levelCount }
@@ -159,6 +165,24 @@ final class TaskListModel {
     private func loadFirst(_ current: Int) async {
         do {
             let vocabulary = try await source.vocabulary(project: project)
+            if mode == .groups {
+                let plan = try await groupPlan(vocabulary)
+                let rows = try await groupRows(plan.map { ($0.status, shouldExpand(group: $0.status) ? min($0.count, Self.pageSize) : 0) })
+                guard current == generation else { return }
+                self.vocabulary = vocabulary
+                loadedCount = 0
+                levelCount = 0
+                totalCount = plan.reduce(0) { $0 + $1.count }
+                roots = plan.map { item in
+                    let node = TaskNode(group: item.status)
+                    node.groupCount = item.count
+                    node.children = (rows[item.status] ?? []).map { TaskNode(task: $0, parent: node, depth: 1) }
+                    return node
+                }
+                phase = .ready
+                onChange?(.reload)
+                return
+            }
             let page = try await fetchLevel(parent: nil, offset: 0)
             guard current == generation else { return }
             self.vocabulary = vocabulary
@@ -170,7 +194,6 @@ final class TaskListModel {
             phase = .ready
             onChange?(.reload)
             expandRemembered(roots)
-            await loadCounts(current)
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
@@ -195,18 +218,9 @@ final class TaskListModel {
             levelCount = page.levelCount
             totalCount = page.totalCount
             let before = roots.count
-            let groupSizes = roots.map { $0.children?.count ?? 0 }
             append(page.rows)
-            if mode == .groups {
-                for (index, group) in roots.enumerated() where index < before {
-                    let old = groupSizes[index]
-                    let new = group.children?.count ?? 0
-                    if new > old { onChange?(.inserted(parent: group, indexes: IndexSet(old..<new))) }
-                }
-            }
             if roots.count > before { onChange?(.inserted(parent: nil, indexes: IndexSet(before..<roots.count))) }
             if mode == .tree { expandRemembered(Array(roots[before...])) }
-            if mode == .groups { await loadCounts(current) }
         } catch {
             guard current == generation else { return }
             onNotice?(localizer.string(.taskListLoadFailed, error.localizedDescription))
@@ -224,47 +238,76 @@ final class TaskListModel {
 
     private func append(_ rows: [TaskRow]) {
         loadedCount += rows.count
-        switch mode {
-        case .flat, .tree:
-            roots += rows.map { TaskNode(task: $0, parent: nil, depth: 0) }
-        case .groups:
-            var groups = Dictionary(roots.compactMap { node in node.groupStatus.map { ($0, node) } }, uniquingKeysWith: { first, _ in first })
-            for row in rows {
-                let group = groups[row.statusId] ?? {
-                    let node = TaskNode(group: row.statusId)
-                    groups[row.statusId] = node
-                    roots.append(node)
-                    return node
-                }()
-                group.children?.append(TaskNode(task: row, parent: group, depth: 1))
+        roots += rows.map { TaskNode(task: $0, parent: nil, depth: 0) }
+    }
+
+    private func groupPlan(_ vocabulary: TaskListVocabulary) async throws -> [(status: UUID, count: Int)] {
+        let statuses = vocabulary.orderedStatuses.map(\.id).filter { filter.statusIds?.contains($0) ?? true }
+        let request = request
+        let project = project
+        let source = source
+        let counts = try await withThrowingTaskGroup(of: (UUID, Int).self) { tasks in
+            for status in statuses {
+                tasks.addTask { (status, try await source.count(project: project, request: request, status: status)) }
+            }
+            var result: [UUID: Int] = [:]
+            for try await (status, count) in tasks { result[status] = count }
+            return result
+        }
+        return statuses.compactMap { status in counts[status].flatMap { $0 > 0 ? (status, $0) : nil } }
+    }
+
+    private func groupRows(_ wanted: [(UUID, Int)]) async throws -> [UUID: [TaskRow]] {
+        let jobs = wanted.flatMap { status, count in stride(from: 0, to: count, by: Self.pageSize).map { (status, $0) } }
+        let source = source
+        let project = project
+        let requests = Dictionary(wanted.map { ($0.0, request(group: $0.0)) }, uniquingKeysWith: { first, _ in first })
+        let limit = Self.pageSize
+        let pages = try await withThrowingTaskGroup(of: (UUID, Int, [TaskRow]).self) { group in
+            var result: [UUID: [Int: [TaskRow]]] = [:]
+            var queue = jobs.makeIterator()
+            func add(_ job: (UUID, Int)) {
+                guard let request = requests[job.0] else { return }
+                group.addTask { (job.0, job.1, try await source.flat(project: project, request: request, offset: job.1, limit: limit).rows) }
+            }
+            for _ in 0..<Self.refreshConcurrency { if let job = queue.next() { add(job) } }
+            while let (status, offset, rows) = try await group.next() {
+                result[status, default: [:]][offset] = rows
+                if let next = queue.next() { add(next) }
+            }
+            return result
+        }
+        return pages.mapValues { byOffset in byOffset.keys.sorted().flatMap { byOffset[$0] ?? [] } }
+    }
+
+    @ObservationIgnored private var loadingGroups: Set<UUID> = []
+
+    func loadMore(group node: TaskNode) {
+        guard phase == .ready, mode == .groups, let status = node.groupStatus, let count = node.groupCount,
+              let loaded = node.children?.count, loaded < count, !loadingGroups.contains(status) else { return }
+        loadingGroups.insert(status)
+        let current = generation
+        let request = request(group: status)
+        Task { [weak self] in
+            guard let self else { return }
+            defer { loadingGroups.remove(status) }
+            do {
+                let page = try await source.flat(project: project, request: request, offset: loaded, limit: Self.pageSize)
+                guard current == generation, node.children?.count == loaded else { return }
+                let known = Set(node.children?.compactMap { $0.row?.id } ?? [])
+                let fresh = page.rows.filter { !known.contains($0.id) }
+                guard !fresh.isEmpty else { return }
+                node.children? += fresh.map { TaskNode(task: $0, parent: node, depth: 1) }
+                onChange?(.inserted(parent: node, indexes: IndexSet(loaded..<(loaded + fresh.count))))
+            } catch {
+                guard current == generation else { return }
+                onNotice?(localizer.string(.taskListLoadFailed, error.localizedDescription))
             }
         }
     }
 
-    private func loadCounts(_ current: Int) async {
-        guard mode == .groups else { return }
-        let groups = roots.filter { $0.kind == .group }
-        let request = request
-        let project = project
-        let source = source
-        let counts = await withTaskGroup(of: (UUID, Int?).self) { tasks in
-            for group in groups {
-                guard let status = group.groupStatus else { continue }
-                tasks.addTask { (status, try? await source.count(project: project, request: request, status: status)) }
-            }
-            var result: [UUID: Int] = [:]
-            for await (status, count) in tasks { if let count { result[status] = count } }
-            return result
-        }
-        guard current == generation else { return }
-        var changed: [TaskNode] = []
-        for group in groups {
-            if let status = group.groupStatus, let count = counts[status], group.groupCount != count {
-                group.groupCount = count
-                changed.append(group)
-            }
-        }
-        if !changed.isEmpty { onChange?(.rows(changed)) }
+    private func shouldExpand(group status: UUID) -> Bool {
+        !preferences.collapsedGroups.contains(status)
     }
 
     func shouldExpand(_ node: TaskNode) -> Bool {
@@ -282,6 +325,7 @@ final class TaskListModel {
         case .group:
             guard let status = node.groupStatus else { return }
             update { $0.setCollapsed(group: status, !expanded) }
+            if expanded, node.children?.isEmpty ?? true { loadMore(group: node) }
         case .task:
             guard let id = node.row?.id else { return }
             update { $0.setExpanded(id, expanded) }
@@ -356,6 +400,27 @@ final class TaskListModel {
         }
         do {
             let vocabulary = try await source.vocabulary(project: project)
+            if mode == .groups {
+                let plan = try await groupPlan(vocabulary)
+                let loaded = Dictionary(roots.compactMap { node in node.groupStatus.map { ($0, node.children?.count ?? 0) } }, uniquingKeysWith: { first, _ in first })
+                let rows = try await groupRows(plan.map { item in
+                    let wanted = shouldExpand(group: item.status) ? max(loaded[item.status] ?? 0, Self.pageSize) : 0
+                    return (item.status, min(item.count, wanted))
+                })
+                guard current == generation else { return }
+                let vocabularyChanged = vocabulary != self.vocabulary
+                self.vocabulary = vocabulary
+                totalCount = plan.reduce(0) { $0 + $1.count }
+                let (structural, counts) = rebuildGroups(plan, rows: rows)
+                if structural || vocabularyChanged {
+                    onChange?(.reload)
+                } else {
+                    let changed = changedNodes + counts
+                    if !changed.isEmpty { onChange?(.rows(changed)) }
+                }
+                changedNodes = []
+                return
+            }
             let pages = try await refreshPages()
             var rows: [TaskRow] = []
             for page in pages {
@@ -392,7 +457,6 @@ final class TaskListModel {
                 if !changed.isEmpty { onChange?(.rows(changed)) }
             }
             changedNodes = []
-            await loadCounts(current)
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
@@ -478,26 +542,35 @@ final class TaskListModel {
         }
 
         loadedCount = rows.count
-        switch mode {
-        case .flat, .tree:
-            roots = rows.map { reuse($0, parent: nil, depth: 0) }
-            if mode == .tree { roots.forEach(attach) }
-        case .groups:
-            var groups: [UUID: TaskNode] = [:]
-            var order: [TaskNode] = []
-            for row in rows {
-                let group = groups[row.statusId] ?? {
-                    let node = old["group:" + row.statusId.uuidString] ?? TaskNode(group: row.statusId)
-                    node.children = []
-                    groups[row.statusId] = node
-                    order.append(node)
-                    return node
-                }()
-                group.children?.append(reuse(row, parent: group, depth: 1))
-            }
-            roots = order
-        }
+        roots = rows.map { reuse($0, parent: nil, depth: 0) }
+        if mode == .tree { roots.forEach(attach) }
         return signature() != before
+    }
+
+    private func rebuildGroups(_ plan: [(status: UUID, count: Int)], rows: [UUID: [TaskRow]]) -> (structural: Bool, counts: [TaskNode]) {
+        var old: [String: TaskNode] = [:]
+        for node in allNodes() { old[node.key] = node }
+        let before = signature()
+        changedNodes = []
+        var counts: [TaskNode] = []
+        roots = plan.map { item in
+            let group = old["group:" + item.status.uuidString] ?? TaskNode(group: item.status)
+            if group.groupCount != item.count {
+                group.groupCount = item.count
+                counts.append(group)
+            }
+            group.children = (rows[item.status] ?? []).map { row in
+                let probe = TaskNode(task: row, parent: group, depth: 1)
+                guard let existing = old[probe.key] else { return probe }
+                if existing.row != row {
+                    existing.row = row
+                    changedNodes.append(existing)
+                }
+                return existing
+            }
+            return group
+        }
+        return (signature() != before, counts)
     }
 
     private func signature() -> [String] {

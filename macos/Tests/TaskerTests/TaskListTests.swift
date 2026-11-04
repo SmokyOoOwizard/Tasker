@@ -35,8 +35,9 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
     func vocabulary(project: UUID) async throws -> TaskListVocabulary { vocabularyValue }
 
     func flat(project: UUID, request: TaskListRequest, offset: Int, limit: Int) async throws -> TaskRowPage {
-        record("flat \(offset) \(TaskSort.string(request.sort) ?? "")")
-        let all = rows
+        let statuses = request.filter.statusIds
+        record("flat \(offset) \(TaskSort.string(request.sort) ?? "")" + (statuses.map { " in \($0.count)" } ?? ""))
+        let all = rows.filter { statuses?.contains($0.statusId) ?? true }
         let page = Array(all.dropFirst(offset).prefix(limit))
         return TaskRowPage(rows: page, totalCount: all.count, levelCount: all.count)
     }
@@ -123,8 +124,6 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
         #expect(TaskSort.string(keys) == "-updated")
         #expect(TaskSort.string(TaskSort.toggled(keys, "updated")) == "updated")
         #expect(TaskSort.string(TaskSort.removed(keys, "updated")) == nil)
-        #expect(TaskSort.string(TaskSort.grouped(keys)) == "status,-updated")
-        #expect(TaskSort.string(TaskSort.grouped([TaskSortKey(key: "status", descending: true)])) == "-status")
         #expect(TaskSortField.isSortable(fieldName: "Оценка"))
         #expect(!TaskSortField.isSortable(fieldName: "Срок сдачи"))
         #expect(TaskSortField(key: "title").title(ru) == "Название")
@@ -160,6 +159,10 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
         #expect(vocabulary.glyph(status: doing, type: type) == .progress(0.5))
         #expect(vocabulary.glyph(status: done, type: type) == .named(.done))
         #expect(vocabulary.statusOptions(forType: type).map(\.name) == ["Туду", "В работе", "Готово"])
+        var alphabetical = vocabulary
+        alphabetical.statuses.sort { $0.name < $1.name }
+        alphabetical.statuses.append(.init(id: UUID(), name: "Вне наборов", color: "#8993a4"))
+        #expect(alphabetical.orderedStatuses.map(\.name) == ["Туду", "В работе", "Готово", "Вне наборов"])
 
         var task = row(5, fields: [TaskRowField(fieldId: component, values: [web.uuidString.lowercased(), core.uuidString])])
         #expect(vocabulary.reference(task) == "TSK-5")
@@ -191,22 +194,40 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
         #expect(changes.contains(.inserted(parent: nil, indexes: IndexSet(200..<400))))
     }
 
-    @Test func groupsFollowStatusesWithTheirCountsAndStatusComesFirstInTheSort() async {
-        let rows = [row(1, status: doing), row(2, status: todo), row(3, status: doing), row(4, status: done)]
+    @Test func everyStatusGroupPagesOnItsOwnSoAMovedTaskShowsUpInItsNewGroup() async {
+        let rows = (1...250).map { row($0, status: todo) } + [row(251, status: doing), row(252, status: done)]
         let source = StubTaskListSource(rows: rows, vocabulary: vocabulary)
         let model = TaskListModel(project: project, source: source, settings: settings())
         model.update { $0.sort = [TaskSortKey(key: "updated", descending: true)] }
         model.start()
-        await until { model.roots.first?.groupCount != nil }
+        await until { model.phase == .ready }
         #expect(model.mode == .groups)
-        #expect(source.requests.first == "flat 0 status,-updated")
-        #expect(model.roots.map(\.groupStatus) == [doing, todo, done])
-        #expect(model.roots.map { $0.children?.count } == [2, 1, 1])
-        #expect(model.roots.first?.groupCount == 2)
-        #expect(model.shouldExpand(model.roots[0]))
-        model.setExpanded(model.roots[0], false)
-        #expect(!model.shouldExpand(model.roots[0]))
+        #expect(model.roots.map(\.groupStatus) == [todo, doing, done])
+        #expect(model.roots.map(\.groupCount) == [250, 1, 1])
+        #expect(model.roots.map { $0.children?.count } == [200, 1, 1])
+        #expect(model.totalCount == 252)
+        #expect(source.requests.filter { $0.hasPrefix("flat") }.allSatisfy { $0.hasSuffix("-updated in 1") })
+
+        model.loadMore(group: model.roots[0])
+        await until { model.roots[0].children?.count == 250 }
+        #expect(model.roots[0].children?.count == 250)
+
+        let moved = model.roots[0].children![0]
+        model.changeStatus(moved, to: doing)
+        await until { source.rows.contains { $0.id == moved.row?.id && $0.statusId == doing } }
+        await model.refresh()
+        #expect(model.roots.map(\.groupCount) == [249, 2, 1])
+        #expect(model.roots[1].children?.contains { $0.row?.id == moved.row?.id } == true)
+        #expect(model.roots[0].children?.contains { $0.row?.id == moved.row?.id } == false)
+
+        model.setExpanded(model.roots[1], false)
+        #expect(!model.shouldExpand(model.roots[1]))
         #expect(model.preferences.collapsedGroups == [doing])
+        await model.refresh()
+        #expect(model.roots[1].children?.isEmpty == true)
+        model.setExpanded(model.roots[1], true)
+        await until { model.roots[1].children?.count == 2 }
+        #expect(model.roots[1].children?.count == 2)
     }
 
     @Test func treeLoadsChildrenOnExpansionAndRemembersIt() async {

@@ -94,11 +94,6 @@ enum TaskSort {
     static func removed(_ keys: [TaskSortKey], _ key: String) -> [TaskSortKey] {
         keys.filter { $0.key != key }
     }
-
-    static func grouped(_ keys: [TaskSortKey]) -> [TaskSortKey] {
-        if keys.first?.key == TaskSortField.status.key { return keys }
-        return [TaskSortKey(key: TaskSortField.status.key, descending: false)] + keys.filter { $0.key != TaskSortField.status.key }
-    }
 }
 
 struct TaskListColumns: Hashable, Codable, Sendable {

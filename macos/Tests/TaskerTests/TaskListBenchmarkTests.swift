@@ -61,6 +61,13 @@ struct TaskListBenchmarkTests {
             model.loadMore()
             while model.loadingMore || model.roots.count + model.allNodes().count == before { try? await Task.sleep(for: .milliseconds(1)) }
         }
+        for group in model.roots where group.kind == .group {
+            while (group.children?.count ?? 0) < (group.groupCount ?? 0) {
+                let before = group.children?.count ?? 0
+                model.loadMore(group: group)
+                while (group.children?.count ?? 0) == before { try? await Task.sleep(for: .milliseconds(1)) }
+            }
+        }
         return model
     }
 
@@ -127,12 +134,12 @@ struct TaskListBenchmarkTests {
             _ = Self.report(name, samples)
         }
         let request = TaskListRequest()
-        let grouped = TaskListRequest(sort: TaskSort.grouped([]))
         let vocabulary = try await source.vocabulary(project: projectId)
+        let grouped = TaskListRequest(filter: TaskListFilter(statusIds: vocabulary.statuses.first.map { [$0.id] }))
         try await time("daemon vocabulary") { _ = try await source.vocabulary(project: projectId) }
         try await time("daemon flat first page (200)") { _ = try await source.flat(project: projectId, request: request, offset: 0, limit: 200) }
         try await time("daemon flat page at offset 9800") { _ = try await source.flat(project: projectId, request: request, offset: 9800, limit: 200) }
-        try await time("daemon grouped first page (200)") { _ = try await source.flat(project: projectId, request: grouped, offset: 0, limit: 200) }
+        try await time("daemon first page of one status group (200)") { _ = try await source.flat(project: projectId, request: grouped, offset: 0, limit: 200) }
         try await time("daemon group counts (all statuses)") {
             for status in vocabulary.statuses { _ = try await source.count(project: projectId, request: grouped, status: status.id) }
         }
@@ -163,5 +170,12 @@ struct TaskListBenchmarkTests {
         try await time("daemon live refresh, scrolled to the end (50 pages, 6 at a time)", runs: 3) { await model.refresh() }
         model.visibleCount = 30
         try await time("daemon live refresh, top of the list (1 page)") { await model.refresh() }
+        let groups = TaskListModel(project: projectId, source: source, settings: TaskListSettings(defaults: UserDefaults(suiteName: "TaskListBench-" + UUID().uuidString)!))
+        let groupsOpened = try await clock.measure {
+            groups.start()
+            while groups.phase != .ready { try await Task.sleep(for: .milliseconds(1)) }
+        }
+        print(String(format: "BENCH daemon groups opened (counts + first page of every group): %.2f ms", Self.milliseconds(groupsOpened)))
+        try await time("daemon groups live refresh (first page of every group)") { await groups.refresh() }
     }
 }
