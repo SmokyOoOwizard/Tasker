@@ -2,9 +2,9 @@ formatVersion: 10
 id: b7cd05a9-cc77-4931-9314-28b45eb36f42
 title: 'macOS: список задач (таблица и дерево на AppKit)'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-03T21:32:48.5916260+00:00
-updatedAt: 2026-11-04T15:19:46.4865430+00:00
+updatedAt: 2026-11-04T16:48:16.9538160+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 189
