@@ -46,9 +46,14 @@ internal static class TaskerApi
         var root = mode == TaskerMode.Server
             ? api.MapGroup("").RequireAuthorization()
             : api.MapGroup("");
+        root.WithApiErrors(mode);
 
         if (mode == TaskerMode.Server)
-            MapAuth(api, root);
+        {
+            var anonymous = api.MapGroup("");
+            anonymous.WithApiErrors(mode);
+            MapAuth(anonymous, root);
+        }
         MapUsers(root, mode);
         MapAgents(root, mode);
 
@@ -59,7 +64,8 @@ internal static class TaskerApi
             root.MapGet("/workspace/problems", async (IServiceProvider services, int? offset, int? limit, CancellationToken ct) =>
                 Results.Ok(services.GetService<IWorkspaceIndex>() is { } workspace
                     ? await workspace.GetProblems(Page.Of(offset, limit), ct)
-                    : Page.Of(offset, limit).Apply(Array.Empty<WorkspaceProblem>())));
+                    : Page.Of(offset, limit).Apply(Array.Empty<WorkspaceProblem>())))
+                .RespondsOk<ListDto<WorkspaceProblem>>("listWorkspaceProblems");
 
             // MCP этой рабочей области: его обслуживает демон tasker-mcpd (десктоп своего MCP не поднимает). Состояние демона, адрес
             // (общий для всех областей) и имя этой области для агента (аргумент workspace), если демон её открыл.
@@ -70,38 +76,36 @@ internal static class TaskerApi
                     ? await daemon.Find(feature.Location, ct)
                     : new WorkspaceMcp(DaemonState.Stopped, null, null, null, null, null);
 
-                return Results.Ok(new
-                {
-                    daemon = mcp.Daemon,
-                    port = mcp.Port,
-                    url = mcp.Url,
-                    workspace = mcp.Workspace,
-                    workspaceState = mcp.WorkspaceState,
-                    error = mcp.Error,
-                    agentHeader = DaemonClient.AgentHeader
-                });
-            });
+                return Results.Ok(new WorkspaceMcpInfo(mcp.Daemon, mcp.Port, mcp.Url, mcp.Workspace, mcp.WorkspaceState, mcp.Error, DaemonClient.AgentHeader));
+            })
+                .RespondsOk<WorkspaceMcpInfo>("getWorkspaceMcp");
         }
 
         root.MapGet("/projects", async (ProjectService service, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(Page.Of(offset, limit), ct)));
+            Results.Ok(await service.GetRange(Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<Project>>("listProjects");
 
         root.MapPost("/projects", async (ProjectService service, CreateProject command, CancellationToken ct) =>
-            Created(await service.Create(command, ct)));
+            Created(await service.Create(command, ct)))
+            .RespondsCreated<Project>("createProject");
 
         root.MapGet("/projects/{projectId:guid}", async (ProjectService service, Guid projectId, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, ct)));
+            OkOrNotFound(await service.GetById(projectId, ct)))
+            .RespondsOk<Project>("getProject");
 
         // Сколько чего в проекте (для подтверждения удаления). Недоступный проект — 404, как и сам проект.
         root.MapGet("/projects/{projectId:guid}/stats", async (ProjectService service, Guid projectId, CancellationToken ct) =>
-            OkOrNotFound(await service.GetStats(projectId, ct)));
+            OkOrNotFound(await service.GetStats(projectId, ct)))
+            .RespondsOk<ProjectStats>("getProjectStats");
 
         root.MapPatch("/projects/{projectId:guid}", async (ProjectService service, Guid projectId, UpdateProject command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, command, ct)));
+            OkOrNotFound(await service.Update(projectId, command, ct)))
+            .RespondsOk<Project>("updateProject");
 
         // Удаляет проект со всем содержимым.
         root.MapDelete("/projects/{projectId:guid}", async (ProjectService service, Guid projectId, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, version, ct)))
+            .RespondsNoContent("deleteProject");
 
         var project = root.MapGroup("/projects/{projectId:guid}")
             .AddEndpointFilter(RequireProject);
@@ -112,108 +116,138 @@ internal static class TaskerApi
         // description — необязательное описание статуса (в POST/PATCH и в ответах; пустая строка в PATCH очищает). ?descriptionLength= в списке — как в /tasks:
         // не задан или -1 — полное, 0 — без описания, N — первые N символов (descriptionTruncated, descriptionLength — полная длина); меньше -1 — 400.
         project.MapGet("/statuses", async (StatusService service, Guid projectId, int? offset, int? limit, int? descriptionLength, CancellationToken ct) =>
-            Results.Ok(await service.List(projectId, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct)));
+            Results.Ok(await service.List(projectId, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct)))
+            .RespondsOk<ListDto<StatusListItem>>("listStatuses");
 
         project.MapGet("/statuses/{id:guid}", async (IStatusStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)));
+            OkOrNotFound(await storage.GetById(projectId, id, ct)))
+            .RespondsOk<Status>("getStatus");
 
         project.MapPost("/statuses", async (StatusService service, Guid projectId, CreateStatus command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<Status>("createStatus");
 
         project.MapPatch("/statuses/{id:guid}", async (StatusService service, Guid projectId, Guid id, UpdateStatus command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<Status>("updateStatus");
 
         project.MapDelete("/statuses/{id:guid}", async (StatusService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteStatus");
 
         project.MapGet("/status-sets", async (IStatusSetStorage storage, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)));
+            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<StatusSet>>("listStatusSets");
 
         project.MapGet("/status-sets/{id:guid}", async (IStatusSetStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)));
+            OkOrNotFound(await storage.GetById(projectId, id, ct)))
+            .RespondsOk<StatusSet>("getStatusSet");
 
         project.MapPost("/status-sets", async (StatusSetService service, Guid projectId, CreateStatusSet command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<StatusSet>("createStatusSet");
 
         project.MapPatch("/status-sets/{id:guid}", async (StatusSetService service, Guid projectId, Guid id, UpdateStatusSet command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<StatusSet>("updateStatusSet");
 
         project.MapDelete("/status-sets/{id:guid}", async (StatusSetService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteStatusSet");
 
         // description — как у статусов; ?descriptionLength= в списке — так же.
         project.MapGet("/task-types", async (TaskTypeService service, Guid projectId, int? offset, int? limit, int? descriptionLength, CancellationToken ct) =>
-            Results.Ok(await service.List(projectId, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct)));
+            Results.Ok(await service.List(projectId, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct)))
+            .RespondsOk<ListDto<TaskTypeListItem>>("listTaskTypes");
 
         project.MapGet("/task-types/{id:guid}", async (ITaskTypeStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)));
+            OkOrNotFound(await storage.GetById(projectId, id, ct)))
+            .RespondsOk<TaskType>("getTaskType");
 
         project.MapPost("/task-types", async (TaskTypeService service, Guid projectId, CreateTaskType command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<TaskType>("createTaskType");
 
         // Поля типа — fields [{fieldId, required}] (заменяются целиком); убрали поле, у задач которого есть значения, —
         // с выбором removedFields: "clear" (убрать значения у задач) или "keep" (поле станет дополнительным у задач); без выбора — 409 in_use.
         // Ответ — тип и affectedTasks (число затронутых задач).
         project.MapPatch("/task-types/{id:guid}", async (TaskTypeService service, Guid projectId, Guid id, UpdateTaskType command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<CascadeResult<TaskType>>("updateTaskType");
 
         project.MapDelete("/task-types/{id:guid}", async (TaskTypeService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteTaskType");
 
         // Каталог полей и перечислений проекта. PATCH поля меняет имя, type, multiple и enumId вместе со значениями задач (атомарно);
         // если значения нельзя сохранить как есть — 409 in_use с числом задач, пока в теле нет choice {clearUnconvertible, several: keepFirst|clear,
         // mapping: [{from, to}]}.
         // Поле, которое подключено к типу или записано у задачи, и перечисление, на которое ссылаются поля, удалить нельзя (409 in_use).
         project.MapGet("/fields", async (FieldService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)));
+            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<FieldDefinition>>("listFields");
 
         project.MapGet("/fields/{id:guid}", async (FieldService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, id, ct)));
+            OkOrNotFound(await service.GetById(projectId, id, ct)))
+            .RespondsOk<FieldDefinition>("getField");
 
         project.MapPost("/fields", async (FieldService service, Guid projectId, CreateField command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<FieldDefinition>("createField");
 
         project.MapPatch("/fields/{id:guid}", async (FieldService service, Guid projectId, Guid id, UpdateField command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<FieldDefinition>("updateField");
 
         project.MapDelete("/fields/{id:guid}", async (FieldService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteField");
 
         // PATCH заменяет список значений целиком; удаляемое значение, выбранное у задач, — только с выбором в теле:
         // removed {clear: true} или removed {reassignTo: <id оставшегося значения>}; без выбора — 409 in_use с числом задач.
         // Ответ — перечисление и affectedTasks (число переписанных задач).
         project.MapGet("/enums", async (FieldEnumService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)));
+            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<FieldEnum>>("listFieldEnums");
 
         project.MapGet("/enums/{id:guid}", async (FieldEnumService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, id, ct)));
+            OkOrNotFound(await service.GetById(projectId, id, ct)))
+            .RespondsOk<FieldEnum>("getFieldEnum");
 
         project.MapPost("/enums", async (FieldEnumService service, Guid projectId, CreateFieldEnum command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<FieldEnum>("createFieldEnum");
 
         project.MapPatch("/enums/{id:guid}", async (FieldEnumService service, Guid projectId, Guid id, UpdateFieldEnum command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<CascadeResult<FieldEnum>>("updateFieldEnum");
 
         project.MapDelete("/enums/{id:guid}", async (FieldEnumService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteFieldEnum");
 
         // Типы связей между задачами (Blocks, Duplicate… — по умолчанию как в Jira): у каждого два названия, по одному на сторону связи.
         // В проекте без типов они создаются при первом обращении.
         project.MapGet("/link-types", async (LinkTypeService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)));
+            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<LinkType>>("listLinkTypes");
 
         project.MapGet("/link-types/{id:guid}", async (LinkTypeService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetById(projectId, id, ct)));
+            OkOrNotFound(await service.GetById(projectId, id, ct)))
+            .RespondsOk<LinkType>("getLinkType");
 
         project.MapPost("/link-types", async (LinkTypeService service, Guid projectId, CreateLinkType command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<LinkType>("createLinkType");
 
         project.MapPatch("/link-types/{id:guid}", async (LinkTypeService service, Guid projectId, Guid id, UpdateLinkType command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<LinkType>("updateLinkType");
 
         // Тип, по которому есть связи, удалить нельзя (409 in_use).
         project.MapDelete("/link-types/{id:guid}", async (LinkTypeService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteLinkType");
 
         // ?statusId=, ?typeId=, ?seriesId= (серия: задачи, у которых есть номер в ней): можно повторять (?statusId=A&statusId=B) — значения одного параметра по ИЛИ, разные параметры
         // (статус, тип, серия, field) по И; одно значение работает как раньше (TaskFilter.Of). ?field=Имя=значение (можно повторять, условия по И): условие по полю каталога или собственному полю задач (то же имя и тип) —
@@ -228,96 +262,121 @@ internal static class TaskerApi
             flat == false
                 ? Results.Ok(await service.ListTree(projectId, TaskFilter.Of(typeId, statusId, seriesId), field, Page.Of(offset, limit), DescriptionPreview.Check(descriptionLength), ct, sort))
                 : Results.Ok(await service.List(projectId, TaskFilter.Of(typeId, statusId, seriesId), field, Page.Of(offset, limit),
-                    DescriptionPreview.Check(descriptionLength), ct, sort)));
+                    DescriptionPreview.Check(descriptionLength), ct, sort)))
+            .RespondsOk<ListDto<TaskListItem>>("listTasks");
 
         // Задачи по ссылке: Guid или «ПРЕФИКС-номер» (TSK-5). При дубликате номера — несколько. Неверная ссылка — 400.
         // Маршрут литеральный, а {id:guid} слова «resolve» не примет, так что они не пересекаются.
         project.MapGet("/tasks/resolve", async (TaskService service, Guid projectId, string? @ref, CancellationToken ct) =>
-            Results.Ok(await service.Resolve(projectId, @ref ?? "", ct)));
+            Results.Ok(await service.Resolve(projectId, @ref ?? "", ct)))
+            .RespondsOk<TaskItem[]>("resolveTasks");
 
         // Одна задача — вместе с видом её полей (fieldViews: определения, источник, названия значений enum) и связями с обеих сторон (linkViews, linkCount); в списках их нет.
         project.MapGet("/tasks/{id:guid}", async (TaskService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.Describe(projectId, id, ct)));
+            OkOrNotFound(await service.Describe(projectId, id, ct)))
+            .RespondsOk<TaskDetails>("getTask");
 
         // Значения полей и дополнительные/собственные поля — в теле: fields {values, addFields, newOwnFields, removeFields}.
         project.MapPost("/tasks", async (TaskService service, Guid projectId, CreateTask command, CancellationToken ct) =>
-            Created(await service.Describe(projectId, await service.Create(projectId, command, ct), ct)));
+            Created(await service.Describe(projectId, await service.Create(projectId, command, ct), ct)))
+            .RespondsCreated<TaskDetails>("createTask");
 
         project.MapPatch("/tasks/{id:guid}", async (TaskService service, Guid projectId, Guid id, UpdateTask command, CancellationToken ct) =>
             await service.Update(projectId, id, command, ct) is { } updated
                 ? Results.Ok(await service.Describe(projectId, updated, ct))
-                : Results.NotFound());
+                : Results.NotFound(NotFoundBody))
+            .RespondsOk<TaskDetails>("updateTask");
 
         project.MapDelete("/tasks/{id:guid}", async (TaskService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteTask");
 
         // Номера задач в сериях. Возвращают изменённую задачу; версия — та, что клиент видел у задачи.
         project.MapPost("/tasks/{id:guid}/series", async (TaskService service, Guid projectId, Guid id, AddTaskToSeries command, CancellationToken ct) =>
-            OkOrNotFound(await service.AddToSeries(projectId, id, command.SeriesId, command.Version, ct)));
+            OkOrNotFound(await service.AddToSeries(projectId, id, command.SeriesId, command.Version, ct)))
+            .RespondsOk<TaskItem>("addTaskToSeries");
 
         project.MapDelete("/tasks/{id:guid}/series/{seriesId:guid}", async (TaskService service, Guid projectId, Guid id, Guid seriesId, string? version, CancellationToken ct) =>
-            OkOrNotFound(await service.RemoveFromSeries(projectId, id, seriesId, version, ct)));
+            OkOrNotFound(await service.RemoveFromSeries(projectId, id, seriesId, version, ct)))
+            .RespondsOk<TaskItem>("removeTaskFromSeries");
 
         project.MapPost("/tasks/{id:guid}/series/{seriesId:guid}/renumber",
             async (TaskService service, Guid projectId, Guid id, Guid seriesId, RenumberTask command, CancellationToken ct) =>
-                OkOrNotFound(await service.Renumber(projectId, id, seriesId, command.To, command.Version, ct)));
+                OkOrNotFound(await service.Renumber(projectId, id, seriesId, command.To, command.Version, ct)))
+            .RespondsOk<TaskItem>("renumberTask");
 
         // Связи задачи: GET — все, и исходящие, и входящие, с названием типа со стороны этой задачи («blocks» / «is blocked by»).
         // POST добавляет исходящую связь, DELETE (?typeId=&targetId=) убирает; version — версия этой задачи, необязательна.
         // Возвращают изменённую задачу. Связи только внутри проекта; задача-цель при этом не меняется.
         project.MapGet("/tasks/{id:guid}/links", async (TaskLinkService service, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await service.GetLinks(projectId, id, ct)));
+            OkOrNotFound(await service.GetLinks(projectId, id, ct)))
+            .RespondsOk<TaskLinkView[]>("getTaskLinks");
 
         project.MapPost("/tasks/{id:guid}/links", async (TaskLinkService service, Guid projectId, Guid id, AddTaskLink command, CancellationToken ct) =>
-            OkOrNotFound(await service.Add(projectId, id, command.TypeId, command.TargetId, command.Version, ct)));
+            OkOrNotFound(await service.Add(projectId, id, command.TypeId, command.TargetId, command.Version, ct)))
+            .RespondsOk<TaskItem>("addTaskLink");
 
         project.MapDelete("/tasks/{id:guid}/links", async (TaskLinkService service, Guid projectId, Guid id, Guid typeId, Guid targetId, string? version, CancellationToken ct) =>
-            OkOrNotFound(await service.Remove(projectId, id, typeId, targetId, version, ct)));
+            OkOrNotFound(await service.Remove(projectId, id, typeId, targetId, version, ct)))
+            .RespondsOk<TaskItem>("removeTaskLink");
 
         // Серии проекта. /series/health — литерал, {id:guid} его не перехватывает.
         project.MapGet("/series", async (ISeriesStorage storage, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)));
+            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<Series>>("listSeriesList");
 
         project.MapGet("/series/health", async (SeriesHealthService health, Guid projectId, CancellationToken ct) =>
-            Results.Ok(await health.Check(projectId, ct)));
+            Results.Ok(await health.Check(projectId, ct)))
+            .RespondsOk<SeriesHealth>("getSeriesHealth");
 
         project.MapGet("/series/{id:guid}", async (ISeriesStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)));
+            OkOrNotFound(await storage.GetById(projectId, id, ct)))
+            .RespondsOk<Series>("getSeries");
 
         project.MapPost("/series", async (SeriesService service, Guid projectId, CreateSeries command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<Series>("createSeries");
 
         project.MapPatch("/series/{id:guid}", async (SeriesService service, Guid projectId, Guid id, UpdateSeries command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<Series>("updateSeries");
 
         // Серию с задачами удалять можно: ссылки на неё из задач убираются в той же операции.
         project.MapDelete("/series/{id:guid}", async (SeriesService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteSeries");
 
         project.MapGet("/boards", async (IBoardStorage storage, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)));
+            Results.Ok(await storage.GetRange(projectId, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<Board>>("listBoards");
 
         project.MapGet("/boards/{id:guid}", async (IBoardStorage storage, Guid projectId, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(projectId, id, ct)));
+            OkOrNotFound(await storage.GetById(projectId, id, ct)))
+            .RespondsOk<Board>("getBoard");
 
         project.MapPost("/boards", async (BoardService service, Guid projectId, CreateBoard command, CancellationToken ct) =>
-            Created(await service.Create(projectId, command, ct)));
+            Created(await service.Create(projectId, command, ct)))
+            .RespondsCreated<Board>("createBoard");
 
         project.MapPatch("/boards/{id:guid}", async (BoardService service, Guid projectId, Guid id, UpdateBoard command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(projectId, id, command, ct)));
+            OkOrNotFound(await service.Update(projectId, id, command, ct)))
+            .RespondsOk<Board>("updateBoard");
 
         project.MapDelete("/boards/{id:guid}", async (BoardService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)));
+            NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))
+            .RespondsNoContent("deleteBoard");
 
         // Задачи колонки грузятся постранично и отдельно для каждой колонки. ?field=… — срез по полям, ?sort=… — порядок внутри колонки, ?descriptionLength= — усечение описаний, как в /tasks.
         project.MapGet("/boards/{id:guid}/columns/{columnId:guid}/tasks",
             async (BoardService boards, Guid projectId, Guid id, Guid columnId, string[]? field, int? offset, int? limit, int? descriptionLength, string? sort, CancellationToken ct) =>
-                OkOrNotFound(await boards.GetColumnTasks(projectId, id, columnId, Page.Of(offset, limit), ct, field, DescriptionPreview.Check(descriptionLength), sort)));
+                OkOrNotFound(await boards.GetColumnTasks(projectId, id, columnId, Page.Of(offset, limit), ct, field, DescriptionPreview.Check(descriptionLength), sort)))
+            .RespondsOk<ListDto<TaskListItem>>("listBoardColumnTasks");
 
         // Перенос задачи в колонку: статус берётся из правила переноса колонки. Возвращает изменённую задачу.
         project.MapPost("/boards/{id:guid}/columns/{columnId:guid}/move",
             async (BoardService boards, Guid projectId, Guid id, Guid columnId, MoveTask command, CancellationToken ct) =>
-                OkOrNotFound(await boards.MoveTask(projectId, id, columnId, command, ct)));
+                OkOrNotFound(await boards.MoveTask(projectId, id, columnId, command, ct)))
+            .RespondsOk<TaskItem>("moveTaskToBoardColumn");
 
         MapLocks(project);
     }
@@ -332,7 +391,8 @@ internal static class TaskerApi
     {
         // Все действующие блокировки проекта — для индикаторов «правит Иван» в списках.
         project.MapGet("/locks", async (EntityLockService locks, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(Page.Of(offset, limit).Apply(await locks.GetByProject(projectId, ct))));
+            Results.Ok(Page.Of(offset, limit).Apply(await locks.GetByProject(projectId, ct))))
+            .RespondsOk<ListDto<LockInfo>>("listProjectLocks");
 
         MapLock(project, "/lock", LockedEntity.Project);
         MapLock(project, "/tasks/{id:guid}/lock", LockedEntity.Task);
@@ -348,21 +408,30 @@ internal static class TaskerApi
 
     private static void MapLock(RouteGroupBuilder project, string pattern, LockedEntity entity)
     {
+        var name = entity.ToString();
+        MapLockRoutes(project, pattern, entity, name);
+    }
+
+    private static void MapLockRoutes(RouteGroupBuilder project, string pattern, LockedEntity entity, string name)
+    {
         // У самого проекта в маршруте только projectId — он и есть id блокируемой сущности.
         static Guid IdOf(HttpContext http, LockedEntity entity) =>
             Guid.Parse((string)http.Request.RouteValues[entity == LockedEntity.Project ? "projectId" : "id"]!);
 
         project.MapPost(pattern, async (HttpContext http, EntityLockService locks, Guid projectId, CancellationToken ct) =>
-            OkOrNotFound(await locks.Acquire(projectId, entity, IdOf(http, entity), ct)));
+            OkOrNotFound(await locks.Acquire(projectId, entity, IdOf(http, entity), ct)))
+            .RespondsOk<LockInfo>("acquire" + name + "Lock");
 
         project.MapGet(pattern, async (HttpContext http, EntityLockService locks, CancellationToken ct) =>
-            OkOrNotFound(await locks.Get(entity, IdOf(http, entity), ct)));
+            OkOrNotFound(await locks.Get(entity, IdOf(http, entity), ct)))
+            .RespondsOk<LockInfo>("get" + name + "Lock");
 
         project.MapDelete(pattern, async (HttpContext http, EntityLockService locks, CancellationToken ct) =>
         {
             await locks.Release(entity, IdOf(http, entity), ct);
             return Results.NoContent();
-        });
+        })
+            .RespondsNoContent("release" + name + "Lock");
     }
 
     /// <summary>Вход (только сервер). Регистрация открыта, только пока на сервере нет ни одного пользователя.</summary>
@@ -370,34 +439,40 @@ internal static class TaskerApi
     {
         // Экран входа: показывать ли форму регистрации первого админа.
         anonymous.MapGet("/auth/registration", async (IUserStorage users, CancellationToken ct) =>
-            Results.Ok(new { open = await users.Count(ct: ct) == 0 }));
+            Results.Ok(new AuthRegistration(await users.Count(ct: ct) == 0)))
+            .RespondsOk<AuthRegistration>("getRegistration");
 
         anonymous.MapPost("/auth/register", async (AuthService auth, RegisterUser command, CancellationToken ct) =>
-            Created(await auth.Register(command, ct)));
+            Created(await auth.Register(command, ct)))
+            .RespondsCreated<AuthSession>("register");
 
         anonymous.MapPost("/auth/login", async (AuthService auth, SignIn command, CancellationToken ct) =>
             await auth.SignIn(command, ct) is { } session
                 ? Results.Ok(session)
-                : Unauthorized("Invalid username/email or password"));
+                : Unauthorized("Invalid username/email or password"))
+            .RespondsOk<AuthSession>("login");
 
         // Без access-токена: к моменту обмена он обычно уже истёк.
         anonymous.MapPost("/auth/refresh", async (AuthService auth, RefreshSession command, CancellationToken ct) =>
             await auth.Refresh(command, ct) is { } session
                 ? Results.Ok(session)
-                : Unauthorized("Refresh token is invalid, expired or already used: sign in again"));
+                : Unauthorized("Refresh token is invalid, expired or already used: sign in again"))
+            .RespondsOk<AuthSession>("refreshSession");
 
         anonymous.MapPost("/auth/logout", async (AuthService auth, RefreshSession command, CancellationToken ct) =>
         {
             await auth.SignOut(command, ct);
             return Results.NoContent();
-        });
+        })
+            .RespondsNoContent("logout");
 
         secured.MapGet("/auth/me", async (UserService users, CancellationToken ct) =>
-            Results.Ok(await users.GetCurrent(ct)));
+            Results.Ok(await users.GetCurrent(ct)))
+            .RespondsOk<User>("getCurrentUser");
     }
 
     private static IResult Unauthorized(string error) =>
-        Results.Json(new { error }, statusCode: StatusCodes.Status401Unauthorized);
+        Results.Json(new ApiError(error), statusCode: StatusCodes.Status401Unauthorized);
 
     /// <summary>
     /// Пользователи. На сервере создаёт и удаляет админ, остальные меняют только себя (права — в UserService).
@@ -406,25 +481,31 @@ internal static class TaskerApi
     private static void MapUsers(IEndpointRouteBuilder root, TaskerMode mode)
     {
         root.MapGet("/users", async (IUserStorage storage, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await storage.GetRange(null, Page.Of(offset, limit), ct)));
+            Results.Ok(await storage.GetRange(null, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<User>>("listUsers");
 
         root.MapGet("/users/{id:guid}", async (IUserStorage storage, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await storage.GetById(id, ct)));
+            OkOrNotFound(await storage.GetById(id, ct)))
+            .RespondsOk<User>("getUser");
 
         root.MapPost("/users", async (UserService service, CreateUser command, CancellationToken ct) =>
-            Created(await service.Create(command, ct)));
+            Created(await service.Create(command, ct)))
+            .RespondsCreated<User>("createUser");
 
         root.MapPatch("/users/{id:guid}", async (UserService service, Guid id, UpdateUser command, CancellationToken ct) =>
-            OkOrNotFound(await service.Update(id, command, ct)));
+            OkOrNotFound(await service.Update(id, command, ct)))
+            .RespondsOk<User>("updateUser");
 
         root.MapDelete("/users/{id:guid}", async (UserService service, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Delete(id, version, ct)));
+            NoContentOrNotFound(await service.Delete(id, version, ct)))
+            .RespondsNoContent("deleteUser");
 
         if (mode == TaskerMode.Server)
         {
             // Смена пароля завершает все сессии пользователя: access- и refresh-токены перестают действовать.
             root.MapPost("/users/{id:guid}/password", async (AuthService auth, Guid id, ChangePassword command, CancellationToken ct) =>
-                NoContentOrNotFound(await auth.ChangePassword(id, command, ct)));
+                NoContentOrNotFound(await auth.ChangePassword(id, command, ct)))
+                .RespondsNoContent("changeUserPassword");
         }
     }
 
@@ -435,47 +516,58 @@ internal static class TaskerApi
     private static void MapAgents(IEndpointRouteBuilder root, TaskerMode mode)
     {
         root.MapGet("/agents", async (AgentService agents, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await agents.GetRange(Page.Of(offset, limit), ct)));
+            Results.Ok(await agents.GetRange(Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<User>>("listAgents");
 
         root.MapGet("/agents/{id:guid}", async (AgentService agents, Guid id, CancellationToken ct) =>
-            OkOrNotFound(await agents.GetById(id, ct)));
+            OkOrNotFound(await agents.GetById(id, ct)))
+            .RespondsOk<User>("getAgent");
 
         root.MapPost("/agents", async (AgentService agents, CreateAgent command, CancellationToken ct) =>
-            Created(await agents.Create(command, ct)));
+            Created(await agents.Create(command, ct)))
+            .RespondsCreated<User>("createAgent");
 
         root.MapPatch("/agents/{id:guid}", async (AgentService agents, Guid id, UpdateAgent command, CancellationToken ct) =>
-            OkOrNotFound(await agents.Update(id, command, ct)));
+            OkOrNotFound(await agents.Update(id, command, ct)))
+            .RespondsOk<User>("updateAgent");
 
         root.MapDelete("/agents/{id:guid}", async (AgentService agents, Guid id, string? version, CancellationToken ct) =>
-            NoContentOrNotFound(await agents.Delete(id, version, ct)));
+            NoContentOrNotFound(await agents.Delete(id, version, ct)))
+            .RespondsNoContent("deleteAgent");
 
         if (mode != TaskerMode.Server)
             return;
 
         root.MapGet("/agents/{id:guid}/tokens", async (AgentService agents, Guid id, int? offset, int? limit, CancellationToken ct) =>
-            OkOrNotFound(await agents.GetTokens(id, Page.Of(offset, limit), ct)));
+            OkOrNotFound(await agents.GetTokens(id, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<AgentToken>>("listAgentTokens");
 
         // Значение токена — только в этом ответе: сохраняется лишь его хэш.
         root.MapPost("/agents/{id:guid}/tokens", async (AgentService agents, Guid id, CreateAgentToken command, CancellationToken ct) =>
             await agents.CreateToken(id, command, ct) is { } issued
-                ? Created(new { token = issued.Value, info = issued.Token })
-                : Results.NotFound());
+                ? Created(new AgentTokenIssued(issued.Value, issued.Token))
+                : Results.NotFound(NotFoundBody))
+            .RespondsCreated<AgentTokenIssued>("createAgentToken");
 
         root.MapDelete("/agents/{id:guid}/tokens/{tokenId:guid}", async (AgentService agents, Guid id, Guid tokenId, CancellationToken ct) =>
-            NoContentOrNotFound(await agents.RevokeToken(id, tokenId, ct)));
+            NoContentOrNotFound(await agents.RevokeToken(id, tokenId, ct)))
+            .RespondsNoContent("revokeAgentToken");
     }
 
     /// <summary>Участники проекта (только сервер). Доступ к проекту уже проверен фильтром группы.</summary>
     private static void MapMembers(IEndpointRouteBuilder project)
     {
         project.MapGet("/members", async (ProjectMemberService service, Guid projectId, int? offset, int? limit, CancellationToken ct) =>
-            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)));
+            Results.Ok(await service.GetRange(projectId, Page.Of(offset, limit), ct)))
+            .RespondsOk<ListDto<User>>("listProjectMembers");
 
         project.MapPost("/members", async (ProjectMemberService service, Guid projectId, AddProjectMember command, CancellationToken ct) =>
-            Created(await service.Add(projectId, command, ct)));
+            Created(await service.Add(projectId, command, ct)))
+            .RespondsCreated<User>("addProjectMember");
 
         project.MapDelete("/members/{userId:guid}", async (ProjectMemberService service, Guid projectId, Guid userId, CancellationToken ct) =>
-            NoContentOrNotFound(await service.Remove(projectId, userId, ct)));
+            NoContentOrNotFound(await service.Remove(projectId, userId, ct)))
+            .RespondsNoContent("removeProjectMember");
     }
 
     /// <summary>
@@ -492,26 +584,26 @@ internal static class TaskerApi
         catch (TaskerValidationException e) when (!context.Response.HasStarted)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new { error = e.Message });
+            await context.Response.WriteAsJsonAsync(new ApiError(e.Message));
         }
         catch (TaskerNotFoundException e) when (!context.Response.HasStarted)
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
-            await context.Response.WriteAsJsonAsync(new { error = e.Message });
+            await context.Response.WriteAsJsonAsync(new ApiError(e.Message));
         }
         catch (TaskerForbiddenException e) when (!context.Response.HasStarted)
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new { error = e.Message });
+            await context.Response.WriteAsJsonAsync(new ApiError(e.Message));
         }
         catch (TaskerConflictException e) when (!context.Response.HasStarted)
         {
             context.Response.StatusCode = StatusCodes.Status409Conflict;
             // Занято блокировкой — клиенту нужно знать, кто правит и до какого времени: «правит Иван».
-            object? heldBy = e is Core.Locks.TaskerLockedException locked
-                ? new { name = locked.HeldBy.Holder.Name, expiresAt = locked.HeldBy.ExpiresAt }
+            var heldBy = e is Core.Locks.TaskerLockedException locked
+                ? new LockHolder(locked.HeldBy.Holder.Name, locked.HeldBy.ExpiresAt)
                 : null;
-            await context.Response.WriteAsJsonAsync(new { error = e.Message, code = ConflictCodeName(e.Code), heldBy });
+            await context.Response.WriteAsJsonAsync(new ConflictError(e.Message, ConflictCodeName(e.Code), heldBy));
         }
     }
 
@@ -533,16 +625,18 @@ internal static class TaskerApi
         var projects = http.RequestServices.GetRequiredService<ProjectService>();
 
         if (await projects.GetById(projectId, http.RequestAborted) == null)
-            return Results.NotFound(new { error = $"Project {projectId} not found" });
+            return Results.NotFound(new ApiError($"Project {projectId} not found"));
 
         return await next(context);
     }
 
+    private static readonly ApiError NotFoundBody = new("Not found");
+
     private static IResult OkOrNotFound<T>(T? value) where T : class =>
-        value == null ? Results.NotFound() : Results.Ok(value);
+        value == null ? Results.NotFound(NotFoundBody) : Results.Ok(value);
 
     private static IResult NoContentOrNotFound(bool found) =>
-        found ? Results.NoContent() : Results.NotFound();
+        found ? Results.NoContent() : Results.NotFound(NotFoundBody);
 
     // Адрес созданного ресурса не отдаём: клиенту достаточно тела с id.
     private static IResult Created<T>(T value) => Results.Json(value, statusCode: StatusCodes.Status201Created);

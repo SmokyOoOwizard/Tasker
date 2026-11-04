@@ -41,7 +41,8 @@ public static class TaskerWebExtensions
         }
 
         var api = app.MapGroup("/api");
-        api.MapGet("/health", () => Results.Ok(new { status = "ok", mode = mode.ToString() }));
+        api.MapGet("/health", () => Results.Ok(new HealthStatus("ok", mode.ToString())))
+            .RespondsOk<HealthStatus>("getHealth");
         api.MapTaskerApi(mode);
         if (mode == TaskerMode.Local)
             api.MapWorkspaceEvents();
@@ -51,7 +52,7 @@ public static class TaskerWebExtensions
 
         // Неизвестный путь под /api — 404 JSON-клиенту. Без этого GET попадал бы в SPA-fallback
         // (200 с index.html), а POST/PATCH/DELETE — в 405 от него же.
-        api.Map("{*path}", () => Results.NotFound(new { error = "Not found" }));
+        api.Map("{*path}", () => Results.NotFound(new ApiError("Not found"))).ExcludeFromDescription();
 
         // SPA: все неизвестные не-API маршруты отдают index.html фронтенда.
         app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = frontend });

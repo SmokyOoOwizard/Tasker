@@ -197,11 +197,13 @@ internal static class WorkspaceEventsEndpoint
 {
     /// <summary>Десктоп: <c>GET /api/events</c> внутри рабочей области — поток SSE <see cref="WorkspaceChange"/>.</summary>
     public static void MapWorkspaceEvents(this IEndpointRouteBuilder api) =>
-        api.MapGet("/events", (HttpContext context) =>
+        api.MapGet("/events", (Delegate)((HttpContext context) =>
         {
             var workspace = context.Features.Get<WorkspaceFeature>()!;
             return context.RequestServices.GetRequiredService<WorkspaceEvents>().Stream(context, workspace.Closing);
-        });
+        }))
+        .Produces<WorkspaceChange>(StatusCodes.Status200OK, "text/event-stream")
+        .WithName("streamWorkspaceEvents");
 
     /// <summary>
     /// Рабочая область в SQLite: после успешного изменяющего запроса — событие <c>unknown</c>
