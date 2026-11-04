@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TopBarView: View {
     let section: AppSection
+    @Environment(\.localizer) private var l
     let sidebarVisible: Bool
     let toggleSidebar: () -> Void
 
@@ -13,13 +14,13 @@ struct TopBarView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(DesignColor.mut.color)
-                .help(Strings.showSidebar)
+                .help(l.string(.sidebarShow))
             }
-            Text(Strings.appName)
+            Text(l.string(.appName))
                 .font(.designEmphasis(DesignTypography.baseSize))
-            Text("/")
+            Text(l.string(.breadcrumbSeparator))
                 .foregroundStyle(DesignColor.dim.color)
-            Text(section.title)
+            Text(l.string(section.titleKey))
                 .font(.designEmphasis(DesignTypography.baseSize))
             Spacer(minLength: 0)
         }

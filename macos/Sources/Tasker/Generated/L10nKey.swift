@@ -1,0 +1,27 @@
+import Foundation
+
+enum L10nKey: String, CaseIterable, Sendable {
+    case appName = "app.name"
+    case appLogoLetter = "app.logoLetter"
+    case appCredits = "app.credits"
+    case breadcrumbSeparator = "breadcrumb.separator"
+    case sectionTasks = "section.tasks"
+    case sectionBoards = "section.boards"
+    case sectionSettings = "section.settings"
+    case sectionAdmin = "section.admin"
+    case sidebarProject = "sidebar.project"
+    case sidebarSearch = "sidebar.search"
+    case sidebarSearchShortcut = "sidebar.searchShortcut"
+    case sidebarProfile = "sidebar.profile"
+    case sidebarShow = "sidebar.show"
+    case sidebarHide = "sidebar.hide"
+    case menuSections = "menu.sections"
+    case menuAbout = "menu.about"
+    case placeholderHint = "placeholder.hint"
+    case placeholderVersion = "placeholder.version"
+    case countTasks = "count.tasks"
+    case sidebarLanguage = "sidebar.language"
+    case languageSystem = "language.system"
+    case languageRu = "language.ru"
+    case languageEn = "language.en"
+}

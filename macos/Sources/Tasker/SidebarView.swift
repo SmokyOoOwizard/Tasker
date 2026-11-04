@@ -18,6 +18,7 @@ struct SidebarView: View {
             }
             DesignDivider().padding(.vertical, DesignSpacing.gap6)
             ProfileButton()
+            LanguageMenu()
         }
         .padding(.horizontal, DesignSpacing.sidebarPadX)
         .padding(.bottom, DesignSpacing.sidebarPadY)
@@ -32,19 +33,20 @@ struct SidebarView: View {
 }
 
 private struct ProjectSwitcher: View {
+    @Environment(\.localizer) private var l
     @State private var hovering = false
 
     var body: some View {
         Menu {
-            Button(Strings.appName) {}
+            Button(l.string(.appName)) {}
         } label: {
             HStack(spacing: DesignSpacing.gap8) {
-                Text("T")
+                Text(l.string(.appLogoLetter))
                     .font(.design(DesignTypography.logoSize, weight: DesignTypography.boldWeight))
                     .foregroundStyle(DesignColor.onAcc.color)
                     .frame(width: DesignLayout.logoSize, height: DesignLayout.logoSize)
                     .background(DesignColor.acc.color, in: RoundedRectangle(cornerRadius: DesignRadius.chip))
-                Text(Strings.appName)
+                Text(l.string(.appName))
                     .font(.designEmphasis(DesignTypography.baseSize))
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.up.chevron.down")
@@ -60,22 +62,24 @@ private struct ProjectSwitcher: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .onHover { hovering = $0 }
-        .help(Strings.projectMenuTitle)
+        .help(l.string(.sidebarProject))
         .padding(.top, 38)
         .padding(.bottom, DesignSpacing.gap6)
     }
 }
 
 private struct SearchField: View {
+    @Environment(\.localizer) private var l
     @State private var hovering = false
 
     var body: some View {
         Button {} label: {
             HStack(spacing: DesignSpacing.gap8) {
                 MockupIconView(icon: .search)
-                Text(Strings.searchPlaceholder)
+                Text(l.string(.sidebarSearch))
+                    .lineLimit(1)
                 Spacer(minLength: 0)
-                KeyCap(text: Strings.searchShortcut)
+                KeyCap(text: l.string(.sidebarSearchShortcut))
             }
             .foregroundStyle(hovering ? DesignColor.tx.color : DesignColor.mut.color)
             .padding(.horizontal, DesignSpacing.rowPadX)
@@ -110,6 +114,7 @@ private struct KeyCap: View {
 private struct SidebarRow: View {
     let section: AppSection
     @Binding var selection: AppSection
+    @Environment(\.localizer) private var l
     @State private var hovering = false
 
     var body: some View {
@@ -120,7 +125,7 @@ private struct SidebarRow: View {
             HStack(spacing: DesignSpacing.gap9) {
                 MockupIconView(icon: section.icon)
                     .frame(width: DesignLayout.iconColumn)
-                Text(section.title)
+                Text(l.string(section.titleKey))
                 Spacer(minLength: 0)
             }
             .foregroundStyle(selected ? DesignColor.tx.color : DesignColor.mut.color)
@@ -139,6 +144,7 @@ private struct SidebarRow: View {
 }
 
 private struct ProfileButton: View {
+    @Environment(\.localizer) private var l
     @State private var hovering = false
 
     var body: some View {
@@ -147,7 +153,7 @@ private struct ProfileButton: View {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.system(size: 18))
                     .foregroundStyle(DesignColor.mut.color)
-                Text(Strings.profile)
+                Text(l.string(.sidebarProfile))
                 Spacer(minLength: 0)
                 MockupIconView(icon: .more)
                     .foregroundStyle(DesignColor.mut.color)
@@ -159,5 +165,48 @@ private struct ProfileButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+    }
+}
+
+private struct LanguageMenu: View {
+    @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
+    @Environment(\.localizer) private var l
+
+    var body: some View {
+        let current = AppLanguage(storedValue: storedLanguage)
+        Menu {
+            ForEach(AppLanguage.allCases) { option in
+                Button {
+                    storedLanguage = option.rawValue
+                } label: {
+                    if option == current {
+                        Label(l.string(option.labelKey), systemImage: "checkmark")
+                    } else {
+                        Text(l.string(option.labelKey))
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(l.language.rawValue.uppercased())
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8))
+            }
+            .font(.design(DesignTypography.captionSize))
+            .foregroundStyle(DesignColor.tx.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 1)
+            .background(DesignColor.sel.color, in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(DesignColor.line2.color, lineWidth: DesignLayout.borderWidth))
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(l.string(.sidebarLanguage))
+        .padding(.horizontal, DesignSpacing.rowPadX)
+        .padding(.top, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

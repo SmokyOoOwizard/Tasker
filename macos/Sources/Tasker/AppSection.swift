@@ -11,12 +11,12 @@ enum AppSection: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var titleKey: L10nKey {
         switch self {
-        case .tasks: "Задачи"
-        case .boards: "Доски"
-        case .settings: "Настройки"
-        case .admin: "Админ-панель"
+        case .tasks: .sectionTasks
+        case .boards: .sectionBoards
+        case .settings: .sectionSettings
+        case .admin: .sectionAdmin
         }
     }
 
