@@ -5,6 +5,14 @@ struct SectionContentView: View {
     @Environment(\.localizer) private var l
 
     var body: some View {
+        if section == .tasks {
+            LiveOverviewView()
+        } else {
+            placeholder
+        }
+    }
+
+    private var placeholder: some View {
         VStack(spacing: 8) {
             MockupIconView(icon: section.icon, size: 36)
                 .foregroundStyle(DesignColor.dim.color)

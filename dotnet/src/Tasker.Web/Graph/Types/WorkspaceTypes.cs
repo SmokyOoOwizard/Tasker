@@ -41,5 +41,17 @@ internal sealed class WorkspaceChangeType : ObjectType<WorkspaceChange>
         descriptor.Field(x => x.Entity);
         descriptor.Field(x => x.ProjectId);
         descriptor.Field(x => x.Id);
+        descriptor.Field(x => x.Author).Type<ChangeAuthorType>();
+    }
+}
+
+internal sealed class ChangeAuthorType : ObjectType<Tasker.Core.Locks.EditHolder>
+{
+    protected override void Configure(IObjectTypeDescriptor<Tasker.Core.Locks.EditHolder> descriptor)
+    {
+        descriptor.Name("ChangeAuthor");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.Key);
+        descriptor.Field(x => x.Name);
     }
 }

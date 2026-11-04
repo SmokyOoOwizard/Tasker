@@ -58,24 +58,44 @@ public actor NormalizedCache {
         notify(removed)
     }
 
-    public func apply(change entity: String, projectId: UUID?, id: UUID?) {
-        if entity == "unknown" || (projectId == nil && id == nil) {
-            evictAll()
-            return
-        }
-        var keys: Set<String> = []
-        if let id {
-            let suffix = ":" + id.uuidString.lowercased()
-            keys.formUnion(records.keys.filter { $0.hasSuffix(suffix) })
-        }
-        if let projectId {
-            keys.insert(Self.key(typename: "Project", id: projectId.uuidString))
-        }
-        if entity == "project" || (projectId == nil && entity != "lock") {
-            keys.insert(Self.rootKey)
-        }
-        let removed = keys.filter { records.removeValue(forKey: $0) != nil }
-        notify(Set(removed))
+    public func record(typename: String, id: UUID, selections: [GraphQLField]) -> JSONValue? {
+        var dependencies: Set<String> = []
+        return denormalize(key: Self.key(typename: typename, id: id.uuidString), selections: selections, variables: [:], dependencies: &dependencies).map(JSONValue.object)
+    }
+
+    public func contains(typename: String, id: UUID) -> Bool {
+        records[Self.key(typename: typename, id: id.uuidString)] != nil
+    }
+
+    @discardableResult
+    public func patch(typename: String, id: UUID, with data: JSONValue, selections: [GraphQLField]) -> Set<String> {
+        let key = Self.key(typename: typename, id: id.uuidString)
+        guard records[key] != nil, case .object(let object) = data else { return [] }
+        var changed: Set<String> = []
+        normalize(object, selections: selections, variables: [:], key: key, changed: &changed)
+        notify(changed)
+        return changed
+    }
+
+    public func invalidate(key: String, fields names: Set<String>) {
+        guard var record = records[key] else { return }
+        let removed = record.keys.filter { names.contains(Self.fieldName($0)) }
+        guard !removed.isEmpty else { return }
+        for field in removed { record[field] = nil }
+        records[key] = record
+        notify([key])
+    }
+
+    public func invalidate(projectId: UUID, fields names: Set<String>) {
+        invalidate(key: Self.key(typename: "Project", id: projectId.uuidString), fields: names)
+    }
+
+    public func invalidateRoot(fields names: Set<String>) {
+        invalidate(key: Self.rootKey, fields: names)
+    }
+
+    private static func fieldName(_ storageKey: String) -> String {
+        storageKey.firstIndex(of: "(").map { String(storageKey[..<$0]) } ?? storageKey
     }
 
     public func changes() -> AsyncStream<Set<String>> {

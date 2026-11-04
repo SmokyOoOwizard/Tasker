@@ -205,6 +205,34 @@ public class ConcurrencyTests : IDisposable
         Assert.Equal(["First", "Second"], projects.Data.Select(x => x.Name).Order());
     }
 
+    [Fact]
+    public async Task A_task_changed_by_another_process_is_reported_with_its_id()
+    {
+        using var ws = TestWorkspace.Create("files");
+        await ws.Run("project", "create", "First");
+        await ws.Run("status", "create", "Todo");
+        await ws.Run("status-set", "create", "Main", "--status", "Todo");
+        await ws.Run("task-type", "create", "Task", "--status-set", "Main");
+        var task = (await ws.Run("task", "create", "Login", "--type", "Task")).Id;
+
+        await using var opened = await Session.Open(new WorkspaceSettings(ws.Root, null), CancellationToken.None, watch: true);
+        var ids = new List<Guid?>();
+        opened.Get<IWorkspaceIndex>().Changed += files =>
+        {
+            lock (ids)
+                ids.AddRange(files.Select(x => x.Id));
+        };
+
+        var updated = await ws.RunProcess("task", "update", task.ToString(), "--title", "Login by password");
+        Assert.Equal(0, updated.Code);
+
+        await Eventually(() =>
+        {
+            lock (ids)
+                return ids.Contains(task);
+        });
+    }
+
     private static async Task Eventually(Func<bool> condition)
     {
         for (var i = 0; i < 100 && !condition(); i++)

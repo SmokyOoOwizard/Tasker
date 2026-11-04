@@ -16,7 +16,7 @@ namespace Tasker.Web.Workspaces;
 /// <c>lock</c> (у сущности с этим id взяли или сняли блокировку на время правки; вид сущности в событии не указан)
 /// или <c>unknown</c> (что-то изменилось — перечитать всё); id — если известен.
 /// </summary>
-public sealed record WorkspaceChange(string Entity, Guid? ProjectId, Guid? Id);
+public sealed record WorkspaceChange(string Entity, Guid? ProjectId, Guid? Id, Tasker.Core.Locks.EditHolder? Author = null);
 
 /// <summary>
 /// Уведомления вкладок об изменениях в рабочей области — чтобы две вкладки (и два окна) одной папки
@@ -52,6 +52,8 @@ public sealed class WorkspaceEvents : IDisposable
     /// <summary>Изменение, которое не видно в файлах (рабочая область в SQLite).</summary>
     public void Publish(WorkspaceChange change)
     {
+        if (change.Author == null && Tasker.Core.Locks.ChangeAuthor.Current is { } author)
+            change = change with { Author = author };
         _pending.TryAdd(change, 0);
         _flush.Change(Debounce, Timeout.InfiniteTimeSpan);
     }
@@ -181,6 +183,22 @@ internal sealed class WorkspaceLockNotifier(WorkspaceEvents events) : Tasker.Cor
 
 internal static class WorkspaceEventsEndpoint
 {
+    public static void UseChangeAuthors(this IApplicationBuilder app) =>
+        app.Use(async (context, next) =>
+        {
+            if (context.Features.Get<WorkspaceFeature>() == null
+                || HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)
+                || context.Request.Path.Value?.EndsWith(Graph.GraphSetup.Path, StringComparison.Ordinal) == true)
+            {
+                await next(context);
+                return;
+            }
+
+            var author = await context.RequestServices.GetRequiredService<Tasker.Core.Locks.IEditorIdentity>().Current(context.RequestAborted);
+            using (Tasker.Core.Locks.ChangeAuthor.Begin(author))
+                await next(context);
+        });
+
     /// <summary>
     /// Рабочая область в SQLite: после успешного изменяющего запроса — событие <c>unknown</c>
     /// (изменения в файлах ловит <see cref="FileSystemWatcher"/>, здесь их не дублируем).

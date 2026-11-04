@@ -152,6 +152,46 @@ public class DaemonTests : IDisposable
     }
 
     [Fact]
+    public async Task Changes_name_their_author_when_they_come_through_the_daemon()
+    {
+        var folder = await _daemon.Workspace("a", "Alpha");
+        var status = await _daemon.Start();
+        var key = KeyOf(status.Workspaces[0]);
+        var apiBase = $"http://127.0.0.1:{status.Port}/w/{key}/api";
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+        using var subscription = await GraphReads.Subscribe(http, apiBase, "entity projectId id author { key name }");
+        using var reader = new StreamReader(await subscription.Content.ReadAsStreamAsync());
+        Assert.Equal(": connected", await reader.ReadLineAsync());
+
+        async Task<JsonNode> ProjectChange(string projectId)
+        {
+            using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            while (await reader.ReadLineAsync(wait.Token) is { } line)
+            {
+                if (GraphReads.Change(line) is { } change && change["entity"]!.GetValue<string>() == "project" && change["id"]?.GetValue<string>() == projectId)
+                    return change;
+            }
+            throw new InvalidOperationException("the stream ended");
+        }
+
+        using var created = await http.PostAsJsonAsync($"{apiBase}/projects", new { name = "Beta" });
+        var restProject = (await created.Content.ReadFromJsonAsync<JsonNode>())!["id"]!.GetValue<string>();
+        var rest = await ProjectChange(restProject);
+        Assert.Equal("local", rest["author"]!["key"]!.GetValue<string>());
+
+        var agentProject = JsonNode.Parse(await _daemon.CallTool(key, "create_project", new { name = "FromAgent" }))!["id"]!.GetValue<string>();
+        var agent = await ProjectChange(agentProject);
+        Assert.StartsWith("user:", agent["author"]!["key"]!.GetValue<string>());
+        Assert.Equal("agent", agent["author"]!["name"]!.GetValue<string>());
+
+        var console = await TaskerProcess.Run("project", "create", "Gamma", "--json", "-w", folder);
+        Assert.Equal(0, console.Code);
+        var fromFiles = await ProjectChange(console.Json["id"]!.GetValue<string>());
+        Assert.Null(fromFiles["author"]);
+    }
+
+    [Fact]
     public async Task A_workspace_that_cannot_be_opened_is_reported_and_does_not_stop_the_others()
     {
         var gone = await _daemon.Workspace("gone", "Gone");

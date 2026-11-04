@@ -7,6 +7,7 @@ enum MockupIcon: Sendable {
     case shield
     case search
     case more
+    case check
 }
 
 struct MockupIconShape: Shape {
@@ -56,6 +57,10 @@ struct MockupIconShape: Shape {
             line(&path, 10.5, 10.5, 14, 14)
         case .more:
             for x in [3.5, 8, 12.5] as [CGFloat] { line(&path, x, 8, x, 8.01) }
+        case .check:
+            path.move(to: p(3, 8.5))
+            path.addLine(to: p(6.2, 11.5))
+            path.addLine(to: p(13, 4.5))
         }
         return path
     }

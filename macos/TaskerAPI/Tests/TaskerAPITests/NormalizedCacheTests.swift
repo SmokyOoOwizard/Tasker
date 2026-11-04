@@ -44,26 +44,24 @@ import Testing
         #expect(await cache.keys().contains("Project:0b9a1c52-27a4-4c41-9d2a-3b8e0c1f7a10"))
     }
 
-    @Test func appliesWorkspaceChanges() async throws {
+    @Test func invalidatesFieldsAndPatchesRecordsInPlace() async throws {
         let cache = NormalizedCache()
         let query = ProjectQuery(id: taskerId)
         await cache.write(try GraphQLClient.parse(status: 200, body: Fixture.data("projects.json")), selections: ProjectsQuery.selections, variables: [:])
         await cache.write(try GraphQLClient.parse(status: 200, body: Fixture.data("project-renamed.json")), selections: ProjectQuery.selections, variables: query.variables)
 
-        await cache.apply(change: "task", projectId: taskerId, id: UUID())
+        await cache.invalidate(projectId: taskerId, fields: ["stats"])
         #expect(await cache.read(query) == nil)
-        #expect(await cache.keys().contains(NormalizedCache.rootKey))
+        #expect(await cache.read(ProjectsQuery())?.projects.data[0].name == "Tasker 2")
 
-        await cache.apply(change: "lock", projectId: nil, id: UUID())
-        #expect(await cache.keys().contains(NormalizedCache.rootKey))
+        let patched = await cache.patch(typename: "Project", id: taskerId, with: .object(["name": .string("Tasker 3")]), selections: [GraphQLField("name")])
+        #expect(patched == ["Project:6cb8f29b-d6d5-4987-a61d-745df39b1ded"])
+        #expect(await cache.read(ProjectsQuery())?.projects.data[0].name == "Tasker 3")
+        #expect(await cache.patch(typename: "Project", id: UUID(), with: .object(["name": .string("x")]), selections: [GraphQLField("name")]).isEmpty)
 
-        let created = UUID()
-        await cache.apply(change: "project", projectId: created, id: created)
-        #expect(await !cache.keys().contains(NormalizedCache.rootKey))
-        #expect(await cache.keys().contains("Project:0b9a1c52-27a4-4c41-9d2a-3b8e0c1f7a10"))
-
-        await cache.apply(change: "unknown", projectId: nil, id: nil)
-        #expect(await cache.recordCount == 0)
+        await cache.invalidateRoot(fields: ["projects"])
+        #expect(await cache.read(ProjectsQuery()) == nil)
+        #expect(await cache.record(typename: "Project", id: taskerId, selections: [GraphQLField("name")])?["name"] == .string("Tasker 3"))
     }
 
     @Test func notifiesChangedKeys() async throws {

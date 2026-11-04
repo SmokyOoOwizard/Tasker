@@ -64,11 +64,11 @@ public static class GraphReads
         return node == null ? (HttpStatusCode.NotFound, null) : (HttpStatusCode.OK, Restore(node.DeepClone()));
     }
 
-    public static async Task<HttpResponseMessage> Subscribe(HttpClient http, string apiBase)
+    public static async Task<HttpResponseMessage> Subscribe(HttpClient http, string apiBase, string fields = "entity projectId id")
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, apiBase.TrimEnd('/') + GraphSetup.Path)
         {
-            Content = JsonContent.Create(new { query = "subscription { workspaceChanges { entity projectId id } }" })
+            Content = JsonContent.Create(new { query = $"subscription {{ workspaceChanges {{ {fields} }} }}" })
         };
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);

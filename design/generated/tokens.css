@@ -64,6 +64,9 @@
   --space-row-pad-x: 8px;
   --space-row-pad-y: 5px;
   --space-page-pad-x: 20px;
+  --space-toast-pad-x: 14px;
+  --space-toast-pad-y: 8px;
+  --space-toast-bottom: 22px;
   --layout-sidebar-width: 232px;
   --layout-top-bar-height: 44px;
   --layout-tab-bar-height: 34px;
@@ -75,6 +78,8 @@
   --layout-icon-stroke: 1.4px;
   --layout-icon-box: 16px;
   --layout-status-icon-box: 14px;
+  --layout-status-dot: 8px;
+  --layout-toast-max-width: 560px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-size-base: 13px;

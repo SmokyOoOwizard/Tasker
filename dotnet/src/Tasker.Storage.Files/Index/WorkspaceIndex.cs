@@ -532,7 +532,10 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                 foreach (var scope in scopes)
                 {
                     if (!(ownWrites.TryGetValue(scope, out var written) && now - written < OwnWriteWindow) && changed.All(x => x.Path != scope))
-                        changed.Add(new WorkspaceFileChange(scope, null, ProjectOf(scope, folders)));
+                    {
+                        var id = indexed.TryGetValue(scope, out var file) ? IdOf(file.Id) : null;
+                        changed.Add(new WorkspaceFileChange(scope, id, ProjectOf(scope, folders)));
+                    }
                 }
             }
 
