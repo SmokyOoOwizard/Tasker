@@ -24,10 +24,13 @@ struct MainView: View {
                 SectionContentView(section: selection.wrappedValue)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(DesignColor.bg.color)
         }
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.18), value: sidebarVisible)
         .frame(minWidth: 640, minHeight: 420)
+        .font(.design(DesignTypography.baseSize))
+        .foregroundStyle(DesignColor.tx.color)
+        .tint(DesignColor.acc.color)
     }
 }
