@@ -18,6 +18,7 @@ struct DaemonWorker: Decodable, Equatable, Sendable {
 struct DaemonWorkspace: Decodable, Equatable, Sendable {
     var path: String
     var state: String
+    var key: String? = nil
     var error: String?
 }
 

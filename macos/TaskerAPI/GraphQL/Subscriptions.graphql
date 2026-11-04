@@ -3,5 +3,9 @@ subscription WorkspaceChanges {
     entity
     projectId
     id
+    author {
+      key
+      name
+    }
   }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 struct TaskerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var connection = DaemonConnection.live()
+    @State private var live = LiveWorkspace()
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
 
     var body: some Scene {
@@ -12,6 +13,7 @@ struct TaskerApp: App {
                 .background(WindowFrameAutosave(name: "TaskerMainWindow"))
                 .localized()
                 .environment(connection)
+                .environment(live)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 960, height: 640)

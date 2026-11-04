@@ -1,0 +1,44 @@
+query LiveTask($projectId: UUID!, $id: UUID!) {
+  project(id: $projectId) {
+    id
+    task(id: $id) {
+      id
+      projectId
+      title
+      typeId
+      statusId
+      seriesNumbers {
+        seriesId
+        number
+      }
+      createdAt
+      updatedAt
+      version
+    }
+  }
+}
+
+query LiveProject($id: UUID!) {
+  project(id: $id) {
+    ...ProjectFields
+  }
+}
+
+query ProjectVocabulary($projectId: UUID!) {
+  project(id: $projectId) {
+    id
+    statuses(limit: 200, descriptionLength: 0) {
+      data {
+        id
+        name
+        color
+      }
+    }
+    seriesList(limit: 200) {
+      data {
+        id
+        prefix
+      }
+    }
+  }
+}

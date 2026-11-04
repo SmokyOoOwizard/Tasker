@@ -63,6 +63,11 @@ type BoardPage {
   data: [Board!]!
 }
 
+type ChangeAuthor {
+  key: String!
+  name: String!
+}
+
 type ColumnFieldFilter {
   fieldId: UUID!
   operator: FieldOperator!
@@ -501,6 +506,7 @@ type WorkspaceChange {
   entity: String!
   projectId: UUID
   id: UUID
+  author: ChangeAuthor
 }
 
 type WorkspaceMcp {

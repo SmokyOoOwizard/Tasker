@@ -25,6 +25,7 @@ public static class TaskerWebExtensions
         {
             app.UseLoopbackOnly();
             app.UseWorkspaces();
+            app.UseChangeAuthors();
             app.UseSqliteChangeEvents();
         }
 
@@ -69,6 +70,7 @@ public static class TaskerWebExtensions
     {
         app.UseLoopbackOnly();
         app.UseWorkspaces();
+        app.UseChangeAuthors();
         app.UseSqliteChangeEvents();
         app.Use(TaskerApi.HandleErrors);
         app.UseRouting();

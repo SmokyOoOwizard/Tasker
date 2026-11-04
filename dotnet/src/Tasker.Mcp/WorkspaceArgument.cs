@@ -92,7 +92,9 @@ internal static class WorkspaceArgument
                 }
 
                 context.Services = scope.Services;
-                return await next(context, ct);
+                var author = await scope.Services.GetRequiredService<Tasker.Core.Locks.IEditorIdentity>().Current(ct);
+                using (Tasker.Core.Locks.ChangeAuthor.Begin(author))
+                    return await next(context, ct);
             }
         };
 

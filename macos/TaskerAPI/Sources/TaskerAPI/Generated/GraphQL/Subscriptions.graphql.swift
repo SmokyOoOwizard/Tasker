@@ -11,6 +11,11 @@ public struct WorkspaceChangesSubscription: GraphQLSubscription {
         entity
         projectId
         id
+        author {
+          __typename
+          key
+          name
+        }
       }
     }
     """
@@ -19,7 +24,12 @@ public struct WorkspaceChangesSubscription: GraphQLSubscription {
             GraphQLField("__typename"),
             GraphQLField("entity"),
             GraphQLField("projectId"),
-            GraphQLField("id")
+            GraphQLField("id"),
+            GraphQLField("author", selections: [
+                GraphQLField("__typename"),
+                GraphQLField("key"),
+                GraphQLField("name")
+            ])
         ])
     ]
 
@@ -38,11 +48,23 @@ public struct WorkspaceChangesSubscription: GraphQLSubscription {
             public var entity: String
             public var projectId: UUID?
             public var id: UUID?
+            public var author: Author?
 
-            public init(entity: String, projectId: UUID?, id: UUID?) {
+            public init(entity: String, projectId: UUID?, id: UUID?, author: Author?) {
                 self.entity = entity
                 self.projectId = projectId
                 self.id = id
+                self.author = author
+            }
+
+            public struct Author: Hashable, Sendable, Decodable {
+                public var key: String
+                public var name: String
+
+                public init(key: String, name: String) {
+                    self.key = key
+                    self.name = name
+                }
             }
         }
     }

@@ -10,8 +10,11 @@ struct LiveDaemonTests {
         let before = try await api.graphQL.fetch(ProjectsQuery())
         #expect(before.projects.totalCount == before.projects.data.count)
 
-        var changes = api.workspaceChanges(updatingCache: false).makeAsyncIterator()
-        #expect(try await changes.next() == .connected)
+        var changes = api.liveUpdates().makeAsyncIterator()
+        guard case .connected(reconnected: false, _) = try await changes.next() else {
+            Issue.record("expected the first connection")
+            return
+        }
 
         var watched = api.graphQL.watch(ProjectsQuery()).makeAsyncIterator()
         #expect(try await watched.next()?.projects.totalCount == before.projects.totalCount)
@@ -22,14 +25,13 @@ struct LiveDaemonTests {
         }
         #expect(created.name == name)
 
-        var event: WorkspaceChangesSubscription.Data.WorkspaceChanges?
+        var event: LiveUpdate?
         while event == nil, let next = try await changes.next() {
-            if case .value(let change) = next { event = change }
+            if case .update(let update) = next { event = update }
         }
-        let change = try #require(event)
-        #expect(["project", "unknown"].contains(change.entity))
-
-        await api.cache.apply(change: change.entity, projectId: change.projectId, id: change.id)
+        let update = try #require(event)
+        #expect([LiveChange.projectCreated(name: name), .reloaded].contains(update.change))
+        #expect(update.author?.key == ChangeAuthor.localKey)
         var after: ProjectsQuery.Data?
         while after == nil, let value = try await watched.next() {
             if value.projects.data.contains(where: { $0.name == name }) { after = value }

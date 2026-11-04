@@ -3,6 +3,7 @@ import SwiftUI
 struct MainView: View {
     @AppStorage(AppSection.storageKey) private var storedSection = AppSection.default.rawValue
     @Environment(DaemonConnection.self) private var connection
+    @Environment(LiveWorkspace.self) private var live
     @AppStorage(SidebarState.storageKey) private var sidebarVisible = true
 
     private var selection: Binding<AppSection> {
@@ -25,6 +26,9 @@ struct MainView: View {
                 DaemonGate {
                     SectionContentView(section: selection.wrappedValue)
                 }
+                .overlay(alignment: .bottom) {
+                    LiveToastStack()
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(DesignColor.bg.color)
@@ -36,5 +40,8 @@ struct MainView: View {
         .foregroundStyle(DesignColor.tx.color)
         .tint(DesignColor.acc.color)
         .task { connection.start() }
+        .onChange(of: connection.state, initial: true) {
+            live.follow(connection.state)
+        }
     }
 }

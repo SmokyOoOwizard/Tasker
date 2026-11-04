@@ -23,6 +23,7 @@ struct TopBarView: View {
             Text(l.string(section.titleKey))
                 .font(.designEmphasis(DesignTypography.baseSize))
             Spacer(minLength: 0)
+            LiveStatusLabel()
         }
         .padding(.leading, sidebarVisible ? DesignSpacing.pagePadX : 80)
         .padding(.trailing, DesignSpacing.pagePadX)

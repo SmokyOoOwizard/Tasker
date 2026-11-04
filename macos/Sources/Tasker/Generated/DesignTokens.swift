@@ -101,6 +101,9 @@ enum DesignSpacing {
     static let rowPadX: CGFloat = 8.0
     static let rowPadY: CGFloat = 5.0
     static let pagePadX: CGFloat = 20.0
+    static let toastPadX: CGFloat = 14.0
+    static let toastPadY: CGFloat = 8.0
+    static let toastBottom: CGFloat = 22.0
 }
 
 enum DesignLayout {
@@ -115,6 +118,8 @@ enum DesignLayout {
     static let iconStroke: CGFloat = 1.4
     static let iconBox: CGFloat = 16.0
     static let statusIconBox: CGFloat = 14.0
+    static let statusDot: CGFloat = 8.0
+    static let toastMaxWidth: CGFloat = 560.0
 }
 
 enum DesignTypography {

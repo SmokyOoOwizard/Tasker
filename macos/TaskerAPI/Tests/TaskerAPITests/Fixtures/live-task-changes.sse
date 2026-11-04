@@ -1,0 +1,17 @@
+: connected
+
+event: next
+data: {"data":{"workspaceChanges":{"__typename":"WorkspaceChange","entity":"lock","projectId":null,"id":"19509c26-992a-475d-8946-91e3cb71f1d2","author":{"__typename":"ChangeAuthor","key":"user:5c0ffee0-0000-4000-8000-000000000001","name":"Claude"}}}}
+
+event: next
+data: {"data":{"workspaceChanges":{"__typename":"WorkspaceChange","entity":"task","projectId":"6cb8f29b-d6d5-4987-a61d-745df39b1ded","id":"19509c26-992a-475d-8946-91e3cb71f1d2","author":{"__typename":"ChangeAuthor","key":"user:5c0ffee0-0000-4000-8000-000000000001","name":"Claude"}}}}
+
+event: next
+data: {"data":{"workspaceChanges":{"__typename":"WorkspaceChange","entity":"task","projectId":"6cb8f29b-d6d5-4987-a61d-745df39b1ded","id":"3b8e1d2f-6c4e-4f9b-8d7a-2e3f4a5b6c7d","author":null}}}
+
+event: next
+data: {"data":{"workspaceChanges":{"__typename":"WorkspaceChange","entity":"task","projectId":"6cb8f29b-d6d5-4987-a61d-745df39b1ded","id":"2a7f0c1e-5b3d-4e8a-9c6f-1d2e3f4a5b6c","author":{"__typename":"ChangeAuthor","key":"local","name":"Local user"}}}}
+
+event: complete
+data:
+

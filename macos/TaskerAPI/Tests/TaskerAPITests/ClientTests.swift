@@ -126,6 +126,7 @@ import Testing
             switch event {
             case .connected: connected += 1
             case .value: values += 1
+            case .disconnected: break
             }
         }
         #expect(connected == 2)
@@ -151,7 +152,7 @@ import Testing
         #expect(server.requests.count == 3)
     }
 
-    @Test func workspaceChangesInvalidateCache() async throws {
+    @Test func liveUpdatesReloadEverythingOnUnknownChange() async throws {
         let server = StubServer { request, _ in
             if request.headers["Accept"] == "text/event-stream" { return .fixture("workspace-changes.sse") }
             return .fixture("projects.json")
@@ -159,11 +160,11 @@ import Testing
         let api = server.client()
         _ = try await api.graphQL.fetch(ProjectsQuery())
         #expect(await api.cache.recordCount == 4)
-        var entities: [String] = []
-        for try await event in api.workspaceChanges() {
-            if case .value(let change) = event { entities.append(change.entity) }
+        var changes: [LiveChange] = []
+        for try await event in api.liveUpdates(reconnect: .never) {
+            if case .update(let update) = event { changes.append(update.change) }
         }
-        #expect(entities == ["task", "unknown"])
+        #expect(changes == [.taskDeleted(nil, id: UUID(uuidString: "19509c26-992a-475d-8946-91e3cb71f1d2")!), .reloaded])
         #expect(await api.cache.recordCount == 0)
     }
 }

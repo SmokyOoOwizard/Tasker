@@ -14,31 +14,7 @@ public final class TaskerAPIClient: Sendable {
 
     public var cache: NormalizedCache { graphQL.cache }
 
-    public func workspaceChanges(reconnect: ReconnectPolicy = .default, updatingCache: Bool = true) -> AsyncThrowingStream<SubscriptionEvent<WorkspaceChangesSubscription.Data.WorkspaceChanges>, any Error> {
-        let source = graphQL.subscribe(WorkspaceChangesSubscription(), reconnect: reconnect)
-        let cache = self.cache
-        let (stream, continuation) = AsyncThrowingStream<SubscriptionEvent<WorkspaceChangesSubscription.Data.WorkspaceChanges>, any Error>.makeStream()
-        let task = Task {
-            var connections = 0
-            do {
-                for try await event in source {
-                    switch event {
-                    case .connected:
-                        connections += 1
-                        if updatingCache, connections > 1 { await cache.evictAll() }
-                        continuation.yield(.connected)
-                    case .value(let data):
-                        let change = data.workspaceChanges
-                        if updatingCache { await cache.apply(change: change.entity, projectId: change.projectId, id: change.id) }
-                        continuation.yield(.value(change))
-                    }
-                }
-                continuation.finish()
-            } catch {
-                continuation.finish(throwing: error)
-            }
-        }
-        continuation.onTermination = { _ in task.cancel() }
-        return stream
+    public func liveUpdates(reconnect: ReconnectPolicy = .default, clock: @escaping @Sendable () -> Date = Date.init) -> AsyncThrowingStream<LiveEvent, any Error> {
+        WorkspaceLiveUpdates(client: self, clock: clock).events(reconnect: reconnect)
     }
 }

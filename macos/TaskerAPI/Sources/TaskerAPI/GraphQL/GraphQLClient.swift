@@ -9,6 +9,7 @@ public enum CachePolicy: Sendable, Hashable {
 public enum SubscriptionEvent<Value: Sendable>: Sendable {
     case connected
     case value(Value)
+    case disconnected
 }
 
 extension SubscriptionEvent: Equatable where Value: Equatable {}
@@ -136,6 +137,7 @@ public final class GraphQLClient: Sendable {
                         continuation.finish(throwing: error)
                         return
                     }
+                    continuation.yield(.disconnected)
                     do {
                         try await Task.sleep(for: delay)
                     } catch {
