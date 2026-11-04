@@ -130,7 +130,7 @@ struct MainColumn: View {
                 Text(l.string(.taskDetailIncludes))
                 ProgressBar(fraction: progress.total == 0 ? 0 : Double(progress.done) / Double(progress.total))
                     .frame(maxWidth: 200)
-                Text(l.string(.taskDetailProgress, progress.done, progress.total)).monospacedDigit()
+                Text(l.string(.taskDetailProgress, String(progress.done), String(progress.total))).monospacedDigit()
             }
             .font(.design(DesignTypography.smallSize))
             .foregroundStyle(DesignColor.mut.color)
