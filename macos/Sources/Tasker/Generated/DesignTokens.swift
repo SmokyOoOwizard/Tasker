@@ -88,6 +88,7 @@ enum DesignRadius {
     static let panel: CGFloat = 10.0
     static let dialog: CGFloat = 12.0
     static let pill: CGFloat = 999.0
+    static let tag: CGFloat = 5.0
 }
 
 enum DesignSpacing {
@@ -120,6 +121,15 @@ enum DesignLayout {
     static let statusIconBox: CGFloat = 14.0
     static let statusDot: CGFloat = 8.0
     static let toastMaxWidth: CGFloat = 560.0
+    static let treeIndent: CGFloat = 22.0
+    static let twistyWidth: CGFloat = 16.0
+    static let statusButton: CGFloat = 22.0
+    static let refMinWidth: CGFloat = 66.0
+    static let dateMinWidth: CGFloat = 52.0
+    static let tagHeight: CGFloat = 19.0
+    static let tagPadX: CGFloat = 7.0
+    static let rowSelectionBar: CGFloat = 2.0
+    static let groupRowHeight: CGFloat = 34.0
 }
 
 enum DesignTypography {
@@ -139,6 +149,18 @@ enum DesignTypography {
     static let boldWeight: Font.Weight = .bold
     static let emphasisWeight: CGFloat = 0.265
     static let lineHeight: CGFloat = 1.45
+}
+
+enum DesignTag {
+    static let palette: [String] = ["#8993a4", "#2684ff", "#f5a623", "#de350b", "#9b59b6", "#36b37e", "#e0568a", "#17a2b8"]
+    static let backgroundLightMix: CGFloat = 0.17
+    static let backgroundLightBase = "#ffffff"
+    static let backgroundDarkMix: CGFloat = 0.24
+    static let backgroundDarkBase = "#14151a"
+    static let textLightMix: CGFloat = 0.62
+    static let textLightBase = "#000000"
+    static let textDarkMix: CGFloat = 0.58
+    static let textDarkBase = "#ffffff"
 }
 
 enum StatusIconName: String, CaseIterable, Sendable {

@@ -41,6 +41,7 @@ final class LiveWorkspace {
     private(set) var lastUpdate: Date?
     private(set) var toasts: [LiveToast] = []
     private(set) var projects: [ProjectFields]?
+    private(set) var revision = 0
 
     @ObservationIgnored private let makeClient: (LiveWorkspaceAddress) -> TaskerAPIClient
     @ObservationIgnored private let reconnect: ReconnectPolicy
@@ -127,11 +128,15 @@ final class LiveWorkspace {
             everConnected = true
             connection = .live
             lastUpdate = at
-            if restored { show(.reconnected) }
+            if restored {
+                revision += 1
+                show(.reconnected)
+            }
         case .disconnected:
             connection = .offline
         case .update(let update):
             lastUpdate = update.receivedAt
+            revision += 1
             if let message = LiveToastMessage(update, ownAuthorKey: ownAuthorKey) { show(message) }
         }
     }

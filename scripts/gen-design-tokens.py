@@ -199,6 +199,16 @@ def gen_swift(t):
     a("    static let emphasisWeight: CGFloat = %s" % swift_num(ns_weight(ty["emphasis"])))
     a("    static let lineHeight: CGFloat = %s" % swift_num(ty["lineHeight"]))
     a("}")
+    tg = t["tags"]
+    a("")
+    a("enum DesignTag {")
+    a("    static let palette: [String] = [%s]" % ", ".join('"%s"' % css_color(c) for c in tg["palette"]))
+    for part in ("background", "text"):
+        for which in ("light", "dark"):
+            spec = tg[part][which]
+            a("    static let %s%sMix: CGFloat = %s" % (part, which.capitalize(), swift_num(spec["mix"])))
+            a("    static let %s%sBase = \"%s\"" % (part, which.capitalize(), css_color(spec["base"])))
+    a("}")
     si = t["statusIcons"]
     a("")
     a("enum StatusIconName: String, CaseIterable, Sendable {")
@@ -244,6 +254,11 @@ def gen_css(t):
             lines.append("  --%s: %s;" % (kebab(n), css_color(c[which])))
         for n, s in t["shadows"].items():
             lines.append("  --shadow-%s: %spx %spx %spx %s;" % (kebab(n), num(s["x"]), num(s["y"]), num(s["blur"]), css_color(s["color"][which])))
+        tg = t["tags"]
+        lines.append("  --tbp: %s%%;" % num(tg["background"][which]["mix"] * 100))
+        lines.append("  --tbb: %s;" % css_color(tg["background"][which]["base"]))
+        lines.append("  --tfp: %s%%;" % num(tg["text"][which]["mix"] * 100))
+        lines.append("  --tfb: %s;" % css_color(tg["text"][which]["base"]))
         lines.append("}")
         return lines
 
@@ -265,6 +280,8 @@ def gen_css(t):
         L.append("  --font-weight-%s: %s;" % (kebab(n), v))
     L.append("  --font-weight-emphasis: %s;" % ty["emphasis"])
     L.append("  --line-height: %s;" % num(ty["lineHeight"]))
+    for i, c in enumerate(t["tags"]["palette"]):
+        L.append("  --tag-%d: %s;" % (i, css_color(c)))
     L.append("}")
     return "\n".join(L) + "\n"
 

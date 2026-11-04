@@ -7,6 +7,7 @@ struct TaskerApp: App {
     @State private var live: LiveWorkspace
     @State private var workspaces: WorkspaceController
     @State private var projects: ProjectSelection
+    @State private var taskLists = TaskListSettings()
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
 
     init() {
@@ -26,6 +27,7 @@ struct TaskerApp: App {
                 .environment(live)
                 .environment(workspaces)
                 .environment(projects)
+                .environment(taskLists)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 960, height: 640)

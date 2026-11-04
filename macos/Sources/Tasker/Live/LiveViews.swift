@@ -88,22 +88,6 @@ struct ProjectScope<Content: View>: View {
     }
 }
 
-struct LiveOverviewView: View {
-    @Environment(LiveWorkspace.self) private var live
-    @Environment(ProjectSelection.self) private var selection
-
-    var body: some View {
-        ProjectScope {
-            if let client = live.client, let project = selection.current {
-                ScrollView {
-                    LiveProjectCard(client: client, project: project)
-                        .padding(DesignSpacing.pagePadX)
-                }
-            }
-        }
-    }
-}
-
 struct LiveMessageView: View {
     let text: String
 
@@ -112,71 +96,6 @@ struct LiveMessageView: View {
             .font(.design(DesignTypography.baseSize))
             .foregroundStyle(DesignColor.mut.color)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct LiveProjectCard: View {
-    let client: TaskerAPIClient
-    let project: ProjectFields
-    @Environment(\.localizer) private var l
-    @State private var tasks: ProjectTasksQuery.Data.Project.Tasks?
-    @State private var statuses: [UUID: String] = [:]
-    @State private var prefixes: [UUID: String] = [:]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: DesignSpacing.gap8) {
-                Text(project.name)
-                    .font(.designEmphasis(DesignTypography.baseSize))
-                Spacer(minLength: 0)
-                if let tasks {
-                    Text(l.taskCount(tasks.totalCount))
-                        .foregroundStyle(DesignColor.dim.color)
-                        .monospacedDigit()
-                }
-            }
-            .padding(.horizontal, DesignSpacing.rowPadX)
-            .padding(.vertical, DesignSpacing.rowPadY)
-            DesignDivider()
-            if let tasks, tasks.data.isEmpty {
-                Text(l.string(.overviewNoTasks))
-                    .foregroundStyle(DesignColor.mut.color)
-                    .padding(.horizontal, DesignSpacing.rowPadX)
-                    .frame(height: DesignLayout.taskRowHeight)
-            }
-            ForEach(tasks?.data ?? [], id: \.id) { task in
-                HStack(spacing: DesignSpacing.gap10) {
-                    Text(reference(task) ?? "")
-                        .font(.design(DesignTypography.monoSize, mono: true))
-                        .foregroundStyle(DesignColor.dim.color)
-                    Text(task.title)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Text(statuses[task.statusId] ?? "")
-                        .foregroundStyle(DesignColor.mut.color)
-                }
-                .padding(.horizontal, DesignSpacing.rowPadX)
-                .frame(height: DesignLayout.taskRowHeight)
-            }
-        }
-        .font(.design(DesignTypography.baseSize))
-        .background(DesignColor.panel.color, in: RoundedRectangle(cornerRadius: DesignRadius.panel))
-        .overlay(RoundedRectangle(cornerRadius: DesignRadius.panel).stroke(DesignColor.line.color, lineWidth: DesignLayout.borderWidth))
-        .task {
-            await LiveQuery.follow(client, ProjectTasksQuery(projectId: project.id, sort: "-updated", limit: 10)) { data in
-                tasks = data.project?.tasks
-            }
-        }
-        .task {
-            await LiveQuery.follow(client, ProjectVocabularyQuery(projectId: project.id)) { data in
-                statuses = Dictionary(data.project?.statuses.data.map { ($0.id, $0.name) } ?? [], uniquingKeysWith: { first, _ in first })
-                prefixes = Dictionary(data.project?.seriesList.data.map { ($0.id, $0.prefix) } ?? [], uniquingKeysWith: { first, _ in first })
-            }
-        }
-    }
-
-    private func reference(_ task: TaskListFields) -> String? {
-        task.seriesNumbers.lazy.compactMap { number in prefixes[number.seriesId].map { "\($0)-\(number.number)" } }.first
     }
 }
 

@@ -214,6 +214,8 @@ type Project {
     offset: Int
     limit: Int
     descriptionLength: Int
+    parentId: UUID
+    levels: Int
   ): TaskTreeList!
   resolveTasks(ref: String!): [TaskItem!]!
   task(id: UUID!): TaskDetails
@@ -439,6 +441,7 @@ type TaskTreeItem {
   childCount: Int!
   depth: Int!
   repeated: Boolean!
+  treeChildCount: Int!
 }
 
 type TaskTreeList {
