@@ -9,7 +9,11 @@ struct TaskerApp: App {
             MainView()
                 .background(WindowFrameAutosave(name: "TaskerMainWindow"))
         }
+        .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
+        .commands {
+            NavigationCommands()
+        }
     }
 }
