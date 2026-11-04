@@ -2,9 +2,9 @@ formatVersion: 10
 id: 12642a78-5c23-45d6-a89f-d91d148fd59a
 title: Чтение данных через GraphQL вместо HTTP GET в сервере и демоне
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-04T02:03:11.0090200+00:00
-updatedAt: 2026-11-04T02:10:39.2703430+00:00
+updatedAt: 2026-11-04T02:32:13.3730110+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 208
