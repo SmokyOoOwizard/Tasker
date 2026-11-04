@@ -4,7 +4,7 @@ title: Чтение данных через GraphQL вместо HTTP GET в с�
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-11-04T02:03:11.0090200+00:00
-updatedAt: 2026-11-04T02:07:40.1997360+00:00
+updatedAt: 2026-11-04T02:10:39.2703430+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 208
@@ -16,7 +16,6 @@ description: |-
   - Сервер (Tasker.Server, режим Server) и демон (режим Local) — оба выступают серверами и поднимают этот API через TaskerWebExtensions.MapTaskerWeb; переводить нужно в обоих.
   - dotnet/src/Tasker.Web/TaskerApi.cs: GET-маршруты /api/... — проекты и статистика, статусы, наборы статусов, типы задач, поля, перечисления, типы связей, задачи (список с фильтрами field/sort, /tasks/resolve, /tasks/{id}, /tasks/{id}/links), серии и /series/health, доски и задачи колонки, блокировки, пользователи, /auth/me и /auth/registration, агенты и их токены, участники проекта, /workspace/problems, /workspace/mcp.
   - dotnet/src/Tasker.Web/Workspaces/WorkspaceEvents.cs: GET /api/events (SSE).
-  - Демон (Tasker.Daemon.Host/McpDaemon.cs): GET /daemon/status. Его вызывает консоль через Tasker.Daemon/DaemonClient.cs — этот вызов тоже перевести.
   - Клиенты API: frontend/src/api.ts, auth.ts, pages/LoginPage.tsx; приложение macOS, если читает REST.
 
   Что нужно сделать
@@ -24,16 +23,16 @@ description: |-
   - Поток событий /events (SSE, WorkspaceEvents) заменить GraphQL-подпиской (subscription) с теми же событиями; SSE-маршрут удалить.
   - Ошибки — в формате GraphQL, коды соответствуют нынешним (not found, forbidden, invalid).
   - Генерировать файл схемы GraphQL (SDL, например schema.graphql) при сборке или отдельной командой и хранить его в репозитории. По этому файлу потом будут генерироваться клиенты (фронтенд, приложение macOS). В CI — проверка, что закоммиченная схема совпадает со сгенерированной из кода.
-  - Перевести фронтенд, приложение macOS, вызов статуса демона из консоли и тесты на GraphQL-запросы.
-  - Удалить GET-маршруты данных из TaskerApi и демона.
+  - Перевести фронтенд, приложение macOS и тесты на GraphQL-запросы.
+  - Удалить GET-маршруты данных из TaskerApi.
   - Выбрать библиотеку с учётом NativeAOT (демон собирается AOT) — проверить, что сборка и размер бинарника остаются приемлемыми.
 
   Не затрагивается
-  - /health, /api/health и /ready остаются на GET (пробы живости для оркестраторов и лаунчера).
+  - Служебные маршруты демона и сервера остаются на GET: /health, /api/health, /ready, /daemon/status (Tasker.Daemon.Host/McpDaemon.cs, вызывается консолью через Tasker.Daemon/DaemonClient.cs).
   - MCP (/mcp) и выдача статики/SPA.
 
   Готово, когда
-  - В сервере и демоне не осталось HTTP GET, кроме /health, /api/health, /ready и статики; все чтения идут через GraphQL, события — через подписку.
+  - В сервере и демоне не осталось HTTP GET, кроме /health, /api/health, /ready, /daemon/status и статики; все чтения данных идут через GraphQL, события — через подписку.
   - Файл схемы генерируется из кода, лежит в репозитории, и CI ловит его рассинхрон с кодом.
   - POST/PUT/PATCH/DELETE работают как прежде.
-  - Фронтенд, приложение macOS и консоль работают через GraphQL; тесты проходят на macOS, Linux и Windows.
+  - Фронтенд и приложение macOS работают через GraphQL; тесты проходят на macOS, Linux и Windows.
