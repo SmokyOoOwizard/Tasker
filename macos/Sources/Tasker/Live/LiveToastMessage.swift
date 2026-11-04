@@ -30,6 +30,7 @@ enum LiveToastMessage: Equatable, Sendable {
     case projectRenamed(author: String?, name: String)
     case projectDeleted(author: String?, name: String)
     case reconnected
+    case notice(String)
 
     init?(_ update: LiveUpdate, ownAuthorKey: String) {
         if update.author?.key == ownAuthorKey { return nil }
@@ -86,6 +87,7 @@ enum LiveToastMessage: Equatable, Sendable {
         case .projectDeleted(let author?, let name): l.string(.toastProjectDeleted, author, name)
         case .projectDeleted(nil, let name): l.string(.toastProjectDeletedAnonymous, name)
         case .reconnected: l.string(.toastReconnected)
+        case .notice(let text): text
         }
     }
 }

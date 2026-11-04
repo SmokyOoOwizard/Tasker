@@ -30,3 +30,25 @@ fragment ProjectFields on Project {
   createdAt
   version
 }
+
+query ProjectSetup($projectId: UUID!) {
+  project(id: $projectId) {
+    id
+    statuses(limit: 200, descriptionLength: 0) {
+      data {
+        id
+        name
+      }
+    }
+    statusSets(limit: 200) {
+      data {
+        id
+      }
+    }
+    taskTypes(limit: 200, descriptionLength: 0) {
+      data {
+        id
+      }
+    }
+  }
+}

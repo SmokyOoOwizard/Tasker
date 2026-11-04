@@ -25,7 +25,7 @@ struct TopBarView: View {
             Spacer(minLength: 0)
             LiveStatusLabel()
         }
-        .padding(.leading, sidebarVisible ? DesignSpacing.pagePadX : 80)
+        .padding(.leading, DesignSpacing.pagePadX)
         .padding(.trailing, DesignSpacing.pagePadX)
         .frame(height: DesignLayout.topBarHeight)
         .overlay(alignment: .bottom) {

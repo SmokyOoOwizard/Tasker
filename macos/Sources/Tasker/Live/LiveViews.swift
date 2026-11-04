@@ -59,21 +59,52 @@ struct LiveStatusLabel: View {
     }
 }
 
-struct LiveOverviewView: View {
+struct ProjectScope<Content: View>: View {
     @Environment(LiveWorkspace.self) private var live
+    @Environment(ProjectSelection.self) private var selection
     @Environment(\.localizer) private var l
+    @State private var creating = false
+    @ViewBuilder var content: () -> Content
 
     var body: some View {
-        if let client = live.client, let address = live.address {
-            LiveProjectsView(client: client, workspace: address.name)
-                .id(address)
+        if let client = live.client {
+            if let project = selection.current {
+                ProjectGate(client: client, project: project, content: content)
+                    .id(project.id)
+            } else if live.projects != nil {
+                VStack(spacing: DesignSpacing.gap10) {
+                    Text(l.string(.overviewNoProjects))
+                        .foregroundStyle(DesignColor.mut.color)
+                    Button(l.string(.projectNew)) { creating = true }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .sheet(isPresented: $creating) { NewProjectSheet() }
+            } else {
+                LiveMessageView(text: l.string(.liveConnecting))
+            }
         } else {
             LiveMessageView(text: l.string(.overviewNoWorkspace))
         }
     }
 }
 
-private struct LiveMessageView: View {
+struct LiveOverviewView: View {
+    @Environment(LiveWorkspace.self) private var live
+    @Environment(ProjectSelection.self) private var selection
+
+    var body: some View {
+        ProjectScope {
+            if let client = live.client, let project = selection.current {
+                ScrollView {
+                    LiveProjectCard(client: client, project: project)
+                        .padding(DesignSpacing.pagePadX)
+                }
+            }
+        }
+    }
+}
+
+struct LiveMessageView: View {
     let text: String
 
     var body: some View {
@@ -81,50 +112,6 @@ private struct LiveMessageView: View {
             .font(.design(DesignTypography.baseSize))
             .foregroundStyle(DesignColor.mut.color)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct LiveProjectsView: View {
-    let client: TaskerAPIClient
-    let workspace: String
-    @Environment(\.localizer) private var l
-    @State private var projects: [ProjectFields]?
-    @State private var error: String?
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignSpacing.pagePadX) {
-                HStack(alignment: .firstTextBaseline, spacing: DesignSpacing.gap10) {
-                    Text(l.string(.overviewTitle))
-                        .font(.design(DesignTypography.pageTitleSize, weight: DesignTypography.semiboldWeight))
-                    Text(workspace)
-                        .foregroundStyle(DesignColor.dim.color)
-                }
-                if let error {
-                    Text(l.string(.overviewLoadFailed, error))
-                        .foregroundStyle(DesignColor.red.color)
-                }
-                if let projects {
-                    if projects.isEmpty {
-                        Text(l.string(.overviewNoProjects))
-                            .foregroundStyle(DesignColor.mut.color)
-                    }
-                    ForEach(projects, id: \.id) { project in
-                        LiveProjectCard(client: client, project: project)
-                    }
-                }
-            }
-            .padding(DesignSpacing.pagePadX)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .task {
-            await LiveQuery.follow(client, ProjectsQuery(limit: 50)) { data in
-                projects = data.projects.data
-                error = nil
-            } failed: { message in
-                error = message
-            }
-        }
     }
 }
 

@@ -23,49 +23,13 @@ struct SidebarView: View {
         }
         .padding(.horizontal, DesignSpacing.sidebarPadX)
         .padding(.bottom, DesignSpacing.sidebarPadY)
-        .padding(.top, DesignSpacing.sidebarPadY)
+        .padding(.top, DesignSpacing.gap6)
         .frame(width: Self.width)
         .frame(maxHeight: .infinity)
         .background(DesignColor.side.color)
         .overlay(alignment: .trailing) {
             DesignDivider(vertical: true)
         }
-    }
-}
-
-private struct ProjectSwitcher: View {
-    @Environment(\.localizer) private var l
-    @State private var hovering = false
-
-    var body: some View {
-        Menu {
-            Button(l.string(.appName)) {}
-        } label: {
-            HStack(spacing: DesignSpacing.gap8) {
-                Text(l.string(.appLogoLetter))
-                    .font(.design(DesignTypography.logoSize, weight: DesignTypography.boldWeight))
-                    .foregroundStyle(DesignColor.onAcc.color)
-                    .frame(width: DesignLayout.logoSize, height: DesignLayout.logoSize)
-                    .background(DesignColor.acc.color, in: RoundedRectangle(cornerRadius: DesignRadius.chip))
-                Text(l.string(.appName))
-                    .font(.designEmphasis(DesignTypography.baseSize))
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9))
-                    .foregroundStyle(DesignColor.mut.color)
-            }
-            .padding(.horizontal, DesignSpacing.rowPadX)
-            .padding(.vertical, DesignLayout.searchPadY)
-            .background(RoundedRectangle(cornerRadius: DesignRadius.control).fill(hovering ? DesignColor.hov.color : .clear))
-            .contentShape(Rectangle())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .onHover { hovering = $0 }
-        .help(l.string(.sidebarProject))
-        .padding(.top, 38)
-        .padding(.bottom, DesignSpacing.gap6)
     }
 }
 

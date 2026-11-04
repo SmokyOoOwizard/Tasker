@@ -4,6 +4,7 @@ struct MainView: View {
     @AppStorage(AppSection.storageKey) private var storedSection = AppSection.default.rawValue
     @Environment(DaemonConnection.self) private var connection
     @Environment(LiveWorkspace.self) private var live
+    @Environment(WorkspaceController.self) private var workspaces
     @AppStorage(SidebarState.storageKey) private var sidebarVisible = true
 
     private var selection: Binding<AppSection> {
@@ -14,7 +15,10 @@ struct MainView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        VStack(spacing: 0) {
+            WorkspaceTabBar()
+            WorkspaceFailureBanner()
+            HStack(spacing: 0) {
             if sidebarVisible {
                 SidebarView(selection: selection)
                     .transition(.move(edge: .leading))
@@ -24,7 +28,9 @@ struct MainView: View {
                     sidebarVisible.toggle()
                 }
                 DaemonGate {
-                    SectionContentView(section: selection.wrappedValue)
+                    WorkspaceGate {
+                        SectionContentView(section: selection.wrappedValue)
+                    }
                 }
                 .overlay(alignment: .bottom) {
                     LiveToastStack()
@@ -32,6 +38,7 @@ struct MainView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(DesignColor.bg.color)
+            }
         }
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.18), value: sidebarVisible)
@@ -41,7 +48,11 @@ struct MainView: View {
         .tint(DesignColor.acc.color)
         .task { connection.start() }
         .onChange(of: connection.state, initial: true) {
-            live.follow(connection.state)
+            workspaces.sync(with: connection.state)
+            live.follow(connection.state, selected: workspaces.tabs.selected)
+        }
+        .onChange(of: workspaces.tabs.selected) {
+            live.follow(connection.state, selected: workspaces.tabs.selected)
         }
     }
 }

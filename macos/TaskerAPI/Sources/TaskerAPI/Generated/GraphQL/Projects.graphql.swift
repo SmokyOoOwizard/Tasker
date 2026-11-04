@@ -198,3 +198,149 @@ public struct ProjectQuery: GraphQLQuery {
         }
     }
 }
+
+public struct ProjectSetupQuery: GraphQLQuery {
+    public static let operationName = "ProjectSetup"
+    public static let document = """
+    query ProjectSetup($projectId: UUID!) {
+      project(id: $projectId) {
+        __typename
+        id
+        statuses(limit: 200, descriptionLength: 0) {
+          __typename
+          data {
+            __typename
+            id
+            name
+          }
+        }
+        statusSets(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+          }
+        }
+        taskTypes(limit: 200, descriptionLength: 0) {
+          __typename
+          data {
+            __typename
+            id
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("statuses", arguments: ["limit": .value(.int(200)), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name")
+                ])
+            ]),
+            GraphQLField("statusSets", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id")
+                ])
+            ]),
+            GraphQLField("taskTypes", arguments: ["limit": .value(.int(200)), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id")
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+
+    public init(projectId: UUID) {
+        self.projectId = projectId
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var statuses: Statuses
+            public var statusSets: StatusSets
+            public var taskTypes: TaskTypes
+
+            public init(id: UUID, statuses: Statuses, statusSets: StatusSets, taskTypes: TaskTypes) {
+                self.id = id
+                self.statuses = statuses
+                self.statusSets = statusSets
+                self.taskTypes = taskTypes
+            }
+
+            public struct Statuses: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+
+                    public init(id: UUID, name: String) {
+                        self.id = id
+                        self.name = name
+                    }
+                }
+            }
+
+            public struct StatusSets: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+
+                    public init(id: UUID) {
+                        self.id = id
+                    }
+                }
+            }
+
+            public struct TaskTypes: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+
+                    public init(id: UUID) {
+                        self.id = id
+                    }
+                }
+            }
+        }
+    }
+}

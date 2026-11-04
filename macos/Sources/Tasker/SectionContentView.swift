@@ -7,6 +7,10 @@ struct SectionContentView: View {
     var body: some View {
         if section == .tasks {
             LiveOverviewView()
+        } else if section == .boards {
+            ProjectScope {
+                placeholder
+            }
         } else {
             placeholder
         }
