@@ -1,20 +1,18 @@
 import { useParams } from 'react-router'
-import { getAll } from '../api'
 import { LockBadge } from '../components/LockBadge'
 import { useLoad } from '../hooks/useLoad'
 import { useLocks } from '../hooks/useLocks'
-import type { Board, StatusSet } from '../types'
+import { loadBoards, loadStatusSets } from '../reads'
 import '../styles/settings.css'
 
 /** Все доски проекта. Просмотр доски и её настройка — следующим шагом. */
 function BoardsPage() {
   const { projectId } = useParams()
-  const base = `/projects/${projectId}`
-  const locks = useLocks(base)
+  const locks = useLocks(projectId!)
   const { data, error } = useLoad(async () => {
-    const [boards, statusSets] = await Promise.all([getAll<Board>(`${base}/boards`), getAll<StatusSet>(`${base}/status-sets`)])
+    const [boards, statusSets] = await Promise.all([loadBoards(projectId!), loadStatusSets(projectId!)])
     return { boards, statusSets }
-  }, [base])
+  }, [projectId])
 
   const setById = new Map(data?.statusSets.map((s) => [s.id, s]))
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { register, signIn } from '../auth'
-import { apiUrl } from '../workspace'
+import { loadRegistrationOpen } from '../reads'
 import '../styles/forms.css'
 import '../styles/auth.css'
 
@@ -15,9 +15,8 @@ function LoginPage() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    fetch(apiUrl('/auth/registration'))
-      .then((r) => (r.ok ? (r.json() as Promise<{ open: boolean }>) : { open: false }))
-      .then((r) => setRegistrationOpen(r.open))
+    loadRegistrationOpen()
+      .then(setRegistrationOpen)
       .catch(() => setRegistrationOpen(false))
   }, [])
 
