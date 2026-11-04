@@ -366,3 +366,30 @@ final class GroupCellView: NSTableCellView {
         count.frame = NSRect(x: x, y: (height - h) / 2, width: ceil(count.intrinsicContentSize.width), height: h)
     }
 }
+
+final class StickyGroupHeader: NSView {
+    let cell = GroupCellView()
+    weak var group: TaskNode?
+    var onClick: ((TaskNode) -> Void)?
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        addSubview(cell)
+        isHidden = true
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override var isFlipped: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        DesignColor.bg.nsColor.setFill()
+        bounds.fill()
+        DesignColor.line.nsColor.setFill()
+        NSRect(x: 0, y: bounds.maxY - DesignLayout.borderWidth, width: bounds.width, height: DesignLayout.borderWidth).fill()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        if let group { onClick?(group) }
+    }
+}

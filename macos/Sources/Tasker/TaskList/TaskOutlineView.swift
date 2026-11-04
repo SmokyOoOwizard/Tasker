@@ -114,14 +114,6 @@ final class TaskOutlineView: NSOutlineView {
     }
 }
 
-final class TaskClipView: NSClipView {
-    override func constrainBoundsRect(_ proposedBounds: NSRect) -> NSRect {
-        var rect = super.constrainBoundsRect(proposedBounds)
-        rect.origin.y = max(rect.origin.y, 0)
-        return rect
-    }
-}
-
 struct TaskOutline: NSViewRepresentable {
     let model: TaskListModel
     let localizer: Localizer
@@ -151,7 +143,7 @@ struct TaskOutline: NSViewRepresentable {
         outline.backgroundColor = DesignColor.bg.nsColor
         outline.gridStyleMask = []
         outline.selectionHighlightStyle = .regular
-        outline.floatsGroupRows = true
+        outline.floatsGroupRows = false
         outline.usesAutomaticRowHeights = false
         outline.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         outline.focusRingType = .none
@@ -160,7 +152,6 @@ struct TaskOutline: NSViewRepresentable {
         outline.setAccessibilityLabel(localizer.string(.taskListTitle))
 
         let scroll = NSScrollView()
-        scroll.contentView = TaskClipView()
         scroll.documentView = outline
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
@@ -237,7 +228,10 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
     func apply(_ change: TaskListChange) {
         guard let outline else { return }
         suppress += 1
-        defer { suppress -= 1 }
+        defer {
+            suppress -= 1
+            updateSticky()
+        }
         switch change {
         case .reload:
             outline.mode = model.mode
@@ -291,6 +285,7 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
     func checkEnd() {
         guard let outline, let scroll = outline.enclosingScrollView else { return }
         outline.updateHover()
+        updateSticky()
         let visible = outline.rows(in: scroll.contentView.documentVisibleRect)
         model.visibleCount = loadedOrdinal(of: visible.location + visible.length - 1)
         let end = visible.location + visible.length + 60
@@ -391,16 +386,7 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
         switch node.kind {
         case .group:
             let cell = outlineView.makeView(withIdentifier: GroupCellView.identifier, owner: nil) as? GroupCellView ?? GroupCellView()
-            let status = node.groupStatus.flatMap(model.vocabulary.status)
-            let firstType = node.children?.first?.row?.typeId
-            let glyph = node.groupStatus.map { id in firstType.map { model.vocabulary.glyph(status: id, type: $0) } ?? .named(.dashed) } ?? .named(.dashed)
-            let count = node.groupCount ?? node.children?.count ?? 0
-            cell.configure(
-                name: status?.name ?? "",
-                count: String(count),
-                glyph: glyph,
-                tint: status.map { NSColor(designHex: $0.color) } ?? DesignColor.dim.nsColor,
-                expanded: outlineView.isItemExpanded(node))
+            configure(cell, group: node, expanded: outlineView.isItemExpanded(node))
             return cell
         case .task:
             guard let row = node.row else { return nil }
@@ -411,6 +397,54 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
             return cell
         }
     }
+
+    private func configure(_ cell: GroupCellView, group node: TaskNode, expanded: Bool) {
+        let status = node.groupStatus.flatMap(model.vocabulary.status)
+        cell.configure(
+            name: status?.name ?? "",
+            count: String(node.groupCount ?? node.children?.count ?? 0),
+            glyph: node.groupStatus.map(model.vocabulary.glyph(status:)) ?? .named(.dashed),
+            tint: status.map { NSColor(designHex: $0.color) } ?? DesignColor.dim.nsColor,
+            expanded: expanded)
+    }
+
+    private let sticky = StickyGroupHeader()
+
+    func updateSticky() {
+        guard let outline, let scroll = outline.enclosingScrollView else { return }
+        let visible = scroll.contentView.documentVisibleRect
+        guard model.mode == .groups, visible.minY > 0,
+              let node = node(outline.row(at: NSPoint(x: visible.midX, y: visible.minY + 1))),
+              let group = node.kind == .task ? node.parent : nil, group.kind == .group else {
+            sticky.isHidden = true
+            return
+        }
+        let height = DesignLayout.groupRowHeight
+        var offset: CGFloat = 0
+        if let index = model.roots.firstIndex(where: { $0 === group }), index + 1 < model.roots.count {
+            let next = outline.row(forItem: model.roots[index + 1])
+            if next >= 0 { offset = min(0, outline.rect(ofRow: next).minY - visible.minY - height) }
+        }
+        if sticky.superview !== outline || outline.subviews.last !== sticky {
+            outline.addSubview(sticky, positioned: .above, relativeTo: nil)
+        }
+        sticky.group = group
+        sticky.onClick = { [weak self] group in self?.collapseFromSticky(group) }
+        configure(sticky.cell, group: group, expanded: true)
+        sticky.frame = NSRect(x: 0, y: visible.minY + offset, width: outline.bounds.width, height: height)
+        sticky.cell.frame = NSRect(x: DesignSpacing.pagePadX, y: 0, width: max(0, outline.bounds.width - DesignSpacing.pagePadX), height: height)
+        sticky.isHidden = false
+    }
+
+    private func collapseFromSticky(_ group: TaskNode) {
+        guard let outline else { return }
+        outline.collapseItem(group)
+        let row = outline.row(forItem: group)
+        if row >= 0 { outline.scrollRowToVisible(row) }
+        updateSticky()
+    }
+
+    var stickyGroup: TaskNode? { sticky.isHidden ? nil : sticky.group }
 
     private func content(_ row: TaskRow) -> TaskCellContent {
         let vocabulary = model.vocabulary
@@ -431,6 +465,7 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
     func outlineViewItemDidExpand(_ notification: Notification) {
         guard let node = notification.userInfo?["NSObject"] as? TaskNode else { return }
         refreshGroupRow(node)
+        updateSticky()
         guard suppress == 0 else { return }
         model.setExpanded(node, true)
     }

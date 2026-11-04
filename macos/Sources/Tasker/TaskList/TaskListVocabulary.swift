@@ -143,6 +143,13 @@ struct TaskListVocabulary: Hashable, Sendable {
         return .progress(last > 0 ? Double(index) / Double(last) : 0)
     }
 
+    func glyph(status statusId: UUID) -> StatusGlyph {
+        let type = typeOrder.first { types[$0].flatMap { statusSets[$0.statusSetId] }?.contains(statusId) ?? false }
+            ?? types.first { statusSets[$0.value.statusSetId]?.contains(statusId) ?? false }?.key
+        guard let type else { return .named(.dashed) }
+        return glyph(status: statusId, type: type)
+    }
+
     func reference(_ row: TaskRow) -> String {
         for number in row.seriesNumbers {
             if let prefix = prefixes[number.seriesId] { return "\(prefix)-\(number.number)" }

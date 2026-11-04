@@ -286,8 +286,38 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
         #expect(store.preferences(for: project).expanded == [epic.id])
         outline.collapseItem(model.roots[0])
         #expect(store.preferences(for: project).expanded.isEmpty)
-        let clip = try #require((window.contentView as? NSScrollView)?.contentView)
-        #expect(clip.constrainBoundsRect(NSRect(x: 0, y: -40, width: 800, height: 400)).origin.y == 0)
+        coordinator.detach()
+    }
+
+    @Test func groupHeaderSticksOnlyWhileScrollingThroughItsOpenTasks() async throws {
+        let source = StubTaskListSource(rows: (1...60).map { row($0, status: todo) } + (61...70).map { row($0, status: doing) }, vocabulary: vocabulary)
+        let model = TaskListModel(project: project, source: source, settings: settings())
+        model.start()
+        await until { model.phase == .ready }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
+        let coordinator = TaskOutlineCoordinator(model: model)
+        window.contentView = TaskOutline.makeScrollView(coordinator: coordinator, localizer: ru)
+        let scroll = try #require(window.contentView as? NSScrollView)
+        let outline = try #require(scroll.documentView as? NSOutlineView)
+        #expect(!outline.floatsGroupRows)
+        #expect(coordinator.stickyGroup == nil)
+
+        func move(to y: CGFloat) {
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            coordinator.checkEnd()
+        }
+        move(to: DesignLayout.taskRowHeight * 20)
+        #expect(coordinator.stickyGroup === model.roots[0])
+        move(to: 0)
+        #expect(coordinator.stickyGroup == nil)
+        move(to: outline.rect(ofRow: outline.row(forItem: model.roots[1])).minY + 1)
+        #expect(coordinator.stickyGroup == nil)
+        move(to: outline.rect(ofRow: outline.row(forItem: model.roots[1])).minY + DesignLayout.groupRowHeight + 4)
+        #expect(coordinator.stickyGroup === model.roots[1])
+        outline.collapseItem(model.roots[1])
+        coordinator.checkEnd()
+        #expect(coordinator.stickyGroup !== model.roots[1])
         coordinator.detach()
     }
 
