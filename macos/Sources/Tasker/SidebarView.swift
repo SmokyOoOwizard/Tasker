@@ -17,6 +17,7 @@ struct SidebarView: View {
                 SidebarRow(section: section, selection: $selection)
             }
             DesignDivider().padding(.vertical, DesignSpacing.gap6)
+            DaemonStatusChip()
             ProfileButton()
             LanguageMenu()
         }

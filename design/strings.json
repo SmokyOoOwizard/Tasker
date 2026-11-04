@@ -22,6 +22,19 @@
     "sidebar.language": {"ru": "Язык интерфейса", "en": "Interface language"},
     "language.system": {"ru": "Как в системе", "en": "System"},
     "language.ru": {"ru": "Русский", "en": "Русский"},
-    "language.en": {"ru": "English", "en": "English"}
+    "language.en": {"ru": "English", "en": "English"},
+    "daemon.title": {"ru": "Демон", "en": "Daemon"},
+    "daemon.running": {"ru": "работает", "en": "running"},
+    "daemon.starting": {"ru": "запускается", "en": "starting"},
+    "daemon.stopped": {"ru": "не работает", "en": "not running"},
+    "daemon.retry": {"ru": "Повторить", "en": "Retry"},
+    "daemon.mismatch.title": {"ru": "Версии демона и приложения не совпадают", "en": "Daemon and app versions differ"},
+    "daemon.mismatch.body": {"ru": "Версия демона: {0}, версия приложения: {1}. Работа приостановлена, пока демон не обновлён.", "en": "Daemon version: {0}, app version: {1}. Work is paused until the daemon is updated."},
+    "daemon.mismatch.update": {"ru": "Обновить демон", "en": "Update daemon"},
+    "daemon.versionUnknown": {"ru": "неизвестна", "en": "unknown"},
+    "daemon.missing": {"ru": "В приложении нет программы демона. Переустановите Tasker.", "en": "The daemon program is missing from the app. Reinstall Tasker."},
+    "daemon.unreachable": {"ru": "Демон не отвечает. Журнал: {0}", "en": "The daemon is not responding. Log: {0}"},
+    "daemon.startFailed": {"ru": "Не удалось запустить демон: {0}", "en": "Could not start the daemon: {0}"},
+    "daemon.updateFailed": {"ru": "Не удалось обновить демон: {0}", "en": "Could not update the daemon: {0}"}
   }
 }

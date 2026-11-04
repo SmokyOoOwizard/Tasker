@@ -12,6 +12,16 @@ export TASKER_BUILD="${TASKER_BUILD:-$(git -C "$root" rev-list --count HEAD 2>/d
 action="${1:-build}"
 derived="$root/macos/build"
 
+command -v dotnet >/dev/null || { echo "dotnet не найден: нужен .NET SDK, чтобы собрать демон tasker-mcpd" >&2; exit 1; }
+case "$(uname -m)" in
+  arm64) rid=osx-arm64 ;;
+  *) rid=osx-x64 ;;
+esac
+PATH="/usr/bin:$PATH" dotnet publish "$root/dotnet/src/Tasker.Daemon.Host" -c Release -r "$rid" --self-contained true \
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EmbedFrontend=false \
+  -p:TaskerVersion="$TASKER_VERSION" -o "$derived/daemon" --nologo -v quiet
+chmod +x "$derived/daemon/tasker-mcpd"
+
 xcodegen generate --quiet
 
 case "$action" in

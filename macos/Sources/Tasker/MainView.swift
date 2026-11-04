@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainView: View {
     @AppStorage(AppSection.storageKey) private var storedSection = AppSection.default.rawValue
+    @Environment(DaemonConnection.self) private var connection
     @AppStorage(SidebarState.storageKey) private var sidebarVisible = true
 
     private var selection: Binding<AppSection> {
@@ -21,7 +22,9 @@ struct MainView: View {
                 TopBarView(section: selection.wrappedValue, sidebarVisible: sidebarVisible) {
                     sidebarVisible.toggle()
                 }
-                SectionContentView(section: selection.wrappedValue)
+                DaemonGate {
+                    SectionContentView(section: selection.wrappedValue)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(DesignColor.bg.color)
@@ -32,5 +35,6 @@ struct MainView: View {
         .font(.design(DesignTypography.baseSize))
         .foregroundStyle(DesignColor.tx.color)
         .tint(DesignColor.acc.color)
+        .task { connection.start() }
     }
 }
