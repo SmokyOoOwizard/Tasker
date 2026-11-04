@@ -52,7 +52,7 @@ claude mcp add --transport http tasker http://127.0.0.1:5719/mcp
 
 ## Документация
 
-Полное описание — в [вики проекта](https://github.com/SmokyOoOwizard/Tasker/wiki): команды консоли, формат файлов, MCP и демон, поля и связи, REST API, настройки, устройство и сборка.
+Полное описание — в [вики проекта](https://github.com/SmokyOoOwizard/Tasker/wiki): команды консоли, формат файлов, MCP и демон, поля и связи, API (GraphQL и REST), настройки, устройство и сборка.
 
 Приложение для macOS (SwiftUI): `macos/`, сборка — `scripts/macos-build.sh`, подробнее — [macos/README.md](macos/README.md).
 

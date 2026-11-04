@@ -8,6 +8,7 @@ on:
     branches: ['**']
     paths:
       - 'dotnet/**'
+      - 'graphql/**'
       - 'tests/golden/**'
       - 'scripts/**'
       - 'VERSION'
@@ -16,6 +17,7 @@ on:
     branches: [main]
     paths:
       - 'dotnet/**'
+      - 'graphql/**'
       - 'tests/golden/**'
       - 'scripts/**'
       - 'VERSION'
@@ -60,6 +62,8 @@ jobs:
           dotnet-version: '10.0.x'
       - name: dotnet build dotnet/Tasker.slnx
         run: dotnet build dotnet/Tasker.slnx -p:EmbedFrontend=false
+      - name: graphql/schema.graphql matches the code
+        run: dotnet run --project dotnet/tools/Tasker.GraphSchema --no-build -p:EmbedFrontend=false -- --check
       # Тест, который висит дольше 10 минут, снимается с дампом и называется в выводе; остальные результаты — в trx.
       - name: dotnet test dotnet/tests/Tasker.Tests
         run: >-

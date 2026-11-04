@@ -6,12 +6,13 @@ import { errorText, isConflict } from '../../errors'
 import { useEditLock } from '../../hooks/useEditLock'
 import { useLocks } from '../../hooks/useLocks'
 import { useProjects } from '../../projects'
+import { loadProjectStats } from '../../reads'
 import type { EditLock, Project, ProjectStats } from '../../types'
 
 /** Переименование и удаление проекта. */
 function ProjectSection({ projectId }: { projectId: string }) {
   const { data: projects } = useProjects()
-  const locks = useLocks(`/projects/${projectId}`)
+  const locks = useLocks(projectId)
   const project = projects?.find((p) => p.id === projectId)
   if (!project) return null
 
@@ -105,7 +106,7 @@ function DeleteProject({ project }: { project: Project }) {
 
   useEffect(() => {
     let current = true
-    api<ProjectStats>(`/projects/${project.id}/stats`)
+    loadProjectStats(project.id)
       .then((s) => current && setStats(s))
       .catch(() => current && setStats(null))
     return () => {

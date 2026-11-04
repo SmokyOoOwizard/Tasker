@@ -1,8 +1,8 @@
 import { NavLink, Navigate, useParams } from 'react-router'
-import { getAll } from '../api'
 import { useLoad } from '../hooks/useLoad'
 import { useLocks } from '../hooks/useLocks'
-import type { ProjectSettings, Status, StatusSet, TaskType } from '../types'
+import { loadProjectSettings } from '../reads'
+import type { ProjectSettings } from '../types'
 import { isDesktop } from '../workspace'
 import MembersSection from './settings/MembersSection'
 import ProjectSection from './settings/ProjectSection'
@@ -39,31 +39,22 @@ function SettingsPage() {
       </div>
 
       {tab === 'members' ? (
-        <MembersSection base={base} />
+        <MembersSection projectId={projectId!} />
       ) : tab === 'project' ? (
         <ProjectSection projectId={projectId!} />
       ) : (
-        <WorkflowTab base={base} tab={tab!} />
+        <WorkflowTab projectId={projectId!} tab={tab!} />
       )}
     </div>
   )
 }
 
 /** Статусы, наборы и типы задач. */
-function WorkflowTab({ base, tab }: { base: string; tab: string }) {
+function WorkflowTab({ projectId, tab }: { projectId: string; tab: string }) {
+  const base = `/projects/${projectId}`
   // Всё сразу: наборы показывают названия статусов, типы — названия наборов, и после любой правки обновляется всё.
-  const locks = useLocks(base)
-  const { data, error, reload } = useLoad(
-    async (): Promise<ProjectSettings> => {
-      const [statuses, statusSets, taskTypes] = await Promise.all([
-        getAll<Status>(`${base}/statuses`),
-        getAll<StatusSet>(`${base}/status-sets`),
-        getAll<TaskType>(`${base}/task-types`),
-      ])
-      return { statuses, statusSets, taskTypes }
-    },
-    [base],
-  )
+  const locks = useLocks(projectId)
+  const { data, error, reload } = useLoad((): Promise<ProjectSettings> => loadProjectSettings(projectId), [projectId])
 
   if (!data) return error ? <div className="error-message">{error}</div> : <p className="muted">Загрузка…</p>
 

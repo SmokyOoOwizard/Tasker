@@ -9,6 +9,7 @@ using Tasker.Core.Projects;
 using Tasker.Core.Users;
 using Tasker.Mcp;
 using Tasker.Web.Configs.Tasker;
+using Tasker.Web.Graph;
 using Tasker.Web.Workspaces;
 
 namespace Tasker.Web.Auth;
@@ -33,6 +34,9 @@ internal static class ModeRegistration
                 .Configure<TokenService>((bearer, tokens) => tokens.Configure(bearer));
             services.AddAuthorization();
         }
+
+        if (!localMcp)
+            services.AddTaskerGraph();
 
         if (mode == TaskerMode.Server || localMcp)
             services.AddTaskerMcp(requireAgentToken: mode == TaskerMode.Server);

@@ -3,6 +3,7 @@ import { NavLink, Navigate, useParams } from 'react-router'
 import { api, ApiError } from '../api'
 import { signIn, updateSessionUser, useSession, type User } from '../auth'
 import Avatar from '../components/Avatar'
+import { loadMe } from '../reads'
 import { isDesktop, workspaceBase } from '../workspace'
 import AgentsSection from './profile/AgentsSection'
 import '../styles/forms.css'
@@ -105,7 +106,7 @@ function AccountForm({ user }: { user: User }) {
     } catch (err) {
       if (err instanceof ApiError && err.code === 'modified') {
         // Профиль уже изменили в другом месте: показываем актуальные данные, правку нужно повторить.
-        updateSessionUser(await api<User>('/auth/me'))
+        updateSessionUser(await loadMe())
         return
       }
       setStatus({ kind: 'error', text: err instanceof Error ? err.message : String(err) })

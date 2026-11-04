@@ -96,7 +96,7 @@ public class ParallelWorkTests
     }
 
     /// <summary>
-    /// Десктоп (REST) как ещё один клиент и события SSE: две вкладки слушают поток <c>/events</c>, пока REST и процессы консоли создают задачи
+    /// Десктоп (REST и GraphQL) как ещё один клиент и события: две вкладки слушают подписку GraphQL <c>workspaceChanges</c>, пока REST и процессы консоли создают задачи
     /// в одной области. Каждая созданная задача должна дойти до обеих вкладок (событием о ней или общим «unknown» — «перечитать всё»),
     /// без обрывов потока; номера серии уникальны и сплошные.
     /// </summary>
@@ -168,7 +168,7 @@ public class ParallelWorkTests
         public static async Task<EventTab> Open(ApiHost api)
         {
             var tab = new EventTab();
-            var response = await tab._http.GetAsync(api.BaseUrl + "/events", HttpCompletionOption.ResponseHeadersRead);
+            var response = await GraphReads.Subscribe(tab._http, api.BaseUrl);
             var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
             Assert.StartsWith(": connected", await reader.ReadLineAsync());
             _ = Task.Run(async () =>
@@ -177,10 +177,9 @@ public class ParallelWorkTests
                 {
                     while (await reader.ReadLineAsync(tab._stop.Token) is { } line)
                     {
-                        if (!line.StartsWith("data:"))
+                        if (GraphReads.Change(line) is not { } change)
                             continue;
                         tab._raw.Enqueue(line);
-                        var change = JsonNode.Parse(line["data:".Length..])!;
                         var entity = change["entity"]!.GetValue<string>();
                         if (entity == "task" && change["id"] is { } id)
                             tab._ids[id.GetValue<string>()] = 0;

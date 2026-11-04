@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router'
-import { api } from './api'
-import { updateSessionUser, useSession, type User } from './auth'
+import { updateSessionUser, useSession } from './auth'
 import ProjectsProvider from './components/ProjectsProvider'
 import Sidebar from './components/Sidebar'
 import BoardsPage from './pages/BoardsPage'
@@ -11,6 +10,7 @@ import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import TasksPage from './pages/TasksPage'
 import { lastProject, rememberProject, useProjects } from './projects'
+import { loadMe } from './reads'
 import { isDesktop, workspaceBase } from './workspace'
 import './styles/pages.css'
 
@@ -58,7 +58,7 @@ function App() {
 
   // Имя, почта или права могли измениться с прошлого входа — берём пользователя с сервера.
   useEffect(() => {
-    if (!isDesktop && signedIn) api<User>('/auth/me').then(updateSessionUser, () => {})
+    if (!isDesktop && signedIn) loadMe().then(updateSessionUser, () => {})
   }, [signedIn])
 
   // Сервер без входа: экран входа по любому адресу, после входа открывается тот же адрес.
