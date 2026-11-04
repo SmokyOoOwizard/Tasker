@@ -7,6 +7,7 @@ final class TaskNavigator {
     private(set) var peek: UUID?
     private(set) var card: UUID?
     private(set) var history: [UUID] = []
+    private(set) var labels: [UUID: String] = [:]
 
     var canGoBack: Bool { !history.isEmpty }
 
@@ -16,6 +17,16 @@ final class TaskNavigator {
 
     func showPeek(_ id: UUID) {
         peek = id
+    }
+
+    func label(_ id: UUID, _ text: String) {
+        if labels[id] != text { labels[id] = text }
+    }
+
+    func jump(toHistory index: Int) {
+        guard history.indices.contains(index) else { return }
+        card = history[index]
+        history = Array(history.prefix(index))
     }
 
     func closePeek() {

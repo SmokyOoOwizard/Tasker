@@ -247,6 +247,13 @@ struct TaskDetailTests {
         #expect(nav.card == a)
         nav.back()
         #expect(nav.card == nil)
+        let c = UUID()
+        nav.open(a)
+        nav.open(b)
+        nav.open(c)
+        #expect(nav.history == [a, b])
+        nav.jump(toHistory: 0)
+        #expect(nav.card == a && nav.history.isEmpty)
     }
 }
 

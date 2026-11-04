@@ -77,8 +77,25 @@ struct TaskCardScreen: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                ForEach(Array(navigator.history.enumerated()), id: \.offset) { index, id in
+                    Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
+                    Button {
+                        navigator.jump(toHistory: index)
+                    } label: {
+                        Text(verbatim: navigator.labels[id] ?? "#" + id.uuidString.lowercased().prefix(8))
+                            .font(.design(DesignTypography.monoSize, mono: true))
+                            .foregroundStyle(DesignColor.mut.color)
+                            .padding(.horizontal, 4)
+                            .frame(height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
                 Text(l.string(.breadcrumbSeparator)).foregroundStyle(DesignColor.dim.color)
-                Text(verbatim: model.reference).font(.design(DesignTypography.monoSize, mono: true))
+                Text(verbatim: model.reference)
+                    .font(.design(DesignTypography.monoSize, mono: true))
+                    .onAppear { navigator.label(task, model.reference) }
+                    .onChange(of: model.reference) { navigator.label(task, model.reference) }
                 Spacer(minLength: 0)
             }
             .font(.design(DesignTypography.baseSize))
