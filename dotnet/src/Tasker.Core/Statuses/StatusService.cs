@@ -9,7 +9,7 @@ public record CreateStatus(string Name, string Color, string? Description = null
 /// <summary>Поля null — не меняются; Description: пустая строка — очистить; Icon: пустая строка — значок по умолчанию. Version — версия, которую видел клиент (см. <see cref="Versioning"/>).</summary>
 public record UpdateStatus(string? Name, string? Color, string? Version, string? Description = null, string? Icon = null);
 
-public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoardStorage boards, ITaskStorage tasks, Locks.EditLockService locks)
+public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoardStorage boards, ITaskStorage tasks, Locks.EditLockService locks, TaskSeries.ISeriesStorage series)
 {
     public async Task<Status> Create(Guid projectId, CreateStatus command, CancellationToken ct = default)
     {
@@ -17,7 +17,7 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
         {
             Id = Guid.NewGuid(),
             ProjectId = projectId,
-            Name = Validate.Name(command.Name, "Status name"),
+            Name = Validate.Name(command.Name, ErrorField.StatusName),
             Color = Validate.Color(command.Color),
             Description = Validate.Description(command.Description) ?? "",
             Icon = Validate.StatusIcon(command.Icon),
@@ -52,7 +52,7 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
 
         var updated = status with
         {
-            Name = command.Name == null ? status.Name : Validate.Name(command.Name, "Status name"),
+            Name = command.Name == null ? status.Name : Validate.Name(command.Name, ErrorField.StatusName),
             Color = command.Color == null ? status.Color : Validate.Color(command.Color),
             Description = command.Description == null ? status.Description : Validate.Description(command.Description) ?? "",
             Icon = command.Icon == null ? status.Icon : Validate.StatusIcon(command.Icon)
@@ -73,12 +73,12 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
         var expected = Versioning.Check(status.Version, version, Subject(status));
 
         var usages = new Usages(Subject(status));
-        usages.AddTasks(await tasks.Count(projectId, new TaskFilter { StatusIds = [id] }, ct));
+        await TaskUsageRefs.AddTo(usages, tasks, series, projectId, new TaskFilter { StatusIds = [id] }, ct);
 
         foreach (var set in await sets.GetAll(projectId, ct))
         {
             if (set.StatusIds.Contains(id))
-                usages.Add($"status set '{set.Name}'");
+                usages.AddStatusSet(set.Name);
         }
 
         foreach (var board in await boards.GetAll(projectId, ct))
@@ -88,7 +88,7 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
                 usages.AddBoardColumn(board, column);
         }
 
-        usages.ThrowIfAny("deleted");
+        usages.ThrowIfAny(u => TaskerErrors.StatusInUse(status.Name, u));
 
         if (!await statuses.Delete(projectId, id, expected, ct))
             throw Versioning.Modified(Subject(status));
@@ -96,5 +96,5 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
         return true;
     }
 
-    private static string Subject(Status status) => $"Status '{status.Name}'";
+    private static ErrorSubject Subject(Status status) => ErrorSubject.Status(status.Name);
 }

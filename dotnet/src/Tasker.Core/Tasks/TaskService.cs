@@ -53,9 +53,9 @@ public partial class TaskService(
             return await CreateCore(projectId, command, ct);
 
         if (newLinks.Length > MaxNewLinks)
-            throw new TaskerValidationException($"Links: at most {MaxNewLinks} links at creation");
+            throw TaskerErrors.Invalid($"Links: at most {MaxNewLinks} links at creation");
         if (newLinks.Distinct().Count() != newLinks.Length)
-            throw new TaskerValidationException("Links: duplicate links");
+            throw TaskerErrors.Invalid("Links: duplicate links");
 
         return await writes.Exclusive(projectId, async () =>
         {
@@ -68,7 +68,7 @@ public partial class TaskService(
                         ? await links.Add(projectId, link.TaskId, link.TypeId, created.Id, null, ct)
                         : await links.Add(projectId, created.Id, link.TypeId, link.TaskId, null, ct);
                     if (added == null)
-                        throw new TaskerValidationException($"Links: task not found in the project: {link.TaskId}");
+                        throw TaskerErrors.Invalid($"Links: task not found in the project: {link.TaskId}");
                 }
             }
             catch
@@ -99,7 +99,7 @@ public partial class TaskService(
 
     private async Task<TaskItem> CreateCore(Guid projectId, CreateTask command, CancellationToken ct)
     {
-        var title = Validate.Name(command.Title, "Title", MaxTitleLength);
+        var title = Validate.Name(command.Title, ErrorField.Title, MaxTitleLength);
         var (type, set) = await GetType(projectId, command.TypeId, ct);
 
         var statusId = command.StatusId ?? set.StatusIds.FirstOrDefault();
@@ -107,7 +107,7 @@ public partial class TaskService(
 
         var seriesIds = Validate.Distinct(command.SeriesIds, "SeriesIds");
         if (command.Fields?.RemoveFields is { Length: > 0 })
-            throw new TaskerValidationException("RemoveFields: a new task has no fields to remove");
+            throw TaskerErrors.Invalid("RemoveFields: a new task has no fields to remove");
 
         var now = time.GetUtcNow();
         var task = new TaskItem
@@ -136,7 +136,7 @@ public partial class TaskService(
             foreach (var seriesId in seriesIds)
             {
                 if (await seriesStorage.GetById(projectId, seriesId, ct) == null)
-                    throw new TaskerValidationException($"SeriesIds: not found in the project: {seriesId}");
+                    throw TaskerErrors.Invalid($"SeriesIds: not found in the project: {seriesId}");
                 numbers.Add(new TaskSeries.TaskSeriesNumber(seriesId, await tasks.GetMaxNumber(projectId, seriesId, ct) + 1));
             }
 
@@ -160,7 +160,7 @@ public partial class TaskService(
 
         var updated = task with
         {
-            Title = command.Title == null ? task.Title : Validate.Name(command.Title, "Title", MaxTitleLength),
+            Title = command.Title == null ? task.Title : Validate.Name(command.Title, ErrorField.Title, MaxTitleLength),
             Description = command.Description == null ? task.Description : Validate.Description(command.Description),
             TypeId = type.Id,
             StatusId = statusId,
@@ -204,7 +204,7 @@ public partial class TaskService(
         {
             var missing = TaskFieldRules.MissingRequired(entries, type, catalog);
             if (missing.Length > 0)
-                throw new TaskerRequiredFieldsException(missing);
+                throw TaskerErrors.RequiredFields(missing);
         }
         return entries;
     }
@@ -224,7 +224,7 @@ public partial class TaskService(
     public async Task<TaskFieldView[]> GetFields(Guid projectId, TaskItem task, CancellationToken ct = default)
     {
         var type = await types.GetById(projectId, task.TypeId, ct)
-            ?? throw new TaskerNotFoundException($"Task type {task.TypeId} of task {task.Id} not found (the project may have been deleted)");
+            ?? throw TaskerErrors.EntityNotFound($"Task type {task.TypeId} of task {task.Id} not found (the project may have been deleted)");
         if (type.Fields.Count == 0 && task.Fields.Count == 0)
             return [];
 
@@ -271,7 +271,7 @@ public partial class TaskService(
         {
             var at = expression.IndexOfAny(OperatorChars);
             if (at <= 0)
-                throw new TaskerValidationException(
+                throw TaskerErrors.Invalid(
                     $"Field filter '{expression}': expected 'Name=value' (also !=, >, >=, <, <=) or 'Name:set|unset|attached|detached'");
             var name = expression[..at].Trim();
             var target = await ResolveFilterField(projectId, expression, name, catalog, ct);
@@ -285,7 +285,7 @@ public partial class TaskService(
                     "unset" => FieldOperator.Unset,
                     "attached" => FieldOperator.Attached,
                     "detached" => FieldOperator.Detached,
-                    _ => throw new TaskerValidationException($"Field filter '{expression}': unknown ':{word}' (use :set, :unset, :attached or :detached)")
+                    _ => throw TaskerErrors.Invalid($"Field filter '{expression}': unknown ':{word}' (use :set, :unset, :attached or :detached)")
                 };
                 Guid[]? typeIds = null;
                 if (presence is FieldOperator.Attached or FieldOperator.Detached && target.FieldId is { } fieldId)
@@ -314,10 +314,10 @@ public partial class TaskService(
         var kinds = await tasks.GetOwnFieldKinds(projectId, FieldNames.Key(name), ct);
         return kinds.Length switch
         {
-            0 => throw new TaskerValidationException(
+            0 => throw TaskerErrors.Invalid(
                 $"Field filter '{expression}': no field '{name}' in the project's catalog and no task has an own field with this name"),
             1 => new FilterField(name, kinds[0].Type, kinds[0].EnumId, null),
-            _ => throw new TaskerValidationException(
+            _ => throw TaskerErrors.Invalid(
                 $"Field filter '{expression}': tasks have own fields '{name}' of several types ({string.Join(", ", await KindNames(projectId, kinds, ct))}) " +
                 "and the catalog has no such field, so the value cannot be read")
         };
@@ -347,11 +347,11 @@ public partial class TaskService(
     {
         var (text, op) = Operators.FirstOrDefault(x => string.CompareOrdinal(expression, at, x.Text, 0, x.Text.Length) == 0);
         if (text == null)
-            throw new TaskerValidationException($"Field filter '{expression}': expected one of = != > >= < <= after the name '{field.Name}'");
+            throw TaskerErrors.Invalid($"Field filter '{expression}': expected one of = != > >= < <= after the name '{field.Name}'");
 
         var ordered = op is FieldOperator.Greater or FieldOperator.GreaterOrEqual or FieldOperator.Less or FieldOperator.LessOrEqual;
         if (ordered && field.Type is not (FieldType.Int or FieldType.Float or FieldType.Date))
-            throw new TaskerValidationException(
+            throw TaskerErrors.Invalid(
                 $"Field filter '{expression}': '{text}' does not apply to field '{field.Name}' of type {field.Type.ToString().ToLowerInvariant()} " +
                 "(only int, float and date can be compared; use = or !=)");
 
@@ -517,16 +517,16 @@ public partial class TaskService(
         return true;
     }
 
-    private static string Subject(TaskItem task) => $"Task '{task.Title}'";
+    private static ErrorSubject Subject(TaskItem task) => ErrorSubject.Task(task.Title);
 
     private async Task<(TaskType Type, StatusSet Set)> GetType(Guid projectId, Guid typeId, CancellationToken ct)
     {
         var type = await types.GetById(projectId, typeId, ct)
-            ?? throw new TaskerValidationException($"TypeId: not found in the project: {typeId}");
+            ?? throw TaskerErrors.Invalid($"TypeId: not found in the project: {typeId}");
 
         // Набор типа всегда в том же проекте — это проверяется при создании и изменении типа.
         var set = await sets.GetById(projectId, type.StatusSetId, ct)
-            ?? throw new TaskerNotFoundException($"Status set {type.StatusSetId} of task type {type.Id} not found (the project may have been deleted)");
+            ?? throw TaskerErrors.EntityNotFound($"Status set {type.StatusSetId} of task type {type.Id} not found (the project may have been deleted)");
 
         return (type, set);
     }
@@ -534,7 +534,7 @@ public partial class TaskService(
     private static void EnsureStatusInSet(Guid statusId, TaskType type, StatusSet set)
     {
         if (!set.StatusIds.Contains(statusId))
-            throw new TaskerValidationException($"StatusId: status {statusId} is not in the status set of task type '{type.Name}'");
+            throw TaskerErrors.Invalid($"StatusId: status {statusId} is not in the status set of task type '{type.Name}'");
     }
 
     // ---- серии и номера ----
@@ -588,7 +588,7 @@ public partial class TaskService(
             if (found.Length == 0)
                 return null;
             if (found.Length > 1)
-                throw new TaskerValidationException(
+                throw TaskerErrors.Invalid(
                     $"Several tasks have number {number} in the series: {string.Join(", ", found.Select(x => x.Id))}; remove by task id instead");
 
             var task = found[0];
@@ -621,9 +621,9 @@ public partial class TaskService(
             {
                 number = to.Value;
                 if (number < 1)
-                    throw new TaskerConflictException($"Series number must be 1 or greater, got {number}");
+                    throw TaskerErrors.TaskNumberInvalid(number);
                 if ((await tasks.FindByNumber(projectId, seriesId, number, ct)).Any(x => x.Id != taskId))
-                    throw new TaskerConflictException($"Number {number} is already taken in the series");
+                    throw TaskerErrors.TaskNumberTaken(number);
                 if (number == current.Number)
                     return task;
             }
@@ -669,7 +669,7 @@ public partial class TaskService(
         if (parsed?.Id is { } guid)
             return guid;
         if (parsed?.IdKey is not { } key)
-            throw new TaskerValidationException($"'{id}' is not a task id: give the full id or its first {ShortId.Length}+ hex characters");
+            throw TaskerErrors.Invalid($"'{id}' is not a task id: give the full id or its first {ShortId.Length}+ hex characters");
 
         var found = await FindByIdPrefix(projectId, key, ct);
         return found.Length == 0 ? null : found[0].Id;
@@ -679,7 +679,7 @@ public partial class TaskService(
     {
         var found = await tasks.FindByIdPrefix(projectId, key, ct);
         return found.Length > 1
-            ? throw new TaskerValidationException(
+            ? throw TaskerErrors.Invalid(
                 $"Several tasks start with '{key.Replace("-", "")}', use a longer prefix or the full id: {string.Join(", ", found.Select(x => x.Id))}")
             : found;
     }

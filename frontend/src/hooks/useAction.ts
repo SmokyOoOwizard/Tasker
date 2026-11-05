@@ -1,23 +1,23 @@
 import { useState } from 'react'
-import { errorText, isConflict } from '../errors'
+import { errorText, errorUsages, isConflict, type Usage } from '../errors'
+import { useLanguage } from '../i18n'
 
-/**
- * Изменение на сервере из экрана: занятость, текст ошибки и перезагрузка данных после.
- * run() возвращает true, если всё прошло; при конфликте версий данные тоже перезагружаются.
- */
+type Failure = { kind: 'error'; err: unknown } | { kind: 'text'; text: string }
+
 export function useAction(reload: () => void) {
+  useLanguage()
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [failure, setFailure] = useState<Failure | null>(null)
 
   const run = async (action: () => Promise<unknown>): Promise<boolean> => {
     setBusy(true)
-    setError(null)
+    setFailure(null)
     try {
       await action()
       reload()
       return true
     } catch (err) {
-      setError(errorText(err))
+      setFailure({ kind: 'error', err })
       if (isConflict(err)) reload()
       return false
     } finally {
@@ -25,5 +25,10 @@ export function useAction(reload: () => void) {
     }
   }
 
-  return { busy, error, setError, run }
+  const setError = (text: string | null) => setFailure(text === null ? null : { kind: 'text', text })
+
+  const error = failure === null ? null : failure.kind === 'text' ? failure.text : errorText(failure.err)
+  const usages: Usage[] = failure?.kind === 'error' ? errorUsages(failure.err) : []
+
+  return { busy, error, usages, setError, run }
 }

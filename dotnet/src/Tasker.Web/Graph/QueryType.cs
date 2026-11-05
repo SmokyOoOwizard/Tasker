@@ -1,3 +1,4 @@
+using Tasker.Core;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
@@ -95,7 +96,7 @@ internal sealed class QueryType : ObjectType
     {
         if (context.Mode() == TaskerMode.Server
             && context.Service<IHttpContextAccessor>().HttpContext?.User.Identity?.IsAuthenticated != true)
-            throw new GraphUnauthenticatedException();
+            throw TaskerErrors.AuthRequired();
         return next(context);
     };
 }

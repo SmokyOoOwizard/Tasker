@@ -77,7 +77,7 @@ public class SeriesConflictTests
         var second = await api.Post(ResolvePath(api, tsk), new { token = plan.Token });
 
         Assert.Equal(HttpStatusCode.Conflict, second.Status);
-        Assert.Equal("modified", second.Body!["code"]!.GetValue<string>());
+        Assert.Equal("series.planChanged", second.Body!["code"]!.GetValue<string>());
         var numbers = (await api.Get(api.P("/tasks"))).Body!["data"]!.AsArray()
             .Select(x => x!["seriesNumbers"]![0]!["number"]!.GetValue<int>()).Order().ToArray();
         Assert.Equal([1, 2], numbers);
@@ -115,7 +115,7 @@ public class SeriesConflictTests
 
         var stale = await api.Post(ResolvePath(api, tsk), new { token = plan.Token });
         Assert.Equal(HttpStatusCode.Conflict, stale.Status);
-        Assert.Equal("modified", stale.Body!["code"]!.GetValue<string>());
+        Assert.Equal("series.planChanged", stale.Body!["code"]!.GetValue<string>());
 
         var fresh = (await service.Plan(api.ProjectId, Guid.Parse(Id(tsk))))!;
         Assert.NotEqual(plan.Token, fresh.Token);

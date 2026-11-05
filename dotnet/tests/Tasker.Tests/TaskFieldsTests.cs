@@ -44,7 +44,7 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         if (release)
             await locks.Release(LockedEntity.Task, task.Id);
         else
-            await locks.Acquire(LockedEntity.Task, task.Id, "Task", ctx.Project);
+            await locks.Acquire(LockedEntity.Task, task.Id, ErrorSubject.Task("Task"), ctx.Project);
         return 0;
     });
 
@@ -64,8 +64,8 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         var links = new TaskLinkService(tasks, linkTypes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>(), writes);
         return action(new Svc(
             new TaskService(tasks, types, sets, TimeProvider.System, scope.Resolve<ISeriesStorage>(), writes, locks, fields, enums, links, scope.Resolve<IStatusStorage>()),
-            new TaskTypeService(types, sets, tasks, fields, writes, TimeProvider.System, locks),
-            new FieldService(fields, enums, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks),
+            new TaskTypeService(types, sets, tasks, fields, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
+            new FieldService(fields, enums, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
             new FieldEnumService(enums, fields, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks),
             tasks, types));
     });
@@ -417,7 +417,7 @@ public abstract class TaskFieldsContract : IAsyncLifetime
 
         // У поля Area значения есть только у одной задачи, но убрать без выбора нельзя; ошибка называет число затронутых задач.
         var error = await Conflict(With(s => s.Types.Update(ctx.Project, type.Id, new UpdateTaskType(null, null, type.Version, [new TaskTypeField(note.Id, true)]))));
-        Assert.Equal(ConflictCode.InUse, error.Code);
+        Assert.Equal(ConflictCode.InUse, error.Kind);
         Assert.Contains("1 task(s)", error.Message);
         Assert.Contains("'Area'", error.Message);
         Assert.Equal(2, (await With(s => s.TypeStorage.GetById(ctx.Project, type.Id)))!.Fields.Count);
@@ -554,7 +554,7 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         // High выбран у двух задач: без выбора — In use с числом задач, и ничего не меняется.
         var error = await Conflict(With(s => s.Enums.Update(ctx.Project, priority.Id,
             new UpdateFieldEnum(null, [new FieldEnumValueInput(low.Id, "Low")], afterMedium.Version))));
-        Assert.Equal(ConflictCode.InUse, error.Code);
+        Assert.Equal(ConflictCode.InUse, error.Kind);
         Assert.Contains("2 task(s)", error.Message);
         Assert.Contains("'High'", error.Message);
         Assert.Equal(afterMedium.Version, (await With(s => s.Enums.GetById(ctx.Project, priority.Id)))!.Version);
@@ -664,7 +664,7 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         });
 
         var byType = await Conflict(With(s => s.Fields.Delete(ctx.Project, typed.Id, typed.Version)));
-        Assert.Equal(ConflictCode.InUse, byType.Code);
+        Assert.Equal(ConflictCode.InUse, byType.Kind);
         Assert.Contains("task type 'Bug'", byType.Message);
         var byTask = await Conflict(With(s => s.Fields.Delete(ctx.Project, added.Id, added.Version)));
         Assert.Contains("1 task(s)", byTask.Message);
@@ -697,24 +697,24 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         // Устаревшая версия задачи.
         var first = (await Edit(ctx, task, Set(note, "b")))!;
         var stale = await Conflict(Edit(ctx, task, Set(note, "c")));
-        Assert.Equal(ConflictCode.Modified, stale.Code);
+        Assert.Equal(ConflictCode.Modified, stale.Kind);
         Assert.Equal(["b"], (await Reload(ctx, first)).Fields.Single().Values.ToArray());
 
         // Устаревшая версия типа — и значения задач при выборе «убрать» не теряются.
         var staleType = await Conflict(With(s => s.Types.Update(ctx.Project, type.Id, new UpdateTaskType(null, null, "nope", [], RemovedFieldValues.Clear))));
-        Assert.Equal(ConflictCode.Modified, staleType.Code);
+        Assert.Equal(ConflictCode.Modified, staleType.Kind);
         Assert.Single((await Reload(ctx, first)).Fields);
 
         // Блокировка задачи другим держателем: правка полей отклоняется.
         await Run(async scope =>
         {
             var locks = new EditLockService(scope.Resolve<IEditLockStorage>(), new FakeEditor { Holder = FakeEditor.Anna }, TimeProvider.System);
-            await locks.Acquire(LockedEntity.Task, task.Id, "Task", ctx.Project);
-            await locks.Acquire(LockedEntity.TaskType, type.Id, "Type", ctx.Project);
+            await locks.Acquire(LockedEntity.Task, task.Id, ErrorSubject.Task("Task"), ctx.Project);
+            await locks.Acquire(LockedEntity.TaskType, type.Id, ErrorSubject.TaskType("Type"), ctx.Project);
             return 0;
         });
-        Assert.Equal(ConflictCode.Locked, (await Conflict(Edit(ctx, first, Set(note, "d")))).Code);
-        Assert.Equal(ConflictCode.Locked, (await Conflict(With(s => s.Types.Update(ctx.Project, type.Id, new UpdateTaskType(null, null, type.Version, []))))).Code);
+        Assert.Equal(ConflictCode.Locked, (await Conflict(Edit(ctx, first, Set(note, "d")))).Kind);
+        Assert.Equal(ConflictCode.Locked, (await Conflict(With(s => s.Types.Update(ctx.Project, type.Id, new UpdateTaskType(null, null, type.Version, []))))).Kind);
     }
 
     [Fact]
@@ -1321,7 +1321,7 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         var good = await NewTask(ctx, type, "Good", Set(field, "9"));
 
         var error = await Conflict(Change(ctx, field, FieldType.Int));
-        Assert.Equal(ConflictCode.InUse, error.Code);
+        Assert.Equal(ConflictCode.InUse, error.Kind);
         Assert.Contains("2 task(s)", error.Message);
         Assert.Contains("'abc'", error.Message);
         Assert.Contains("'1.5'", error.Message);
@@ -1448,7 +1448,7 @@ public abstract class TaskFieldsContract : IAsyncLifetime
 
         var two = await NewTask(ctx, type, "Two", Set(field, "b", "c"));
         var error = await Conflict(Change(ctx, multi, multiple: false));
-        Assert.Equal(ConflictCode.InUse, error.Code);
+        Assert.Equal(ConflictCode.InUse, error.Kind);
         Assert.Contains("1 task(s)", error.Message);
         Assert.True((await Current(ctx, field)).Multiple);
         Assert.Equal(["b", "c"], await ValuesOf(ctx, two));
@@ -1496,7 +1496,7 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         Assert.Contains("enum not found", (await Invalid(Change(ctx, field, FieldType.Enum, enumId: Guid.NewGuid()))).Message);
         Assert.Contains("unknown", (await Invalid(Change(ctx, field, (FieldType)99))).Message);
         Assert.Contains("Version is required", (await Invalid(With(s => s.Fields.Update(ctx.Project, field.Id, new UpdateField(null, null, FieldType.Int))))).Message);
-        Assert.Equal(ConflictCode.Modified, (await Conflict(Change(ctx, field, FieldType.Int, version: "stale"))).Code);
+        Assert.Equal(ConflictCode.Modified, (await Conflict(Change(ctx, field, FieldType.Int, version: "stale"))).Kind);
         Assert.Null(await With(s => s.Fields.Update(ctx.Project, Guid.NewGuid(), new UpdateField(null, "v", FieldType.Int))));
 
         // Тип enum: перечисление прежнее, если не передано другое.

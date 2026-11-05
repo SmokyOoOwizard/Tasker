@@ -13,10 +13,6 @@ const boardFields =
 const lockFields = 'entity id holder mine acquiredAt expiresAt'
 const tokenFields = 'id agentId name prefix createdAt expiresAt lastUsedAt revokedAt'
 
-/**
- * Десктоп: MCP обслуживает демон tasker-mcpd. Его состояние, общий адрес MCP (null — демон не работает или ещё не открыл эту папку),
- * имя этой папки для агента (аргумент workspace инструментов) и заголовок, которым выбирается агент.
- */
 export type LocalMcp = {
   daemon: 'running' | 'starting' | 'stopped' | 'failed'
   port: number | null

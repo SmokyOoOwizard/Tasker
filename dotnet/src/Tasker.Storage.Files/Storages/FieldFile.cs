@@ -43,7 +43,7 @@ internal static class FieldFile
         Name = file.Model.Name ?? "",
         Type = Enum.TryParse<FieldType>(file.Model.Type, ignoreCase: true, out var type) && Enum.IsDefined(type)
             ? type
-            : throw new UnsupportedFormatException($"{Path.GetFileName(path)}: unknown field type '{file.Model.Type}': update Tasker"),
+            : throw Tasker.Core.TaskerErrors.UnsupportedFormat(Path.GetFileName(path), $"{Path.GetFileName(path)}: unknown field type '{file.Model.Type}': update Tasker"),
         Multiple = file.Model.Multiple ?? false,
         EnumId = file.Model.Enum,
         Version = file.Version

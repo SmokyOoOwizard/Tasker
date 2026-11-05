@@ -1,7 +1,9 @@
 import { NavLink, Navigate, useParams } from 'react-router'
+import { useT } from '../i18n'
 import { useLoad } from '../hooks/useLoad'
 import { useLocks } from '../hooks/useLocks'
 import { loadProjectSettings } from '../reads'
+import type { StringKey } from '../i18n'
 import type { ProjectSettings } from '../types'
 import { isDesktop } from '../workspace'
 import MembersSection from './settings/MembersSection'
@@ -12,28 +14,27 @@ import TaskTypesSection from './settings/TaskTypesSection'
 import '../styles/forms.css'
 import '../styles/settings.css'
 
-// Участников нет на десктопе: там все видят все проекты папки.
-const tabs = [
-  { key: 'statuses', label: 'Статусы' },
-  { key: 'task-types', label: 'Типы задач' },
-  ...(isDesktop ? [] : [{ key: 'members', label: 'Участники' }]),
-  { key: 'project', label: 'Проект' },
+const tabs: { key: string; label: StringKey }[] = [
+  { key: 'statuses', label: 'web.settings.statuses' },
+  { key: 'task-types', label: 'web.settings.taskTypes' },
+  ...(isDesktop ? [] : [{ key: 'members', label: 'web.settings.members' as const }]),
+  { key: 'project', label: 'web.settings.project' },
 ]
 
-/** Настройки проекта. Вкладка — в адресе: /settings/statuses, /settings/members и т.д. */
 function SettingsPage() {
+  const t = useT()
   const { projectId, tab } = useParams()
   const base = `/projects/${projectId}`
 
-  if (!tabs.some((t) => t.key === tab)) return <Navigate to={`${base}/settings/statuses`} replace />
+  if (!tabs.some((item) => item.key === tab)) return <Navigate to={`${base}/settings/statuses`} replace />
 
   return (
     <div className="page page-wide">
-      <h1 className="page-title">Настройки проекта</h1>
+      <h1 className="page-title">{t('web.settings.title')}</h1>
       <div className="tabs">
-        {tabs.map((t) => (
-          <NavLink key={t.key} to={`${base}/settings/${t.key}`} className={({ isActive }) => (isActive ? 'tab-button active' : 'tab-button')}>
-            {t.label}
+        {tabs.map((item) => (
+          <NavLink key={item.key} to={`${base}/settings/${item.key}`} className={({ isActive }) => (isActive ? 'tab-button active' : 'tab-button')}>
+            {t(item.label)}
           </NavLink>
         ))}
       </div>
@@ -49,14 +50,13 @@ function SettingsPage() {
   )
 }
 
-/** Статусы, наборы и типы задач. */
 function WorkflowTab({ projectId, tab }: { projectId: string; tab: string }) {
+  const t = useT()
   const base = `/projects/${projectId}`
-  // Всё сразу: наборы показывают названия статусов, типы — названия наборов, и после любой правки обновляется всё.
   const locks = useLocks(projectId)
   const { data, error, reload } = useLoad((): Promise<ProjectSettings> => loadProjectSettings(projectId), [projectId])
 
-  if (!data) return error ? <div className="error-message">{error}</div> : <p className="muted">Загрузка…</p>
+  if (!data) return error ? <div className="error-message">{error}</div> : <p className="muted">{t('web.common.loading')}</p>
 
   return tab === 'task-types' ? (
     <TaskTypesSection base={base} settings={data} reload={reload} locks={locks} />

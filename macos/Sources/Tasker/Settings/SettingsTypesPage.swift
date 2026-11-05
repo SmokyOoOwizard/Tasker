@@ -19,7 +19,6 @@ struct TypesSettingsPage: View {
     @State private var editing: TypeEditTarget?
     @State private var refusal: SettingsRefusal?
     @State private var deleting: SettingsTypeItem?
-    @State private var checking = false
 
     var body: some View {
         let catalog = model.catalog
@@ -38,8 +37,7 @@ struct TypesSettingsPage: View {
                         }
                     } actions: {
                         SettingsIconButton(icon: .pen, help: l.string(.settingsEdit)) { editing = .edit(item) }
-                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { askDelete(item) }
-                            .disabled(checking)
+                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { deleting = item }
                     }
                 }
             }
@@ -67,26 +65,13 @@ struct TypesSettingsPage: View {
         return l.string(.settingsTypeSummary, set, fields.joined(separator: ", "))
     }
 
-    private func askDelete(_ item: SettingsTypeItem) {
-        checking = true
-        Task {
-            let uses = await model.taskTypeUsage(of: item)
-            checking = false
-            if uses.isEmpty {
-                deleting = item
-            } else {
-                refusal = SettingsRefusal(subject: l.string(.settingsTypeSubject, item.name), uses: uses)
-            }
-        }
-    }
-
     private func confirmDelete(_ item: SettingsTypeItem) {
         Task {
             if case .failure(let error) = await model.deleteTaskType(item) {
-                if let detail = SettingsModel.isInUse(error) {
-                    refusal = SettingsRefusal(subject: l.string(.settingsTypeSubject, item.name), uses: [], detail: detail)
+                if let detail = SettingsModel.inUseRefusal(error) {
+                    refusal = SettingsRefusal(refusal: detail)
                 } else {
-                    model.onNotice?(model.message(error))
+                    model.onFailure?(model.message(error))
                 }
             }
         }

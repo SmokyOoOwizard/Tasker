@@ -38,18 +38,17 @@ public class SeriesConflictService(ITaskStorage tasks, ISeriesStorage series, IW
     public async Task<ConflictPlan> Apply(Guid projectId, Guid seriesId, string? token, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(token))
-            throw new TaskerValidationException("Token is required: pass the token of the plan you are confirming");
+            throw TaskerErrors.Invalid("Token is required: pass the token of the plan you are confirming");
 
         // Блокировки ждём до секции записи (внутри неё держатель не смог бы её снять), как в CleanupService.
-        var preview = await Build(projectId, seriesId, ct) ?? throw new TaskerNotFoundException($"Series {seriesId} was not found");
+        var preview = await Build(projectId, seriesId, ct) ?? throw TaskerErrors.EntityNotFound($"Series {seriesId} was not found");
         await TaskRewrites.WaitForLocks(locks, preview.Moves.Select(x => x.Task), ct);
 
         return await writes.Exclusive(projectId, async () =>
         {
-            var current = await Build(projectId, seriesId, ct) ?? throw new TaskerNotFoundException($"Series {seriesId} was not found");
+            var current = await Build(projectId, seriesId, ct) ?? throw TaskerErrors.EntityNotFound($"Series {seriesId} was not found");
             if (current.Plan.Token != token)
-                throw new TaskerConflictException(
-                    "The conflicts changed since the plan was built or the plan was already applied; reload the plan and confirm it again", ConflictCode.Modified);
+                throw TaskerErrors.SeriesPlanChanged();
 
             await TaskRewrites.ModifyAll(tasks, time, locks, current.Moves.Select(x => x.Task),
                 t =>
@@ -72,7 +71,7 @@ public class SeriesConflictService(ITaskStorage tasks, ISeriesStorage series, IW
         if (await series.GetById(projectId, seriesId, ct) == null)
             return null;
         if (await series.CountUnreadable(projectId, ct) > 0)
-            throw new TaskerValidationException(
+            throw TaskerErrors.Invalid(
                 "Some series files cannot be read (merge conflict or broken YAML): fix them first, then resolve the conflicts");
 
         var next = await tasks.GetMaxNumber(projectId, seriesId, ct);

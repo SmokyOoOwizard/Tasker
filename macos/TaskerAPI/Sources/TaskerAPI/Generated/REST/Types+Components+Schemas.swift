@@ -169,17 +169,133 @@ extension Components {
         }
         /// - Remark: Generated from `#/components/schemas/ApiError`.
         public struct ApiError: Codable, Hashable, Sendable {
+            /// English text, the fallback when a client has no translation for the code.
+            ///
             /// - Remark: Generated from `#/components/schemas/ApiError/error`.
             public var error: Swift.String
+            /// Stable refusal code, see docs/api/error-codes.json for its parameters. The same code, params and usages come in GraphQL errors[].extensions.
+            ///
+            /// - Remark: Generated from `#/components/schemas/ApiError/code`.
+            @frozen public enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case agent_expiresAtPast = "agent.expiresAtPast"
+                case auth_invalidCredentials = "auth.invalidCredentials"
+                case auth_localOnly = "auth.localOnly"
+                case auth_required = "auth.required"
+                case auth_sessionExpired = "auth.sessionExpired"
+                case board_columnOverlap = "board.columnOverlap"
+                case board_conditionNoValue = "board.conditionNoValue"
+                case board_conditionNotApplicable = "board.conditionNotApplicable"
+                case board_conditionValueRequired = "board.conditionValueRequired"
+                case board_dropSetNotOnBoard = "board.dropSetNotOnBoard"
+                case board_dropStatusNotInColumn = "board.dropStatusNotInColumn"
+                case board_dropStatusNotInSet = "board.dropStatusNotInSet"
+                case board_noColumns = "board.noColumns"
+                case board_noDropRule = "board.noDropRule"
+                case board_noStatusSets = "board.noStatusSets"
+                case board_taskNotMatchColumn = "board.taskNotMatchColumn"
+                case board_taskTypeNotOnBoard = "board.taskTypeNotOnBoard"
+                case entity_locked = "entity.locked"
+                case entity_modified = "entity.modified"
+                case entity_notFound = "entity.notFound"
+                case enum_columnsCollide = "enum.columnsCollide"
+                case enum_inUse = "enum.inUse"
+                case enum_nameTaken = "enum.nameTaken"
+                case enum_noValues = "enum.noValues"
+                case enum_valueRepeated = "enum.valueRepeated"
+                case enum_valuesInUse = "enum.valuesInUse"
+                case field_changeBlockedByColumns = "field.changeBlockedByColumns"
+                case field_conversionBlocked = "field.conversionBlocked"
+                case field_enumNotAllowed = "field.enumNotAllowed"
+                case field_enumRequired = "field.enumRequired"
+                case field_inUse = "field.inUse"
+                case field_nameTaken = "field.nameTaken"
+                case field_typeChangeNotAllowed = "field.typeChangeNotAllowed"
+                case fieldValue_empty = "fieldValue.empty"
+                case fieldValue_invalid = "fieldValue.invalid"
+                case fieldValue_notInEnum = "fieldValue.notInEnum"
+                case fieldValue_repeated = "fieldValue.repeated"
+                case fieldValue_single = "fieldValue.single"
+                case fieldValue_tooLong = "fieldValue.tooLong"
+                case format_unsupported = "format.unsupported"
+                case internal_unexpected = "internal.unexpected"
+                case link_cycle = "link.cycle"
+                case link_self = "link.self"
+                case linkType_hierarchicalNoCycles = "linkType.hierarchicalNoCycles"
+                case linkType_hierarchicalSameNames = "linkType.hierarchicalSameNames"
+                case linkType_inUse = "linkType.inUse"
+                case linkType_nameTaken = "linkType.nameTaken"
+                case project_agentOfAnotherUser = "project.agentOfAnotherUser"
+                case project_lastPerson = "project.lastPerson"
+                case project_notFound = "project.notFound"
+                case series_planChanged = "series.planChanged"
+                case series_prefixInvalid = "series.prefixInvalid"
+                case series_prefixTaken = "series.prefixTaken"
+                case status_inUse = "status.inUse"
+                case statusSet_inUse = "statusSet.inUse"
+                case statusSet_noStatuses = "statusSet.noStatuses"
+                case statusSet_statusInUse = "statusSet.statusInUse"
+                case task_fieldNameTaken = "task.fieldNameTaken"
+                case task_numberInvalid = "task.numberInvalid"
+                case task_numberTaken = "task.numberTaken"
+                case task_requiredFields = "task.requiredFields"
+                case taskType_fieldsHaveValues = "taskType.fieldsHaveValues"
+                case taskType_inUse = "taskType.inUse"
+                case taskType_statusesNotInSet = "taskType.statusesNotInSet"
+                case user_adminOnly = "user.adminOnly"
+                case user_adminRightsAdminOnly = "user.adminRightsAdminOnly"
+                case user_cannotDeleteSelf = "user.cannotDeleteSelf"
+                case user_currentPasswordIncorrect = "user.currentPasswordIncorrect"
+                case user_emailTaken = "user.emailTaken"
+                case user_lastAdmin = "user.lastAdmin"
+                case user_ownAccountOnly = "user.ownAccountOnly"
+                case user_personOnly = "user.personOnly"
+                case user_registrationClosed = "user.registrationClosed"
+                case user_signInRequired = "user.signInRequired"
+                case user_usernameOrEmailTaken = "user.usernameOrEmailTaken"
+                case user_usernameTaken = "user.usernameTaken"
+                case validation_color = "validation.color"
+                case validation_email = "validation.email"
+                case validation_fieldNameChars = "validation.fieldNameChars"
+                case validation_invalid = "validation.invalid"
+                case validation_password = "validation.password"
+                case validation_required = "validation.required"
+                case validation_statusIcon = "validation.statusIcon"
+                case validation_tooLong = "validation.tooLong"
+                case validation_username = "validation.username"
+                case workspace_notInAddress = "workspace.notInAddress"
+                case workspace_notOpen = "workspace.notOpen"
+            }
+            /// Stable refusal code, see docs/api/error-codes.json for its parameters. The same code, params and usages come in GraphQL errors[].extensions.
+            ///
+            /// - Remark: Generated from `#/components/schemas/ApiError/code`.
+            public var code: Components.Schemas.ApiError.CodePayload
+            /// - Remark: Generated from `#/components/schemas/ApiError/params`.
+            public var params: OpenAPIRuntime.OpenAPIObjectContainer
+            /// - Remark: Generated from `#/components/schemas/ApiError/usages`.
+            public var usages: [Components.Schemas.ErrorUsage]
             /// Creates a new `ApiError`.
             ///
             /// - Parameters:
-            ///   - error:
-            public init(error: Swift.String) {
+            ///   - error: English text, the fallback when a client has no translation for the code.
+            ///   - code: Stable refusal code, see docs/api/error-codes.json for its parameters. The same code, params and usages come in GraphQL errors[].extensions.
+            ///   - params:
+            ///   - usages:
+            public init(
+                error: Swift.String,
+                code: Components.Schemas.ApiError.CodePayload,
+                params: OpenAPIRuntime.OpenAPIObjectContainer,
+                usages: [Components.Schemas.ErrorUsage]
+            ) {
                 self.error = error
+                self.code = code
+                self.params = params
+                self.usages = usages
             }
             public enum CodingKeys: String, CodingKey {
                 case error
+                case code
+                case params
+                case usages
             }
         }
         /// - Remark: Generated from `#/components/schemas/AuthSession`.
@@ -438,64 +554,6 @@ extension Components {
                 case fieldId
                 case _operator = "operator"
                 case value
-            }
-        }
-        /// - Remark: Generated from `#/components/schemas/ConflictError`.
-        public struct ConflictError: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/ConflictError/error`.
-            public var error: Swift.String
-            /// in_use: the entity is used elsewhere; modified: someone changed it since the client read it; locked: someone is editing it (heldBy); unsupported_format: the data was written by a newer version of Tasker.
-            ///
-            /// - Remark: Generated from `#/components/schemas/ConflictError/code`.
-            @frozen public enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                case inUse = "in_use"
-                case modified = "modified"
-                case locked = "locked"
-                case unsupportedFormat = "unsupported_format"
-            }
-            /// in_use: the entity is used elsewhere; modified: someone changed it since the client read it; locked: someone is editing it (heldBy); unsupported_format: the data was written by a newer version of Tasker.
-            ///
-            /// - Remark: Generated from `#/components/schemas/ConflictError/code`.
-            public var code: Components.Schemas.ConflictError.CodePayload
-            /// - Remark: Generated from `#/components/schemas/ConflictError/heldBy`.
-            public struct HeldByPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/ConflictError/heldBy/value1`.
-                public var value1: Components.Schemas.LockHolder
-                /// Creates a new `HeldByPayload`.
-                ///
-                /// - Parameters:
-                ///   - value1:
-                public init(value1: Components.Schemas.LockHolder) {
-                    self.value1 = value1
-                }
-                public init(from decoder: any Swift.Decoder) throws {
-                    self.value1 = try .init(from: decoder)
-                }
-                public func encode(to encoder: any Swift.Encoder) throws {
-                    try self.value1.encode(to: encoder)
-                }
-            }
-            /// - Remark: Generated from `#/components/schemas/ConflictError/heldBy`.
-            public var heldBy: Components.Schemas.ConflictError.HeldByPayload?
-            /// Creates a new `ConflictError`.
-            ///
-            /// - Parameters:
-            ///   - error:
-            ///   - code: in_use: the entity is used elsewhere; modified: someone changed it since the client read it; locked: someone is editing it (heldBy); unsupported_format: the data was written by a newer version of Tasker.
-            ///   - heldBy:
-            public init(
-                error: Swift.String,
-                code: Components.Schemas.ConflictError.CodePayload,
-                heldBy: Components.Schemas.ConflictError.HeldByPayload? = nil
-            ) {
-                self.error = error
-                self.code = code
-                self.heldBy = heldBy
-            }
-            public enum CodingKeys: String, CodingKey {
-                case error
-                case code
-                case heldBy
             }
         }
         /// - Remark: Generated from `#/components/schemas/ConflictPlan`.
@@ -1086,6 +1144,64 @@ extension Components {
                 case settled
             }
         }
+        /// - Remark: Generated from `#/components/schemas/ErrorUsage`.
+        public struct ErrorUsage: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ErrorUsage/kind`.
+            @frozen public enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case tasks = "tasks"
+                case links = "links"
+                case ownFields = "ownFields"
+                case board = "board"
+                case boardColumn = "boardColumn"
+                case taskType = "taskType"
+                case statusSet = "statusSet"
+                case field = "field"
+            }
+            /// - Remark: Generated from `#/components/schemas/ErrorUsage/kind`.
+            public var kind: Components.Schemas.ErrorUsage.KindPayload
+            /// - Remark: Generated from `#/components/schemas/ErrorUsage/name`.
+            public var name: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ErrorUsage/count`.
+            public var count: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/ErrorUsage/tasks`.
+            public var tasks: [Swift.String]?
+            /// - Remark: Generated from `#/components/schemas/ErrorUsage/board`.
+            public var board: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ErrorUsage/column`.
+            public var column: Swift.String?
+            /// Creates a new `ErrorUsage`.
+            ///
+            /// - Parameters:
+            ///   - kind:
+            ///   - name:
+            ///   - count:
+            ///   - tasks:
+            ///   - board:
+            ///   - column:
+            public init(
+                kind: Components.Schemas.ErrorUsage.KindPayload,
+                name: Swift.String? = nil,
+                count: Swift.Int32? = nil,
+                tasks: [Swift.String]? = nil,
+                board: Swift.String? = nil,
+                column: Swift.String? = nil
+            ) {
+                self.kind = kind
+                self.name = name
+                self.count = count
+                self.tasks = tasks
+                self.board = board
+                self.column = column
+            }
+            public enum CodingKeys: String, CodingKey {
+                case kind
+                case name
+                case count
+                case tasks
+                case board
+                case column
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/FieldChangeChoice`.
         public struct FieldChangeChoice: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/FieldChangeChoice/clearUnconvertible`.
@@ -1479,29 +1595,6 @@ extension Components {
                 case title
                 case statusId
                 case seriesNumbers
-            }
-        }
-        /// - Remark: Generated from `#/components/schemas/LockHolder`.
-        public struct LockHolder: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/LockHolder/name`.
-            public var name: Swift.String
-            /// - Remark: Generated from `#/components/schemas/LockHolder/expiresAt`.
-            public var expiresAt: Foundation.Date
-            /// Creates a new `LockHolder`.
-            ///
-            /// - Parameters:
-            ///   - name:
-            ///   - expiresAt:
-            public init(
-                name: Swift.String,
-                expiresAt: Foundation.Date
-            ) {
-                self.name = name
-                self.expiresAt = expiresAt
-            }
-            public enum CodingKeys: String, CodingKey {
-                case name
-                case expiresAt
             }
         }
         /// - Remark: Generated from `#/components/schemas/LockInfo`.

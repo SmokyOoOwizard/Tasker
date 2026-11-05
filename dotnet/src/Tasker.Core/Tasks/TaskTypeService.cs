@@ -37,7 +37,8 @@ public class TaskTypeService(
     IFieldStorage fields,
     IWriteScope writes,
     TimeProvider time,
-    Locks.EditLockService locks)
+    Locks.EditLockService locks,
+    ISeriesStorage series)
 {
     private const int CascadeAttempts = 3;
 
@@ -57,7 +58,7 @@ public class TaskTypeService(
 
     public async Task<TaskType> Create(Guid projectId, CreateTaskType command, CancellationToken ct = default)
     {
-        var name = Validate.Name(command.Name, "Task type name");
+        var name = Validate.Name(command.Name, ErrorField.TaskTypeName);
         await GetSet(projectId, command.StatusSetId, ct);
 
         return await writes.Exclusive(projectId, async () =>
@@ -97,11 +98,11 @@ public class TaskTypeService(
         await locks.EnsureWritable(Locks.LockedEntity.TaskType, type.Id, Subject(type), ct);
         var expected = Versioning.Check(type.Version, command.Version, Subject(type));
 
-        var name = command.Name == null ? type.Name : Validate.Name(command.Name, "Task type name");
+        var name = command.Name == null ? type.Name : Validate.Name(command.Name, ErrorField.TaskTypeName);
         var description = command.Description == null ? type.Description : Validate.Description(command.Description) ?? "";
         var setId = command.StatusSetId ?? type.StatusSetId;
         if (command.RemovedFields is { } choice && !Enum.IsDefined(choice))
-            throw new TaskerValidationException($"RemovedFields: unknown choice '{choice}'");
+            throw TaskerErrors.Invalid($"RemovedFields: unknown choice '{choice}'");
 
         if (setId != type.StatusSetId)
         {
@@ -113,7 +114,7 @@ public class TaskTypeService(
                 ? 0
                 : await tasks.Count(projectId, new TaskFilter { TypeIds = [id], StatusIds = lost }, ct);
             if (count > 0)
-                throw new TaskerConflictException(
+                throw TaskerErrors.TaskTypeStatusesNotInSet(type.Name, newSet.Name, count,
                     $"{count} task(s) of type '{type.Name}' have statuses that are not in status set '{newSet.Name}'; " +
                     "move them to other statuses first");
         }
@@ -152,8 +153,8 @@ public class TaskTypeService(
         var expected = Versioning.Check(type.Version, version, Subject(type));
 
         var usages = new Usages(Subject(type));
-        usages.AddTasks(await tasks.Count(projectId, new TaskFilter { TypeIds = [id] }, ct));
-        usages.ThrowIfAny("deleted");
+        await TaskUsageRefs.AddTo(usages, tasks, series, projectId, new TaskFilter { TypeIds = [id] }, ct);
+        usages.ThrowIfAny(u => TaskerErrors.TaskTypeInUse(type.Name, u));
 
         if (!await types.Delete(projectId, id, expected, ct))
             throw Versioning.Modified(Subject(type));
@@ -161,23 +162,23 @@ public class TaskTypeService(
         return true;
     }
 
-    private static string Subject(TaskType type) => $"Task type '{type.Name}'";
+    private static ErrorSubject Subject(TaskType type) => ErrorSubject.TaskType(type.Name);
 
     private async Task<StatusSet> GetSet(Guid projectId, Guid setId, CancellationToken ct) =>
         await sets.GetById(projectId, setId, ct)
-        ?? throw new TaskerValidationException($"StatusSetId: not found in the project: {setId}");
+        ?? throw TaskerErrors.Invalid($"StatusSetId: not found in the project: {setId}");
 
     /// <summary>Поля типа: все из каталога проекта, без повторов.</summary>
     private async Task<IReadOnlyList<TaskTypeField>> ValidateFields(Guid projectId, TaskTypeField[]? input, CancellationToken ct)
     {
         var list = input ?? [];
         if (list.Select(x => x.FieldId).Distinct().Count() != list.Length)
-            throw new TaskerValidationException("Fields contains duplicates");
+            throw TaskerErrors.Invalid("Fields contains duplicates");
 
         var catalog = (await fields.GetAll(projectId, ct)).Select(x => x.Id).ToHashSet();
         var missing = list.Select(x => x.FieldId).Where(x => !catalog.Contains(x)).ToArray();
         if (missing.Length > 0)
-            throw new TaskerValidationException($"Fields: not found in the project: {string.Join(", ", missing)}");
+            throw TaskerErrors.Invalid($"Fields: not found in the project: {string.Join(", ", missing)}");
         return list.Select(x => new TaskTypeField(x.FieldId, x.Required)).ToArray();
     }
 
@@ -200,9 +201,9 @@ public class TaskTypeService(
 
         if (choice == null)
         {
-            var names = (await fields.GetAll(projectId, ct)).Where(x => removed.Contains(x.Id)).Select(x => $"'{x.Name}'").ToArray();
-            throw new TaskerConflictException(
-                $"{holders.Length} task(s) of type '{type.Name}' have values in the field(s) being removed ({string.Join(", ", names)}): " +
+            var names = (await fields.GetAll(projectId, ct)).Where(x => removed.Contains(x.Id)).Select(x => x.Name).ToArray();
+            throw TaskerErrors.TaskTypeFieldsHaveValues(type.Name, names, holders.Length,
+                $"{holders.Length} task(s) of type '{type.Name}' have values in the field(s) being removed ({string.Join(", ", names.Select(x => $"'{x}'"))}): " +
                 "choose to clear those values or to keep them as additional fields of the tasks");
         }
 

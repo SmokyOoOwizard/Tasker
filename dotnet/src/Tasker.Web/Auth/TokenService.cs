@@ -1,3 +1,4 @@
+using Tasker.Core;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -65,7 +66,16 @@ public class TokenService(AuthConfigs configs, TimeProvider time) : IAccessToken
             ClockSkew = TimeSpan.FromSeconds(30),
             NameClaimType = JwtRegisteredClaimNames.Name
         };
-        bearer.Events = new JwtBearerEvents { OnTokenValidated = EnsureNotRevoked };
+        bearer.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = EnsureNotRevoked,
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.Headers.WWWAuthenticate = "Bearer";
+                await TaskerApi.WriteError(context.HttpContext, TaskerErrors.AuthRequired("Sign in required"));
+            }
+        };
     }
 
     // Подпись и срок проверены; остаётся убедиться, что пользователь существует и не менял пароль.

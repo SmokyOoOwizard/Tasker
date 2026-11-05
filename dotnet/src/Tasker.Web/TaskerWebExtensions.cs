@@ -1,3 +1,4 @@
+using Tasker.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -53,7 +54,7 @@ public static class TaskerWebExtensions
 
         // Неизвестный путь под /api — 404 JSON-клиенту. Без этого GET попадал бы в SPA-fallback
         // (200 с index.html), а POST/PATCH/DELETE — в 405 от него же.
-        api.Map("{*path}", () => Results.NotFound(new ApiError("Not found"))).ExcludeFromDescription();
+        api.Map("{*path}", () => Results.Json(ApiError.From(TaskerErrors.EntityNotFound()), statusCode: StatusCodes.Status404NotFound)).ExcludeFromDescription();
 
         // SPA: все неизвестные не-API маршруты отдают index.html фронтенда.
         app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = frontend });
@@ -79,7 +80,7 @@ public static class TaskerWebExtensions
         var api = app.MapGroup("/api");
         api.MapTaskerApi(TaskerMode.Local);
         api.MapTaskerGraph();
-        api.Map("{*path}", () => Results.NotFound(new ApiError("Not found"))).ExcludeFromDescription();
+        api.Map("{*path}", () => Results.Json(ApiError.From(TaskerErrors.EntityNotFound()), statusCode: StatusCodes.Status404NotFound)).ExcludeFromDescription();
         mapExtra?.Invoke(app);
         app.MapTaskerMcp(requireAgentToken: false);
 

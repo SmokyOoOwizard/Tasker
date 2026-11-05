@@ -16,7 +16,7 @@ public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScop
     /// <exception cref="TaskerConflictException">Префикс уже занят в проекте (точное совпадение, регистр важен).</exception>
     public async Task<Series> Create(Guid projectId, CreateSeries command, CancellationToken ct = default)
     {
-        var name = Validate.Name(command.Name, "Series name");
+        var name = Validate.Name(command.Name, ErrorField.SeriesName);
         var prefix = SeriesPrefix.Validate(command.Prefix);
 
         return await writes.Exclusive(projectId, async () =>
@@ -47,7 +47,7 @@ public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScop
 
             var updated = current with
             {
-                Name = command.Name == null ? current.Name : Validate.Name(command.Name, "Series name"),
+                Name = command.Name == null ? current.Name : Validate.Name(command.Name, ErrorField.SeriesName),
                 Prefix = command.Prefix == null ? current.Prefix : SeriesPrefix.Validate(command.Prefix)
             };
             if (updated.Prefix != current.Prefix)
@@ -106,7 +106,7 @@ public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScop
     private async Task EnsurePrefixFree(Guid projectId, string prefix, Guid? exceptId, CancellationToken ct)
     {
         if ((await series.GetAll(projectId, ct)).Any(x => x.Prefix == prefix && x.Id != exceptId))
-            throw new TaskerConflictException($"Series prefix '{prefix}' is already used in the project");
+            throw TaskerErrors.SeriesPrefixTaken(prefix);
     }
 
     /// <summary>
@@ -159,5 +159,5 @@ public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScop
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(first).Throw();
     }
 
-    private static string Subject(Series item) => $"Series '{item.Name}'";
+    private static ErrorSubject Subject(Series item) => ErrorSubject.Series(item.Name);
 }

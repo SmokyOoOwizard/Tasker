@@ -72,7 +72,7 @@ internal static partial class YamlFile
     private static T? Deserialize<T>(string text, string path) where T : class
     {
         if (ConflictLine(text) is { } line)
-            throw new TaskerValidationException($"Unresolved git merge conflict (line {line})");
+            throw Tasker.Core.TaskerErrors.Invalid($"Unresolved git merge conflict (line {line})");
 
         var upgraded = FormatVersions.Upgrade(text, path);
         try
@@ -81,7 +81,7 @@ internal static partial class YamlFile
         }
         catch (YamlException e)
         {
-            throw new TaskerValidationException(e.Message);
+            throw Tasker.Core.TaskerErrors.Invalid(e.Message);
         }
     }
 

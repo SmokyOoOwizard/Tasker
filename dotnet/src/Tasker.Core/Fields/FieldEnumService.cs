@@ -72,7 +72,7 @@ public class FieldEnumService(
         {
             0 => null,
             1 => byName[0],
-            _ => throw new TaskerValidationException(
+            _ => throw TaskerErrors.Invalid(
                 $"Several enums are named '{text}', use the id: {string.Join(", ", byName.Select(x => x.Id))}")
         };
     }
@@ -80,7 +80,7 @@ public class FieldEnumService(
     /// <exception cref="TaskerConflictException">Перечисление с таким именем уже есть.</exception>
     public async Task<FieldEnum> Create(Guid projectId, CreateFieldEnum command, CancellationToken ct = default)
     {
-        var name = Validate.Name(command.Name, "Enum name");
+        var name = Validate.Name(command.Name, ErrorField.EnumName);
         var values = ValidateValues((command.Values ?? []).Select(x => new FieldEnumValueInput(null, x)).ToArray(), []);
 
         return await writes.Exclusive(projectId, async () =>
@@ -110,7 +110,7 @@ public class FieldEnumService(
         await locks.EnsureWritable(Locks.LockedEntity.Enum, current.Id, Subject(current), ct);
         var expected = Versioning.Check(current.Version, command.Version, Subject(current));
 
-        var name = command.Name == null ? current.Name : Validate.Name(command.Name, "Enum name");
+        var name = command.Name == null ? current.Name : Validate.Name(command.Name, ErrorField.EnumName);
         var values = command.Values == null ? current.Values : ValidateValues(command.Values, current.Values);
         var removed = current.Values.Select(x => x.Id).Except(values.Select(x => x.Id)).ToArray();
         ValidateChoice(command.Removed, values, removed);
@@ -154,12 +154,12 @@ public class FieldEnumService(
             foreach (var field in await fields.GetAll(projectId, ct))
             {
                 if (field.EnumId == id)
-                    usages.Add($"field '{field.Name}'");
+                    usages.AddField(field.Name);
             }
             var own = await tasks.Count(projectId, new TaskFilter { EnumIds = [id] }, ct);
             if (own > 0)
-                usages.Add($"own fields of {own} task(s)");
-            usages.ThrowIfAny("deleted");
+                usages.AddOwnFields(own);
+            usages.ThrowIfAny(u => TaskerErrors.EnumInUse(current.Name, u));
 
             if (!await enums.Delete(projectId, id, expected, ct))
                 throw Versioning.Modified(Subject(current));
@@ -174,9 +174,9 @@ public class FieldEnumService(
         if (choice == null)
             return;
         if (choice.Clear == (choice.ReassignTo != null))
-            throw new TaskerValidationException("Removed: choose exactly one of clear (remove the values from the tasks) or reassign (give another value)");
+            throw TaskerErrors.Invalid("Removed: choose exactly one of clear (remove the values from the tasks) or reassign (give another value)");
         if (choice.ReassignTo is { } target && (!remaining.Any(x => x.Id == target) || removed.Contains(target)))
-            throw new TaskerValidationException($"Removed: the value to reassign to {target} is not among the values the enum keeps");
+            throw TaskerErrors.Invalid($"Removed: the value to reassign to {target} is not among the values the enum keeps");
     }
 
     /// <summary>Задачи, где выбраны убираемые значения (у полей каталога с этим перечислением и у собственных полей), и признак «поле использует их».</summary>
@@ -217,7 +217,7 @@ public class FieldEnumService(
     private static bool UsesValue(ColumnFieldFilter filter, HashSet<Guid> fieldIds, HashSet<string> removedKeys) =>
         fieldIds.Contains(filter.FieldId) && filter.Value != null && removedKeys.Contains(filter.Value);
 
-    private static string BoardSubject(Board board) => $"Board '{board.Name}'";
+    private static ErrorSubject BoardSubject(Board board) => ErrorSubject.Board(board.Name);
 
     /// <summary>
     /// Значения, которые убирают из перечисления, и места, где они выбраны: задачи (у полей каталога с этим перечислением и у собственных
@@ -235,15 +235,15 @@ public class FieldEnumService(
         if (choice == null)
         {
             var fieldIds = await EnumFieldIds(projectId, current, ct);
-            var names = current.Values.Where(x => removed.Contains(x.Id)).Select(x => $"'{x.Name}'");
+            var names = current.Values.Where(x => removed.Contains(x.Id)).Select(x => x.Name).ToArray();
             var places = new List<string>();
             if (holders.Count > 0)
                 places.Add($"selected in {holders.Count} task(s)");
             if (affectedBoards.Length > 0)
                 places.Add("used in the field conditions of " + string.Join(", ", affectedBoards.SelectMany(b => b.Columns
                     .Where(c => c.FieldConditions.Any(f => UsesValue(f, fieldIds, removedKeys))).Select(c => $"board '{b.Name}' (column '{c.Name}')"))));
-            throw new TaskerConflictException(
-                $"Value(s) {string.Join(", ", names)} of {Subject(current)} are {string.Join(" and ", places)} and cannot be removed: " +
+            throw TaskerErrors.EnumValuesInUse(current.Name, names,
+                $"Value(s) {string.Join(", ", names.Select(x => $"'{x}'"))} of {Subject(current)} are {string.Join(" and ", places)} and cannot be removed: " +
                 "choose to clear them (from the tasks, and the conditions from the columns) or to reassign them to another value of the enum");
         }
 
@@ -280,7 +280,7 @@ public class FieldEnumService(
         {
             var columns = board.Columns.Select(Rewrite).ToArray();
             if (ColumnFilters.FindOverlap(columns, catalog) is var (first, second, _, _))
-                throw new TaskerConflictException(
+                throw TaskerErrors.EnumColumnsCollide(board.Name, first.Name, second.Name,
                     $"{BoardSubject(board)}: after the change columns '{first.Name}' and '{second.Name}' would show the same tasks (the same status and conditions that " +
                     "no longer exclude each other): change their conditions on the board first");
             rewrittenBoards.Add(board with { Columns = columns });
@@ -345,7 +345,7 @@ public class FieldEnumService(
     private static FieldEnumValue[] ValidateValues(FieldEnumValueInput[] input, FieldEnumValue[] existing)
     {
         if (input.Length == 0)
-            throw new TaskerValidationException("Enum must contain at least one value");
+            throw TaskerErrors.EnumNoValues();
 
         var known = existing.Select(x => x.Id).ToHashSet();
         var ids = new HashSet<Guid>();
@@ -353,15 +353,15 @@ public class FieldEnumService(
         var result = new List<FieldEnumValue>();
         foreach (var item in input)
         {
-            var valueName = Validate.Name(item.Name, "Enum value");
+            var valueName = Validate.Name(item.Name, ErrorField.EnumValue);
             if (!names.Add(valueName))
-                throw new TaskerValidationException($"Enum value '{valueName}' is repeated: values must be unique");
+                throw TaskerErrors.EnumValueRepeated(valueName);
 
             var valueId = item.Id ?? Guid.NewGuid();
             if (item.Id != null && !known.Contains(valueId))
-                throw new TaskerValidationException($"Enum value id not found in the enum: {valueId}");
+                throw TaskerErrors.Invalid($"Enum value id not found in the enum: {valueId}");
             if (!ids.Add(valueId))
-                throw new TaskerValidationException($"Enum value id {valueId} is repeated");
+                throw TaskerErrors.Invalid($"Enum value id {valueId} is repeated");
             result.Add(new FieldEnumValue(valueId, valueName));
         }
         return result.ToArray();
@@ -370,8 +370,8 @@ public class FieldEnumService(
     private async Task EnsureNameFree(Guid projectId, string name, Guid? exceptId, CancellationToken ct)
     {
         if ((await enums.GetAll(projectId, ct)).Any(x => x.Id != exceptId && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
-            throw new TaskerConflictException($"Enum '{name}' already exists in the project");
+            throw TaskerErrors.EnumNameTaken(name);
     }
 
-    private static string Subject(FieldEnum value) => $"Enum '{value.Name}'";
+    private static ErrorSubject Subject(FieldEnum value) => ErrorSubject.Enum(value.Name);
 }

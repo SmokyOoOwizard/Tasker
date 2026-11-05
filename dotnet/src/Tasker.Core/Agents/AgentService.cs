@@ -114,14 +114,14 @@ public class AgentService(
 
         var now = time.GetUtcNow();
         if (command.ExpiresAt is { } expires && expires <= now)
-            throw new TaskerValidationException("ExpiresAt must be in the future");
+            throw TaskerErrors.AgentExpiresAtPast();
 
         var value = TokenPrefix + Base64Url(RandomNumberGenerator.GetBytes(32));
         var token = new AgentToken
         {
             Id = Guid.NewGuid(),
             AgentId = agentId,
-            Name = Validate.Name(command.Name, "Token name"),
+            Name = Validate.Name(command.Name, ErrorField.TokenName),
             Prefix = value[..(TokenPrefix.Length + 8)],
             CreatedAt = now,
             ExpiresAt = command.ExpiresAt
@@ -183,9 +183,9 @@ public class AgentService(
     }
 
     private IAgentTokenStorage RequireTokens() =>
-        tokens ?? throw new TaskerValidationException("Agent tokens are available only on the server: local MCP needs no token");
+        tokens ?? throw TaskerErrors.Invalid("Agent tokens are available only on the server: local MCP needs no token");
 
-    private static string Subject(User agent) => $"Agent '{agent.Username}'";
+    private static ErrorSubject Subject(User agent) => ErrorSubject.Agent(agent.Username);
 
     public static string Hash(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 

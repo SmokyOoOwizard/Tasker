@@ -200,7 +200,7 @@ struct TaskCreateTests {
         model.onCreated = { _, _ in closed = true }
         model.title = "T"
         model.setValues(priority, [high.uuidString.lowercased()])
-        source.failNext(.badRequest("Links: cycle"))
+        source.failNext(.badRequest(Refusal(code: "validation.invalid", message: "Links: cycle")))
 
         await model.submit()
 

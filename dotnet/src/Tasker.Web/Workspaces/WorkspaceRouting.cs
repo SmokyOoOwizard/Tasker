@@ -1,3 +1,4 @@
+using Tasker.Core;
 using Tasker.Storage.Files.Workspaces;
 using Autofac;
 using Autofac.Core.Lifetime;
@@ -37,8 +38,7 @@ internal static class WorkspaceRouting
             {
                 if (NeedsWorkspace(request.Path))
                 {
-                    context.Response.StatusCode = StatusCodes.Status404NotFound;
-                    await context.Response.WriteAsJsonAsync(new { error = "No workspace in the address: use /w/{folder}/api/…" });
+                    await TaskerApi.WriteError(context, TaskerErrors.WorkspaceNotInAddress("No workspace in the address: use /w/{folder}/api/…"));
                     return;
                 }
 
@@ -48,16 +48,14 @@ internal static class WorkspaceRouting
 
             if (localMcp && rest.StartsWithSegments(Tasker.Mcp.McpRegistration.Path))
             {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                await context.Response.WriteAsJsonAsync(new { error = $"MCP has no per-workspace address: use {Tasker.Mcp.McpRegistration.Path} and pass the folder in the 'workspace' argument of the tool" });
+                await TaskerApi.WriteError(context, TaskerErrors.WorkspaceNotInAddress($"MCP has no per-workspace address: use {Tasker.Mcp.McpRegistration.Path} and pass the folder in the 'workspace' argument of the tool"));
                 return;
             }
 
             var workspace = registry.Find(id);
             if (workspace == null || !workspace.TryEnter())
             {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                await context.Response.WriteAsJsonAsync(new { error = $"Workspace '{id}' is not open" });
+                await TaskerApi.WriteError(context, TaskerErrors.WorkspaceNotOpen(id));
                 return;
             }
 

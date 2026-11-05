@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 import { api } from '../api'
 import { LockBadge } from '../components/LockBadge'
 import { StatusChip } from '../components/ui'
+import { useT, useLocale } from '../i18n'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLocks } from '../hooks/useLocks'
@@ -13,8 +14,9 @@ import '../styles/settings.css'
 
 const pageSize = 50
 
-/** Все задачи проекта: список страницами, создание и смена статуса. */
 function TasksPage() {
+  const t = useT()
+  const locale = useLocale()
   const { projectId } = useParams()
   const base = `/projects/${projectId}`
   const [shown, setShown] = useState(pageSize)
@@ -22,7 +24,6 @@ function TasksPage() {
 
   const settings = useLoad(() => loadProjectSettings(projectId!), [projectId])
 
-  // Первые `shown` задач: при «Показать ещё» и перезагрузке список перечитывается целиком, чтобы не было дыр и повторов.
   const tasks = useLoad(async () => {
     const items: Task[] = []
     let total = 0
@@ -47,8 +48,8 @@ function TasksPage() {
   if (!data || !tasks.data) {
     return (
       <div className="page page-wide">
-        <h1 className="page-title">Задачи</h1>
-        {loadError ? <div className="error-message">{loadError}</div> : <p className="muted">Загрузка…</p>}
+        <h1 className="page-title">{t('web.tasks.title')}</h1>
+        {loadError ? <div className="error-message">{loadError}</div> : <p className="muted">{t('web.common.loading')}</p>}
       </div>
     )
   }
@@ -67,15 +68,15 @@ function TasksPage() {
   return (
     <div className="page page-wide">
       <div className="page-header">
-        <h1 className="page-title">Задачи</h1>
+        <h1 className="page-title">{t('web.tasks.title')}</h1>
         <span className="muted">{tasks.data.total}</span>
       </div>
 
       {data.taskTypes.length === 0 ? (
         <div className="card">
           <p>
-            Чтобы создавать задачи, настройте проект: статусы, наборы статусов и типы задач —{' '}
-            <Link to={`${base}/settings`}>в настройках</Link>.
+            {t('web.tasks.setupBefore')}
+            <Link to={`${base}/settings`}>{t('web.tasks.setupLink')}</Link>.
           </p>
         </div>
       ) : (
@@ -89,10 +90,10 @@ function TasksPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Задача</th>
-                <th>Тип</th>
-                <th>Статус</th>
-                <th>Изменена</th>
+                <th>{t('web.tasks.colTask')}</th>
+                <th>{t('web.tasks.colType')}</th>
+                <th>{t('web.tasks.colStatus')}</th>
+                <th>{t('web.tasks.colUpdated')}</th>
               </tr>
             </thead>
             <tbody>
@@ -113,7 +114,7 @@ function TasksPage() {
                       onChange={(statusId) => changeStatus(task, statusId)}
                     />
                   </td>
-                  <td className="muted">{new Date(task.updatedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                  <td className="muted">{new Date(task.updatedAt).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })}</td>
                 </tr>
                 )
               })}
@@ -124,7 +125,7 @@ function TasksPage() {
 
       {tasks.data.items.length < tasks.data.total && (
         <button type="button" className="button button-secondary" onClick={() => setShown(shown + pageSize)}>
-          Показать ещё
+          {t('web.tasks.showMore')}
         </button>
       )}
     </div>
@@ -132,6 +133,7 @@ function TasksPage() {
 }
 
 function NewTaskForm({ types, busy, onCreate }: { types: TaskType[]; busy: boolean; onCreate: (title: string, typeId: string) => void }) {
+  const t = useT()
   const [title, setTitle] = useState('')
   const [typeId, setTypeId] = useState(types[0].id)
 
@@ -142,8 +144,8 @@ function NewTaskForm({ types, busy, onCreate }: { types: TaskType[]; busy: boole
 
   return (
     <form className="card inline-form inline-form-row" onSubmit={submit}>
-      <input className="input" placeholder="Новая задача" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <select className="input select" value={typeId} onChange={(e) => setTypeId(e.target.value)} title="Тип задачи">
+      <input className="input" placeholder={t('web.tasks.newPlaceholder')} value={title} onChange={(e) => setTitle(e.target.value)} />
+      <select className="input select" value={typeId} onChange={(e) => setTypeId(e.target.value)} title={t('web.tasks.typeTitle')}>
         {types.map((t) => (
           <option key={t.id} value={t.id}>
             {t.name}
@@ -151,13 +153,12 @@ function NewTaskForm({ types, busy, onCreate }: { types: TaskType[]; busy: boole
         ))}
       </select>
       <button className="button" type="submit" disabled={busy || !title.trim()}>
-        Создать
+        {t('web.common.create')}
       </button>
     </form>
   )
 }
 
-/** Статус задачи с выбором из набора её типа. */
 function StatusSelect({
   value,
   statuses,
@@ -171,10 +172,11 @@ function StatusSelect({
   disabled: boolean
   onChange: (statusId: string) => void
 }) {
+  const t = useT()
   return (
     <label className="status-select">
       <StatusChip status={current} />
-      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} aria-label="Статус">
+      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} aria-label={t('web.tasks.colStatus')}>
         {statuses.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}

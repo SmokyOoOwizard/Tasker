@@ -65,7 +65,7 @@ struct GraphQLTaskCreateSource: TaskCreateSource {
         let created = try await client.rest.perform {
             try await $0.createTask(path: .init(projectId: project.wire), body: .json(body)).created.body.json
         }
-        guard let id = UUID(uuidString: created.id) else { throw TaskerAPIError.notFound(created.id) }
+        guard let id = UUID(uuidString: created.id) else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: created.id)) }
         return TaskCreated(id: id, seriesNumbers: created.seriesNumbers.map { TaskSeriesRef(seriesId: UUID(uuidString: $0.seriesId) ?? UUID(), number: Int($0.number)) })
     }
 }

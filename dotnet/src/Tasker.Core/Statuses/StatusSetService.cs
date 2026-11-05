@@ -18,7 +18,8 @@ public class StatusSetService(
     ITaskTypeStorage types,
     IBoardStorage boards,
     ITaskStorage tasks,
-    Locks.EditLockService locks
+    Locks.EditLockService locks,
+    TaskSeries.ISeriesStorage series
 )
 {
     public async Task<StatusSet> Create(Guid projectId, CreateStatusSet command, CancellationToken ct = default)
@@ -27,7 +28,7 @@ public class StatusSetService(
         {
             Id = Guid.NewGuid(),
             ProjectId = projectId,
-            Name = Validate.Name(command.Name, "Status set name"),
+            Name = Validate.Name(command.Name, ErrorField.StatusSetName),
             StatusIds = await ValidateStatuses(projectId, command.StatusIds, ct),
             Version = Versioning.New
         };
@@ -48,7 +49,7 @@ public class StatusSetService(
         await locks.EnsureWritable(Locks.LockedEntity.StatusSet, set.Id, Subject(set), ct);
         var expected = Versioning.Check(set.Version, command.Version, Subject(set));
 
-        var name = command.Name == null ? set.Name : Validate.Name(command.Name, "Status set name");
+        var name = command.Name == null ? set.Name : Validate.Name(command.Name, ErrorField.StatusSetName);
         var statusIds = command.StatusIds == null ? set.StatusIds : await ValidateStatuses(projectId, command.StatusIds, ct);
 
         var removed = set.StatusIds.Except(statusIds).ToArray();
@@ -74,14 +75,14 @@ public class StatusSetService(
         foreach (var type in await types.GetAll(projectId, ct))
         {
             if (type.StatusSetId == id)
-                usages.Add($"task type '{type.Name}'");
+                usages.AddTaskType(type.Name);
         }
         foreach (var board in await boards.GetAll(projectId, ct))
         {
             if (board.StatusSetIds.Contains(id))
-                usages.Add($"board '{board.Name}'");
+                usages.AddBoard(board.Name);
         }
-        usages.ThrowIfAny("deleted");
+        usages.ThrowIfAny(u => TaskerErrors.StatusSetInUse(set.Name, u));
 
         if (!await sets.Delete(projectId, id, expected, ct))
             throw Versioning.Modified(Subject(set));
@@ -89,15 +90,14 @@ public class StatusSetService(
         return true;
     }
 
-    private static string Subject(StatusSet set) => $"Status set '{set.Name}'";
+    private static ErrorSubject Subject(StatusSet set) => ErrorSubject.StatusSet(set.Name);
 
     private async Task EnsureCanRemove(Guid projectId, StatusSet set, Guid[] removed, CancellationToken ct)
     {
         var names = (await statuses.GetAll(projectId, ct)).ToDictionary(x => x.Id, x => x.Name);
         var projectSets = (await sets.GetAll(projectId, ct)).ToDictionary(x => x.Id);
-        var subject = removed.Length == 1
-            ? $"Status '{names.GetValueOrDefault(removed[0])}'"
-            : $"Statuses {string.Join(", ", removed.Select(x => $"'{names.GetValueOrDefault(x)}'"))}";
+        var removedNames = removed.Select(x => names.GetValueOrDefault(x) ?? "").ToArray();
+        var subject = removed.Length == 1 ? ErrorSubject.Status(removedNames[0]) : ErrorSubject.Statuses(removedNames);
         var usages = new Usages(subject);
 
         var typeIds = (await types.GetAll(projectId, ct))
@@ -105,7 +105,7 @@ public class StatusSetService(
             .Select(x => x.Id)
             .ToArray();
         if (typeIds.Length > 0)
-            usages.AddTasks(await tasks.Count(projectId, new TaskFilter { TypeIds = typeIds, StatusIds = removed }, ct));
+            await TaskUsageRefs.AddTo(usages, tasks, series, projectId, new TaskFilter { TypeIds = typeIds, StatusIds = removed }, ct);
 
         foreach (var board in await boards.GetAll(projectId, ct))
         {
@@ -127,14 +127,14 @@ public class StatusSetService(
             }
         }
 
-        usages.ThrowIfAny($"removed from status set '{set.Name}'");
+        usages.ThrowIfAny(u => TaskerErrors.StatusSetStatusInUse(string.Join(", ", removedNames), set.Name, u));
     }
 
     private async Task<Guid[]> ValidateStatuses(Guid projectId, Guid[]? ids, CancellationToken ct)
     {
         var statusIds = Validate.Distinct(ids, "StatusIds");
         if (statusIds.Length == 0)
-            throw new TaskerValidationException("Status set must contain at least one status");
+            throw TaskerErrors.StatusSetNoStatuses();
 
         var projectStatuses = await statuses.GetAll(projectId, ct);
         Validate.AllKnown(statusIds, projectStatuses.Select(x => x.Id), "StatusIds");

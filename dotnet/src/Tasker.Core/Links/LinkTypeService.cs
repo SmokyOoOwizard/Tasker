@@ -29,7 +29,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
     /// <summary>Сколько файлов типов связей проекта не удалось прочитать (см. <see cref="ILinkTypeStorage.CountUnreadable"/>).</summary>
     public Task<int> CountUnreadable(Guid projectId, CancellationToken ct = default) => types.CountUnreadable(projectId, ct);
 
-    /// <summary>Версия типа по умолчанию, которого ещё нет в хранилище: после записи у него настоящая, так что изменение «со старой версией» даст <c>[modified]</c> и клиент перечитает.</summary>
+    /// <summary>Версия типа по умолчанию, которого ещё нет в хранилище.</summary>
     public const string DefaultVersion = "default";
 
     /// <summary>Сохранённые типы проекта; нет ни одного — типы по умолчанию (ничего не записывая).</summary>
@@ -133,7 +133,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
         {
             0 => null,
             1 => byName[0],
-            _ => throw new TaskerValidationException(
+            _ => throw TaskerErrors.Invalid(
                 $"Several link types are named '{text}', use the id: {string.Join(", ", byName.Select(x => x.Id))}")
         };
     }
@@ -148,7 +148,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
     {
         var text = phrase?.Trim();
         if (string.IsNullOrEmpty(text))
-            throw new TaskerValidationException("Link type is required");
+            throw TaskerErrors.Invalid("Link type is required");
 
         var all = await GetAll(projectId, ct);
         if (Guid.TryParse(text, out var id) && all.FirstOrDefault(x => x.Id == id) is { } byId)
@@ -166,9 +166,9 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
         return found.Count switch
         {
             1 => found[0],
-            0 => throw new TaskerValidationException(
+            0 => throw TaskerErrors.Invalid(
                 $"No link type or link name '{text}'; available: {string.Join(", ", all.SelectMany(x => new[] { x.OutwardName, x.InwardName }).Distinct(StringComparer.OrdinalIgnoreCase))}"),
-            _ => throw new TaskerValidationException(
+            _ => throw TaskerErrors.Invalid(
                 $"'{text}' fits several link types ({string.Join(", ", found.Select(x => $"{x.Type.Name} [{x.Type.Id}]"))}); use the type id")
         };
 
@@ -180,9 +180,9 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
     {
         await EnsureDefaults(projectId, ct);
 
-        var name = Validate.Name(command.Name, "Link type name");
-        var outward = Validate.Name(command.OutwardName, "Outward name");
-        var inward = command.InwardName == null ? outward : Validate.Name(command.InwardName, "Inward name");
+        var name = Validate.Name(command.Name, ErrorField.LinkTypeName);
+        var outward = Validate.Name(command.OutwardName, ErrorField.OutwardName);
+        var inward = command.InwardName == null ? outward : Validate.Name(command.InwardName, ErrorField.InwardName);
         await EnsureNameFree(projectId, name, null, ct);
         var hierarchical = command.Hierarchical ?? false;
         EnsureHierarchyValid(hierarchical, command.AllowCycles, outward, inward);
@@ -210,13 +210,13 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
         if (type == null)
             return null;
         await locks.EnsureWritable(Locks.LockedEntity.LinkType, type.Id, Subject(type), ct);
-        var expected = Versioning.Check(type.Version, command.Version, Subject(type));
+        var expected = Versioning.Check(type.Version, SeenVersion(projectId, type, command.Version), Subject(type));
 
         var updated = type with
         {
-            Name = command.Name == null ? type.Name : Validate.Name(command.Name, "Link type name"),
-            OutwardName = command.OutwardName == null ? type.OutwardName : Validate.Name(command.OutwardName, "Outward name"),
-            InwardName = command.InwardName == null ? type.InwardName : Validate.Name(command.InwardName, "Inward name"),
+            Name = command.Name == null ? type.Name : Validate.Name(command.Name, ErrorField.LinkTypeName),
+            OutwardName = command.OutwardName == null ? type.OutwardName : Validate.Name(command.OutwardName, ErrorField.OutwardName),
+            InwardName = command.InwardName == null ? type.InwardName : Validate.Name(command.InwardName, ErrorField.InwardName),
             AllowCycles = command.AllowCycles ?? type.AllowCycles,
             Hierarchical = command.Hierarchical ?? type.Hierarchical
         };
@@ -240,18 +240,26 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
         if (type == null)
             return false;
         await locks.EnsureWritable(Locks.LockedEntity.LinkType, type.Id, Subject(type), ct);
-        var expected = Versioning.Check(type.Version, version, Subject(type));
+        var expected = Versioning.Check(type.Version, SeenVersion(projectId, type, version), Subject(type));
 
         var usages = new Usages(Subject(type));
         var linked = await tasks.Count(projectId, new TaskFilter { LinkTypeIds = [id] }, ct);
         if (linked > 0)
-            usages.Add($"links of {linked} task(s)");
-        usages.ThrowIfAny("deleted");
+            usages.AddLinks(linked);
+        usages.ThrowIfAny(u => TaskerErrors.LinkTypeInUse(type.Name, u));
 
         if (!await types.Delete(projectId, id, expected, ct))
             throw Versioning.Modified(Subject(type));
         await locks.Forget(Locks.LockedEntity.LinkType, type.Id, ct);
         return true;
+    }
+
+    private static string? SeenVersion(Guid projectId, LinkType stored, string? version)
+    {
+        if (version != DefaultVersion)
+            return version;
+        var definition = Defaults(projectId).FirstOrDefault(x => x.Id == stored.Id);
+        return definition != null && definition == stored with { Version = DefaultVersion } ? stored.Version : version;
     }
 
     /// <summary>Иерархический тип: циклы запрещены (граф эпиков без циклов), стороны названы по-разному (родителя не отличить от потомка иначе).</summary>
@@ -260,16 +268,16 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
         if (!hierarchical)
             return;
         if (allowCycles == true)
-            throw new TaskerValidationException("A hierarchical link type does not allow cycles: AllowCycles cannot be true");
+            throw TaskerErrors.LinkTypeHierarchicalNoCycles();
         if (string.Equals(outward, inward, StringComparison.OrdinalIgnoreCase))
-            throw new TaskerValidationException("A hierarchical link type needs two different side names (e.g. 'includes' / 'is part of'): the parent and the child must be told apart");
+            throw TaskerErrors.LinkTypeHierarchicalSameNames();
     }
 
     private async Task EnsureNameFree(Guid projectId, string name, Guid? exceptId, CancellationToken ct)
     {
         if ((await types.GetAll(projectId, ct)).Any(x => x.Id != exceptId && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
-            throw new TaskerConflictException($"Link type '{name}' already exists in the project");
+            throw TaskerErrors.LinkTypeNameTaken(name);
     }
 
-    private static string Subject(LinkType type) => $"Link type '{type.Name}'";
+    private static ErrorSubject Subject(LinkType type) => ErrorSubject.LinkType(type.Name);
 }

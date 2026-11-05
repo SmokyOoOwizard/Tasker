@@ -26,7 +26,7 @@ struct GraphQLBoardEditorSource: BoardEditorSource {
 
     func catalog(project: UUID) async throws -> BoardCatalog {
         guard let data = try await client.graphQL.fetch(BoardEditorCatalogQuery(projectId: project)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         var catalog = BoardCatalog()
         catalog.statuses = data.statuses.data.map { BoardStatusInfo(id: $0.id, name: $0.name, color: $0.color) }
@@ -39,7 +39,7 @@ struct GraphQLBoardEditorSource: BoardEditorSource {
 
     func board(project: UUID, id: UUID) async throws -> BoardRecord? {
         guard let data = try await client.graphQL.fetch(BoardEditorBoardQuery(projectId: project, id: id)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         guard let board = data.board else { return nil }
         let columns = board.columns.map { column in
@@ -58,7 +58,7 @@ struct GraphQLBoardEditorSource: BoardEditorSource {
         let created = try await client.rest.perform {
             try await $0.createBoard(path: .init(projectId: project.wire), body: .json(body)).created.body.json
         }
-        guard let id = UUID(uuidString: created.id) else { throw TaskerAPIError.notFound(created.id) }
+        guard let id = UUID(uuidString: created.id) else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: created.id)) }
         return id
     }
 
@@ -75,7 +75,7 @@ struct GraphQLBoardEditorSource: BoardEditorSource {
 
     func lock(project: UUID, id: UUID) async throws -> BoardLockState {
         guard let data = try await client.graphQL.fetch(BoardLockQuery(projectId: project, entity: .board, id: id)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         guard let lock = data.lock else { return .none }
         return lock.mine ? .mine : .other(lock.holder)

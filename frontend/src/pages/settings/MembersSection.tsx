@@ -5,16 +5,14 @@ import { useSession, type User } from '../../auth'
 import Avatar from '../../components/Avatar'
 import { IconTrash } from '../../components/Icons'
 import { IconButton } from '../../components/ui'
+import { useT } from '../../i18n'
 import { useAction } from '../../hooks/useAction'
 import { useLoad } from '../../hooks/useLoad'
 import { useProjects } from '../../projects'
 import { loadMembers, loadUsers } from '../../reads'
 
-/**
- * Участники проекта (только сервер): люди и агенты. Проект видят только участники и админы.
- * Добавить можно любого человека и своего агента (админ — любого агента); последнего человека убрать нельзя.
- */
 function MembersSection({ projectId }: { projectId: string }) {
+  const t = useT()
   const base = `/projects/${projectId}`
   const me = useSession()?.user
   const projects = useProjects()
@@ -26,7 +24,7 @@ function MembersSection({ projectId }: { projectId: string }) {
   const { busy, error, run } = useAction(reload)
   const [userId, setUserId] = useState('')
 
-  if (!data || !me) return loadError ? <div className="error-message">{loadError}</div> : <p className="muted">Загрузка…</p>
+  if (!data || !me) return loadError ? <div className="error-message">{loadError}</div> : <p className="muted">{t('web.common.loading')}</p>
 
   const memberIds = new Set(data.members.map((m) => m.id))
   const candidates = data.users.filter(
@@ -42,11 +40,10 @@ function MembersSection({ projectId }: { projectId: string }) {
   const remove = async (member: User) => {
     const self = member.id === me.id
     const question = self
-      ? 'Выйти из проекта? Вы перестанете его видеть, вернуть вас сможет другой участник или админ.'
-      : `Убрать ${member.username} из проекта?`
+      ? t('web.members.confirmLeave')
+      : t('web.members.confirmRemove', member.username)
     if (!confirm(question)) return
     const ok = await run(() => api(`${base}/members/${member.id}`, { method: 'DELETE' }))
-    // Админ видит все проекты и без участия; остальные теряют доступ.
     if (ok && self && !me.isAdmin) {
       projects.reload()
       navigate('/', { replace: true })
@@ -55,8 +52,8 @@ function MembersSection({ projectId }: { projectId: string }) {
 
   return (
     <section className="card">
-      <h2 className="card-title">Участники</h2>
-      <p className="card-hint">Проект видят только участники и администраторы. Агенты работают в проекте через MCP.</p>
+      <h2 className="card-title">{t('web.settings.members')}</h2>
+      <p className="card-hint">{t('web.members.hint')}</p>
 
       <ul className="item-list">
         {data.members.map((member) => (
@@ -65,14 +62,14 @@ function MembersSection({ projectId }: { projectId: string }) {
             <span className="member-info">
               <span className="item-name">
                 {member.username}
-                {member.id === me.id && <span className="badge">Вы</span>}
-                {member.kind === 'agent' && <span className="badge badge-agent">Агент</span>}
-                {member.isAdmin && <span className="badge">Админ</span>}
+                {member.id === me.id && <span className="badge">{t('web.members.you')}</span>}
+                {member.kind === 'agent' && <span className="badge badge-agent">{t('web.members.agent')}</span>}
+                {member.isAdmin && <span className="badge">{t('web.members.admin')}</span>}
               </span>
               {member.email && <span className="item-meta">{member.email}</span>}
             </span>
             <span className="item-actions">
-              <IconButton title={member.id === me.id ? 'Выйти из проекта' : 'Убрать из проекта'} danger disabled={busy} onClick={() => remove(member)}>
+              <IconButton title={member.id === me.id ? t('web.members.leave') : t('web.members.remove')} danger disabled={busy} onClick={() => remove(member)}>
                 <IconTrash />
               </IconButton>
             </span>
@@ -83,19 +80,19 @@ function MembersSection({ projectId }: { projectId: string }) {
       {error && <div className="error-message">{error}</div>}
 
       {candidates.length === 0 ? (
-        <p className="muted">Добавить некого: все пользователи уже в проекте. Новых пользователей создаёт администратор.</p>
+        <p className="muted">{t('web.members.nobody')}</p>
       ) : (
         <form className="inline-form" onSubmit={add}>
-          <select className="input" value={selected} onChange={(e) => setUserId(e.target.value)} aria-label="Пользователь">
+          <select className="input" value={selected} onChange={(e) => setUserId(e.target.value)} aria-label={t('web.members.user')}>
             {candidates.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.username}
-                {u.kind === 'agent' ? ' (агент)' : u.email ? ` — ${u.email}` : ''}
+                {u.kind === 'agent' ? ` ${t('web.members.agentSuffix')}` : u.email ? ` — ${u.email}` : ''}
               </option>
             ))}
           </select>
           <button className="button" type="submit" disabled={busy || !selected}>
-            Добавить
+            {t('web.common.add')}
           </button>
         </form>
       )}

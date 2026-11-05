@@ -65,11 +65,11 @@ public class TaskLinkService(
         // Связь — запись: типы по умолчанию должны быть сохранены (в БД на них внешний ключ), чтение их только показывает.
         await types.EnsureDefaults(projectId, ct);
         var type = await types.GetById(projectId, typeId, ct)
-            ?? throw new TaskerValidationException($"TypeId: link type not found in the project: {typeId}");
+            ?? throw TaskerErrors.Invalid($"TypeId: link type not found in the project: {typeId}");
         if (targetId == taskId)
-            throw new TaskerValidationException("TargetId: a task cannot be linked to itself");
+            throw TaskerErrors.LinkSelf();
         var target = await tasks.GetById(projectId, targetId, ct)
-            ?? throw new TaskerValidationException($"TargetId: task not found in the project: {targetId}");
+            ?? throw TaskerErrors.Invalid($"TargetId: task not found in the project: {targetId}");
 
         await locks.EnsureWritable(Locks.LockedEntity.Task, task.Id, Subject(task), ct);
 
@@ -115,8 +115,7 @@ public class TaskLinkService(
             names.Add(task == null ? ShortId.Of(id) : LinkCycle.Reference(id, task.SeriesNumbers, prefixes));
         }
 
-        throw new TaskerValidationException(
-            $"Cycle: {string.Join(" → ", names)} (link type '{type.Name}' does not allow cycles; remove the opposite link or allow cycles for the type)");
+        throw TaskerErrors.LinkCycle(type.Name, names.ToArray());
     }
 
     /// <summary>
@@ -223,5 +222,5 @@ public class TaskLinkService(
 
     private static LinkedTask Linked(TaskItem task) => new(task.Id, task.Title, task.StatusId, task.SeriesNumbers);
 
-    private static string Subject(TaskItem task) => $"Task '{task.Title}'";
+    private static ErrorSubject Subject(TaskItem task) => ErrorSubject.Task(task.Title);
 }

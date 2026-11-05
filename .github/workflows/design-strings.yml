@@ -7,6 +7,8 @@ on:
       - 'design/strings.json'
       - 'docs/mockups/web/main-design.html'
       - 'macos/Sources/Tasker/**'
+      - 'frontend/src/**'
+      - 'docs/api/error-codes.json'
       - 'scripts/gen-strings.py'
       - '.github/workflows/design-strings.yml'
   pull_request:
@@ -15,6 +17,8 @@ on:
       - 'design/strings.json'
       - 'docs/mockups/web/main-design.html'
       - 'macos/Sources/Tasker/**'
+      - 'frontend/src/**'
+      - 'docs/api/error-codes.json'
       - 'scripts/gen-strings.py'
       - '.github/workflows/design-strings.yml'
   workflow_dispatch:

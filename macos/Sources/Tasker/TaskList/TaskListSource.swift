@@ -25,7 +25,7 @@ struct GraphQLTaskListSource: TaskListSource {
 
     func vocabulary(project: UUID) async throws -> TaskListVocabulary {
         guard let data = try await client.graphQL.fetch(TaskListVocabularyQuery(projectId: project)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         return TaskListVocabulary(data)
     }
@@ -34,7 +34,7 @@ struct GraphQLTaskListSource: TaskListSource {
         let query = TaskListPageQuery(
             projectId: project, statusIds: request.filter.statusIds, typeIds: request.filter.typeIds, seriesIds: request.filter.seriesIds,
             field: request.filter.field, sort: TaskSort.string(request.sort), offset: offset, limit: limit)
-        guard let page = try await client.graphQL.fetch(query).project?.tasks else { throw TaskerAPIError.notFound(project.uuidString) }
+        guard let page = try await client.graphQL.fetch(query).project?.tasks else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString)) }
         return TaskRowPage(rows: page.data.map(TaskRow.init), totalCount: page.totalCount, levelCount: page.totalCount)
     }
 
@@ -42,7 +42,7 @@ struct GraphQLTaskListSource: TaskListSource {
         let query = TaskTreePageQuery(
             projectId: project, statusIds: request.filter.statusIds, typeIds: request.filter.typeIds, seriesIds: request.filter.seriesIds,
             field: request.filter.field, sort: TaskSort.string(request.sort), parentId: parent, levels: 1, offset: offset, limit: limit)
-        guard let page = try await client.graphQL.fetch(query).project?.taskTree else { throw TaskerAPIError.notFound(project.uuidString) }
+        guard let page = try await client.graphQL.fetch(query).project?.taskTree else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString)) }
         return TaskRowPage(rows: page.data.map(TaskRow.init), totalCount: page.totalCount, levelCount: page.topLevelCount)
     }
 

@@ -23,7 +23,6 @@ struct FieldsSettingsPage: View {
     @State private var editing: FieldEditTarget?
     @State private var refusal: SettingsRefusal?
     @State private var deleting: SettingsFieldItem?
-    @State private var checking = false
 
     var body: some View {
         let catalog = model.catalog
@@ -44,8 +43,7 @@ struct FieldsSettingsPage: View {
                         }
                     } actions: {
                         SettingsIconButton(icon: .pen, help: l.string(.settingsEdit)) { editing = .edit(field) }
-                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { askDelete(field) }
-                            .disabled(checking)
+                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { deleting = field }
                     }
                 }
             }
@@ -66,27 +64,14 @@ struct FieldsSettingsPage: View {
         }
     }
 
-    private func askDelete(_ field: SettingsFieldItem) {
-        checking = true
-        Task {
-            let uses = await model.usage(of: field)
-            checking = false
-            if uses.isEmpty {
-                deleting = field
-            } else {
-                refusal = SettingsRefusal(subject: l.string(.settingsFieldSubject, field.name), uses: uses)
-            }
-        }
-    }
-
     private func confirmDelete(_ field: SettingsFieldItem) {
         Task {
             let result = await model.deleteField(field)
             if case .failure(let error) = result {
-                if let detail = SettingsModel.isInUse(error) {
-                    refusal = SettingsRefusal(subject: l.string(.settingsFieldSubject, field.name), uses: [], detail: detail)
+                if let detail = SettingsModel.inUseRefusal(error) {
+                    refusal = SettingsRefusal(refusal: detail)
                 } else {
-                    model.onNotice?(model.message(error))
+                    model.onFailure?(model.message(error))
                 }
             }
         }

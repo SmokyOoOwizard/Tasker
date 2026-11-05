@@ -231,26 +231,13 @@ enum BoardValidation {
 }
 
 enum BoardServerIssue {
-    private static let overlap = try! NSRegularExpression(
-        pattern: #"^Columns\[(\d+)\]\.StatusIds: status ([0-9a-fA-F-]{36}) is already used by column '(.*?)', and"#, options: [.dotMatchesLineSeparators])
-    private static let indexed = try! NSRegularExpression(pattern: #"^Columns\[(\d+)\]"#)
-
-    static func map(_ message: String, draft: BoardDraft, catalog: BoardCatalog, l: Localizer) -> BoardIssues {
+    static func map(_ refusal: Refusal, draft: BoardDraft, l: Localizer) -> BoardIssues {
         var issues = BoardIssues()
-        let range = NSRange(message.startIndex..., in: message)
-        func text(_ match: NSTextCheckingResult, _ group: Int) -> String? {
-            Range(match.range(at: group), in: message).map { String(message[$0]) }
-        }
-        if let match = overlap.firstMatch(in: message, range: range),
-           let index = text(match, 1).flatMap({ Int($0) }), draft.columns.indices.contains(index) {
-            let status = text(match, 2).flatMap { UUID(uuidString: $0) }.flatMap { catalog.status($0)?.name } ?? ""
-            let first = text(match, 3) ?? ""
-            issues.columns[draft.columns[index].id] = [l.string(.boardOverlap, status, first, draft.columns[index].name)]
-        } else if let match = indexed.firstMatch(in: message, range: range),
-                  let index = text(match, 1).flatMap({ Int($0) }), draft.columns.indices.contains(index) {
-            issues.columns[draft.columns[index].id] = [message]
+        let text = l.refusal(refusal)
+        if let index = refusal.columnIndex, draft.columns.indices.contains(index) {
+            issues.columns[draft.columns[index].id] = [text]
         } else {
-            issues.board = [message]
+            issues.board = [text]
         }
         return issues
     }

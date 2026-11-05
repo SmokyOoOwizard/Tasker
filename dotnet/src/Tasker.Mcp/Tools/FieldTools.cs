@@ -160,11 +160,11 @@ public static class FieldTools
             await McpCall.RequireProject(projects, projectId, ct);
             var removed = removedValues switch
             {
-                null when reassignTo != null => throw new TaskerValidationException("ReassignTo: only together with removedValues=reassign"),
+                null when reassignTo != null => throw Tasker.Core.TaskerErrors.Invalid("ReassignTo: only together with removedValues=reassign"),
                 null => null,
-                RemovedValuesChoice.Clear when reassignTo != null => throw new TaskerValidationException("ReassignTo: not with removedValues=clear"),
+                RemovedValuesChoice.Clear when reassignTo != null => throw Tasker.Core.TaskerErrors.Invalid("ReassignTo: not with removedValues=clear"),
                 RemovedValuesChoice.Clear => new RemovedEnumValues(Clear: true),
-                RemovedValuesChoice.Reassign when reassignTo == null => throw new TaskerValidationException("ReassignTo: required with removedValues=reassign"),
+                RemovedValuesChoice.Reassign when reassignTo == null => throw Tasker.Core.TaskerErrors.Invalid("ReassignTo: required with removedValues=reassign"),
                 _ => new RemovedEnumValues(ReassignTo: reassignTo)
             };
             return McpCall.Found(await enums.Update(projectId, enumId, new UpdateFieldEnum(name, values, version, removed), ct), $"Enum {enumId}");

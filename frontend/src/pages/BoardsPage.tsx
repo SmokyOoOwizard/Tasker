@@ -1,12 +1,13 @@
 import { useParams } from 'react-router'
 import { LockBadge } from '../components/LockBadge'
+import { useT } from '../i18n'
 import { useLoad } from '../hooks/useLoad'
 import { useLocks } from '../hooks/useLocks'
 import { loadBoards, loadStatusSets } from '../reads'
 import '../styles/settings.css'
 
-/** Все доски проекта. Просмотр доски и её настройка — следующим шагом. */
 function BoardsPage() {
+  const t = useT()
   const { projectId } = useParams()
   const locks = useLocks(projectId!)
   const { data, error } = useLoad(async () => {
@@ -19,15 +20,15 @@ function BoardsPage() {
   return (
     <div className="page page-wide">
       <div className="page-header">
-        <h1 className="page-title">Доски</h1>
+        <h1 className="page-title">{t('web.boards.title')}</h1>
         {data && <span className="muted">{data.boards.length}</span>}
       </div>
 
       {error && !data && <div className="error-message">{error}</div>}
-      {!data && !error && <p className="muted">Загрузка…</p>}
+      {!data && !error && <p className="muted">{t('web.common.loading')}</p>}
       {data?.boards.length === 0 && (
         <div className="card">
-          <p>Досок пока нет. Создать доску из интерфейса пока нельзя — только через API или агента в MCP.</p>
+          <p>{t('web.boards.empty')}</p>
         </div>
       )}
 
@@ -44,7 +45,7 @@ function BoardsPage() {
                 <span
                   key={column.id}
                   className="board-card-column"
-                  title={column.fieldConditions.length > 0 ? `Условий по полям: ${column.fieldConditions.length}` : undefined}
+                  title={column.fieldConditions.length > 0 ? t('web.boards.conditions', column.fieldConditions.length) : undefined}
                 >
                   {column.name}
                 </span>

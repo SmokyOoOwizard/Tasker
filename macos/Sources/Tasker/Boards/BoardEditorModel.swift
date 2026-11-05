@@ -98,7 +98,7 @@ final class BoardEditorModel {
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
-            phase = .failed(Self.reason(error))
+            phase = .failed(localizer.message(for: error))
         }
     }
 
@@ -191,25 +191,25 @@ final class BoardEditorModel {
     }
 
     private func fail(_ error: any Error, draft sent: BoardDraft) {
-        guard case TaskerAPIError.conflict(let conflict) = error else {
-            let message = (error as? TaskerAPIError)?.message ?? error.localizedDescription
-            if case TaskerAPIError.badRequest(let text) = error {
-                issues = BoardServerIssue.map(text, draft: sent, catalog: catalog, l: localizer)
-            } else {
-                issues = BoardIssues(board: [localizer.string(.boardSaveFailed, message)])
-            }
+        guard let error = error as? TaskerAPIError, let refusal = error.refusal else {
+            issues = BoardIssues(board: [localizer.string(.boardSaveFailed, localizer.message(for: error))])
             return
         }
-        switch conflict.kind {
-        case .locked:
-            lock = .other(conflict.heldBy?.name ?? conflict.message)
-            issues = BoardIssues(board: [localizer.string(.boardSaveBlocked, conflict.heldBy?.name ?? conflict.message)])
-        case .modified:
-            staleVersion = true
-            issues = BoardIssues(board: [localizer.string(.boardModified)])
-        default:
-            issues = BoardIssues(board: [localizer.string(.boardSaveFailed, conflict.message)])
+        if case .conflict(let conflict) = error {
+            switch conflict.kind {
+            case .locked:
+                lock = .other(conflict.heldBy?.name ?? conflict.message)
+                issues = BoardIssues(board: [localizer.refusal(refusal)])
+                return
+            case .modified:
+                staleVersion = true
+                issues = BoardIssues(board: [localizer.string(.boardModified)])
+                return
+            default:
+                break
+            }
         }
+        issues = BoardServerIssue.map(refusal, draft: sent, l: localizer)
     }
 
     func reloadFromServer() {
@@ -239,9 +239,5 @@ final class BoardEditorModel {
         let source = source
         let project = target.project
         return { try? await source.release(project: project, id: id) }
-    }
-
-    private static func reason(_ error: any Error) -> String {
-        (error as? TaskerAPIError)?.message ?? error.localizedDescription
     }
 }

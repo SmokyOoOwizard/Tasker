@@ -58,11 +58,11 @@ public static class LockTools
     private static Guid IdOf(LockedEntity kind, Guid projectId, Guid? entityId)
     {
         if (kind == LockedEntity.User)
-            throw new Tasker.Core.TaskerValidationException("Entity: users cannot be locked here; expected one of project, task, taskType, linkType, field, enum, status, statusSet, board, series");
+            throw Tasker.Core.TaskerErrors.Invalid("Entity: users cannot be locked here; expected one of project, task, taskType, linkType, field, enum, status, statusSet, board, series");
         if (kind == LockedEntity.Project)
             return entityId is { } id && id != projectId
-                ? throw new Tasker.Core.TaskerValidationException("EntityId: for a project it must be the projectId or omitted")
+                ? throw Tasker.Core.TaskerErrors.Invalid("EntityId: for a project it must be the projectId or omitted")
                 : projectId;
-        return entityId ?? throw new Tasker.Core.TaskerValidationException($"EntityId: required to lock a {kind}");
+        return entityId ?? throw Tasker.Core.TaskerErrors.Invalid($"EntityId: required to lock a {kind}");
     }
 }

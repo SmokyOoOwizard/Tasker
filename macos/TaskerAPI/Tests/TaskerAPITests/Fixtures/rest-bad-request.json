@@ -1,1 +1,1 @@
-{"error":"Name is required"}
+{"error":"Name is required","code":"validation.required","params":{"field":"projectName"}}

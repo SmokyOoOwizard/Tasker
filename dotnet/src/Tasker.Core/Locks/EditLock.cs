@@ -25,9 +25,12 @@ public record EditHolder(string Key, string Name);
 /// <param name="ProjectId">Проект сущности (у самого проекта — он сам): по нему отбираются блокировки проекта. null — вне проектов или не указан.</param>
 public record EditLock(LockedEntity Entity, Guid Id, EditHolder Holder, DateTimeOffset AcquiredAt, DateTimeOffset ExpiresAt, Guid? ProjectId = null);
 
-/// <summary>Сущность занята: её правит другой держатель. В API — 409 с кодом <c>locked</c>.</summary>
-public class TaskerLockedException(string subject, EditLock heldBy)
-    : TaskerConflictException($"{subject} is being edited by {heldBy.Holder.Name}", ConflictCode.Locked)
+public class TaskerLockedException : TaskerConflictException
 {
-    public EditLock HeldBy { get; } = heldBy;
+    internal TaskerLockedException(TaskerError error, EditLock heldBy) : base(error, ConflictCode.Locked)
+    {
+        HeldBy = heldBy;
+    }
+
+    public EditLock HeldBy { get; }
 }

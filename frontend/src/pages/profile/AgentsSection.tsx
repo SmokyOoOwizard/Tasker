@@ -3,39 +3,37 @@ import { api } from '../../api'
 import { useSession, type User } from '../../auth'
 import Avatar from '../../components/Avatar'
 import { IconEdit, IconTrash } from '../../components/Icons'
+import RichText from '../../components/RichText'
 import { IconButton, RenameForm } from '../../components/ui'
 import { useAction } from '../../hooks/useAction'
+import { useLocale, useT, type StringKey, type Translate } from '../../i18n'
 import { useLoad } from '../../hooks/useLoad'
 import { loadAgents, loadAgentTokens, loadUsers, loadWorkspaceMcp, type LocalMcp } from '../../reads'
 import type { AgentToken } from '../../types'
 import { isDesktop } from '../../workspace'
 
-/** Что с демоном MCP и этой папкой у него: текст и ошибка ли это. */
-function daemonState(mcp: LocalMcp): { text: string; error: boolean } {
+function daemonState(mcp: LocalMcp, t: Translate): { text: string; error: boolean } {
+  const reason = mcp.error ?? t('web.agents.reasonInLog')
   switch (mcp.daemon) {
     case 'starting':
-      return { text: 'Демон MCP запускается…', error: false }
+      return { text: t('web.agents.daemonStarting'), error: false }
     case 'failed':
-      return { text: `Демон MCP не запустился: ${mcp.error ?? 'причина в журнале'}. Запустить снова — пункт «MCP» в меню трея или tasker mcp start.`, error: true }
+      return { text: t('web.agents.daemonFailed', reason), error: true }
     case 'stopped':
-      return { text: 'Демон MCP не работает. Запустить — пункт «MCP» в меню трея или tasker mcp start.', error: true }
+      return { text: t('web.agents.daemonStopped'), error: true }
   }
-  if (mcp.workspaceState === 'open') return { text: `MCP обслуживает демон tasker-mcpd на порту ${mcp.port}.`, error: false }
-  if (mcp.workspaceState === 'opening') return { text: 'Демон MCP открывает эту папку…', error: false }
-  if (mcp.workspaceState === 'failed') return { text: `Демон MCP не смог открыть эту папку: ${mcp.error ?? 'причина в журнале'}.`, error: true }
-  return { text: 'Демон MCP работает, но этой папки нет в его списке (tasker mcp workspace add).', error: true }
+  if (mcp.workspaceState === 'open') return { text: t('web.agents.daemonServing', mcp.port ?? ''), error: false }
+  if (mcp.workspaceState === 'opening') return { text: t('web.agents.workspaceOpening'), error: false }
+  if (mcp.workspaceState === 'failed') return { text: t('web.agents.workspaceFailed', reason), error: true }
+  return { text: t('web.agents.workspaceMissing'), error: true }
 }
 
-/**
- * Агенты — пользователи для MCP (например, Claude Code). Сервер: свои агенты (админу — все) и их токены.
- * Десктоп: агенты папки общие, MCP работает без токена.
- */
 function AgentsSection() {
+  const t = useT()
   const me = useSession()?.user
   const { data, error: loadError, reload } = useLoad(async () => {
     const [agents, users, mcp] = await Promise.all([
       loadAgents(),
-      // Админ видит чужих агентов — показываем, чей агент.
       me?.isAdmin ? loadUsers() : [],
       isDesktop ? loadWorkspaceMcp() : null,
     ])
@@ -43,10 +41,9 @@ function AgentsSection() {
   }, [me?.isAdmin])
   const { busy, error, run } = useAction(reload)
   const [username, setUsername] = useState('')
-  // Десктоп: у только что созданного агента сразу открыта команда подключения.
   const [createdId, setCreatedId] = useState<string | null>(null)
 
-  if (!data) return loadError ? <div className="error-message">{loadError}</div> : <p className="muted">Загрузка…</p>
+  if (!data) return loadError ? <div className="error-message">{loadError}</div> : <p className="muted">{t('web.common.loading')}</p>
 
   const userById = new Map(data.users.map((u) => [u.id, u]))
 
@@ -64,13 +61,13 @@ function AgentsSection() {
       <div className="card">
         <p>
           {isDesktop
-            ? 'Агенты работают с задачами через MCP. На десктопе токены не нужны: MCP доступен только с этого компьютера, а агент выбирается в команде подключения. Без него MCP работает от имени агента «agent» этой папки.'
-            : 'Агент работает с задачами через MCP по своему токену. Чтобы агент видел проект, добавьте его в участники проекта: «Настройки» проекта → «Участники».'}
+            ? t('web.agents.introDesktop')
+            : t('web.agents.introServer')}
         </p>
       </div>
 
       {data.mcp && (
-        <div className={daemonState(data.mcp).error ? 'error-message' : 'card muted'}>{daemonState(data.mcp).text}</div>
+        <div className={daemonState(data.mcp, t).error ? 'error-message' : 'card muted'}>{daemonState(data.mcp, t).text}</div>
       )}
 
       {data.agents.map((agent) => (
@@ -85,9 +82,9 @@ function AgentsSection() {
       ))}
 
       <form className="card inline-form" onSubmit={create}>
-        <input className="input" placeholder="Имя нового агента, например claude" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input className="input" placeholder={t('web.agents.newPlaceholder')} value={username} onChange={(e) => setUsername(e.target.value)} />
         <button className="button" type="submit" disabled={busy || !username.trim()}>
-          Создать агента
+          {t('web.agents.create')}
         </button>
         {error && <div className="error-message form-row-error">{error}</div>}
       </form>
@@ -108,6 +105,8 @@ function AgentCard({
   connectOpen: boolean
   reload: () => void
 }) {
+  const t = useT()
+  const locale = useLocale()
   const { busy, error, run } = useAction(reload)
   const [renaming, setRenaming] = useState(false)
   const [connecting, setConnecting] = useState(connectOpen)
@@ -117,7 +116,7 @@ function AgentCard({
   }
 
   const remove = () => {
-    if (!confirm(`Удалить агента «${agent.username}»? Его токены перестанут работать, а сам он пропадёт из участников проектов.`)) return
+    if (!confirm(t('web.agents.confirmDelete', agent.username))) return
     run(() => api(`/agents/${agent.id}?version=${encodeURIComponent(agent.version)}`, { method: 'DELETE' }))
   }
 
@@ -132,20 +131,20 @@ function AgentCard({
             <div className="member-info">
               <span className="item-name">{agent.username}</span>
               <span className="item-meta">
-                {owner ? `Агент пользователя ${owner.username} · ` : ''}
-                создан {formatDate(agent.createdAt)}
+                {owner ? t('web.agents.ownerPrefix', owner.username) : ''}
+                {t('web.agents.created', formatDate(locale, agent.createdAt))}
               </span>
             </div>
             <span className="item-actions">
               {mcp?.url && (
                 <button type="button" className="button button-secondary button-small" onClick={() => setConnecting(!connecting)}>
-                  Подключить
+                  {t('web.agents.connect')}
                 </button>
               )}
-              <IconButton title="Переименовать" onClick={() => setRenaming(true)}>
+              <IconButton title={t('web.agents.rename')} onClick={() => setRenaming(true)}>
                 <IconEdit />
               </IconButton>
-              <IconButton title="Удалить агента" danger disabled={busy} onClick={remove}>
+              <IconButton title={t('web.agents.deleteAgent')} danger disabled={busy} onClick={remove}>
                 <IconTrash />
               </IconButton>
             </span>
@@ -159,16 +158,16 @@ function AgentCard({
   )
 }
 
-const lifetimes = [
-  { label: 'Без срока', days: null },
-  { label: '30 дней', days: 30 },
-  { label: '90 дней', days: 90 },
-  { label: '1 год', days: 365 },
+const lifetimes: { label: StringKey; days: number | null }[] = [
+  { label: 'web.agents.lifetimeNone', days: null },
+  { label: 'web.agents.lifetime30', days: 30 },
+  { label: 'web.agents.lifetime90', days: 90 },
+  { label: 'web.agents.lifetimeYear', days: 365 },
 ]
 
-/** Токены агента: у каждого места использования — свой, чтобы отзывать по отдельности. */
 function Tokens({ agent }: { agent: User }) {
-  // Время загрузки — чтобы определить истёкшие токены, не вызывая Date.now() при рендере.
+  const t = useT()
+  const locale = useLocale()
   const { data, error: loadError, reload } = useLoad(
     async () => ({ tokens: await loadAgentTokens(agent.id), loadedAt: Date.now() }),
     [agent.id],
@@ -177,7 +176,6 @@ function Tokens({ agent }: { agent: User }) {
   const { busy, error, run } = useAction(reload)
   const [name, setName] = useState('')
   const [lifetime, setLifetime] = useState(0)
-  // Значение нового токена: сервер отдаёт его один раз и хранит только хэш.
   const [issued, setIssued] = useState<{ name: string; value: string } | null>(null)
 
   const create = async (e: FormEvent) => {
@@ -196,21 +194,25 @@ function Tokens({ agent }: { agent: User }) {
   }
 
   const revoke = (token: AgentToken) => {
-    if (!confirm(`Отозвать токен «${token.name}»? Агент с этим токеном сразу потеряет доступ.`)) return
+    if (!confirm(t('web.agents.confirmRevoke', token.name))) return
     run(() => api(`/agents/${agent.id}/tokens/${token.id}`, { method: 'DELETE' }))
   }
 
-  const state = (t: AgentToken) =>
-    t.revokedAt ? 'отозван' : t.expiresAt && data && Date.parse(t.expiresAt) <= data.loadedAt ? 'истёк' : null
+  const state = (token: AgentToken) =>
+    token.revokedAt
+      ? t('web.agents.tokenRevoked')
+      : token.expiresAt && data && Date.parse(token.expiresAt) <= data.loadedAt
+        ? t('web.agents.tokenExpired')
+        : null
 
   return (
     <div className="tokens">
-      <h3 className="tokens-title">Токены</h3>
+      <h3 className="tokens-title">{t('web.agents.tokens')}</h3>
 
       {issued && <IssuedToken name={issued.name} value={issued.value} onClose={() => setIssued(null)} />}
 
       {loadError && <div className="error-message">{loadError}</div>}
-      {tokens?.length === 0 && <p className="muted">Токенов нет — выпустите токен, чтобы подключить агента.</p>}
+      {tokens?.length === 0 && <p className="muted">{t('web.agents.tokensEmpty')}</p>}
       {tokens && tokens.length > 0 && (
         <ul className="item-list">
           {tokens.map((token) => (
@@ -221,15 +223,15 @@ function Tokens({ agent }: { agent: User }) {
                   {state(token) && <span className="badge badge-muted">{state(token)}</span>}
                 </span>
                 <span className="item-meta">
-                  <code>{token.prefix}…</code> · выпущен {formatDate(token.createdAt)}
-                  {token.expiresAt && ` · действует до ${formatDate(token.expiresAt)}`}
+                  <code>{token.prefix}…</code> · {t('web.agents.tokenIssued', formatDate(locale, token.createdAt))}
+                  {token.expiresAt && ` · ${t('web.agents.tokenValidUntil', formatDate(locale, token.expiresAt))}`}
                   {' · '}
-                  {token.lastUsedAt ? `использован ${formatDateTime(token.lastUsedAt)}` : 'ещё не использовался'}
+                  {token.lastUsedAt ? t('web.agents.tokenUsed', formatDateTime(locale, token.lastUsedAt)) : t('web.agents.tokenNeverUsed')}
                 </span>
               </span>
               {!state(token) && (
                 <span className="item-actions">
-                  <IconButton title="Отозвать токен" danger disabled={busy} onClick={() => revoke(token)}>
+                  <IconButton title={t('web.agents.revokeToken')} danger disabled={busy} onClick={() => revoke(token)}>
                     <IconTrash />
                   </IconButton>
                 </span>
@@ -242,78 +244,68 @@ function Tokens({ agent }: { agent: User }) {
       {error && <div className="error-message">{error}</div>}
 
       <form className="inline-form" onSubmit={create}>
-        <input className="input" placeholder="Где используется, например «Claude Code на ноутбуке»" value={name} onChange={(e) => setName(e.target.value)} />
-        <select className="input select" value={lifetime} onChange={(e) => setLifetime(Number(e.target.value))} aria-label="Срок действия">
+        <input className="input" placeholder={t('web.agents.tokenNamePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
+        <select className="input select" value={lifetime} onChange={(e) => setLifetime(Number(e.target.value))} aria-label={t('web.agents.lifetimeLabel')}>
           {lifetimes.map((l, i) => (
             <option key={l.label} value={i}>
-              {l.label}
+              {t(l.label)}
             </option>
           ))}
         </select>
         <button className="button" type="submit" disabled={busy || !name.trim()}>
-          Выпустить токен
+          {t('web.agents.issueToken')}
         </button>
       </form>
     </div>
   )
 }
 
-/** Только что выпущенный токен: показывается один раз, с готовой командой подключения. */
 function IssuedToken({ name, value, onClose }: { name: string; value: string; onClose: () => void }) {
+  const t = useT()
   const command = `claude mcp add --transport http tasker ${window.location.origin}/mcp --header "Authorization: Bearer ${value}"`
 
   return (
     <div className="issued-token">
       <p>
-        <strong>Токен «{name}» выпущен.</strong> Скопируйте его сейчас: больше он не будет показан.
+        <strong>{t('web.agents.tokenIssuedTitle', name)}</strong> {t('web.agents.tokenCopyNow')}
       </p>
       <CopyField value={value} />
-      <p className="muted">Подключение в Claude Code:</p>
+      <p className="muted">{t('web.agents.connectInClaude')}</p>
       <CopyField value={command} />
       <button type="button" className="button button-secondary" onClick={onClose}>
-        Готово, скопировал
+        {t('web.agents.doneCopied')}
       </button>
     </div>
   )
 }
 
-/**
- * Десктоп: команда подключения агента к общему MCP. Адрес один на все папки, папку агент указывает аргументом workspace.
- * Секрета в команде нет — её можно показывать сколько угодно.
- */
 function LocalConnect({ agent, mcp, onClose }: { agent: User; mcp: { url: string; workspace: string | null; agentHeader: string }; onClose: () => void }) {
+  const t = useT()
   const command = `claude mcp add --transport http tasker ${mcp.url} --header "${mcp.agentHeader}: ${agent.id}"`
   const commonCommand = `claude mcp add --transport http tasker ${mcp.url}`
 
   return (
     <div className="issued-token">
       <p>
-        <strong>Подключение агента «{agent.username}» в Claude Code.</strong> Выполните команду: агент будет работать с задачами
-        этой папки от своего имени.
+        <strong>{t('web.agents.connectTitle', agent.username)}</strong> {t('web.agents.connectRun')}
       </p>
       <CopyField value={command} />
       <p className="muted">
-        Адрес MCP <code>{mcp.url}</code> у демона tasker-mcpd один на все его папки; открытая в Tasker папка добавляется в них сама
-        (список — <code>tasker mcp workspace list</code>). Папку агент указывает аргументом{' '}
-        <code>workspace</code> инструментов{mcp.workspace && (
-          <>
-            : для этой — <code>{mcp.workspace}</code>
-          </>
-        )}
-        ; если папка у демона одна, аргумент можно опустить. Список папок — инструмент <code>list_workspaces</code>. Агент в заголовке{' '}
-        <code>{mcp.agentHeader}</code> действует только в этой папке; чтобы работать с несколькими папками, подключите агента без заголовка
-        (в каждой папке он работает от имени её агента «agent»):
+        <RichText
+          text={t('web.agents.connectDetails', mcp.url, mcp.workspace ? t('web.agents.connectWorkspace', mcp.workspace) : '', mcp.agentHeader)}
+        />
       </p>
       <CopyField value={commonCommand} />
-      <p className="muted">Демон работает и после закрытия Tasker.</p>
+      <p className="muted">{t('web.agents.daemonKeepsRunning')}</p>
       <button type="button" className="button button-secondary" onClick={onClose}>
-        Готово
+        {t('web.agents.done')}
       </button>
     </div>
   )
 }
 
 function CopyField({ value }: { value: string }) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -329,18 +321,18 @@ function CopyField({ value }: { value: string }) {
     <div className="issued-token-row">
       <code className="issued-token-value">{value}</code>
       <button type="button" className="button button-secondary" onClick={copy}>
-        {copied ? 'Скопировано' : 'Копировать'}
+        {copied ? t('web.agents.copied') : t('web.agents.copy')}
       </button>
     </div>
   )
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('ru-RU', { dateStyle: 'medium' })
+function formatDate(locale: string, value: string) {
+  return new Date(value).toLocaleDateString(locale, { dateStyle: 'medium' })
 }
 
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+function formatDateTime(locale: string, value: string) {
+  return new Date(value).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 export default AgentsSection

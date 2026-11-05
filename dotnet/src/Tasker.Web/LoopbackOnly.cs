@@ -1,3 +1,4 @@
+using Tasker.Core;
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -21,8 +22,7 @@ internal static class LoopbackOnly
 
             if (!IsLoopback(request.Host.Host) || (origin.Length > 0 && !IsLoopbackOrigin(origin)))
             {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(new { error = "Only local requests are allowed" });
+                await TaskerApi.WriteError(context, TaskerErrors.LocalOnly());
                 return;
             }
 

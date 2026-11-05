@@ -31,7 +31,7 @@ public static partial class SeriesPrefix
     public static string Validate(string? prefix) =>
         IsValid(prefix)
             ? prefix!
-            : throw new TaskerValidationException($"Series prefix must be 1-{MaxLength} Latin letters or digits");
+            : throw TaskerErrors.SeriesPrefixInvalid(MaxLength);
 
     [GeneratedRegex("^[A-Za-z0-9]+$")]
     private static partial Regex PrefixRegex();

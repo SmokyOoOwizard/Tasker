@@ -129,8 +129,8 @@ public class EditLockInterfaceTests
 
         var patch = await api.Patch(api.P($"/tasks/{id}"), new { title = "Other", version = task["version"]!.GetValue<string>() });
         Assert.Equal(HttpStatusCode.Conflict, patch.Status);
-        Assert.Equal("locked", patch.Body!["code"]!.GetValue<string>());
-        Assert.Equal("Ivan (console)", patch.Body["heldBy"]!["name"]!.GetValue<string>());
+        Assert.Equal("entity.locked", patch.Body!["code"]!.GetValue<string>());
+        Assert.Equal("Ivan (console)", patch.Body["params"]!["holder"]!.GetValue<string>());
         Assert.Contains("Ivan (console)", patch.Body["error"]!.GetValue<string>());
 
         Assert.Equal(HttpStatusCode.Conflict, (await api.Delete(api.P($"/tasks/{id}?version={task["version"]!.GetValue<string>()}"))).Status);
@@ -138,7 +138,7 @@ public class EditLockInterfaceTests
         // Взять чужую блокировку нельзя, увидеть — можно, и она не «моя».
         var take = await api.Post(api.P($"/tasks/{id}/lock"));
         Assert.Equal(HttpStatusCode.Conflict, take.Status);
-        Assert.Equal("locked", take.Body!["code"]!.GetValue<string>());
+        Assert.Equal("entity.locked", take.Body!["code"]!.GetValue<string>());
         var shown = (await api.Get(api.P($"/tasks/{id}/lock"))).Body!;
         Assert.False(shown["mine"]!.GetValue<bool>());
         Assert.Equal("Ivan (console)", shown["holder"]!.GetValue<string>());

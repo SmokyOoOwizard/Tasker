@@ -63,9 +63,9 @@ final class TaskCreateModel {
                 prepare(value)
             } catch is CancellationError {
             } catch let error as TaskerAPIError {
-                phase = .failed(error.message)
+                phase = .failed(localizer.message(for: error))
             } catch {
-                phase = .failed(error.localizedDescription)
+                phase = .failed(localizer.message(for: error))
             }
         }
     }
@@ -227,7 +227,7 @@ final class TaskCreateModel {
         } catch let error as TaskerAPIError {
             serverError = failure(error)
         } catch {
-            serverError = localizer.string(.taskCreateFailed, error.localizedDescription)
+            serverError = localizer.string(.taskCreateFailed, localizer.message(for: error))
         }
     }
 
@@ -235,10 +235,10 @@ final class TaskCreateModel {
         switch error {
         case .timedOut, .network:
             return localizer.string(.taskDetailOffline)
-        case .forbidden(let message):
-            return localizer.string(.taskDetailForbidden, message)
+        case .forbidden(let refusal):
+            return localizer.string(.taskDetailForbidden, localizer.refusal(refusal))
         default:
-            return localizer.string(.taskCreateFailed, error.message)
+            return localizer.string(.taskCreateFailed, localizer.message(for: error))
         }
     }
 }

@@ -24,12 +24,12 @@ public static class FieldValues
         {
             var canonical = One(name, type, enumeration, value);
             if (result.Contains(canonical, StringComparer.Ordinal))
-                throw new TaskerValidationException($"Field '{name}': value '{value}' is repeated");
+                throw TaskerErrors.FieldValueRepeated(name, value ?? "");
             result.Add(canonical);
         }
 
         if (result.Count > 1 && !multiple)
-            throw new TaskerValidationException($"Field '{name}' holds a single value, but {result.Count} were given");
+            throw TaskerErrors.FieldValueSingle(name, result.Count);
         return result.ToArray();
     }
 
@@ -50,37 +50,37 @@ public static class FieldValues
     {
         var text = raw?.Trim();
         if (string.IsNullOrEmpty(text))
-            throw new TaskerValidationException($"Field '{name}': a value must not be empty (pass no values to clear the field)");
+            throw TaskerErrors.FieldValueEmpty(name);
 
         switch (type)
         {
             case FieldType.String:
                 if (text.Length > MaxStringLength)
-                    throw new TaskerValidationException($"Field '{name}': a value must be at most {MaxStringLength} characters");
+                    throw TaskerErrors.FieldValueTooLong(name, MaxStringLength);
                 return text;
 
             case FieldType.Int:
                 return long.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer)
                     ? integer.ToString(CultureInfo.InvariantCulture)
-                    : throw Invalid(name, text, "an integer");
+                    : throw Invalid(name, text, type, "an integer");
 
             case FieldType.Float:
                 return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number)
                     ? number.ToString("R", CultureInfo.InvariantCulture)
-                    : throw Invalid(name, text, "a number (use '.' as the decimal separator)");
+                    : throw Invalid(name, text, type, "a number (use '.' as the decimal separator)");
 
             case FieldType.Bool:
                 return text.ToLowerInvariant() switch
                 {
                     "true" => "true",
                     "false" => "false",
-                    _ => throw Invalid(name, text, "true or false")
+                    _ => throw Invalid(name, text, type, "true or false")
                 };
 
             case FieldType.Date:
                 return DateOnly.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
                     ? date.ToString(DateFormat, CultureInfo.InvariantCulture)
-                    : throw Invalid(name, text, $"a date in the format {DateFormat}");
+                    : throw Invalid(name, text, type, $"a date in the format {DateFormat}");
 
             case FieldType.Enum:
                 return EnumValue(name, enumeration, text).ToString("D");
@@ -94,7 +94,7 @@ public static class FieldValues
     private static Guid EnumValue(string name, FieldEnum? enumeration, string text)
     {
         if (enumeration == null)
-            throw new TaskerValidationException($"Field '{name}': its enum was not found");
+            throw TaskerErrors.Invalid($"Field '{name}': its enum was not found");
 
         if (Guid.TryParse(text, out var id) && enumeration.Values.Any(x => x.Id == id))
             return id;
@@ -102,8 +102,7 @@ public static class FieldValues
         var byName = enumeration.Values.Where(x => string.Equals(x.Name, text, StringComparison.OrdinalIgnoreCase)).ToArray();
         return byName.Length == 1
             ? byName[0].Id
-            : throw new TaskerValidationException(
-                $"Field '{name}': '{text}' is not a value of enum '{enumeration.Name}' (values: {string.Join(", ", enumeration.Values.Select(x => x.Name))})");
+            : throw TaskerErrors.FieldValueNotInEnum(name, text, enumeration.Name, enumeration.Values.Select(x => x.Name).ToArray());
     }
 
     /// <summary>Значения для показа: у enum — названия значений (неизвестное значение — как есть), у остальных — сами значения.</summary>
@@ -112,6 +111,6 @@ public static class FieldValues
             ? values.Select(x => Guid.TryParse(x, out var id) && enumeration?.Values.FirstOrDefault(v => v.Id == id) is { } found ? found.Name : x).ToArray()
             : values.ToArray();
 
-    private static TaskerValidationException Invalid(string name, string text, string expected) =>
-        new($"Field '{name}': '{text}' is not {expected}");
+    private static TaskerValidationException Invalid(string name, string text, FieldType type, string expected) =>
+        TaskerErrors.FieldValueInvalid(name, text, type.ToString().ToLowerInvariant(), $"Field '{name}': '{text}' is not {expected}");
 }

@@ -1,0 +1,615 @@
+{
+  "codes": {
+    "agent.expiresAtPast": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "auth.invalidCredentials": {
+      "status": 401,
+      "params": [],
+      "usages": false
+    },
+    "auth.localOnly": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "auth.required": {
+      "status": 401,
+      "params": [],
+      "usages": false
+    },
+    "auth.sessionExpired": {
+      "status": 401,
+      "params": [],
+      "usages": false
+    },
+    "board.columnOverlap": {
+      "status": 400,
+      "params": [
+        "status",
+        "otherColumn",
+        "columnIndex"
+      ],
+      "usages": false
+    },
+    "board.conditionNoValue": {
+      "status": 400,
+      "params": [
+        "field",
+        "op",
+        "columnIndex"
+      ],
+      "usages": false
+    },
+    "board.conditionNotApplicable": {
+      "status": 400,
+      "params": [
+        "field",
+        "op",
+        "type",
+        "columnIndex"
+      ],
+      "usages": false
+    },
+    "board.conditionValueRequired": {
+      "status": 400,
+      "params": [
+        "field",
+        "op",
+        "columnIndex"
+      ],
+      "usages": false
+    },
+    "board.dropSetNotOnBoard": {
+      "status": 400,
+      "params": [
+        "statusSet",
+        "columnIndex"
+      ],
+      "usages": false
+    },
+    "board.dropStatusNotInColumn": {
+      "status": 400,
+      "params": [
+        "status",
+        "columnIndex"
+      ],
+      "usages": false
+    },
+    "board.dropStatusNotInSet": {
+      "status": 400,
+      "params": [
+        "status",
+        "statusSet",
+        "columnIndex"
+      ],
+      "usages": false
+    },
+    "board.noColumns": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "board.noDropRule": {
+      "status": 400,
+      "params": [
+        "column",
+        "taskType"
+      ],
+      "usages": false
+    },
+    "board.noStatusSets": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "board.taskNotMatchColumn": {
+      "status": 400,
+      "params": [
+        "task",
+        "column",
+        "conditions"
+      ],
+      "usages": false
+    },
+    "board.taskTypeNotOnBoard": {
+      "status": 400,
+      "params": [
+        "taskType",
+        "board"
+      ],
+      "usages": false
+    },
+    "entity.locked": {
+      "status": 409,
+      "params": [
+        "name",
+        "holder",
+        "entity",
+        "expiresAt"
+      ],
+      "usages": false
+    },
+    "entity.modified": {
+      "status": 409,
+      "params": [
+        "name",
+        "entity"
+      ],
+      "usages": false
+    },
+    "entity.notFound": {
+      "status": 404,
+      "params": [],
+      "usages": false
+    },
+    "enum.columnsCollide": {
+      "status": 409,
+      "params": [
+        "board",
+        "first",
+        "second"
+      ],
+      "usages": false
+    },
+    "enum.inUse": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": true
+    },
+    "enum.nameTaken": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "enum.noValues": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "enum.valueRepeated": {
+      "status": 400,
+      "params": [
+        "value"
+      ],
+      "usages": false
+    },
+    "enum.valuesInUse": {
+      "status": 409,
+      "params": [
+        "name",
+        "values"
+      ],
+      "usages": false
+    },
+    "field.changeBlockedByColumns": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": true
+    },
+    "field.conversionBlocked": {
+      "status": 409,
+      "params": [],
+      "usages": false
+    },
+    "field.enumNotAllowed": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "field.enumRequired": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "field.inUse": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": true
+    },
+    "field.nameTaken": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "field.typeChangeNotAllowed": {
+      "status": 400,
+      "params": [
+        "from",
+        "to"
+      ],
+      "usages": false
+    },
+    "fieldValue.empty": {
+      "status": 400,
+      "params": [
+        "field"
+      ],
+      "usages": false
+    },
+    "fieldValue.invalid": {
+      "status": 400,
+      "params": [
+        "field",
+        "value",
+        "type"
+      ],
+      "usages": false
+    },
+    "fieldValue.notInEnum": {
+      "status": 400,
+      "params": [
+        "field",
+        "value",
+        "enumName",
+        "values"
+      ],
+      "usages": false
+    },
+    "fieldValue.repeated": {
+      "status": 400,
+      "params": [
+        "field",
+        "value"
+      ],
+      "usages": false
+    },
+    "fieldValue.single": {
+      "status": 400,
+      "params": [
+        "field",
+        "count"
+      ],
+      "usages": false
+    },
+    "fieldValue.tooLong": {
+      "status": 400,
+      "params": [
+        "field",
+        "max"
+      ],
+      "usages": false
+    },
+    "format.unsupported": {
+      "status": 409,
+      "params": [
+        "file"
+      ],
+      "usages": false
+    },
+    "internal.unexpected": {
+      "status": 500,
+      "params": [],
+      "usages": false
+    },
+    "link.cycle": {
+      "status": 400,
+      "params": [
+        "linkType",
+        "tasks"
+      ],
+      "usages": false
+    },
+    "link.self": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "linkType.hierarchicalNoCycles": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "linkType.hierarchicalSameNames": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "linkType.inUse": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": true
+    },
+    "linkType.nameTaken": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "project.agentOfAnotherUser": {
+      "status": 403,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "project.lastPerson": {
+      "status": 409,
+      "params": [],
+      "usages": false
+    },
+    "project.notFound": {
+      "status": 404,
+      "params": [
+        "id"
+      ],
+      "usages": false
+    },
+    "series.planChanged": {
+      "status": 409,
+      "params": [],
+      "usages": false
+    },
+    "series.prefixInvalid": {
+      "status": 400,
+      "params": [
+        "max"
+      ],
+      "usages": false
+    },
+    "series.prefixTaken": {
+      "status": 409,
+      "params": [
+        "prefix"
+      ],
+      "usages": false
+    },
+    "status.inUse": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": true
+    },
+    "statusSet.inUse": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": true
+    },
+    "statusSet.noStatuses": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "statusSet.statusInUse": {
+      "status": 409,
+      "params": [
+        "name",
+        "set"
+      ],
+      "usages": true
+    },
+    "task.fieldNameTaken": {
+      "status": 400,
+      "params": [
+        "field"
+      ],
+      "usages": false
+    },
+    "task.numberInvalid": {
+      "status": 409,
+      "params": [
+        "number"
+      ],
+      "usages": false
+    },
+    "task.numberTaken": {
+      "status": 409,
+      "params": [
+        "number"
+      ],
+      "usages": false
+    },
+    "task.requiredFields": {
+      "status": 400,
+      "params": [
+        "names"
+      ],
+      "usages": false
+    },
+    "taskType.fieldsHaveValues": {
+      "status": 409,
+      "params": [
+        "name",
+        "fields",
+        "count"
+      ],
+      "usages": false
+    },
+    "taskType.inUse": {
+      "status": 409,
+      "params": [
+        "name"
+      ],
+      "usages": true
+    },
+    "taskType.statusesNotInSet": {
+      "status": 409,
+      "params": [
+        "name",
+        "set",
+        "count"
+      ],
+      "usages": false
+    },
+    "user.adminOnly": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "user.adminRightsAdminOnly": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "user.cannotDeleteSelf": {
+      "status": 409,
+      "params": [],
+      "usages": false
+    },
+    "user.currentPasswordIncorrect": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "user.emailTaken": {
+      "status": 409,
+      "params": [
+        "email"
+      ],
+      "usages": false
+    },
+    "user.lastAdmin": {
+      "status": 409,
+      "params": [
+        "username",
+        "action"
+      ],
+      "usages": false
+    },
+    "user.ownAccountOnly": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "user.personOnly": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "user.registrationClosed": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "user.signInRequired": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "user.usernameOrEmailTaken": {
+      "status": 409,
+      "params": [],
+      "usages": false
+    },
+    "user.usernameTaken": {
+      "status": 409,
+      "params": [
+        "username"
+      ],
+      "usages": false
+    },
+    "validation.color": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "validation.email": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "validation.fieldNameChars": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "validation.invalid": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "validation.password": {
+      "status": 400,
+      "params": [
+        "min"
+      ],
+      "usages": false
+    },
+    "validation.required": {
+      "status": 400,
+      "params": [
+        "field"
+      ],
+      "usages": false
+    },
+    "validation.statusIcon": {
+      "status": 400,
+      "params": [
+        "allowed"
+      ],
+      "usages": false
+    },
+    "validation.tooLong": {
+      "status": 400,
+      "params": [
+        "field",
+        "max"
+      ],
+      "usages": false
+    },
+    "validation.username": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "workspace.notInAddress": {
+      "status": 404,
+      "params": [],
+      "usages": false
+    },
+    "workspace.notOpen": {
+      "status": 404,
+      "params": [
+        "id"
+      ],
+      "usages": false
+    }
+  },
+  "fields": [
+    "statusName",
+    "statusSetName",
+    "taskTypeName",
+    "linkTypeName",
+    "inwardName",
+    "outwardName",
+    "enumName",
+    "enumValue",
+    "projectName",
+    "seriesName",
+    "tokenName",
+    "title",
+    "boardName",
+    "columnName",
+    "fieldName"
+  ],
+  "usageKinds": [
+    "tasks",
+    "links",
+    "ownFields",
+    "board",
+    "boardColumn",
+    "taskType",
+    "statusSet",
+    "field"
+  ]
+}

@@ -32,6 +32,7 @@ final class StubSettingsSource: SettingsSource, @unchecked Sendable {
     func catalog(project: UUID) async throws -> SettingsCatalog { catalogValue }
 
     func tasks(project: UUID, filter: [String], statusIds: [UUID]?, typeIds: [UUID]?, cap: Int) async throws -> SettingsTaskPage {
+        record("tasks")
         if let status = statusIds?.first { return tasksByStatus[status] ?? SettingsTaskPage(total: 0, items: []) }
         if let type = typeIds?.first {
             return tasksByType[type.uuidString + "|" + filter.joined(separator: "|")] ?? SettingsTaskPage(total: 0, items: [])
@@ -231,7 +232,7 @@ struct SettingsTests {
 
     @Test func foreignLockIsReportedAndNotHeld() async {
         let source = StubSettingsSource(catalog: catalog())
-        source.lockFailure = .conflict(Conflict(kind: .locked, message: "busy", heldBy: LockHolder(name: "Анна", expiresAt: nil)))
+        source.lockFailure = TaskerAPIError.locked(by: "Анна")
         let value = model(source)
         let message = await value.hold(.project)
         #expect(message?.contains("Анна") == true)
@@ -275,7 +276,7 @@ struct SettingsTests {
 
     @Test func staleFieldVersionIsExplained() async {
         let source = StubSettingsSource(catalog: catalog())
-        source.updateFailure = .conflict(Conflict(kind: .modified, message: "changed"))
+        source.updateFailure = TaskerAPIError.modified()
         let value = model(source)
         let failure = await value.updateField(catalog().fields[0], name: "Level", type: .string, multiple: false, enumId: nil, change: nil, affected: 0)
         #expect(failure == ru.string(.settingsModified))
@@ -304,21 +305,6 @@ struct SettingsTests {
         #expect(await value.enumUsage(catalog().enums[0]).complete == false)
     }
 
-    @Test func fieldUsageListsTypesTasksAndBoards() async {
-        var data = catalog()
-        data.types = [SettingsTypeItem(id: UUID(), name: "Баг", fields: [SettingsTypeField(fieldId: fieldId, required: false)])]
-        let source = StubSettingsSource(catalog: data)
-        source.tasksByFilter["Level:set"] = SettingsTaskPage(
-            total: 1, items: [SettingsTaskBrief(id: UUID(), title: "Сломано", numbers: [TaskSeriesRef(seriesId: seriesId, number: 7)], fields: [fieldId: ["x"]])])
-        let value = model(source)
-        await value.reload()
-        let uses = await value.usage(of: data.fields[0])
-        #expect(uses.count == 3)
-        #expect(uses.contains { $0.kind == .tasks(1) && $0.name == "TSK-7" })
-        #expect(uses.contains { $0.kind == .type && $0.name == "Баг" })
-        #expect(uses.contains { $0.kind == .board("Main") && $0.name == "Hot" })
-    }
-
     @Test func enumUpdateCarriesRemovalChoice() async {
         let source = StubSettingsSource(catalog: catalog())
         let value = model(source)
@@ -332,7 +318,7 @@ struct SettingsTests {
 
     @Test func linkTypeInUseIsRecognised() async {
         let source = StubSettingsSource(catalog: catalog())
-        source.deleteFailure = .conflict(Conflict(kind: .inUse, message: "Link type 'x' is used by links of 2 task(s)"))
+        source.deleteFailure = .inUse(code: "linkType.inUse", name: "x", usages: [RefusalUsage(kind: "links", count: 2)])
         let value = model(source)
         let item = SettingsLinkTypeItem(id: UUID(), name: "x", outward: "a", inward: "b", allowCycles: false, hierarchical: false, version: "v")
         let result = await value.deleteLinkType(item)
@@ -340,8 +326,9 @@ struct SettingsTests {
             Issue.record("deletion should be refused")
             return
         }
-        #expect(SettingsModel.isInUse(error)?.contains("2 task") == true)
+        #expect(SettingsModel.inUseRefusal(error)?.usages == [RefusalUsage(kind: "links", count: 2)])
         #expect(!source.calls.contains("deleteLinkType"))
+        #expect(!source.calls.contains("tasks"))
     }
 
     @Test func projectDeletionNotifiesAndKeepsNothingLocked() async {
@@ -382,31 +369,21 @@ struct SettingsTests {
         return (status, other, set, type, data)
     }
 
-    @Test func statusUsageNamesTasksSetsAndBoardColumns() async {
-        let flow = workflow()
-        let source = StubSettingsSource(catalog: flow.data)
-        source.tasksByStatus[flow.status.id] = SettingsTaskPage(
-            total: 2, items: [SettingsTaskBrief(id: UUID(), title: "A", numbers: [TaskSeriesRef(seriesId: seriesId, number: 3)], fields: [:])])
-        let value = model(source)
-        await value.reload()
-        let uses = await value.statusUsage(of: flow.status)
-        #expect(uses.contains { $0.kind == .tasks(2) && $0.name == "TSK-3" })
-        #expect(uses.contains { $0.kind == .statusSet && $0.name == "Основной" })
-        #expect(uses.contains { $0.kind == .board("Main") && $0.name == "Todo" })
-        #expect(await value.statusUsage(of: SettingsStatusItem(id: UUID(), name: "x", color: "#000000", description: "", icon: "", version: "v")).isEmpty)
-    }
 
     @Test func statusInUseRefusalIsRecognisedAndNothingIsDeleted() async {
         let flow = workflow()
         let source = StubSettingsSource(catalog: flow.data)
-        source.deleteFailure = .conflict(Conflict(kind: .inUse, message: "Status 'Новая' is used by 4 task(s)"))
+        source.deleteFailure = .inUse(code: "status.inUse", name: "Новая", usages: [RefusalUsage(kind: "tasks", count: 4, tasks: ["TSK-1"])])
         let value = model(source)
         guard case .failure(let error) = await value.deleteStatus(flow.status) else {
             Issue.record("deletion should be refused")
             return
         }
-        #expect(SettingsModel.isInUse(error)?.contains("4 task") == true)
+        let refusal = SettingsModel.inUseRefusal(error)
+        #expect(refusal?.code == "status.inUse")
+        #expect(refusal?.usages.first?.count == 4)
         #expect(!source.calls.contains("deleteStatus"))
+        #expect(!source.calls.contains("tasks"))
     }
 
     @Test func statusIconAndColourAreSent() async {
@@ -446,33 +423,17 @@ struct SettingsTests {
         #expect(uses.contains { $0.kind == .boardName && $0.name == "Main" })
     }
 
-    @Test func removalFromSetIsCheckedAgainstTheTypesOfThatSet() async {
-        let flow = workflow()
-        let source = StubSettingsSource(catalog: flow.data)
-        source.tasksByStatus[flow.status.id] = SettingsTaskPage(total: 2, items: [])
-        let value = model(source)
-        await value.reload()
-        #expect(await value.statusRemovalUsage(from: flow.set, lost: []).isEmpty)
-        let uses = await value.statusRemovalUsage(from: flow.set, lost: [flow.status.id])
-        #expect(uses.first?.kind == .tasks(2))
-        var noTypes = flow.data
-        noTypes.types = []
-        let bare = StubSettingsSource(catalog: noTypes)
-        bare.tasksByStatus[flow.status.id] = SettingsTaskPage(total: 2, items: [])
-        let other = model(bare)
-        await other.reload()
-        #expect(await other.statusRemovalUsage(from: flow.set, lost: [flow.status.id]).isEmpty)
-        #expect(SettingsRules.lostStatuses(old: [flow.status.id, flow.other.id], new: [flow.other.id]) == [flow.status.id])
-    }
 
-    @Test func statusSetRemovalRefusalKeepsServerText() async {
+    @Test func statusSetRemovalRefusalCarriesUsages() async {
         let flow = workflow()
         let source = StubSettingsSource(catalog: flow.data)
-        source.updateFailure = .conflict(Conflict(kind: .inUse, message: "Status 'Новая' is used by 2 task(s) and cannot be removed"))
+        source.updateFailure = .inUse(code: "statusSet.statusInUse", name: "Основной", usages: [RefusalUsage(kind: "tasks", count: 2, tasks: ["TSK-1", "TSK-2"])])
         let value = model(source)
         await value.reload()
-        let message = await value.updateStatusSet(flow.set, name: "Основной", statusIds: [flow.other.id])
-        #expect(message?.contains("2 task") == true)
+        let failure = await value.updateStatusSet(flow.set, name: "Основной", statusIds: [flow.other.id])
+        #expect(failure?.inUse?.code == "statusSet.statusInUse")
+        #expect(failure?.inUse?.usages.first?.count == 2)
+        #expect(!source.calls.contains("tasks"))
     }
 
     @Test func removedTypeFieldsNeedChoiceOnlyWhenTasksHoldValues() async {
@@ -505,27 +466,17 @@ struct SettingsTests {
     @Test func typeUpdateConflictAndLockAreReported() async {
         let flow = workflow()
         let source = StubSettingsSource(catalog: flow.data)
-        source.updateFailure = .conflict(Conflict(kind: .modified, message: "changed"))
+        source.updateFailure = TaskerAPIError.modified()
         let value = model(source)
         await value.reload()
         let message = await value.updateTaskType(flow.type, name: "Баг", description: "", statusSetId: flow.set.id, fields: flow.type.fields, removal: nil)
         #expect(message == ru.string(.settingsModified))
-        source.lockFailure = .conflict(Conflict(kind: .locked, message: "busy", heldBy: LockHolder(name: "Анна", expiresAt: nil)))
+        source.lockFailure = TaskerAPIError.locked(by: "Анна")
         #expect(await value.hold(.taskType(flow.type.id))?.contains("Анна") == true)
         #expect(await value.hold(.status(flow.status.id))?.contains("Анна") == true)
         #expect(await value.hold(.statusSet(flow.set.id))?.contains("Анна") == true)
     }
 
-    @Test func typeInUseRefusalListsTasks() async {
-        let flow = workflow()
-        let source = StubSettingsSource(catalog: flow.data)
-        source.tasksByType[flow.type.id.uuidString + "|"] = SettingsTaskPage(
-            total: 5, items: [SettingsTaskBrief(id: UUID(), title: "A", numbers: [TaskSeriesRef(seriesId: seriesId, number: 1)], fields: [:])])
-        let value = model(source)
-        await value.reload()
-        let uses = await value.taskTypeUsage(of: flow.type)
-        #expect(uses.first?.kind == .tasks(5))
-    }
 
     @Test func newPagesComeFirstAndArePaletteReachable() {
         #expect(Array(SettingsPage.pages(in: .local).prefix(3)) == [.statuses, .statusSets, .types])
@@ -554,7 +505,6 @@ struct SettingsStringsTests {
         for choice in [AppLanguage.ru, .en] {
             let l = Localizer(choice: choice)
             #expect(!l.string(.settingsFieldChanged, "3").contains("%"))
-            #expect(!l.string(.settingsUseTasks, "3").contains("%"))
             #expect(!l.string(.settingsEnumAdded, "3").contains("%"))
             #expect(!l.string(.settingsSeriesMeta, 2, "5").contains("%"))
             #expect(!l.string(.settingsSeriesConflicts, "2").contains("%"))
@@ -565,15 +515,6 @@ struct SettingsStringsTests {
             #expect(!l.string(.settingsTypeSummary, "Основной", "Level*").contains("%"))
             #expect(!l.string(.settingsTypeRemovalBody, "Баг", "Level").contains("%"))
             #expect(!l.string(.settingsStatusSetUsedBy, "x").contains("%"))
-            #expect(!l.string(.settingsStatusSetRemoveBody, "«a»").contains("%"))
         }
-    }
-}
-
-struct LinkTypeRefusalTests {
-    @Test func countIsReadFromServerMessage() {
-        let uses = LinkTypesSettingsPage.linkUsage("Link type 'x' is used by links of 12 task(s) and cannot be deleted")
-        #expect(uses.map(\.kind) == [.links(12)])
-        #expect(LinkTypesSettingsPage.linkUsage("something else").isEmpty)
     }
 }

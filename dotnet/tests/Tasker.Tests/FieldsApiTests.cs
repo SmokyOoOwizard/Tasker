@@ -70,10 +70,10 @@ public class FieldsApiTests
         var renamed = await Ok(api.Patch(api.P($"/fields/{Id(estimate)}"), new { name = "Points", version = Version(estimate) }));
         Assert.Equal("Points", renamed["name"]!.GetValue<string>());
         Assert.Equal("int", renamed["type"]!.GetValue<string>());
-        await Fails(api.Patch(api.P($"/fields/{Id(estimate)}"), new { name = "Stale", version = Version(estimate) }), HttpStatusCode.Conflict, "modified");
+        await Fails(api.Patch(api.P($"/fields/{Id(estimate)}"), new { name = "Stale", version = Version(estimate) }), HttpStatusCode.Conflict, "entity.modified");
 
         // Ошибки: имя занято (регистр не важен), нет имени, неизвестный тип, enum без перечисления, перечисление у не-enum, чужое перечисление.
-        await Fails(api.Post(api.P("/fields"), new { name = "points", type = "int" }), HttpStatusCode.Conflict, "in_use");
+        await Fails(api.Post(api.P("/fields"), new { name = "points", type = "int" }), HttpStatusCode.Conflict, "field.nameTaken");
         await Fails(api.Post(api.P("/fields"), new { name = " ", type = "int" }), HttpStatusCode.BadRequest);
         await Fails(api.Post(api.P("/fields"), new { name = "X", type = "weird" }), HttpStatusCode.BadRequest);
         await Fails(api.Post(api.P("/fields"), new { name = "X", type = "enum" }), HttpStatusCode.BadRequest);
@@ -87,12 +87,12 @@ public class FieldsApiTests
         await Fails(api.Delete(api.P($"/fields/{unknown}?version=v")), HttpStatusCode.NotFound);
 
         // Удаление: устаревшая версия — 409 modified, потом по актуальной.
-        await Fails(api.Delete(api.P($"/fields/{Id(tags)}?version=stale")), HttpStatusCode.Conflict, "modified");
+        await Fails(api.Delete(api.P($"/fields/{Id(tags)}?version=stale")), HttpStatusCode.Conflict, "entity.modified");
         Assert.Equal(HttpStatusCode.NoContent, (await api.Delete(api.P($"/fields/{Id(tags)}?version={Version(tags)}"))).Status);
         Assert.Equal(2, (await api.Get(api.P("/fields"))).Body!["totalCount"]!.GetValue<int>());
 
         // Поле «Level» ссылается на перечисление — его удалить нельзя, пока поле есть.
-        await Fails(api.Delete(api.P($"/enums/{Id(levels)}?version={Version(levels)}")), HttpStatusCode.Conflict, "in_use");
+        await Fails(api.Delete(api.P($"/enums/{Id(levels)}?version={Version(levels)}")), HttpStatusCode.Conflict, "enum.inUse");
     }
 
     [Theory, MemberData(nameof(Storages))]
@@ -119,10 +119,10 @@ public class FieldsApiTests
         Assert.Equal(["Lowest", "Mid"], edited["values"]!.AsArray().Select(x => x!["name"]!.GetValue<string>()).ToArray());
         Assert.Equal(lowId, edited["values"]![0]!["id"]!.GetValue<string>());
 
-        await Fails(api.Post(api.P("/enums"), new { name = "priority", values = Texts("A") }), HttpStatusCode.Conflict, "in_use");
+        await Fails(api.Post(api.P("/enums"), new { name = "priority", values = Texts("A") }), HttpStatusCode.Conflict, "enum.nameTaken");
         await Fails(api.Post(api.P("/enums"), new { name = "Empty", values = Texts() }), HttpStatusCode.BadRequest);
         await Fails(api.Post(api.P("/enums"), new { name = "Twice", values = Texts("a", "A") }), HttpStatusCode.BadRequest);
-        await Fails(api.Patch(api.P($"/enums/{Id(levels)}"), new { name = "Stale", version = Version(levels) }), HttpStatusCode.Conflict, "modified");
+        await Fails(api.Patch(api.P($"/enums/{Id(levels)}"), new { name = "Stale", version = Version(levels) }), HttpStatusCode.Conflict, "entity.modified");
         await Fails(api.Get(api.P($"/enums/{Guid.NewGuid()}")), HttpStatusCode.NotFound);
 
         Assert.Equal(HttpStatusCode.NoContent, (await api.Delete(api.P($"/enums/{Id(edited)}?version={Version(edited)}"))).Status);
@@ -217,13 +217,13 @@ public class FieldsApiTests
         await Fails(api.Patch(api.P($"/tasks/{Id(task)}"), new { version = Version(edited), fields = new { removeFields = new[] { Id(estimate) } } }), HttpStatusCode.BadRequest);
         await Fails(api.Patch(api.P($"/tasks/{Id(task)}"), new { version = Version(edited), fields = new { values = new[] { new { fieldId = Id(estimate), values = Texts() } } } }),
             HttpStatusCode.BadRequest);
-        await Fails(api.Patch(api.P($"/tasks/{Id(task)}"), new { version = Version(task), title = "stale" }), HttpStatusCode.Conflict, "modified");
+        await Fails(api.Patch(api.P($"/tasks/{Id(task)}"), new { version = Version(task), title = "stale" }), HttpStatusCode.Conflict, "entity.modified");
 
         // Удаление поля типа с выбором: без выбора — 409 in_use с числом задач, «keep» оставляет значения как дополнительное поле.
         var currentType = (await api.Get(api.P($"/task-types/{api.TypeId}"))).Body!;
         var withoutEstimate = new object[] { new { fieldId = Id(level), required = false }, new { fieldId = Id(tags), required = false } };
         await Fails(api.Patch(api.P($"/task-types/{api.TypeId}"), new { version = Version(currentType), fields = withoutEstimate }),
-            HttpStatusCode.Conflict, "in_use", "1 task");
+            HttpStatusCode.Conflict, "taskType.fieldsHaveValues", "1 task");
         var kept = await Ok(api.Patch(api.P($"/task-types/{api.TypeId}"), new { version = Version(currentType), fields = withoutEstimate, removedFields = "keep" }));
         Assert.Equal(2, kept["fields"]!.AsArray().Count);
         Assert.Equal(1, kept["affectedTasks"]!.GetValue<int>());
@@ -270,7 +270,7 @@ public class FieldsApiTests
 
         // «Low» выбрана у задачи: без выбора — 409 in_use с числом задач.
         var onlyHigh = new object[] { new { id = high, name = "High" } };
-        await Fails(api.Patch(api.P($"/enums/{Id(levels)}"), new { version = Version(noMid), values = onlyHigh }), HttpStatusCode.Conflict, "in_use", "1 task");
+        await Fails(api.Patch(api.P($"/enums/{Id(levels)}"), new { version = Version(noMid), values = onlyHigh }), HttpStatusCode.Conflict, "enum.valuesInUse", "1 task");
 
         // Переназначение на значение, которого нет среди оставшихся, — 400; на оставшееся — задача получает его.
         await Fails(api.Patch(api.P($"/enums/{Id(levels)}"), new { version = Version(noMid), values = onlyHigh, removed = new { reassignTo = mid } }), HttpStatusCode.BadRequest);
@@ -372,7 +372,7 @@ public class FieldsApiTests
         }));
 
         // Несколько значений → одно: без выбора 409 in_use с числом задач, ничего не меняется.
-        await Fails(api.Patch(api.P($"/fields/{Id(tags)}"), new { version = Version(tags), multiple = false }), HttpStatusCode.Conflict, "in_use", "1 task");
+        await Fails(api.Patch(api.P($"/fields/{Id(tags)}"), new { version = Version(tags), multiple = false }), HttpStatusCode.Conflict, "field.conversionBlocked", "1 task");
         Assert.True((await Ok(api.Get(api.P($"/fields/{Id(tags)}"))))["multiple"]!.GetValue<bool>());
         await Fails(api.Patch(api.P($"/fields/{Id(tags)}"), new { version = Version(tags), multiple = false, choice = new { several = "nope" } }), HttpStatusCode.BadRequest);
 
@@ -393,7 +393,7 @@ public class FieldsApiTests
         Assert.Equal(["Low"], Values(FieldView(await Ok(api.Get(api.P($"/tasks/{Id(task)}"))), "Tags")));
 
         // string → int: «Low» не разбирается — нужен выбор; с clearUnconvertible значение убирается.
-        await Fails(api.Patch(api.P($"/fields/{Id(tags)}"), new { version = Version(text), type = "int" }), HttpStatusCode.Conflict, "in_use", "Low");
+        await Fails(api.Patch(api.P($"/fields/{Id(tags)}"), new { version = Version(text), type = "int" }), HttpStatusCode.Conflict, "field.conversionBlocked", "Low");
         var asInt = await Ok(api.Patch(api.P($"/fields/{Id(tags)}"), new { version = Version(text), type = "int", choice = new { clearUnconvertible = true } }));
         Assert.Equal("int", asInt["type"]!.GetValue<string>());
         Assert.Empty(Values(FieldView(await Ok(api.Get(api.P($"/tasks/{Id(task)}"))), "Tags")));

@@ -591,11 +591,18 @@ internal static class ApiSchemaGenerator
     {
         var schemas = (JsonObject)document["components"]!["schemas"]!;
 
-        if (schemas["ConflictError"] is JsonObject conflict)
+        if (schemas["ApiError"] is JsonObject apiError)
         {
-            var code = (JsonObject)conflict["properties"]!["code"]!;
-            code["enum"] = new JsonArray("in_use", "modified", "locked", "unsupported_format");
-            code["description"] = "in_use: the entity is used elsewhere; modified: someone changed it since the client read it; locked: someone is editing it (heldBy); unsupported_format: the data was written by a newer version of Tasker.";
+            var code = (JsonObject)apiError["properties"]!["code"]!;
+            code["enum"] = new JsonArray(ErrorCatalog.All.Select(x => JsonValue.Create(x.Code)).ToArray<JsonNode?>());
+            code["description"] = "Stable refusal code, see docs/api/error-codes.json for its parameters. The same code, params and usages come in GraphQL errors[].extensions.";
+            ((JsonObject)apiError["properties"]!["error"]!)["description"] = "English text, the fallback when a client has no translation for the code.";
+        }
+
+        if (schemas["ErrorUsage"] is JsonObject usage)
+        {
+            var kind = (JsonObject)usage["properties"]!["kind"]!;
+            kind["enum"] = new JsonArray(ErrorUsage.Kinds.Select(x => JsonValue.Create(x)).ToArray<JsonNode?>());
         }
 
         foreach (var (_, item) in (JsonObject)document["paths"]!)

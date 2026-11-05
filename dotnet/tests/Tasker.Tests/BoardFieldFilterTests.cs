@@ -267,7 +267,7 @@ public class BoardFieldFilterTests
         await p.Board("Main", p.Column("Big", [p.Open], "Spare>=3"));
 
         var deleted = await Fails(api.Delete(api.P($"/fields/{Id(spare)}?version={Version(spare)}")), HttpStatusCode.Conflict, "board 'Main' (column 'Big')");
-        Assert.Equal("in_use", deleted["code"]!.GetValue<string>());
+        Assert.Equal("field.inUse", deleted["code"]!.GetValue<string>());
         await Fails(api.Patch(api.P($"/fields/{Id(spare)}"), new { version = Version(spare), type = "string" }), HttpStatusCode.Conflict, "board 'Main' (column 'Big')");
 
         // Множественность тоже: от неё зависит, исключают ли друг друга условия колонок с общим статусом.
@@ -305,7 +305,7 @@ public class BoardFieldFilterTests
         var refused = await Fails(api.Patch(api.P($"/enums/{Id(p.Levels)}"), new { version = Version(levels), values = onlyLow }),
             HttpStatusCode.Conflict, "board 'Main' (column 'Critical')");
         Assert.Contains("board 'Main' (column 'Closed')", Error(refused));
-        Assert.Equal("in_use", refused["code"]!.GetValue<string>());
+        Assert.Equal("enum.valuesInUse", refused["code"]!.GetValue<string>());
         Assert.Equal(2, (await Ok(api.Get(api.P($"/enums/{Id(p.Levels)}"))))["values"]!.AsArray().Count);
 
         // Переназначение: условия получают другое значение; доска остаётся прежней по всему остальному.

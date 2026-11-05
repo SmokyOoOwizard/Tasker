@@ -146,9 +146,9 @@ internal sealed class GlobalOptions(TextWriter output, TextWriter error, TextRea
     public static string ErrorText(Exception e) => e switch
     {
         TaskerNotFoundException => $"Not found: {e.Message}",
-        TaskerConflictException { Code: ConflictCode.InUse } => $"In use: {e.Message}",
-        TaskerConflictException { Code: ConflictCode.Locked } => $"Locked: {e.Message}",
-        TaskerConflictException { Code: ConflictCode.UnsupportedFormat } => $"Unsupported format: {e.Message}",
+        TaskerConflictException { Kind: ConflictCode.InUse } => $"In use: {e.Message}",
+        TaskerConflictException { Kind: ConflictCode.Locked } => $"Locked: {e.Message}",
+        TaskerConflictException { Kind: ConflictCode.UnsupportedFormat } => $"Unsupported format: {e.Message}",
         TaskerConflictException => $"Modified by someone else: {e.Message}",
         _ => $"Error: {e.Message}"
     };

@@ -43,7 +43,7 @@ struct StatusSetsSettingsPage: View {
                         }
                     } actions: {
                         SettingsIconButton(icon: .pen, help: l.string(.settingsEdit)) { editing = .edit(item) }
-                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { askDelete(item) }
+                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { deleting = item }
                     }
                 }
             }
@@ -64,22 +64,13 @@ struct StatusSetsSettingsPage: View {
         }
     }
 
-    private func askDelete(_ item: SettingsStatusSetItem) {
-        let uses = model.statusSetUsage(of: item)
-        if uses.isEmpty {
-            deleting = item
-        } else {
-            refusal = SettingsRefusal(subject: l.string(.settingsStatusSetSubject, item.name), uses: uses)
-        }
-    }
-
     private func confirmDelete(_ item: SettingsStatusSetItem) {
         Task {
             if case .failure(let error) = await model.deleteStatusSet(item) {
-                if let detail = SettingsModel.isInUse(error) {
-                    refusal = SettingsRefusal(subject: l.string(.settingsStatusSetSubject, item.name), uses: [], detail: detail)
+                if let detail = SettingsModel.inUseRefusal(error) {
+                    refusal = SettingsRefusal(refusal: detail)
                 } else {
-                    model.onNotice?(model.message(error))
+                    model.onFailure?(model.message(error))
                 }
             }
         }
@@ -249,23 +240,17 @@ private struct StatusSetEditSheet: View {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         Task {
             if let original {
-                let lost = SettingsRules.lostStatuses(old: original.statusIds, new: ids)
-                let uses = await model.statusRemovalUsage(from: original, lost: lost)
-                if !uses.isEmpty {
-                    let names = lost.compactMap { catalog?.status($0)?.name }.map { "«\($0)»" }.joined(separator: ", ")
-                    refusal = SettingsRefusal(
-                        subject: names, uses: uses, body: l.string(.settingsStatusSetRemoveBody, names))
+                if let failure = await model.updateStatusSet(original, name: trimmed, statusIds: ids) {
+                    if let inUse = failure.inUse {
+                        refusal = SettingsRefusal(refusal: inUse)
+                    } else {
+                        error = failure.message
+                    }
                     busy = false
-                    return
+                } else {
+                    close()
                 }
-            }
-            let failure: String?
-            if let original {
-                failure = await model.updateStatusSet(original, name: trimmed, statusIds: ids)
-            } else {
-                failure = await model.createStatusSet(name: trimmed, statusIds: ids)
-            }
-            if let failure {
+            } else if let failure = await model.createStatusSet(name: trimmed, statusIds: ids) {
                 error = failure
                 busy = false
             } else {

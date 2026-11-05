@@ -58,19 +58,13 @@ struct LinkTypesSettingsPage: View {
         }
     }
 
-    static func linkUsage(_ message: String) -> [SettingsUsage] {
-        guard let range = message.range(of: #"links of (\d+) task"#, options: .regularExpression),
-              let count = Int(message[range].filter(\.isNumber)) else { return [] }
-        return [SettingsUsage(kind: .links(count), name: "")]
-    }
-
     private func confirmDelete(_ item: SettingsLinkTypeItem) {
         Task {
             if case .failure(let error) = await model.deleteLinkType(item) {
-                if let detail = SettingsModel.isInUse(error) {
-                    refusal = SettingsRefusal(subject: l.string(.settingsLinkTypeSubject, item.name), uses: Self.linkUsage(detail), detail: detail)
+                if let detail = SettingsModel.inUseRefusal(error) {
+                    refusal = SettingsRefusal(refusal: detail)
                 } else {
-                    model.onNotice?(model.message(error))
+                    model.onFailure?(model.message(error))
                 }
             }
         }

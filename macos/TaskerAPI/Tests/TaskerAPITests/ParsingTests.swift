@@ -57,7 +57,7 @@ import Testing
         let error = #expect(throws: TaskerAPIError.self) {
             try GraphQLClient.parse(status: 200, body: Fixture.data("project-not-found.json"))
         }
-        #expect(error == .notFound("Project 6cb8f29b-d6d5-4987-a61d-745df39b1ded not found"))
+        #expect(error == .notFound(Refusal(code: "entity.notFound", message: "Project 6cb8f29b-d6d5-4987-a61d-745df39b1ded not found")))
     }
 
     @Test func mapsLockedConflictWithHolder() throws {
@@ -70,6 +70,7 @@ import Testing
         }
         #expect(conflict.kind == .locked)
         #expect(conflict.message == "Task is being edited by alice")
+        #expect(conflict.refusal.code == "entity.locked")
         #expect(conflict.heldBy?.name == "alice")
         #expect(conflict.heldBy?.expiresAt == TaskerDate.parse("2026-11-04T10:00:00Z"))
     }
@@ -78,7 +79,7 @@ import Testing
         let error = #expect(throws: TaskerAPIError.self) {
             try GraphQLClient.parse(status: 401, body: Fixture.data("graphql-unauthenticated.json"))
         }
-        #expect(error == .unauthenticated("Sign in to read data"))
+        #expect(error == .unauthenticated(Refusal(code: "auth.required", message: "Sign in to read data")))
     }
 
     @Test func keepsErrorsWithoutCode() {
@@ -95,11 +96,63 @@ import Testing
     }
 
     @Test func mapsRestBodies() {
-        #expect(TaskerAPIError.from(status: 400, body: Fixture.data("rest-bad-request.json")) == .badRequest("Name is required"))
+        #expect(TaskerAPIError.from(status: 400, body: Fixture.data("rest-bad-request.json")) == .badRequest(Refusal(code: "validation.required", message: "Name is required", params: ["field": .string("projectName")])))
         #expect(TaskerAPIError.from(status: 409, body: Fixture.data("rest-conflict-modified.json"))
-            == .conflict(Conflict(kind: .modified, message: "Project was changed by someone else")))
-        #expect(TaskerAPIError.from(status: 503, body: Data()) == .server(status: 503, message: HTTPURLResponse.localizedString(forStatusCode: 503)))
-        #expect(TaskerAPIError.from(status: 502, body: Data("Bad gateway".utf8)) == .server(status: 502, message: "Bad gateway"))
+            == .conflict(Conflict(kind: .modified, refusal: Refusal(code: "entity.modified", message: "Project was changed by someone else", params: ["name": .string("Site"), "entity": .string("project")]))))
+        #expect(TaskerAPIError.from(status: 503, body: Data()) == .server(status: 503, refusal: Refusal(message: HTTPURLResponse.localizedString(forStatusCode: 503))))
+        #expect(TaskerAPIError.from(status: 502, body: Data("Bad gateway".utf8)) == .server(status: 502, refusal: Refusal(message: "Bad gateway")))
+    }
+
+    @Test func mapsInternalErrorToServer() {
+        let body = Data(#"{"error":"Unexpected","code":"internal.unexpected","params":{}}"#.utf8)
+        #expect(TaskerAPIError.from(status: 500, body: body) == .server(status: 500, refusal: Refusal(code: "internal.unexpected", message: "Unexpected")))
+    }
+
+    @Test func nonJSONBodyKeepsText() {
+        let error = TaskerAPIError.from(status: 400, body: Data("plain text".utf8))
+        #expect(error == .badRequest(Refusal(message: "plain text")))
+        #expect(error.refusal?.code == "")
+    }
+
+    @Test func classifiesConflictKinds() {
+        #expect(Conflict.Kind(refusal: Refusal(code: "series.planChanged", message: "")) == .modified)
+        #expect(Conflict.Kind(refusal: Refusal(code: "format.unsupported", message: "")) == .unsupportedFormat)
+        #expect(Conflict.Kind(refusal: Refusal(code: "statusSet.statusInUse", message: "")) == .inUse)
+        #expect(Conflict.Kind(refusal: Refusal(code: "enum.valuesInUse", message: "")) == .inUse)
+        #expect(Conflict.Kind(refusal: Refusal(code: "x.y", message: "", usages: [RefusalUsage(kind: "links")])) == .inUse)
+        #expect(Conflict.Kind(refusal: Refusal(code: "x.y", message: "")) == .other("x.y"))
+    }
+
+    @Test func parsesInUseUsagesThroughRest() {
+        let error = TaskerAPIError.from(status: 409, body: Fixture.data("rest-in-use.json"))
+        assertInUse(error)
+    }
+
+    @Test func parsesInUseUsagesThroughGraphQL() {
+        let error = #expect(throws: TaskerAPIError.self) {
+            try GraphQLClient.parse(status: 200, body: Fixture.data("graphql-in-use.json"))
+        }
+        assertInUse(error)
+    }
+
+    private func assertInUse(_ error: TaskerAPIError?) {
+        guard case .conflict(let conflict) = error else {
+            Issue.record("expected conflict, got \(String(describing: error))")
+            return
+        }
+        #expect(conflict.kind == .inUse)
+        #expect(conflict.refusal.code == "status.inUse")
+        #expect(conflict.refusal.params["name"]?.stringValue == "Open")
+        #expect(conflict.usages == [
+            RefusalUsage(kind: "tasks", count: 3, tasks: ["TSK-1", "TSK-2"]),
+            RefusalUsage(kind: "boardColumn", board: "Main", column: "Todo"),
+            RefusalUsage(kind: "statusSet", name: "Default"),
+        ])
+    }
+
+    @Test func readsColumnIndex() {
+        let body = Data(#"{"error":"x","code":"board.noDropRule","params":{"column":"A","taskType":"B","columnIndex":2}}"#.utf8)
+        #expect(TaskerAPIError.from(status: 400, body: body).refusal?.columnIndex == 2)
     }
 
     @Test func wrapsTransportErrors() {

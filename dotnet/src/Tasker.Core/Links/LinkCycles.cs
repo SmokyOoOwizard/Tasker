@@ -86,7 +86,7 @@ public static class LinkCycles
             }
 
             if (parent.Count > MaxVisited)
-                throw new TaskerValidationException(
+                throw TaskerErrors.Invalid(
                     $"Cycle check: more than {MaxVisited} tasks are reachable through links of this type, cannot verify that the link does not close a cycle");
             level = next.ToArray();
         }

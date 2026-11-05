@@ -1,4 +1,4 @@
-import { accessToken, ApiError, dropSession, toApiError } from './auth'
+import { accessToken, ApiError, dropSession, toApiError, type ErrorParams, type Usage } from './auth'
 import type { Page } from './types'
 import { apiUrl, isDesktop, workspaceBase } from './workspace'
 
@@ -7,10 +7,6 @@ export { ApiError } from './auth'
 
 type Send = { method: string; body?: unknown; headers?: Record<string, string>; signal?: AbortSignal; anonymous?: boolean }
 
-/**
- * Запрос к API текущей рабочей области. На сервере — с access-токеном; если сервер его отклонил,
- * токен обновляется и запрос повторяется один раз. Ошибка — {@link ApiError} с текстом сервера.
- */
 async function send(path: string, init: Send): Promise<Response> {
   const request = (token: string | null) =>
     fetch(apiUrl(path), {
@@ -27,13 +23,12 @@ async function send(path: string, init: Send): Promise<Response> {
   if (isDesktop || init.anonymous) return request(null)
 
   let token = await accessToken()
-  if (!token) throw new ApiError(401, 'Sign in again')
+  if (!token) throw new ApiError(401, 'Sign in again', 'auth.sessionExpired')
   let response = await request(token)
   if (response.status === 401) {
     token = await accessToken(token)
-    if (!token) throw new ApiError(401, 'Sign in again')
+    if (!token) throw new ApiError(401, 'Sign in again', 'auth.sessionExpired')
     response = await request(token)
-    // Токен свежий, а сервер всё равно не принимает: пароль сменили или пользователя удалили.
     if (response.status === 401) dropSession()
   }
   return response
@@ -47,7 +42,7 @@ export async function api<T>(path: string, init: { method: 'POST' | 'PATCH' | 'D
 
 type GraphError = {
   message: string
-  extensions?: { status?: number; conflict?: string; heldBy?: { name: string; expiresAt: string } }
+  extensions?: { status?: number; code?: string; params?: ErrorParams | null; usages?: Usage[] | null }
 }
 
 export async function graphql<T>(query: string, variables: Record<string, unknown> = {}, options: { anonymous?: boolean } = {}): Promise<T> {
@@ -55,12 +50,17 @@ export async function graphql<T>(query: string, variables: Record<string, unknow
   const body = (await response.json().catch(() => null)) as { data?: T | null; errors?: GraphError[] } | null
   const error = body?.errors?.[0]
   if (error)
-    throw new ApiError(error.extensions?.status ?? response.status, error.message, error.extensions?.conflict, error.extensions?.heldBy)
+    throw new ApiError(
+      error.extensions?.status ?? response.status,
+      error.message,
+      error.extensions?.code,
+      error.extensions?.params,
+      error.extensions?.usages,
+    )
   if (!response.ok || !body?.data) throw new ApiError(response.status, `HTTP ${response.status}`)
   return body.data
 }
 
-/** Все элементы постраничного списка (для коротких списков: проекты, статусы, типы). */
 export async function graphqlAll<T, R = unknown>(
   query: string,
   variables: Record<string, unknown>,
@@ -75,7 +75,6 @@ export async function graphqlAll<T, R = unknown>(
   }
 }
 
-/** Что изменилось в рабочей области (десктоп): entity — project, task, taskType, status, statusSet, board, user или unknown. */
 export type WorkspaceChange = { entity: string; projectId: string | null; id: string | null }
 
 const changeListeners = new Set<(change: WorkspaceChange) => void>()
@@ -84,11 +83,6 @@ let changeStream: AbortController | null = null
 const reconnectDelayMs = 3_000
 const changesQuery = 'subscription { workspaceChanges { entity projectId id } }'
 
-/**
- * Изменения в рабочей области — из соседних вкладок, от агентов через MCP, руками и через git.
- * Только на десктопе (адрес /w/{id}/…). Возвращает функцию отписки.
- * Поток один на вкладку, сколько бы экранов ни подписалось: у браузера мало соединений на один хост.
- */
 export function onWorkspaceChange(listener: (change: WorkspaceChange) => void): () => void {
   if (!workspaceBase) return () => {}
   changeListeners.add(listener)

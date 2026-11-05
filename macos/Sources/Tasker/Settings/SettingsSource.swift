@@ -70,7 +70,7 @@ struct GraphQLSettingsSource: SettingsSource {
 
     func catalog(project: UUID) async throws -> SettingsCatalog {
         guard let data = try await client.graphQL.fetch(SettingsCatalogQuery(projectId: project)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         var catalog = SettingsCatalog(project: SettingsProjectItem(id: data.id, name: data.name, createdAt: data.createdAt, version: data.version))
         catalog.fields = data.fields.data.map {
@@ -119,7 +119,7 @@ struct GraphQLSettingsSource: SettingsSource {
         while offset < cap {
             guard let page = try await client.graphQL.fetch(
                 SettingsTasksQuery(projectId: project, field: filter.isEmpty ? nil : filter, statusIds: statusIds, typeIds: typeIds, offset: offset, limit: Self.page)).project?.tasks
-            else { throw TaskerAPIError.notFound(project.uuidString) }
+            else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString)) }
             total = page.totalCount
             for task in page.data {
                 items.append(SettingsTaskBrief(
@@ -139,7 +139,7 @@ struct GraphQLSettingsSource: SettingsSource {
         while offset < GraphQLSeriesSource.cap {
             guard let page = try await client.graphQL.fetch(
                 SeriesNumbersPageQuery(projectId: project, seriesIds: series, offset: offset, limit: Self.page)).project?.tasks
-            else { throw TaskerAPIError.notFound(project.uuidString) }
+            else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString)) }
             for task in page.data {
                 for number in task.seriesNumbers {
                     guard var stat = stats[number.seriesId] else { continue }
@@ -156,7 +156,7 @@ struct GraphQLSettingsSource: SettingsSource {
 
     func members(project: UUID) async throws -> [SettingsMember] {
         guard let data = try await client.graphQL.fetch(SettingsMembersQuery(projectId: project)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         return data.members.data.map {
             SettingsMember(id: $0.id, name: $0.username, email: $0.email, isAgent: $0.kind == .agent, isAdmin: $0.isAdmin, ownerId: $0.ownerId)

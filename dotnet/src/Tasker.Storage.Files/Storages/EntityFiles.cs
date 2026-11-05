@@ -46,7 +46,7 @@ internal sealed class EntityFiles<T>(
                 var path = written = project.EntityFile(folder, idOf(entity), nameOf(entity));
                 return File.Exists(project.ProjectFile) || !File.Exists(directory.DeletedProjectMarker(projectOf(entity)))
                     ? write(path, entity, ct)
-                    : throw new Tasker.Core.TaskerValidationException($"ProjectId: project not found: {projectOf(entity)}");
+                    : throw Tasker.Core.TaskerErrors.Invalid($"ProjectId: project not found: {projectOf(entity)}");
             });
         }
         finally

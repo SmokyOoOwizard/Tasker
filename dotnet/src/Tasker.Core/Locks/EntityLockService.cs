@@ -46,7 +46,7 @@ public class EntityLockService(
                 return entity;
         }
 
-        throw new TaskerValidationException(
+        throw TaskerErrors.Invalid(
             $"Entity: unknown kind '{text}'; expected one of {string.Join(", ", Enum.GetNames<LockedEntity>().Select(x => char.ToLowerInvariant(x[0]) + x[1..]))}");
     }
 
@@ -59,6 +59,13 @@ public class EntityLockService(
             return null;
         // У самого проекта «проект сущности» — он сам.
         return await ToInfo(await locks.Acquire(entity, id, subject, entity == LockedEntity.Project ? id : projectId, ct), ct);
+    }
+
+    private async Task<string?> LinkTypeName(Guid project, Guid id, CancellationToken ct)
+    {
+        if (await linkTypes.GetById(project, id, ct) is { } stored)
+            return stored.Name;
+        return (await linkTypes.GetAll(project, ct)).Length == 0 ? Links.LinkTypeService.Defaults(project).FirstOrDefault(x => x.Id == id)?.Name : null;
     }
 
     /// <summary>Действующие блокировки проекта — для индикаторов «правит Иван» в списках. Старые первыми.</summary>
@@ -80,25 +87,25 @@ public class EntityLockService(
         new(held.Entity, held.Id, held.Holder.Name, held.Holder.Key == (await identity.Current(ct)).Key, held.AcquiredAt, held.ExpiresAt);
 
     /// <summary>Название сущности для сообщения («Task 'Fix login'»); null — сущности нет.</summary>
-    private async Task<string?> Subject(Guid? projectId, LockedEntity entity, Guid id, CancellationToken ct)
+    private async Task<ErrorSubject?> Subject(Guid? projectId, LockedEntity entity, Guid id, CancellationToken ct)
     {
         if (IsProjectScoped(entity) && projectId == null)
-            throw new TaskerValidationException($"ProjectId is required to lock a {entity}");
+            throw TaskerErrors.Invalid($"ProjectId is required to lock a {entity}");
         var project = projectId.GetValueOrDefault();
 
         return entity switch
         {
-            LockedEntity.Project => await projects.GetById(id, ct) is { } x ? $"Project '{x.Name}'" : null,
-            LockedEntity.Task => await tasks.GetById(project, id, ct) is { } x ? $"Task '{x.Title}'" : null,
-            LockedEntity.TaskType => await taskTypes.GetById(project, id, ct) is { } x ? $"Task type '{x.Name}'" : null,
-            LockedEntity.Status => await statuses.GetById(project, id, ct) is { } x ? $"Status '{x.Name}'" : null,
-            LockedEntity.StatusSet => await statusSets.GetById(project, id, ct) is { } x ? $"Status set '{x.Name}'" : null,
-            LockedEntity.Board => await boards.GetById(project, id, ct) is { } x ? $"Board '{x.Name}'" : null,
-            LockedEntity.Series => await series.GetById(project, id, ct) is { } x ? $"Series '{x.Name}'" : null,
-            LockedEntity.User => await users.GetById(id, ct) is { } x ? $"User '{x.Username}'" : null,
-            LockedEntity.LinkType => await linkTypes.GetById(project, id, ct) is { } x ? $"Link type '{x.Name}'" : null,
-            LockedEntity.Field => await fields.GetById(project, id, ct) is { } x ? $"Field '{x.Name}'" : null,
-            LockedEntity.Enum => await fieldEnums.GetById(project, id, ct) is { } x ? $"Enum '{x.Name}'" : null,
+            LockedEntity.Project => await projects.GetById(id, ct) is { } x ? ErrorSubject.Project(x.Name) : null,
+            LockedEntity.Task => await tasks.GetById(project, id, ct) is { } x ? ErrorSubject.Task(x.Title) : null,
+            LockedEntity.TaskType => await taskTypes.GetById(project, id, ct) is { } x ? ErrorSubject.TaskType(x.Name) : null,
+            LockedEntity.Status => await statuses.GetById(project, id, ct) is { } x ? ErrorSubject.Status(x.Name) : null,
+            LockedEntity.StatusSet => await statusSets.GetById(project, id, ct) is { } x ? ErrorSubject.StatusSet(x.Name) : null,
+            LockedEntity.Board => await boards.GetById(project, id, ct) is { } x ? ErrorSubject.Board(x.Name) : null,
+            LockedEntity.Series => await series.GetById(project, id, ct) is { } x ? ErrorSubject.Series(x.Name) : null,
+            LockedEntity.User => await users.GetById(id, ct) is { } x ? ErrorSubject.User(x.Username) : null,
+            LockedEntity.LinkType => await LinkTypeName(project, id, ct) is { } x ? ErrorSubject.LinkType(x) : null,
+            LockedEntity.Field => await fields.GetById(project, id, ct) is { } x ? ErrorSubject.Field(x.Name) : null,
+            LockedEntity.Enum => await fieldEnums.GetById(project, id, ct) is { } x ? ErrorSubject.Enum(x.Name) : null,
             _ => throw new ArgumentOutOfRangeException(nameof(entity), entity, null)
         };
     }

@@ -134,7 +134,7 @@ struct NewProjectSheet: View {
                     selection.choose(id)
                     dismiss()
                 } catch {
-                    self.error = l.string(.projectCreateFailed, error.localizedDescription)
+                    self.error = l.string(.projectCreateFailed, l.message(for: error))
                     busy = false
                 }
             }

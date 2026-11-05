@@ -51,7 +51,7 @@ struct EnumsSettingsPage: View {
                         }
                     } actions: {
                         SettingsIconButton(icon: .pen, help: l.string(.settingsEdit)) { editing = .edit(item) }
-                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { askDelete(item) }
+                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { deleting = item }
                     }
                 }
             }
@@ -72,22 +72,13 @@ struct EnumsSettingsPage: View {
         }
     }
 
-    private func askDelete(_ item: SettingsEnumItem) {
-        let fields = model.catalog?.fields(of: item.id) ?? []
-        if fields.isEmpty {
-            deleting = item
-        } else {
-            refusal = SettingsRefusal(subject: l.string(.settingsEnumSubject, item.name), uses: fields.map { SettingsUsage(kind: .field, name: $0.name) })
-        }
-    }
-
     private func confirmDelete(_ item: SettingsEnumItem) {
         Task {
             if case .failure(let error) = await model.deleteEnum(item) {
-                if let detail = SettingsModel.isInUse(error) {
-                    refusal = SettingsRefusal(subject: l.string(.settingsEnumSubject, item.name), uses: [], detail: detail)
+                if let detail = SettingsModel.inUseRefusal(error) {
+                    refusal = SettingsRefusal(refusal: detail)
                 } else {
-                    model.onNotice?(model.message(error))
+                    model.onFailure?(model.message(error))
                 }
             }
         }

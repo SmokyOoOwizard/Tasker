@@ -131,7 +131,7 @@ struct TaskDetailTests {
     @Test func modifiedConflictRereadsAndOffersReplay() async {
         let source = StubDetailSource(detail: detail(), vocabulary: vocabulary)
         let model = await ready(source)
-        source.failNext(.conflict(Conflict(kind: .modified, message: "changed")))
+        source.failNext(TaskerAPIError.modified())
         var newer = detail()
         newer.version = "v2"
         newer.title = "Changed by someone"
@@ -148,7 +148,7 @@ struct TaskDetailTests {
     @Test func keepingOthersDropsTheEdit() async {
         let source = StubDetailSource(detail: detail(), vocabulary: vocabulary)
         let model = await ready(source)
-        source.failNext(.conflict(Conflict(kind: .modified, message: "changed")))
+        source.failNext(TaskerAPIError.modified())
         await model.run(.title("Mine"))
         model.resolveConflict(keepMine: false)
         try? await Task.sleep(for: .milliseconds(50))
@@ -160,8 +160,8 @@ struct TaskDetailTests {
         let source = StubDetailSource(detail: detail(), vocabulary: vocabulary)
         let model = await ready(source)
         var notices: [String] = []
-        model.onNotice = { notices.append($0) }
-        source.failNext(.conflict(Conflict(kind: .locked, message: "locked", heldBy: LockHolder(name: "Anna", expiresAt: nil))))
+        model.onFailure = { notices.append($0) }
+        source.failNext(TaskerAPIError.locked(by: "Anna"))
         await model.run(.status(doing))
         #expect(notices.count == 1)
         #expect(notices[0].contains("Anna"))

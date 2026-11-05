@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Tasker.Core;
 using Tasker.Core.Agents;
 using Tasker.Core.Auth;
@@ -170,7 +171,7 @@ internal static class TaskerApi
         project.MapPatch("/tasks/{id:guid}", async (TaskService service, Guid projectId, Guid id, UpdateTask command, CancellationToken ct) =>
             await service.Update(projectId, id, command, ct) is { } updated
                 ? Results.Ok(await service.Describe(projectId, updated, ct))
-                : Results.NotFound(NotFoundBody))
+                : NotFoundResult())
             .RespondsOk<TaskDetails>("updateTask");
 
         project.MapDelete("/tasks/{id:guid}", async (TaskService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
@@ -296,14 +297,14 @@ internal static class TaskerApi
         anonymous.MapPost("/auth/login", async (AuthService auth, SignIn command, CancellationToken ct) =>
             await auth.SignIn(command, ct) is { } session
                 ? Results.Ok(session)
-                : Unauthorized("Invalid username/email or password"))
+                : Refusal(TaskerErrors.InvalidCredentials()))
             .RespondsOk<AuthSession>("login");
 
         // Без access-токена: к моменту обмена он обычно уже истёк.
         anonymous.MapPost("/auth/refresh", async (AuthService auth, RefreshSession command, CancellationToken ct) =>
             await auth.Refresh(command, ct) is { } session
                 ? Results.Ok(session)
-                : Unauthorized("Refresh token is invalid, expired or already used: sign in again"))
+                : Refusal(TaskerErrors.SessionExpired()))
             .RespondsOk<AuthSession>("refreshSession");
 
         anonymous.MapPost("/auth/logout", async (AuthService auth, RefreshSession command, CancellationToken ct) =>
@@ -313,9 +314,6 @@ internal static class TaskerApi
         })
             .RespondsNoContent("logout");
     }
-
-    private static IResult Unauthorized(string error) =>
-        Results.Json(new ApiError(error), statusCode: StatusCodes.Status401Unauthorized);
 
     /// <summary>
     /// Пользователи. На сервере создаёт и удаляет админ, остальные меняют только себя (права — в UserService).
@@ -369,7 +367,7 @@ internal static class TaskerApi
         root.MapPost("/agents/{id:guid}/tokens", async (AgentService agents, Guid id, CreateAgentToken command, CancellationToken ct) =>
             await agents.CreateToken(id, command, ct) is { } issued
                 ? Created(new AgentTokenIssued(issued.Value, issued.Token))
-                : Results.NotFound(NotFoundBody))
+                : NotFoundResult())
             .RespondsCreated<AgentTokenIssued>("createAgentToken");
 
         root.MapDelete("/agents/{id:guid}/tokens/{tokenId:guid}", async (AgentService agents, Guid id, Guid tokenId, CancellationToken ct) =>
@@ -389,51 +387,30 @@ internal static class TaskerApi
             .RespondsNoContent("removeProjectMember");
     }
 
-    /// <summary>
-    /// Ошибки из Core: неверные данные → 400 <c>{error}</c>; нет прав → 403 <c>{error}</c>;
-    /// конфликт с текущими данными → 409 <c>{error, code}</c>,
-    /// где code — <c>in_use</c> (сущность используется) или <c>modified</c> (её изменил кто-то другой).
-    /// </summary>
     public static async Task HandleErrors(HttpContext context, RequestDelegate next)
     {
         try
         {
             await next(context);
         }
-        catch (TaskerValidationException e) when (!context.Response.HasStarted)
+        catch (TaskerException e) when (!context.Response.HasStarted)
         {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new ApiError(e.Message));
+            await WriteError(context, e);
         }
-        catch (TaskerNotFoundException e) when (!context.Response.HasStarted)
+        catch (Exception e) when (!context.Response.HasStarted && !context.RequestAborted.IsCancellationRequested)
         {
-            context.Response.StatusCode = StatusCodes.Status404NotFound;
-            await context.Response.WriteAsJsonAsync(new ApiError(e.Message));
-        }
-        catch (TaskerForbiddenException e) when (!context.Response.HasStarted)
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new ApiError(e.Message));
-        }
-        catch (TaskerConflictException e) when (!context.Response.HasStarted)
-        {
-            context.Response.StatusCode = StatusCodes.Status409Conflict;
-            // Занято блокировкой — клиенту нужно знать, кто правит и до какого времени: «правит Иван».
-            var heldBy = e is Core.Locks.TaskerLockedException locked
-                ? new LockHolder(locked.HeldBy.Holder.Name, locked.HeldBy.ExpiresAt)
-                : null;
-            await context.Response.WriteAsJsonAsync(new ConflictError(e.Message, ConflictCodeName(e.Code), heldBy));
+            context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(TaskerApi)).LogError(e, "Unhandled request error");
+            await WriteError(context, TaskerErrors.Unexpected());
         }
     }
 
-    internal static string ConflictCodeName(ConflictCode code) => code switch
+    internal static Task WriteError(HttpContext context, TaskerException error)
     {
-        ConflictCode.InUse => "in_use",
-        ConflictCode.Modified => "modified",
-        ConflictCode.Locked => "locked",
-        ConflictCode.UnsupportedFormat => "unsupported_format",
-        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
-    };
+        context.Response.StatusCode = error.Status;
+        return context.Response.WriteAsJsonAsync(ApiError.From(error));
+    }
+
+    private static IResult Refusal(TaskerException error) => Results.Json(ApiError.From(error), statusCode: error.Status);
 
     // Несуществующий или недоступный проект — 404 для всех вложенных маршрутов, в том числе POST.
     // Недоступный — тоже 404, а не 403: не раскрываем, какие проекты есть на сервере.
@@ -444,18 +421,18 @@ internal static class TaskerApi
         var projects = http.RequestServices.GetRequiredService<ProjectService>();
 
         if (await projects.GetById(projectId, http.RequestAborted) == null)
-            return Results.NotFound(new ApiError($"Project {projectId} not found"));
+            return Refusal(TaskerErrors.ProjectNotFound(projectId));
 
         return await next(context);
     }
 
-    private static readonly ApiError NotFoundBody = new("Not found");
+    private static IResult NotFoundResult() => Refusal(TaskerErrors.EntityNotFound());
 
     private static IResult OkOrNotFound<T>(T? value) where T : class =>
-        value == null ? Results.NotFound(NotFoundBody) : Results.Ok(value);
+        value == null ? NotFoundResult() : Results.Ok(value);
 
     private static IResult NoContentOrNotFound(bool found) =>
-        found ? Results.NoContent() : Results.NotFound(NotFoundBody);
+        found ? Results.NoContent() : NotFoundResult();
 
     // Адрес созданного ресурса не отдаём: клиенту достаточно тела с id.
     private static IResult Created<T>(T value) => Results.Json(value, statusCode: StatusCodes.Status201Created);

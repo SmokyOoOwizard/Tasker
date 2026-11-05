@@ -236,7 +236,7 @@ public class SeriesServiceTests
         Assert.Null(await _env.SeriesSvc.Update(_env.Project, Guid.NewGuid(), new UpdateSeries("x", null, "any")));
         await Assert.ThrowsAsync<TaskerValidationException>(() => _env.SeriesSvc.Update(_env.Project, series.Id, new UpdateSeries("x", null, null)));
         var stale = await Assert.ThrowsAsync<TaskerConflictException>(() => _env.SeriesSvc.Update(_env.Project, series.Id, new UpdateSeries("x", null, "stale")));
-        Assert.Equal(ConflictCode.Modified, stale.Code);
+        Assert.Equal(ConflictCode.Modified, stale.Kind);
         await Assert.ThrowsAsync<TaskerValidationException>(() => _env.SeriesSvc.Update(_env.Project, series.Id, new UpdateSeries(" ", null, series.Version)));
         await Assert.ThrowsAsync<TaskerValidationException>(() => _env.SeriesSvc.Update(_env.Project, series.Id, new UpdateSeries(null, "A-B", series.Version)));
         Assert.Equal("A", (await _env.Series.GetById(_env.Project, series.Id))!.Name);
@@ -266,7 +266,7 @@ public class SeriesServiceTests
         Assert.False(await _env.SeriesSvc.Delete(_env.Project, Guid.NewGuid(), "x"));
         await Assert.ThrowsAsync<TaskerValidationException>(() => _env.SeriesSvc.Delete(_env.Project, series.Id, null));
         var stale = await Assert.ThrowsAsync<TaskerConflictException>(() => _env.SeriesSvc.Delete(_env.Project, series.Id, "stale"));
-        Assert.Equal(ConflictCode.Modified, stale.Code);
+        Assert.Equal(ConflictCode.Modified, stale.Kind);
         Assert.NotNull(await _env.Series.GetById(_env.Project, series.Id));
 
         Assert.True(await _env.SeriesSvc.Delete(_env.Project, series.Id, series.Version));
@@ -355,7 +355,7 @@ public class SeriesServiceTests
 
         var ex = await Assert.ThrowsAsync<TaskerConflictException>(() => _env.SeriesSvc.Delete(_env.Project, a.Id, a.Version));
 
-        Assert.Equal(ConflictCode.Modified, ex.Code);
+        Assert.Equal(ConflictCode.Modified, ex.Kind);
         Assert.Null(await _env.Series.GetById(_env.Project, a.Id));
         // Оставшуюся недействительную ссылку уберёт cleanup.
         Assert.Equal(1, (await _env.Health.Check(_env.Project)).TasksWithInvalidSeries);
@@ -640,7 +640,7 @@ public class TaskServiceSeriesTests
         Assert.Null(await _env.TaskSvc.AddToSeries(_env.Project, task.Id, Guid.NewGuid(), task.Version));
         await Assert.ThrowsAsync<TaskerValidationException>(() => _env.TaskSvc.AddToSeries(_env.Project, task.Id, s.Id, null));
         var ex = await Assert.ThrowsAsync<TaskerConflictException>(() => _env.TaskSvc.AddToSeries(_env.Project, task.Id, s.Id, "stale"));
-        Assert.Equal(ConflictCode.Modified, ex.Code);
+        Assert.Equal(ConflictCode.Modified, ex.Kind);
         Assert.Equal(0, _env.Tasks.WriteCount);
     }
 
@@ -653,7 +653,7 @@ public class TaskServiceSeriesTests
 
         var ex = await Assert.ThrowsAsync<TaskerConflictException>(() => _env.TaskSvc.AddToSeries(_env.Project, task.Id, s.Id, task.Version));
 
-        Assert.Equal(ConflictCode.Modified, ex.Code);
+        Assert.Equal(ConflictCode.Modified, ex.Kind);
     }
 
     // ---- RemoveFromSeries ----
@@ -819,7 +819,7 @@ public class TaskServiceSeriesTests
         Assert.Null(await _env.TaskSvc.Renumber(_env.Project, task.Id, b.Id, 5, task.Version));
         await Assert.ThrowsAsync<TaskerValidationException>(() => _env.TaskSvc.Renumber(_env.Project, task.Id, a.Id, 5, null));
         var ex = await Assert.ThrowsAsync<TaskerConflictException>(() => _env.TaskSvc.Renumber(_env.Project, task.Id, a.Id, 5, "stale"));
-        Assert.Equal(ConflictCode.Modified, ex.Code);
+        Assert.Equal(ConflictCode.Modified, ex.Kind);
         Assert.Equal(0, _env.Tasks.WriteCount);
     }
 
@@ -1224,7 +1224,7 @@ public class SeriesCleanupTests
 
         var ex = await Assert.ThrowsAsync<TaskerConflictException>(() => _env.Cleanup.Run(_env.Project, new CleanupOptions()));
 
-        Assert.Equal(ConflictCode.Modified, ex.Code);
+        Assert.Equal(ConflictCode.Modified, ex.Kind);
     }
 
     [Fact]

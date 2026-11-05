@@ -16,7 +16,7 @@ public class CascadeLockTests
     private static async Task LockedByAnna(SeriesEnv env, Guid taskId)
     {
         env.Editor.Holder = FakeEditor.Anna;
-        await env.Locks.Acquire(LockedEntity.Task, taskId, "Task");
+        await env.Locks.Acquire(LockedEntity.Task, taskId, ErrorSubject.Task("Task"));
         env.Editor.Holder = FakeEditor.Ivan;
     }
 

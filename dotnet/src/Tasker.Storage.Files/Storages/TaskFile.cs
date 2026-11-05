@@ -159,7 +159,7 @@ internal static class TaskFile
                 field.Name,
                 Enum.TryParse<FieldType>(field.Type, ignoreCase: true, out var type) && Enum.IsDefined(type)
                     ? type
-                    : throw new UnsupportedFormatException($"{Path.GetFileName(path)}: unknown field type '{field.Type}': update Tasker"),
+                    : throw Tasker.Core.TaskerErrors.UnsupportedFormat(Path.GetFileName(path), $"{Path.GetFileName(path)}: unknown field type '{field.Type}': update Tasker"),
                 field.Required ?? false,
                 field.Multiple ?? false,
                 field.Enum));

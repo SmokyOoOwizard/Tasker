@@ -85,13 +85,13 @@ public class EditLockService(IEditLockStorage storage, IEditorIdentity identity,
     /// <param name="subject">Как назвать сущность в ошибке: <c>Task 'Fix login'</c>.</param>
     /// <exception cref="TaskerLockedException">Блокировку держит другой.</exception>
     /// <param name="projectId">Проект сущности: блокировка запоминает его для <see cref="GetByProject"/>.</param>
-    public async Task<EditLock> Acquire(LockedEntity entity, Guid id, string subject, Guid? projectId = null, CancellationToken ct = default)
+    public async Task<EditLock> Acquire(LockedEntity entity, Guid id, ErrorSubject subject, Guid? projectId = null, CancellationToken ct = default)
     {
         var holder = await identity.Current(ct);
         var now = time.GetUtcNow();
         var held = await storage.Acquire(entity, id, holder, now, now + Duration, projectId, ct);
         if (held.Holder.Key != holder.Key)
-            throw new TaskerLockedException(subject, held);
+            throw TaskerErrors.Locked(subject, held);
 
         // Продление («пульс» редактора) не событие: блокировка и так видна. Событие — когда она появилась.
         if (held.AcquiredAt == now)
@@ -121,12 +121,12 @@ public class EditLockService(IEditLockStorage storage, IEditorIdentity identity,
     /// Вызывается перед изменением и удалением. Свободна или своя — можно писать; чужая — отказ.
     /// </summary>
     /// <exception cref="TaskerLockedException">Сущность правит другой держатель.</exception>
-    public async Task EnsureWritable(LockedEntity entity, Guid id, string subject, CancellationToken ct = default)
+    public async Task EnsureWritable(LockedEntity entity, Guid id, ErrorSubject subject, CancellationToken ct = default)
     {
         if (await Get(entity, id, ct) is not { } held)
             return;
         if (held.Holder.Key != (await identity.Current(ct)).Key)
-            throw new TaskerLockedException(subject, held);
+            throw TaskerErrors.Locked(subject, held);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public class EditLockService(IEditLockStorage storage, IEditorIdentity identity,
     /// </summary>
     /// <exception cref="TaskerLockedException">Через <see cref="CascadeTimeout"/> блокировка всё ещё держится; в сообщении — все занятые сущности.</exception>
     public async Task WaitUntilWritable(
-        IReadOnlyCollection<(LockedEntity Entity, Guid Id, string Subject)> items, TimeSpan? timeout = null, CancellationToken ct = default)
+        IReadOnlyCollection<(LockedEntity Entity, Guid Id, ErrorSubject Subject)> items, TimeSpan? timeout = null, CancellationToken ct = default)
     {
         if (items.Count == 0)
             return;
@@ -148,7 +148,7 @@ public class EditLockService(IEditLockStorage storage, IEditorIdentity identity,
         {
             var me = (await identity.Current(ct)).Key;
             EditLock? first = null;
-            var busy = new List<string>();
+            var busy = new List<ErrorSubject>();
             foreach (var (entity, id, subject) in items)
             {
                 if (await Get(entity, id, ct) is { } held && held.Holder.Key != me)
@@ -162,7 +162,7 @@ public class EditLockService(IEditLockStorage storage, IEditorIdentity identity,
 
             var left = deadline - time.GetUtcNow();
             if (left <= TimeSpan.Zero)
-                throw new TaskerLockedException(string.Join(", ", busy), first);
+                throw TaskerErrors.Locked(ErrorSubject.Several(busy), first);
             await Task.Delay(left < CascadePoll ? left : CascadePoll, time, ct);
         }
     }

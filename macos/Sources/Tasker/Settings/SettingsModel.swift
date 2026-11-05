@@ -16,6 +16,11 @@ struct EnumUsage: Equatable, Sendable {
     func count(_ id: UUID) -> Int { perValue[id] ?? 0 }
 }
 
+struct SettingsSaveFailure: Equatable {
+    var message: String
+    var inUse: Refusal?
+}
+
 @MainActor
 @Observable
 final class SettingsModel {
@@ -34,6 +39,7 @@ final class SettingsModel {
 
     @ObservationIgnored var localizer = Localizer(choice: .system)
     @ObservationIgnored var onNotice: ((String) -> Void)?
+    @ObservationIgnored var onFailure: ((String) -> Void)?
     @ObservationIgnored var onProjectDeleted: (() -> Void)?
     @ObservationIgnored private let source: any SettingsSource
     @ObservationIgnored private let heartbeat: Duration
@@ -91,7 +97,7 @@ final class SettingsModel {
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
-            if catalog == nil { phase = .failed(Self.reason(error)) }
+            if catalog == nil { phase = .failed(localizer.message(for: error)) }
         }
     }
 
@@ -100,20 +106,13 @@ final class SettingsModel {
     }
 
     static func failure(_ error: any Error, l: Localizer) -> String {
-        guard let error = error as? TaskerAPIError else { return l.string(.settingsFailed, error.localizedDescription) }
-        if case .conflict(let conflict) = error {
-            switch conflict.kind {
-            case .modified: return l.string(.settingsModified)
-            case .locked: return l.string(.settingsLockedBy, conflict.heldBy?.name ?? conflict.message)
-            case .inUse: return l.string(.settingsInUse, conflict.message)
-            default: break
-            }
-        }
-        return l.string(.settingsFailed, error.message)
+        if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .modified { return l.string(.settingsModified) }
+        if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .locked { return l.refusal(conflict.refusal) }
+        return l.string(.settingsFailed, l.message(for: error))
     }
 
-    static func isInUse(_ error: any Error) -> String? {
-        if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .inUse { return conflict.message }
+    static func inUseRefusal(_ error: any Error) -> Refusal? {
+        if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .inUse { return conflict.refusal }
         return nil
     }
 
@@ -124,7 +123,7 @@ final class SettingsModel {
             try await source.lock(project: project, target: target)
         } catch {
             if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .locked {
-                return localizer.string(.settingsLockedBy, conflict.heldBy?.name ?? conflict.message)
+                return localizer.refusal(conflict.refusal)
             }
             return nil
         }
@@ -203,23 +202,6 @@ final class SettingsModel {
 
     func affectedTasks(of field: SettingsFieldItem) async -> SettingsTaskPage? {
         try? await source.tasks(project: project, filter: ["\(field.name):set"], cap: Self.usageCap)
-    }
-
-    func usage(of field: SettingsFieldItem) async -> [SettingsUsage] {
-        guard let catalog else { return [] }
-        var uses: [SettingsUsage] = []
-        for type in catalog.types where type.fieldIds.contains(field.id) {
-            uses.append(SettingsUsage(kind: .type, name: type.name))
-        }
-        if let page = await affectedTasks(of: field), page.total > 0 {
-            let prefixes = prefixes
-            let shown = page.items.prefix(6).map { SettingsRules.reference($0, prefixes: prefixes) }
-            uses.append(SettingsUsage(kind: .tasks(page.total), name: shown.joined(separator: ", ") + (page.total > 6 ? " …" : "")))
-        }
-        for condition in catalog.conditions where condition.fieldId == field.id {
-            uses.append(SettingsUsage(kind: .board(condition.board), name: condition.column))
-        }
-        return uses
     }
 
     func enumUsage(_ item: SettingsEnumItem) async -> EnumUsage {
@@ -317,36 +299,6 @@ final class SettingsModel {
         return result
     }
 
-    func statusUsage(of item: SettingsStatusItem) async -> [SettingsUsage] {
-        guard let catalog else { return [] }
-        var uses: [SettingsUsage] = []
-        if let page = try? await source.tasks(project: project, filter: [], statusIds: [item.id], typeIds: nil, cap: Self.usageCap), page.total > 0 {
-            let prefixes = prefixes
-            let shown = page.items.prefix(6).map { SettingsRules.reference($0, prefixes: prefixes) }
-            uses.append(SettingsUsage(kind: .tasks(page.total), name: shown.joined(separator: ", ") + (page.total > 6 ? " …" : "")))
-        }
-        for set in catalog.statusSets where set.statusIds.contains(item.id) {
-            uses.append(SettingsUsage(kind: .statusSet, name: set.name))
-        }
-        for board in catalog.boards {
-            for column in board.columns where column.statusIds.contains(item.id) || column.dropStatusIds.contains(item.id) {
-                uses.append(SettingsUsage(kind: .board(board.name), name: column.name))
-            }
-        }
-        return uses
-    }
-
-    func statusRemovalUsage(from set: SettingsStatusSetItem, lost: [UUID]) async -> [SettingsUsage] {
-        guard let catalog, !lost.isEmpty else { return [] }
-        let typeIds = catalog.types.filter { $0.statusSetId == set.id }.map(\.id)
-        guard !typeIds.isEmpty,
-              let page = try? await source.tasks(project: project, filter: [], statusIds: lost, typeIds: typeIds, cap: Self.usageCap), page.total > 0
-        else { return [] }
-        let prefixes = prefixes
-        let shown = page.items.prefix(6).map { SettingsRules.reference($0, prefixes: prefixes) }
-        return [SettingsUsage(kind: .tasks(page.total), name: shown.joined(separator: ", ") + (page.total > 6 ? " …" : ""))]
-    }
-
     func statusSetUsage(of item: SettingsStatusSetItem) -> [SettingsUsage] {
         guard let catalog else { return [] }
         var uses: [SettingsUsage] = []
@@ -357,13 +309,6 @@ final class SettingsModel {
             uses.append(SettingsUsage(kind: .boardName, name: board.name))
         }
         return uses
-    }
-
-    func taskTypeUsage(of item: SettingsTypeItem) async -> [SettingsUsage] {
-        guard let page = try? await source.tasks(project: project, filter: [], statusIds: nil, typeIds: [item.id], cap: Self.usageCap), page.total > 0 else { return [] }
-        let prefixes = prefixes
-        let shown = page.items.prefix(6).map { SettingsRules.reference($0, prefixes: prefixes) }
-        return [SettingsUsage(kind: .tasks(page.total), name: shown.joined(separator: ", ") + (page.total > 6 ? " …" : ""))]
     }
 
     func holdersOfRemovedFields(in item: SettingsTypeItem, fields removed: [UUID]) async -> (names: [String], tasks: Int)? {
@@ -405,8 +350,17 @@ final class SettingsModel {
         await run(.settingsStatusSetSaved) { try await source.createStatusSet(project: project, name: name, statusIds: statusIds) }
     }
 
-    func updateStatusSet(_ item: SettingsStatusSetItem, name: String, statusIds: [UUID]) async -> String? {
-        await run(.settingsStatusSetSaved) { try await source.updateStatusSet(project: project, item: item, name: name, statusIds: statusIds) }
+    func updateStatusSet(_ item: SettingsStatusSetItem, name: String, statusIds: [UUID]) async -> SettingsSaveFailure? {
+        var inUse: Refusal?
+        let message = await run(.settingsStatusSetSaved) {
+            do {
+                try await source.updateStatusSet(project: project, item: item, name: name, statusIds: statusIds)
+            } catch {
+                inUse = Self.inUseRefusal(error)
+                throw error
+            }
+        }
+        return message.map { SettingsSaveFailure(message: $0, inUse: inUse) }
     }
 
     func deleteStatusSet(_ item: SettingsStatusSetItem) async -> Result<Void, any Error> {
@@ -495,20 +449,11 @@ final class SettingsModel {
         guard SettingsRules.canRemoveMember(user, among: members) else { return localizer.string(.settingsMemberLast) }
         return await run(.settingsMemberRemoved) { try await source.removeMember(project: project, user: user.id) }
     }
-
-    private static func reason(_ error: any Error) -> String {
-        (error as? TaskerAPIError)?.message ?? error.localizedDescription
-    }
 }
 
 struct SettingsUsage: Hashable, Sendable, Identifiable {
     enum Kind: Hashable, Sendable {
         case type
-        case tasks(Int)
-        case links(Int)
-        case board(String)
-        case field
-        case statusSet
         case boardName
     }
 

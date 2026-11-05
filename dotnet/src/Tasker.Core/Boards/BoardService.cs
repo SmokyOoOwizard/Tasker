@@ -31,6 +31,7 @@ public record MoveTask(Guid TaskId, string? Version);
 public class BoardService(
     IBoardStorage boards,
     IStatusSetStorage sets,
+    IStatusStorage statuses,
     ITaskTypeStorage taskTypes,
     ITaskStorage tasks,
     IFieldStorage fields,
@@ -98,7 +99,7 @@ public class BoardService(
         return true;
     }
 
-    private static string Subject(Board board) => $"Board '{board.Name}'";
+    private static ErrorSubject Subject(Board board) => ErrorSubject.Board(board.Name);
 
     /// <summary>
     /// Перенос задачи в колонку: задача получает статус из правила переноса колонки для набора её типа.
@@ -116,23 +117,20 @@ public class BoardService(
             return null;
 
         var type = await taskTypes.GetById(projectId, task.TypeId, ct)
-            ?? throw new TaskerNotFoundException($"Task type {task.TypeId} of task {task.Id} not found (the project may have been deleted)");
+            ?? throw TaskerErrors.EntityNotFound($"Task type {task.TypeId} of task {task.Id} not found (the project may have been deleted)");
 
         if (!board.StatusSetIds.Contains(type.StatusSetId))
-            throw new TaskerValidationException($"Task type '{type.Name}' is not on board '{board.Name}'");
+            throw TaskerErrors.BoardTaskTypeNotOnBoard(type.Name, board.Name);
 
         var statusId = column.GetDropStatus(type.StatusSetId)
-            ?? throw new TaskerValidationException(
-                $"Column '{column.Name}' has no drop rule for tasks of type '{type.Name}'");
+            ?? throw TaskerErrors.BoardNoDropRule(column.Name, type.Name);
 
         if (column.FieldConditions.Length > 0)
         {
             var conditions = ColumnFilters.ToConditions(
                 column.FieldConditions, await taskTypes.GetAll(projectId, ct), (await fields.GetAll(projectId, ct)).ToDictionary(x => x.Id));
             if (!conditions.All(x => x.Matches(task)))
-                throw new TaskerValidationException(
-                    $"Task '{task.Title}' does not match the field conditions of column '{column.Name}' " +
-                    $"({string.Join(", ", await DescribeFilters(projectId, column, ct))}): change the task's fields first, a move does not change them");
+                throw TaskerErrors.BoardTaskNotMatchColumn(task.Title, column.Name, await DescribeFilters(projectId, column, ct));
         }
 
         return await taskService.Update(projectId, task.Id, new UpdateTask(null, null, null, statusId, command.Version), ct);
@@ -202,18 +200,20 @@ public class BoardService(
         CancellationToken ct
     )
     {
-        var boardName = Validate.Name(name, "Board name");
+        var boardName = Validate.Name(name, ErrorField.BoardName);
 
         var setIds = Validate.Distinct(statusSetIds, "StatusSetIds");
         if (setIds.Length == 0)
-            throw new TaskerValidationException("Board must include at least one status set");
+            throw TaskerErrors.BoardNoStatusSets();
 
         var projectSets = (await sets.GetAll(projectId, ct)).ToDictionary(x => x.Id);
         Validate.AllKnown(setIds, projectSets.Keys, "StatusSetIds");
         var boardStatusIds = setIds.SelectMany(x => projectSets[x].StatusIds).ToHashSet();
+        var statusNames = (await statuses.GetAll(projectId, ct)).ToDictionary(x => x.Id, x => x.Name);
+        string StatusName(Guid statusId) => statusNames.GetValueOrDefault(statusId) ?? statusId.ToString();
 
         if (columns is not { Length: > 0 })
-            throw new TaskerValidationException("Board must have at least one column");
+            throw TaskerErrors.BoardNoColumns();
 
         // Условия колонок по полям: переданный текст разбирается по каталогу в id поля и значения; без текста у существующей колонки остаются
         // её условия. Хранимые условия проверяются тем же правилом, что введённые.
@@ -233,19 +233,19 @@ public class BoardService(
                     filters[i] = (await taskService.ParseFieldFilters(projectId, c.FieldFilters, ct) ?? [])
                         .Select(x => new ColumnFieldFilter(
                             // Колонка хранит условия по id поля каталога: собственные поля задач (у каждой задачи свой id) в неё не входят.
-                            x.FieldId ?? throw new TaskerValidationException($"'{x.Name}' is not a field of the catalog: a column condition needs one"),
+                            x.FieldId ?? throw TaskerErrors.Invalid($"'{x.Name}' is not a field of the catalog: a column condition needs one"),
                             x.Operator, x.Value))
                         .ToArray();
                 }
                 catch (TaskerValidationException e)
                 {
-                    throw new TaskerValidationException($"{where}: {e.Message}");
+                    throw e.Reworded($"{where}: {e.Message}", ("columnIndex", i));
                 }
             }
 
             filters[i] = filters[i].Distinct().ToArray();
             foreach (var filter in filters[i])
-                ColumnFilters.Validate(filter, catalog, enumerations, where);
+                ColumnFilters.Validate(filter, catalog, enumerations, i);
         }
 
         var usedColumnIds = new HashSet<Guid>();
@@ -256,12 +256,12 @@ public class BoardService(
             if (c.Id is { } columnId)
             {
                 if (!existingColumns.ContainsKey(columnId))
-                    throw new TaskerValidationException($"{field}.Id: column {columnId} not found on the board");
+                    throw TaskerErrors.Invalid($"{field}.Id: column {columnId} not found on the board");
                 if (!usedColumnIds.Add(columnId))
-                    throw new TaskerValidationException($"{field}.Id: column {columnId} is listed twice");
+                    throw TaskerErrors.Invalid($"{field}.Id: column {columnId} is listed twice");
             }
 
-            var columnName = Validate.Name(c.Name, $"{field}.Name");
+            var columnName = Validate.Name(c.Name, ErrorField.ColumnName, english: $"{field}.Name");
 
             var statusIds = Validate.Distinct(c.StatusIds, $"{field}.StatusIds");
             Validate.AllKnown(statusIds, boardStatusIds, $"{field}.StatusIds (statuses of the board's status sets)");
@@ -270,12 +270,15 @@ public class BoardService(
             foreach (var (setId, statusId) in drop)
             {
                 if (!setIds.Contains(setId))
-                    throw new TaskerValidationException($"{field}.DropStatuses: status set {setId} is not on the board");
+                    throw TaskerErrors.BoardDropSetNotOnBoard(i, projectSets.TryGetValue(setId, out var dropSet) ? dropSet.Name : setId.ToString(),
+                        $"{field}.DropStatuses: status set {setId} is not on the board");
                 if (!projectSets[setId].StatusIds.Contains(statusId))
-                    throw new TaskerValidationException($"{field}.DropStatuses: status {statusId} is not in status set {setId}");
+                    throw TaskerErrors.BoardDropStatusNotInSet(i, StatusName(statusId), projectSets[setId].Name,
+                        $"{field}.DropStatuses: status {statusId} is not in status set {setId}");
                 // Иначе перетянутая задача сразу «уехала» бы в другую колонку.
                 if (!statusIds.Contains(statusId))
-                    throw new TaskerValidationException($"{field}.DropStatuses: status {statusId} is not one of the column's statuses");
+                    throw TaskerErrors.BoardDropStatusNotInColumn(i, StatusName(statusId),
+                        $"{field}.DropStatuses: status {statusId} is not one of the column's statuses");
             }
 
             return new BoardColumn
@@ -291,7 +294,7 @@ public class BoardService(
         // Статус в двух колонках — задача показывалась бы на доске дважды, если только условия колонок по полям не исключают друг друга
         // (например, «Компонент=API» и «Компонент!=API»).
         if (ColumnFilters.FindOverlap(built, catalog) is var (first, _, shared, at))
-            throw new TaskerValidationException(
+            throw TaskerErrors.BoardColumnOverlap(at, StatusName(shared), first.Name,
                 $"Columns[{at}].StatusIds: status {shared} is already used by column '{first.Name}', and the columns' field conditions do not " +
                 "exclude each other (a status may be shared only by columns with conditions that cannot hold together, such as Field=a and Field!=a)");
 

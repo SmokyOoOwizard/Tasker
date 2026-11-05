@@ -107,7 +107,7 @@ internal static partial class FormatVersions
 
         return int.TryParse(match.Groups["value"].Value, out var version) && version >= 0
             ? version
-            : throw new UnsupportedFormatException($"{Path.GetFileName(path)}: formatVersion '{match.Groups["value"].Value}' is not a number");
+            : throw Tasker.Core.TaskerErrors.UnsupportedFormat(Path.GetFileName(path), $"{Path.GetFileName(path)}: formatVersion '{match.Groups["value"].Value}' is not a number");
     }
 
     /// <summary>Приводит текст файла к текущему формату в памяти. Файл на диске не меняется.</summary>
@@ -127,7 +127,7 @@ internal static partial class FormatVersions
     }
 
     public static UnsupportedFormatException Newer(int version, string path) =>
-        new($"{Path.GetFileName(path)}: format version {version} is newer than this Tasker supports ({Current}): update Tasker");
+        Tasker.Core.TaskerErrors.UnsupportedFormat(Path.GetFileName(path), $"{Path.GetFileName(path)}: format version {version} is newer than this Tasker supports ({Current}): update Tasker");
 
     /// <summary>Выставляет <c>formatVersion</c> первой строкой: заменяет имеющуюся или добавляет. Остальной текст не трогает.</summary>
     public static string SetVersion(string text, int version)

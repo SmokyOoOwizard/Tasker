@@ -11,8 +11,8 @@ struct LiveToastStack: View {
         VStack(spacing: DesignSpacing.gap8) {
             ForEach(live.toasts + session.toasts.toasts) { toast in
                 HStack(spacing: DesignSpacing.gap8) {
-                    MockupIconView(icon: .check)
-                        .foregroundStyle(DesignColor.green.color)
+                    MockupIconView(icon: toast.message.isFailure ? .warn : .check)
+                        .foregroundStyle(toast.message.isFailure ? DesignColor.red.color : DesignColor.green.color)
                     Text(toast.message.text(l))
                         .lineLimit(2)
                 }
@@ -101,7 +101,7 @@ enum LiveQuery {
         _ query: Query,
         retryDelay: Duration = .seconds(2),
         value: @MainActor (Query.Data) -> Void,
-        failed: @MainActor (String) -> Void = { _ in }
+        failed: @MainActor (any Error) -> Void = { _ in }
     ) async {
         while !Task.isCancelled {
             do {
@@ -112,7 +112,7 @@ enum LiveQuery {
             } catch is CancellationError {
                 return
             } catch {
-                failed(error.localizedDescription)
+                failed(error)
             }
             try? await Task.sleep(for: retryDelay)
         }

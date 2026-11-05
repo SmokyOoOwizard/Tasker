@@ -34,7 +34,7 @@ public class FormatVersionTests
     {
         var error = Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Of(text, "tasks/x.yaml"));
         Assert.Contains("x.yaml", error.Message);
-        Assert.Equal(Tasker.Core.ConflictCode.UnsupportedFormat, error.Code);
+        Assert.Equal(Tasker.Core.ConflictCode.UnsupportedFormat, error.Kind);
     }
 
     [Fact]

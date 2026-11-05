@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import TaskerAPI
 
 enum Language: String, CaseIterable, Sendable {
     case ru
@@ -90,6 +91,46 @@ struct Localizer: Sendable {
         let format = bundle.localizedString(forKey: key.rawValue, value: key.rawValue, table: nil)
         guard !arguments.isEmpty else { return format }
         return String(format: format, locale: locale, arguments: arguments)
+    }
+
+    func refusal(_ refusal: Refusal) -> String {
+        guard refusal.code != "validation.invalid", let entry = ErrorCatalog.entries[refusal.code] else { return refusal.message }
+        var arguments: [any CVarArg] = []
+        for (index, name) in entry.params.prefix(entry.shown).enumerated() {
+            let value = refusal.params[name]
+            if index == entry.plural {
+                arguments.append(value?.intValue ?? Int(value?.stringValue ?? "") ?? 0)
+            } else {
+                arguments.append(refusalText(value, param: name, code: refusal.code))
+            }
+        }
+        let format = bundle.localizedString(forKey: entry.key.rawValue, value: entry.key.rawValue, table: nil)
+        guard !arguments.isEmpty else { return format }
+        return String(format: format, locale: locale, arguments: arguments)
+    }
+
+    func message(for error: any Error) -> String {
+        if let error = error as? TaskerAPIError {
+            if let refusal = error.refusal { return self.refusal(refusal) }
+            return error.message
+        }
+        return error.localizedDescription
+    }
+
+    private func refusalText(_ value: JSONValue?, param: String, code: String) -> String {
+        guard let value else { return "" }
+        if param == "field", code == "validation.required" || code == "validation.tooLong",
+           let name = value.stringValue, let key = ErrorCatalog.fields[name] {
+            return string(key)
+        }
+        if let items = value.arrayValue {
+            return items.map { refusalText($0, param: "", code: code) }.joined(separator: ", ")
+        }
+        if let text = value.stringValue { return text }
+        if let number = value.intValue { return String(number) }
+        if case .bool(let flag) = value { return String(flag) }
+        if case .double(let amount) = value { return number(amount) }
+        return ""
     }
 
     func taskCount(_ count: Int) -> String {

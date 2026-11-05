@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
+import { useT } from '../i18n'
 import type { Status } from '../types'
 
-/** Статус задачи: цветная точка и название. */
 export function StatusChip({ status }: { status: Status | undefined }) {
   if (!status) return <span className="chip muted">—</span>
   return (
@@ -12,7 +12,6 @@ export function StatusChip({ status }: { status: Status | undefined }) {
   )
 }
 
-/** Описание статуса или типа задачи: многострочное, необязательное; пустое при сохранении очищает его. */
 export function DescriptionInput({
   value,
   onChange,
@@ -22,19 +21,19 @@ export function DescriptionInput({
   onChange: (value: string) => void
   placeholder: string
 }) {
+  const t = useT()
   return (
     <textarea
       className="input textarea"
       rows={2}
       placeholder={placeholder}
-      aria-label="Описание"
+      aria-label={t('web.common.description')}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
   )
 }
 
-/** Описание под названием в строке списка: полный текст — в подсказке. */
 export function ItemDescription({ text }: { text: string }) {
   if (!text) return null
   return (
@@ -44,7 +43,6 @@ export function ItemDescription({ text }: { text: string }) {
   )
 }
 
-/** Кнопка-иконка в строке списка. */
 export function IconButton({
   title,
   danger,
@@ -72,7 +70,6 @@ export function IconButton({
   )
 }
 
-/** Переименование в строке списка. */
 export function RenameForm({
   initial,
   busy,
@@ -84,6 +81,7 @@ export function RenameForm({
   onSave: (name: string) => void
   onCancel: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState(initial)
   return (
     <form
@@ -96,10 +94,10 @@ export function RenameForm({
     >
       <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
       <button className="button" type="submit" disabled={busy || !name.trim()}>
-        Сохранить
+        {t('web.common.save')}
       </button>
       <button className="button button-secondary" type="button" onClick={onCancel}>
-        Отмена
+        {t('web.common.cancel')}
       </button>
     </form>
   )

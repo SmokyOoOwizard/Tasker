@@ -1,52 +1,45 @@
 using HotChocolate;
 using HotChocolate.Execution;
-using Microsoft.AspNetCore.Http;
 using Tasker.Core;
-using Tasker.Core.Locks;
 
 namespace Tasker.Web.Graph;
 
 internal sealed class GraphErrorFilter : IErrorFilter
 {
-    public const string BadRequest = "BAD_REQUEST";
-    public const string Unauthenticated = "UNAUTHENTICATED";
-    public const string Forbidden = "FORBIDDEN";
-    public const string NotFound = "NOT_FOUND";
-    public const string Conflict = "CONFLICT";
-
     public IError OnError(IError error)
     {
-        if (!IsDomainError(error.Exception))
+        if (error.Exception is TaskerException refusal)
+            return Refuse(error.WithMessage(refusal.Message), refusal.Error.Code, refusal.Status, refusal.Error.Params, refusal.Error.Usages).WithException(null);
+        if (error.Exception != null)
             return error;
-
-        var exception = error.Exception!;
-        var (code, status) = exception switch
-        {
-            GraphUnauthenticatedException => (Unauthenticated, StatusCodes.Status401Unauthorized),
-            TaskerValidationException => (BadRequest, StatusCodes.Status400BadRequest),
-            TaskerNotFoundException => (NotFound, StatusCodes.Status404NotFound),
-            TaskerForbiddenException => (Forbidden, StatusCodes.Status403Forbidden),
-            _ => (Conflict, StatusCodes.Status409Conflict)
-        };
-
-        var result = error.WithMessage(exception.Message).WithCode(code).SetExtension("status", status);
-        if (exception is TaskerConflictException conflict)
-            result = result.SetExtension("conflict", TaskerApi.ConflictCodeName(conflict.Code));
-        if (exception is TaskerLockedException locked)
-            result = result.SetExtension("heldBy", new Dictionary<string, object?>
-            {
-                ["name"] = locked.HeldBy.Holder.Name,
-                ["expiresAt"] = locked.HeldBy.ExpiresAt
-            });
-
-        return result.WithException(null);
+        return Refuse(error, TaskerErrors.Invalid(error.Message).Error.Code, 400, new Dictionary<string, object?>(), []);
     }
 
-    public static bool IsDomainError(Exception? exception) =>
-        exception is GraphUnauthenticatedException or TaskerValidationException or TaskerNotFoundException
-            or TaskerForbiddenException or TaskerConflictException;
+    private static IError Refuse(IError error, string code, int status, IReadOnlyDictionary<string, object?> parameters, IReadOnlyList<ErrorUsage> usages) =>
+        error.WithCode(code)
+            .SetExtension("status", status)
+            .SetExtension("params", parameters.ToDictionary(x => x.Key, x => x.Value))
+            .SetExtension("usages", usages.Select(Usage).ToArray());
 
-    public static bool IsUnauthenticated(IError error) => error.Code == Unauthenticated;
+    private static Dictionary<string, object?> Usage(ErrorUsage usage)
+    {
+        var result = new Dictionary<string, object?> { ["kind"] = usage.Kind };
+        if (usage.Name != null)
+            result["name"] = usage.Name;
+        if (usage.Count != null)
+            result["count"] = usage.Count;
+        if (usage.Tasks != null)
+            result["tasks"] = usage.Tasks.ToArray();
+        if (usage.Board != null)
+            result["board"] = usage.Board;
+        if (usage.Column != null)
+            result["column"] = usage.Column;
+        return result;
+    }
+
+    public static bool IsRefused(IError error) => error.Extensions?.ContainsKey("status") == true;
+
+    public static bool IsDomainError(Exception? exception) => exception is TaskerException;
+
+    public static bool IsUnauthenticated(IError error) => error.Extensions?.TryGetValue("status", out var status) == true && status is 401;
 }
-
-internal sealed class GraphUnauthenticatedException() : Exception("Sign in to read data");

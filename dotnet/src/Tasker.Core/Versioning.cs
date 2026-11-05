@@ -19,8 +19,7 @@ public static class Versioning
     public const string New = "";
 
     /// <summary>Сущность уже изменена кем-то другим.</summary>
-    public static TaskerConflictException Modified(string subject) =>
-        new($"{subject} was changed by someone else; reload it and try again", ConflictCode.Modified);
+    public static TaskerConflictException Modified(ErrorSubject subject) => TaskerErrors.Modified(subject);
 
     /// <summary>
     /// Версия от клиента обязательна и должна совпадать с текущей. Вызывается после того, как сущность
@@ -28,10 +27,10 @@ public static class Versioning
     /// Это быстрая проверка до записи; окончательная — атомарно в хранилище.
     /// </summary>
     /// <returns>Ожидаемая версия — для передачи в хранилище.</returns>
-    public static string Check(string current, string? expected, string subject)
+    public static string Check(string current, string? expected, ErrorSubject subject)
     {
         if (string.IsNullOrWhiteSpace(expected))
-            throw new TaskerValidationException("Version is required: pass the version of the entity you are changing");
+            throw TaskerErrors.Invalid("Version is required: pass the version of the entity you are changing");
         if (current != expected)
             throw Modified(subject);
         return expected;

@@ -134,7 +134,7 @@ internal class UserStorage(AppDbContext context) : IUserStorage
     // Нормализация на стороне .NET, а не SQL: у SQLite UPPER() не работает с кириллицей.
     private static string Normalize(string value) => value.Trim().ToUpperInvariant();
 
-    private static TaskerConflictException Taken() => new("Username or email is already taken");
+    private static TaskerConflictException Taken() => Tasker.Core.TaskerErrors.UsernameOrEmailTaken();
 
     private static User Map(UserDbModel model) => new()
     {

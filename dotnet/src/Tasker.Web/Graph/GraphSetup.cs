@@ -78,8 +78,7 @@ public static class GraphSetup
 
         if (body is not { Query.Length: > 0 })
         {
-            http.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await http.Response.WriteAsJsonAsync(new { errors = new[] { new { message = "Body must be a GraphQL request: {query, operationName, variables}" } } });
+            await WriteRejected(http, ["Body must be a GraphQL request: {query, operationName, variables}"]);
             return;
         }
 
@@ -110,6 +109,12 @@ public static class GraphSetup
         var failure = operation.Errors?.Select(x => x.Exception).FirstOrDefault(x => x != null && !GraphErrorFilter.IsDomainError(x));
         if (failure != null)
             ExceptionDispatchInfo.Throw(failure);
+
+        if (operation.Data == null && operation.Errors is { } rejected && rejected.Any(x => !GraphErrorFilter.IsRefused(x)))
+        {
+            await WriteRejected(http, rejected.Select(x => x.Message));
+            return;
+        }
 
         http.Response.StatusCode = operation.Errors?.Any(GraphErrorFilter.IsUnauthenticated) == true
             ? StatusCodes.Status401Unauthorized
@@ -156,6 +161,19 @@ public static class GraphSetup
         catch (OperationCanceledException)
         {
         }
+    }
+
+    private static async Task WriteRejected(HttpContext http, IEnumerable<string> messages)
+    {
+        http.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await http.Response.WriteAsJsonAsync(new
+        {
+            errors = messages.Select(TaskerErrors.Invalid).Select(x => new
+            {
+                message = x.Message,
+                extensions = new { status = x.Status, code = x.Code, @params = x.Error.Params, usages = x.Error.Usages }
+            })
+        });
     }
 
     private static async Task<string> Format(IExecutionResult result, CancellationToken ct)
