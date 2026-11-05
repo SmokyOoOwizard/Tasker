@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { useT } from '../i18n'
 import { useCurrentProjectId, useProjects } from '../projects'
 import { IconCheck, IconChevronDown, IconFolder, IconPlus } from './Icons'
 import '../styles/project-switcher.css'
 
 const closeDelayMs = 150
 
-/** Выбор проекта в сайдбаре: список всплывает справа при наведении. */
 function ProjectSwitcher() {
+  const t = useT()
   const { data: projects } = useProjects()
   const projectId = useCurrentProjectId()
   const location = useLocation()
@@ -43,7 +44,6 @@ function ProjectSwitcher() {
 
   const select = (id: string) => {
     setOpen(false)
-    // Тот же раздел (задачи, доски, вкладка настроек), но в другом проекте.
     const [, , , section, tab] = location.pathname.split('/')
     const path = section === 'settings' && tab ? `settings/${tab}` : (section ?? 'tasks')
     navigate(`/projects/${id}/${current ? path : 'tasks'}`)
@@ -67,7 +67,7 @@ function ProjectSwitcher() {
         type="button"
         className="project-switcher-trigger"
         aria-expanded={open}
-        title={current?.name ?? 'Проект не выбран'}
+        title={current?.name ?? t('web.projects.noneSelected')}
         onFocus={openNow}
         onBlur={scheduleClose}
         onClick={projects.length === 0 ? create : openNow}
@@ -75,7 +75,7 @@ function ProjectSwitcher() {
         <span className="project-switcher-icon">
           <IconFolder />
         </span>
-        <span className="project-switcher-name">{current?.name ?? (projects.length ? 'Проект' : 'Нет проекта')}</span>
+        <span className="project-switcher-name">{current?.name ?? (projects.length ? t('web.settings.project') : t('web.projects.none'))}</span>
         <span className="project-switcher-chevron">
           <IconChevronDown />
         </span>
@@ -83,7 +83,7 @@ function ProjectSwitcher() {
 
       {open && (
         <div className="project-switcher-flyout">
-          <div className="project-switcher-flyout-title">Проекты</div>
+          <div className="project-switcher-flyout-title">{t('web.projects.title')}</div>
           <ul className="project-switcher-list">
             {projects.map((project) => (
               <li key={project.id}>
@@ -106,7 +106,7 @@ function ProjectSwitcher() {
           </ul>
           <button type="button" className="project-switcher-create" onClick={create} onFocus={openNow} onBlur={scheduleClose}>
             <IconPlus />
-            Новый проект
+            {t('web.projects.new')}
           </button>
         </div>
       )}

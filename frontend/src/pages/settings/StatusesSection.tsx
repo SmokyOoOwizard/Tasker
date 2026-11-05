@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api } from '../../api'
 import { IconEdit, IconTrash } from '../../components/Icons'
+import UsagesList from '../../components/UsagesList'
 import { LockBadge } from '../../components/LockBadge'
 import { DescriptionInput, IconButton, ItemDescription } from '../../components/ui'
 import { useAction } from '../../hooks/useAction'
+import { useT } from '../../i18n'
 import { useEditLock } from '../../hooks/useEditLock'
 import type { SettingsSectionProps, Status } from '../../types'
 
-// Цвет нового статуса — следующий из палитры, чтобы статусы сразу различались.
 const palette = ['#64748b', '#6366f1', '#f59e0b', '#14b8a6', '#e11d48', '#8b5cf6', '#0ea5e9', '#22c55e']
 const nextColor = (count: number) => palette[count % palette.length]
 
-/** Статусы проекта: название и цвет. Порядок у статусов свой в каждом наборе (см. StatusSetsSection). */
 function StatusesSection({ base, settings, reload, locks }: SettingsSectionProps) {
-  const { busy, error, setError, run } = useAction(reload)
+  const t = useT()
+  const { busy, error, usages, setError, run } = useAction(reload)
   const editLock = useEditLock()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -29,7 +30,6 @@ function StatusesSection({ base, settings, reload, locks }: SettingsSectionProps
     }
   }
 
-  // Переименование открывается, только если запись не правит другой: на время формы она блокируется.
   const startEdit = async (status: Status) => {
     const problem = await editLock.lock(`${base}/statuses/${status.id}`)
     if (problem) setError(problem)
@@ -45,16 +45,16 @@ function StatusesSection({ base, settings, reload, locks }: SettingsSectionProps
     run(() => api(`${base}/statuses/${status.id}`, { method: 'PATCH', body: { ...changes, version: status.version } }))
 
   const remove = (status: Status) => {
-    if (!confirm(`Удалить статус «${status.name}»?`)) return
+    if (!confirm(t('web.statuses.confirmDelete', status.name))) return
     run(() => api(`${base}/statuses/${status.id}?version=${encodeURIComponent(status.version)}`, { method: 'DELETE' }))
   }
 
   return (
     <section className="card">
-      <h2 className="card-title">Статусы</h2>
+      <h2 className="card-title">{t('web.settings.statuses')}</h2>
 
       {settings.statuses.length === 0 ? (
-        <p className="muted">Статусов пока нет. Добавьте, например, «Открыта», «В работе» и «Готово».</p>
+        <p className="muted">{t('web.statuses.empty')}</p>
       ) : (
         <ul className="item-list">
           {settings.statuses.map((status) => {
@@ -77,10 +77,10 @@ function StatusesSection({ base, settings, reload, locks }: SettingsSectionProps
                   </span>
                   {other && <LockBadge lock={other} />}
                   <span className="item-actions">
-                    <IconButton title="Изменить" disabled={!!other} onClick={() => startEdit(status)}>
+                    <IconButton title={t('web.common.edit')} disabled={!!other} onClick={() => startEdit(status)}>
                       <IconEdit />
                     </IconButton>
-                    <IconButton title="Удалить" danger disabled={busy || !!other} onClick={() => remove(status)}>
+                    <IconButton title={t('web.common.delete')} danger disabled={busy || !!other} onClick={() => remove(status)}>
                       <IconTrash />
                     </IconButton>
                   </span>
@@ -93,20 +93,20 @@ function StatusesSection({ base, settings, reload, locks }: SettingsSectionProps
       )}
 
       {error && <div className="error-message">{error}</div>}
+      <UsagesList usages={usages} />
 
       <form className="inline-form" onSubmit={add}>
-        <input type="color" className="color-input" title="Цвет" value={color} onChange={(e) => setColor(e.target.value)} />
-        <input className="input" placeholder="Новый статус" value={name} onChange={(e) => setName(e.target.value)} />
-        <DescriptionInput value={description} onChange={setDescription} placeholder="Описание: что значит статус и когда его ставить (необязательно)" />
+        <input type="color" className="color-input" title={t('web.statuses.color')} value={color} onChange={(e) => setColor(e.target.value)} />
+        <input className="input" placeholder={t('web.statuses.newPlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
+        <DescriptionInput value={description} onChange={setDescription} placeholder={t('web.statuses.descriptionPlaceholder')} />
         <button className="button" type="submit" disabled={busy || !name.trim()}>
-          Добавить
+          {t('web.common.add')}
         </button>
       </form>
     </section>
   )
 }
 
-/** Правка названия и описания статуса в строке списка. */
 function StatusEditForm({
   status,
   busy,
@@ -118,6 +118,7 @@ function StatusEditForm({
   onSave: (changes: { name: string; description: string }) => void
   onCancel: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState(status.name)
   const [description, setDescription] = useState(status.description)
   return (
@@ -130,22 +131,19 @@ function StatusEditForm({
       onKeyDown={(e) => e.key === 'Escape' && onCancel()}
     >
       <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-      <DescriptionInput value={description} onChange={setDescription} placeholder="Описание (необязательно)" />
+      <DescriptionInput value={description} onChange={setDescription} placeholder={t('web.statuses.descriptionOptional')} />
       <button className="button" type="submit" disabled={busy || !name.trim()}>
-        Сохранить
+        {t('web.common.save')}
       </button>
       <button className="button button-secondary" type="button" onClick={onCancel}>
-        Отмена
+        {t('web.common.cancel')}
       </button>
     </form>
   )
 }
 
-/**
- * Цвет статуса. Сохраняется, когда выбор в палитре затих: палитра шлёт изменения непрерывно,
- * а PATCH на каждое из них менял бы версию и конфликтовал сам с собой.
- */
 function ColorInput({ value, onCommit }: { value: string; onCommit: (color: string) => void }) {
+  const t = useT()
   const [color, setColor] = useState(value)
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(timer.current), [])
@@ -154,7 +152,7 @@ function ColorInput({ value, onCommit }: { value: string; onCommit: (color: stri
     <input
       type="color"
       className="color-input"
-      title="Цвет"
+      title={t('web.statuses.color')}
       value={color}
       onChange={(e) => {
         const next = e.target.value

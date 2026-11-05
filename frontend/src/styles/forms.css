@@ -96,3 +96,25 @@
   background: var(--accent-teal-tint);
   border-left: 3px solid var(--accent-teal);
 }
+
+.usage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: var(--surface-tint);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.usage-label {
+  color: var(--text-muted);
+  margin-right: 0.5rem;
+}
+
+.usage-value {
+  color: var(--text-primary);
+}

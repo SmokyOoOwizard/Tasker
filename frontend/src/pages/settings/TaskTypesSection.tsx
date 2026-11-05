@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { api } from '../../api'
 import { IconEdit, IconTrash } from '../../components/Icons'
+import UsagesList from '../../components/UsagesList'
 import { LockBadge } from '../../components/LockBadge'
 import { DescriptionInput, IconButton, ItemDescription } from '../../components/ui'
 import { useAction } from '../../hooks/useAction'
+import { useT } from '../../i18n'
 import { useEditLock } from '../../hooks/useEditLock'
 import type { SettingsSectionProps, StatusSet, TaskType } from '../../types'
 
-/** Типы задач: название и набор статусов, из которого задачи типа берут статус. */
 function TaskTypesSection({ base, settings, reload, locks }: SettingsSectionProps) {
-  const { busy, error, setError, run } = useAction(reload)
+  const t = useT()
+  const { busy, error, usages, setError, run } = useAction(reload)
   const editLock = useEditLock()
   const [editingId, setEditingId] = useState<string | null>(null)
   const setById = new Map(settings.statusSets.map((s) => [s.id, s]))
@@ -18,7 +20,6 @@ function TaskTypesSection({ base, settings, reload, locks }: SettingsSectionProp
   const create = (name: string, statusSetId: string, description: string) =>
     run(() => api(`${base}/task-types`, { method: 'POST', body: { name, statusSetId, description } }))
 
-  // Правка типа открывается, только если его не правит другой: на время формы он блокируется.
   const startEdit = async (type: TaskType) => {
     const problem = await editLock.lock(`${base}/task-types/${type.id}`)
     if (problem) setError(problem)
@@ -38,19 +39,19 @@ function TaskTypesSection({ base, settings, reload, locks }: SettingsSectionProp
   }
 
   const remove = (type: TaskType) => {
-    if (!confirm(`Удалить тип «${type.name}»?`)) return
+    if (!confirm(t('web.taskTypes.confirmDelete', type.name))) return
     run(() => api(`${base}/task-types/${type.id}?version=${encodeURIComponent(type.version)}`, { method: 'DELETE' }))
   }
 
   return (
     <section className="card">
-      <h2 className="card-title">Типы задач</h2>
+      <h2 className="card-title">{t('web.settings.taskTypes')}</h2>
 
       {sets.length === 0 ? (
-        <p className="muted">Сначала создайте набор статусов на вкладке «Статусы»: тип задачи берёт статусы из набора.</p>
+        <p className="muted">{t('web.taskTypes.needSet')}</p>
       ) : (
         <>
-          {settings.taskTypes.length === 0 && <p className="muted">Типов пока нет. Например: «Задача», «Баг», «Фича».</p>}
+          {settings.taskTypes.length === 0 && <p className="muted">{t('web.taskTypes.empty')}</p>}
           <ul className="item-list">
             {settings.taskTypes.map((type) => {
               const other = locks.byOther('taskType', type.id)
@@ -63,7 +64,7 @@ function TaskTypesSection({ base, settings, reload, locks }: SettingsSectionProp
                     initialSetId={type.statusSetId}
                     initialDescription={type.description}
                     busy={busy}
-                    submitLabel="Сохранить"
+                    submitLabel={t('web.common.save')}
                     onSubmit={(name, setId, description) => update(type, name, setId, description)}
                     onCancel={stopEdit}
                   />
@@ -76,10 +77,10 @@ function TaskTypesSection({ base, settings, reload, locks }: SettingsSectionProp
                     <span className="item-meta">{setById.get(type.statusSetId)?.name ?? '—'}</span>
                     {other && <LockBadge lock={other} />}
                     <span className="item-actions">
-                      <IconButton title="Изменить" disabled={!!other} onClick={() => startEdit(type)}>
+                      <IconButton title={t('web.common.edit')} disabled={!!other} onClick={() => startEdit(type)}>
                         <IconEdit />
                       </IconButton>
-                      <IconButton title="Удалить" danger disabled={busy || !!other} onClick={() => remove(type)}>
+                      <IconButton title={t('web.common.delete')} danger disabled={busy || !!other} onClick={() => remove(type)}>
                         <IconTrash />
                       </IconButton>
                     </span>
@@ -91,8 +92,9 @@ function TaskTypesSection({ base, settings, reload, locks }: SettingsSectionProp
           </ul>
 
           {error && <div className="error-message">{error}</div>}
+          <UsagesList usages={usages} />
 
-          <TaskTypeForm key={settings.taskTypes.length} sets={sets} initialName="" initialSetId={sets[0].id} initialDescription="" busy={busy} submitLabel="Добавить" onSubmit={create} />
+          <TaskTypeForm key={settings.taskTypes.length} sets={sets} initialName="" initialSetId={sets[0].id} initialDescription="" busy={busy} submitLabel={t('web.common.add')} onSubmit={create} />
         </>
       )}
     </section>
@@ -118,6 +120,7 @@ function TaskTypeForm({
   onSubmit: (name: string, statusSetId: string, description: string) => void
   onCancel?: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState(initialName)
   const [setId, setSetId] = useState(initialSetId)
   const [description, setDescription] = useState(initialDescription)
@@ -129,21 +132,21 @@ function TaskTypeForm({
 
   return (
     <form className="inline-form inline-form-row" onSubmit={submit} onKeyDown={(e) => e.key === 'Escape' && onCancel?.()}>
-      <input className="input" placeholder="Новый тип задачи" value={name} onChange={(e) => setName(e.target.value)} autoFocus={!!onCancel} />
-      <select className="input select" value={setId} onChange={(e) => setSetId(e.target.value)} title="Набор статусов">
+      <input className="input" placeholder={t('web.taskTypes.newPlaceholder')} value={name} onChange={(e) => setName(e.target.value)} autoFocus={!!onCancel} />
+      <select className="input select" value={setId} onChange={(e) => setSetId(e.target.value)} title={t('web.taskTypes.setTitle')}>
         {sets.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>
         ))}
       </select>
-      <DescriptionInput value={description} onChange={setDescription} placeholder="Описание: когда использовать этот тип (необязательно)" />
+      <DescriptionInput value={description} onChange={setDescription} placeholder={t('web.taskTypes.descriptionPlaceholder')} />
       <button className="button" type="submit" disabled={busy || !name.trim()}>
         {submitLabel}
       </button>
       {onCancel && (
         <button className="button button-secondary" type="button" onClick={onCancel}>
-          Отмена
+          {t('web.common.cancel')}
         </button>
       )}
     </form>

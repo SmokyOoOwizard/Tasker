@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import { signOut, useSession } from '../auth'
+import { useT, type Translate } from '../i18n'
 import { useCurrentProjectId } from '../projects'
 import { isDesktop } from '../workspace'
 import Avatar from './Avatar'
@@ -8,23 +9,22 @@ import { IconBoards, IconLogout, IconSettings, IconTasks } from './Icons'
 import ProjectSwitcher from './ProjectSwitcher'
 import '../styles/sidebar.css'
 
-// Кнопка «Выйти» не пропадает сразу, когда курсор уходит с профиля: успеть довести до неё.
 const closeDelayMs = 150
 
-// Разделы проекта; без выбранного проекта их нет.
-function projectItems(projectId: string): { icon: ReactElement; label: string; path: string }[] {
+function projectItems(projectId: string, t: Translate): { icon: ReactElement; label: string; path: string }[] {
   return [
-    { icon: <IconTasks />, label: 'Задачи', path: `/projects/${projectId}/tasks` },
-    { icon: <IconBoards />, label: 'Доски', path: `/projects/${projectId}/boards` },
-    { icon: <IconSettings />, label: 'Настройки', path: `/projects/${projectId}/settings` },
+    { icon: <IconTasks />, label: t('web.nav.tasks'), path: `/projects/${projectId}/tasks` },
+    { icon: <IconBoards />, label: t('web.nav.boards'), path: `/projects/${projectId}/boards` },
+    { icon: <IconSettings />, label: t('web.nav.settings'), path: `/projects/${projectId}/settings` },
   ]
 }
 
 function Sidebar() {
+  const t = useT()
   const user = useSession()?.user
   const navigate = useNavigate()
   const projectId = useCurrentProjectId()
-  const items = projectId ? projectItems(projectId) : []
+  const items = projectId ? projectItems(projectId, t) : []
 
   const [logoutOpen, setLogoutOpen] = useState(false)
   const closeTimer = useRef<number | null>(null)
@@ -56,7 +56,6 @@ function Sidebar() {
     await signOut()
   }
 
-  // Десктоп: входа нет, поэтому и выхода нет — только ссылка на настройки.
   const canLogout = !isDesktop && !!user
 
   return (
@@ -86,7 +85,7 @@ function Sidebar() {
         >
           <Avatar name={user?.username} className="sidebar-user-avatar" />
           <div className="sidebar-user-name" title={user?.username}>
-            {user?.username ?? 'Профиль'}
+            {user?.username ?? t('web.nav.profile')}
           </div>
         </NavLink>
 
@@ -94,7 +93,7 @@ function Sidebar() {
           <div className={logoutOpen ? 'sidebar-logout-flyout open' : 'sidebar-logout-flyout'}>
             <button type="button" className="sidebar-logout-btn" onClick={handleLogout} onFocus={openNow} onBlur={scheduleClose}>
               <IconLogout />
-              <span>Выйти</span>
+              <span>{t('web.nav.logout')}</span>
             </button>
           </div>
         )}

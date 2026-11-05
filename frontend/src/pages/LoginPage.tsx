@@ -1,15 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { register, signIn } from '../auth'
+import { errorText } from '../errors'
+import { useT } from '../i18n'
+import LanguageSelect from '../components/LanguageSelect'
 import { loadRegistrationOpen } from '../reads'
 import '../styles/forms.css'
 import '../styles/auth.css'
 
-/**
- * Экран входа (только сервер). Пока на сервере нет ни одного пользователя, вместо входа —
- * регистрация первого, он становится администратором.
- */
 function LoginPage() {
-  // null — ещё не знаем, открыта ли регистрация.
+  const t = useT()
   const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -25,10 +24,9 @@ function LoginPage() {
     setBusy(true)
     setError(null)
     try {
-      // Успех меняет сессию — App сам покажет приложение вместо этого экрана.
       await action(new FormData(e.currentTarget))
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(errorText(err))
       setBusy(false)
     }
   }
@@ -42,8 +40,8 @@ function LoginPage() {
       <div className="auth-card">
         <div className="auth-header">
           <div className="auth-logo">T</div>
-          <h1>{registrationOpen ? 'Добро пожаловать' : 'Вход'}</h1>
-          <p>{registrationOpen ? 'Создайте первого пользователя — он станет администратором' : 'Войдите в Tasker'}</p>
+          <h1>{registrationOpen ? t('web.login.welcome') : t('web.login.title')}</h1>
+          <p>{registrationOpen ? t('web.login.firstUserHint') : t('web.login.hint')}</p>
         </div>
 
         {registrationOpen ? (
@@ -52,39 +50,40 @@ function LoginPage() {
             onSubmit={submit((f) => register(field(f, 'username'), field(f, 'email'), field(f, 'password')))}
           >
             <div className="form-group">
-              <label htmlFor="username">Имя пользователя</label>
+              <label htmlFor="username">{t('web.common.username')}</label>
               <input id="username" name="username" autoComplete="username" required autoFocus />
             </div>
             <div className="form-group">
-              <label htmlFor="email">Почта</label>
+              <label htmlFor="email">{t('web.common.email')}</label>
               <input id="email" name="email" type="email" autoComplete="email" required />
             </div>
             <div className="form-group">
-              <label htmlFor="password">Пароль</label>
+              <label htmlFor="password">{t('web.common.password')}</label>
               <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
-              <span className="form-hint">Не короче 8 символов</span>
+              <span className="form-hint">{t('web.common.passwordMin')}</span>
             </div>
             {error && <div className="error-message">{error}</div>}
             <button className="button" type="submit" disabled={busy}>
-              Создать и войти
+              {t('web.login.register')}
             </button>
           </form>
         ) : (
           <form className="form" onSubmit={submit((f) => signIn(field(f, 'login'), field(f, 'password')))}>
             <div className="form-group">
-              <label htmlFor="login">Имя или почта</label>
+              <label htmlFor="login">{t('web.login.loginLabel')}</label>
               <input id="login" name="login" autoComplete="username" required autoFocus />
             </div>
             <div className="form-group">
-              <label htmlFor="password">Пароль</label>
+              <label htmlFor="password">{t('web.common.password')}</label>
               <input id="password" name="password" type="password" autoComplete="current-password" required />
             </div>
             {error && <div className="error-message">{error}</div>}
             <button className="button" type="submit" disabled={busy}>
-              Войти
+              {t('web.login.signIn')}
             </button>
           </form>
         )}
+        <LanguageSelect id="login-language" />
       </div>
     </div>
   )

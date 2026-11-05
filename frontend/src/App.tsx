@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router'
 import { updateSessionUser, useSession } from './auth'
+import { useT } from './i18n'
 import ProjectsProvider from './components/ProjectsProvider'
 import Sidebar from './components/Sidebar'
 import BoardsPage from './pages/BoardsPage'
@@ -26,10 +27,10 @@ function Layout() {
 }
 
 function Loading({ error }: { error?: string | null }) {
-  return <div className="page">{error ? <div className="error-message">{error}</div> : <p className="muted">Загрузка…</p>}</div>
+  const t = useT()
+  return <div className="page">{error ? <div className="error-message">{error}</div> : <p className="muted">{t('web.common.loading')}</p>}</div>
 }
 
-// Корень: последний открытый проект, а если проектов нет — создание первого.
 function DefaultRoute() {
   const { data: projects, error } = useProjects()
   if (!projects) return <Loading error={error} />
@@ -37,8 +38,6 @@ function DefaultRoute() {
   return <Navigate to={project ? `/projects/${project.id}/tasks` : '/new-project'} replace />
 }
 
-// Страницы проекта — под /projects/{id}/…: проект берётся из адреса (вкладку десктопа можно переоткрыть по адресу).
-// Недоступный или удалённый проект — на проект по умолчанию.
 function ProjectRoute() {
   const { projectId } = useParams()
   const { data: projects, error } = useProjects()
@@ -56,16 +55,13 @@ function ProjectRoute() {
 function App() {
   const signedIn = useSession() !== null
 
-  // Имя, почта или права могли измениться с прошлого входа — берём пользователя с сервера.
   useEffect(() => {
     if (!isDesktop && signedIn) loadMe().then(updateSessionUser, () => {})
   }, [signedIn])
 
-  // Сервер без входа: экран входа по любому адресу, после входа открывается тот же адрес.
   if (!isDesktop && !signedIn) return <LoginPage />
 
   return (
-    // Десктоп: адрес вкладки — /w/{папка}/…, маршруты — внутри него.
     <BrowserRouter basename={workspaceBase || undefined}>
       <Routes>
         <Route element={<Layout />}>
