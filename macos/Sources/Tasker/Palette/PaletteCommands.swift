@@ -12,6 +12,7 @@ struct PaletteActions {
     var createBoard: @MainActor () -> Void
     var editBoard: @MainActor (UUID) -> Void
     var showSeries: @MainActor (UUID) -> Void
+    var openSettings: @MainActor (SettingsPage) -> Void
     var chooseProject: @MainActor (UUID) -> Void
     var openWorkspace: @MainActor (String) -> Void
     var openFolder: @MainActor () -> Void
@@ -28,6 +29,7 @@ struct PaletteContext {
     var theme: AppTheme
     var isDark: Bool
     var language: AppLanguage
+    var settingsPages: [SettingsPage] = []
 }
 
 @MainActor
@@ -54,6 +56,14 @@ enum PaletteCommands {
                     result.append(PaletteEntry(
                         id: "board:" + id.uuidString, title: l.string(.paletteBoardEdit, name), detail: l.string(.paletteKindBoard),
                         icon: .mockup(.board), keywords: "board edit settings configure", run: { actions.editBoard(id) }))
+                }
+            }
+            if context.hasProject {
+                for page in context.settingsPages {
+                    result.append(PaletteEntry(
+                        id: "settings:" + page.rawValue, title: l.string(.paletteSettingsPage, l.string(page.titleKey)),
+                        detail: l.string(.paletteKindSettings), icon: .mockup(.gear), keywords: "settings " + page.keywords,
+                        run: { actions.openSettings(page) }))
                 }
             }
             for id in vocabulary.seriesOrder {

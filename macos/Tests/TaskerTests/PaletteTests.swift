@@ -76,6 +76,7 @@ struct PaletteTests {
             createBoard: { recorder.calls.append("create-board") },
             editBoard: { recorder.calls.append("edit-board:\($0)") },
             showSeries: { recorder.calls.append("series:\($0)") },
+            openSettings: { recorder.calls.append("settings:\($0.rawValue)") },
             chooseProject: { recorder.calls.append("project:\($0)") },
             openWorkspace: { recorder.calls.append("workspace:\($0)") },
             openFolder: { recorder.calls.append("folder") },

@@ -208,7 +208,7 @@ private struct SeriesEditSheet: View {
     }
 }
 
-private struct SeriesResolveSheet: View {
+struct SeriesResolveSheet: View {
     let model: SeriesPageModel
     @Environment(\.localizer) private var l
 

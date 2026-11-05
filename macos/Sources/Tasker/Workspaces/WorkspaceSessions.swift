@@ -19,6 +19,7 @@ final class WorkspaceTabSession: Identifiable {
     private(set) var seriesPage: UUID?
     var seriesPrefix: String?
     private(set) var boardEditor: BoardEditorModel?
+    var settingsPage = SettingsPage.series
 
     private var idleSection = AppSection.default
 
@@ -29,6 +30,8 @@ final class WorkspaceTabSession: Identifiable {
     @ObservationIgnored private var listClient: TaskerAPIClient?
     @ObservationIgnored private var listOwner: UUID?
     @ObservationIgnored private var pendingFilter: TaskListFilter?
+    @ObservationIgnored private var settingsStore: SettingsModel?
+    @ObservationIgnored private var settingsClient: TaskerAPIClient?
 
     init(tab: WorkspaceTab?, layout: WorkspaceLayout, live: LiveWorkspace, defaults: UserDefaults) {
         let id = tab?.id ?? UUID()
@@ -76,6 +79,7 @@ final class WorkspaceTabSession: Identifiable {
             seriesPage = nil
             seriesPrefix = nil
             closeBoardEditor()
+            closeSettings()
         }
         lastProject = project
     }
@@ -147,6 +151,40 @@ final class WorkspaceTabSession: Identifiable {
         boardEditor = nil
     }
 
+    var settingsModel: SettingsModel? { settingsStore }
+
+    func openSettings(_ page: SettingsPage? = nil) {
+        if let page { settingsPage = page }
+        setSection(.settings)
+    }
+
+    func attachSettings(project: UUID, client: TaskerAPIClient, localizer: Localizer) -> SettingsModel {
+        if let settingsStore, settingsStore.project == project, settingsClient === client {
+            return settingsStore
+        }
+        closeSettings()
+        let model = SettingsModel(project: project, source: GraphQLSettingsSource(client: client))
+        model.localizer = localizer
+        model.onNotice = { [weak self] text in self?.notice(text) }
+        model.onProjectDeleted = { [weak self] in self?.projectDeleted(client: client) }
+        settingsStore = model
+        settingsClient = client
+        model.load()
+        return model
+    }
+
+    func closeSettings() {
+        settingsStore?.release()
+        settingsStore = nil
+        settingsClient = nil
+    }
+
+    private func projectDeleted(client: TaskerAPIClient) {
+        closeSettings()
+        navigator.reset()
+        Task { _ = try? await client.graphQL.fetch(ProjectsQuery(limit: 200)) }
+    }
+
     private func apply(_ filter: TaskListFilter) {
         let visible = section == .tasks && listOwner != nil
         if visible, let listModel {
@@ -182,6 +220,7 @@ final class WorkspaceTabSession: Identifiable {
 
     func discard() {
         closeBoardEditor()
+        closeSettings()
         listModel?.stop()
         listModel = nil
         settings.removeTabData()
@@ -214,9 +253,11 @@ final class WorkspaceSessions {
 
     func releaseEditorLocks() -> Task<Void, Never>? {
         let editors = sessions.values.compactMap(\.boardEditor)
-        guard !editors.isEmpty else { return nil }
+        let settings = sessions.values.compactMap(\.settingsModel)
+        guard !editors.isEmpty || !settings.isEmpty else { return nil }
         return Task { @MainActor in
             for editor in editors { await editor.releaseNow() }
+            for model in settings { await model.releaseNow() }
         }
     }
 
