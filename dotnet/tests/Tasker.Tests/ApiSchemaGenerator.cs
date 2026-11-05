@@ -26,7 +26,7 @@ internal static class ApiSchemaGenerator
 
     private sealed record Surface(JsonObject Document, string[] Routes, HashSet<string> Secured);
 
-    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true, NewLine = "\n", Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     public static async Task<string> Build()
     {
