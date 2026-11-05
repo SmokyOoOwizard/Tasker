@@ -801,25 +801,31 @@ extension Components {
             public var color: Swift.String
             /// - Remark: Generated from `#/components/schemas/CreateStatus/description`.
             public var description: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CreateStatus/icon`.
+            public var icon: Swift.String?
             /// Creates a new `CreateStatus`.
             ///
             /// - Parameters:
             ///   - name:
             ///   - color:
             ///   - description:
+            ///   - icon:
             public init(
                 name: Swift.String,
                 color: Swift.String,
-                description: Swift.String? = nil
+                description: Swift.String? = nil,
+                icon: Swift.String? = nil
             ) {
                 self.name = name
                 self.color = color
                 self.description = description
+                self.icon = icon
             }
             public enum CodingKeys: String, CodingKey {
                 case name
                 case color
                 case description
+                case icon
             }
         }
         /// - Remark: Generated from `#/components/schemas/CreateStatusSet`.
@@ -2118,6 +2124,8 @@ extension Components {
             public var color: Swift.String
             /// - Remark: Generated from `#/components/schemas/Status/description`.
             public var description: Swift.String
+            /// - Remark: Generated from `#/components/schemas/Status/icon`.
+            public var icon: Swift.String
             /// - Remark: Generated from `#/components/schemas/Status/version`.
             public var version: Swift.String
             /// Creates a new `Status`.
@@ -2128,6 +2136,7 @@ extension Components {
             ///   - name:
             ///   - color:
             ///   - description:
+            ///   - icon:
             ///   - version:
             public init(
                 id: Swift.String,
@@ -2135,6 +2144,7 @@ extension Components {
                 name: Swift.String,
                 color: Swift.String,
                 description: Swift.String,
+                icon: Swift.String,
                 version: Swift.String
             ) {
                 self.id = id
@@ -2142,6 +2152,7 @@ extension Components {
                 self.name = name
                 self.color = color
                 self.description = description
+                self.icon = icon
                 self.version = version
             }
             public enum CodingKeys: String, CodingKey {
@@ -2150,6 +2161,7 @@ extension Components {
                 case name
                 case color
                 case description
+                case icon
                 case version
             }
         }
@@ -3093,6 +3105,8 @@ extension Components {
             public var version: Swift.String?
             /// - Remark: Generated from `#/components/schemas/UpdateStatus/description`.
             public var description: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/UpdateStatus/icon`.
+            public var icon: Swift.String?
             /// Creates a new `UpdateStatus`.
             ///
             /// - Parameters:
@@ -3100,22 +3114,26 @@ extension Components {
             ///   - color:
             ///   - version:
             ///   - description:
+            ///   - icon:
             public init(
                 name: Swift.String? = nil,
                 color: Swift.String? = nil,
                 version: Swift.String? = nil,
-                description: Swift.String? = nil
+                description: Swift.String? = nil,
+                icon: Swift.String? = nil
             ) {
                 self.name = name
                 self.color = color
                 self.version = version
                 self.description = description
+                self.icon = icon
             }
             public enum CodingKeys: String, CodingKey {
                 case name
                 case color
                 case version
                 case description
+                case icon
             }
         }
         /// - Remark: Generated from `#/components/schemas/UpdateStatusSet`.

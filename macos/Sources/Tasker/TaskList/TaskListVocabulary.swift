@@ -55,6 +55,13 @@ enum StatusGlyph: Hashable, Sendable {
     case named(StatusIconName)
     case progress(Double)
 
+    static func positional(index: Int?, count: Int) -> StatusGlyph {
+        guard let index, index > 0 else { return .named(.dashed) }
+        let last = count - 1
+        if last > 0, index >= last { return .named(.done) }
+        return .progress(last > 0 ? Double(index) / Double(last) : 0)
+    }
+
     var primitives: [StatusIconPrimitive] {
         switch self {
         case .named(let name):
@@ -78,6 +85,7 @@ struct TaskListVocabulary: Hashable, Sendable {
         var id: UUID
         var name: String
         var color: String
+        var icon = ""
     }
 
     struct TypeField: Hashable, Sendable {
@@ -157,15 +165,18 @@ struct TaskListVocabulary: Hashable, Sendable {
     }
 
     func glyph(status statusId: UUID, type typeId: UUID) -> StatusGlyph {
+        if let chosen = chosenGlyph(statusId) { return chosen }
         let ids = types[typeId].flatMap { statusSets[$0.statusSetId] } ?? statuses.map(\.id)
         guard let index = ids.firstIndex(of: statusId) else { return .named(.dashed) }
-        if index == 0 { return .named(.dashed) }
-        let last = ids.count - 1
-        if last > 0, index >= last { return .named(.done) }
-        return .progress(last > 0 ? Double(index) / Double(last) : 0)
+        return .positional(index: index, count: ids.count)
+    }
+
+    private func chosenGlyph(_ statusId: UUID) -> StatusGlyph? {
+        status(statusId).flatMap { StatusIconName(rawValue: $0.icon) }.map { .named($0) }
     }
 
     func glyph(status statusId: UUID) -> StatusGlyph {
+        if let chosen = chosenGlyph(statusId) { return chosen }
         let type = typeOrder.first { types[$0].flatMap { statusSets[$0.statusSetId] }?.contains(statusId) ?? false }
             ?? types.first { statusSets[$0.value.statusSetId]?.contains(statusId) ?? false }?.key
         guard let type else { return .named(.dashed) }
@@ -230,7 +241,7 @@ struct TaskListVocabulary: Hashable, Sendable {
 
 extension TaskListVocabulary {
     init(_ project: TaskListVocabularyQuery.Data.Project) {
-        statuses = project.statuses.data.map { Status(id: $0.id, name: $0.name, color: $0.color) }
+        statuses = project.statuses.data.map { Status(id: $0.id, name: $0.name, color: $0.color, icon: $0.icon) }
         statusSets = Dictionary(project.statusSets.data.map { ($0.id, $0.statusIds) }, uniquingKeysWith: { first, _ in first })
         types = Dictionary(project.taskTypes.data.map { ($0.id, TaskType(name: $0.name, statusSetId: $0.statusSetId, fields: $0.fields.map { TypeField(fieldId: $0.fieldId, required: $0.required) })) }, uniquingKeysWith: { first, _ in first })
         typeOrder = project.taskTypes.data.map(\.id)

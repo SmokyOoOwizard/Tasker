@@ -50,10 +50,52 @@ struct SettingsSeriesItem: Hashable, Sendable, Identifiable {
     var version: String
 }
 
+struct SettingsTypeField: Hashable, Sendable, Identifiable {
+    var fieldId: UUID
+    var required: Bool
+
+    var id: UUID { fieldId }
+}
+
 struct SettingsTypeItem: Hashable, Sendable, Identifiable {
     var id: UUID
     var name: String
-    var fieldIds: [UUID]
+    var description = ""
+    var statusSetId: UUID?
+    var fields: [SettingsTypeField] = []
+    var version = ""
+
+    var fieldIds: [UUID] { fields.map(\.fieldId) }
+}
+
+struct SettingsStatusItem: Hashable, Sendable, Identifiable {
+    var id: UUID
+    var name: String
+    var color: String
+    var description: String
+    var icon: String
+    var version: String
+
+    var iconName: StatusIconName? { StatusIconName(rawValue: icon) }
+}
+
+struct SettingsStatusSetItem: Hashable, Sendable, Identifiable {
+    var id: UUID
+    var name: String
+    var statusIds: [UUID]
+    var version: String
+}
+
+struct SettingsBoardColumnItem: Hashable, Sendable {
+    var name: String
+    var statusIds: [UUID]
+    var dropStatusIds: [UUID]
+}
+
+struct SettingsBoardItem: Hashable, Sendable {
+    var name: String
+    var statusSetIds: [UUID]
+    var columns: [SettingsBoardColumnItem]
 }
 
 struct SettingsBoardCondition: Hashable, Sendable {
@@ -86,12 +128,23 @@ struct SettingsCatalog: Hashable, Sendable {
     var linkTypes: [SettingsLinkTypeItem] = []
     var series: [SettingsSeriesItem] = []
     var types: [SettingsTypeItem] = []
+    var statuses: [SettingsStatusItem] = []
+    var statusSets: [SettingsStatusSetItem] = []
+    var boards: [SettingsBoardItem] = []
     var conditions: [SettingsBoardCondition] = []
     var health = SettingsHealth()
 
     func field(_ id: UUID?) -> SettingsFieldItem? { fields.first { $0.id == id } }
     func enumeration(_ id: UUID?) -> SettingsEnumItem? { enums.first { $0.id == id } }
     func fields(of enumeration: UUID) -> [SettingsFieldItem] { fields.filter { $0.enumId == enumeration } }
+    func glyph(of status: SettingsStatusItem, in set: SettingsStatusSetItem? = nil) -> StatusGlyph {
+        if let named = status.iconName { return .named(named) }
+        guard let set = set ?? statusSets.first(where: { $0.statusIds.contains(status.id) }) else { return .named(.dashed) }
+        return .positional(index: set.statusIds.firstIndex(of: status.id), count: set.statusIds.count)
+    }
+
+    func status(_ id: UUID?) -> SettingsStatusItem? { statuses.first { $0.id == id } }
+    func statusSet(_ id: UUID?) -> SettingsStatusSetItem? { statusSets.first { $0.id == id } }
 }
 
 struct SettingsTaskBrief: Hashable, Sendable, Identifiable {
@@ -132,6 +185,9 @@ enum SettingsLockTarget: Hashable, Sendable {
     case enumeration(UUID)
     case linkType(UUID)
     case series(UUID)
+    case status(UUID)
+    case statusSet(UUID)
+    case taskType(UUID)
 }
 
 enum FieldValueChoice: Hashable, Sendable {
@@ -144,6 +200,11 @@ struct FieldChangeRequest: Hashable, Sendable {
     var clearUnconvertible = true
     var keepFirst: Bool?
     var mapping: [String: String] = [:]
+}
+
+enum RemovedFieldChoice: Hashable, Sendable {
+    case clear
+    case keep
 }
 
 enum EnumRemovalChoice: Hashable, Sendable {
@@ -191,6 +252,22 @@ enum SettingsRules {
     static func reference(_ task: SettingsTaskBrief, prefixes: [UUID: String]) -> String {
         if let number = task.numbers.first, let prefix = prefixes[number.seriesId] { return "\(prefix)-\(number.number)" }
         return task.title
+    }
+
+    static func validColor(_ text: String) -> Bool {
+        let scalars = Array(text.unicodeScalars)
+        guard scalars.count == 7, scalars[0] == "#" else { return false }
+        return scalars.dropFirst().allSatisfy { CharacterSet(charactersIn: "0123456789abcdefABCDEF").contains($0) }
+    }
+
+    static func removedFields(old: [SettingsTypeField], new: [SettingsTypeField]) -> [UUID] {
+        let kept = Set(new.map(\.fieldId))
+        return old.map(\.fieldId).filter { !kept.contains($0) }
+    }
+
+    static func lostStatuses(old: [UUID], new: [UUID]) -> [UUID] {
+        let kept = Set(new)
+        return old.filter { !kept.contains($0) }
     }
 
     static func canRemoveMember(_ member: SettingsMember, among members: [SettingsMember]) -> Bool {

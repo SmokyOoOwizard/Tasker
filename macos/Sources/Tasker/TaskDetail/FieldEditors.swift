@@ -302,11 +302,17 @@ struct ChoicePopover: View {
     struct Option: Hashable, Identifiable {
         var id: String
         var name: String
+        var detail: String?
+        var keywords = ""
+        var glyph: StatusGlyph?
+        var tint: Color?
     }
 
     let title: String
     let options: [Option]
     let selected: [String]
+    var single = false
+    var placeholder: String?
     let change: ([String]) -> Void
     @Environment(\.localizer) private var l
     @State private var query = ""
@@ -315,7 +321,7 @@ struct ChoicePopover: View {
     private var shown: [Option] {
         let text = query.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return options }
-        return options.filter { $0.name.localizedCaseInsensitiveContains(text) }
+        return options.filter { $0.name.localizedCaseInsensitiveContains(text) || $0.keywords.localizedCaseInsensitiveContains(text) }
     }
 
     var body: some View {
@@ -324,7 +330,7 @@ struct ChoicePopover: View {
                 .font(.design(DesignTypography.baseSize, weight: DesignTypography.semiboldWeight))
                 .padding(.horizontal, DesignSpacing.toastPadX)
                 .padding(.top, DesignSpacing.gap10)
-            TextField(l.string(.taskListSortSearch), text: $query)
+            TextField(placeholder ?? l.string(.taskListSortSearch), text: $query)
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .padding(.horizontal, DesignSpacing.toastPadX)
@@ -338,12 +344,21 @@ struct ChoicePopover: View {
                     ForEach(shown) { option in
                         let on = selected.contains(option.id)
                         Button {
-                            change(on ? selected.filter { $0 != option.id } : selected + [option.id])
+                            change(single ? [option.id] : (on ? selected.filter { $0 != option.id } : selected + [option.id]))
                         } label: {
                             HStack(spacing: DesignSpacing.gap8) {
-                                Image(systemName: on ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(on ? DesignColor.acc.color : DesignColor.dim.color)
-                                Text(verbatim: option.name)
+                                Image(systemName: single ? (on ? "checkmark" : "circle.fill") : (on ? "checkmark.square.fill" : "square"))
+                                    .foregroundStyle(on ? DesignColor.acc.color : single ? .clear : DesignColor.dim.color)
+                                if let glyph = option.glyph {
+                                    GlyphView(glyph: glyph, color: option.tint ?? DesignColor.mut.color)
+                                }
+                                Text(verbatim: option.name).lineLimit(1)
+                                if let detail = option.detail, !detail.isEmpty {
+                                    Text(verbatim: detail)
+                                        .font(.design(DesignTypography.smallSize))
+                                        .foregroundStyle(DesignColor.dim.color)
+                                        .lineLimit(1)
+                                }
                                 Spacer(minLength: 0)
                             }
                             .padding(.horizontal, DesignSpacing.gap10)
@@ -358,7 +373,7 @@ struct ChoicePopover: View {
             .frame(height: 220)
         }
         .font(.design(DesignTypography.baseSize))
-        .frame(width: 280)
+        .frame(width: single ? 340 : 280)
         .task {
             try? await Task.sleep(for: .milliseconds(150))
             focused = true

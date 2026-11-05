@@ -19,7 +19,7 @@ final class WorkspaceTabSession: Identifiable {
     private(set) var seriesPage: UUID?
     var seriesPrefix: String?
     private(set) var boardEditor: BoardEditorModel?
-    var settingsPage = SettingsPage.series
+    var settingsPage = SettingsPage.statuses
 
     private var idleSection = AppSection.default
 

@@ -317,6 +317,138 @@ final class SettingsModel {
         return result
     }
 
+    func statusUsage(of item: SettingsStatusItem) async -> [SettingsUsage] {
+        guard let catalog else { return [] }
+        var uses: [SettingsUsage] = []
+        if let page = try? await source.tasks(project: project, filter: [], statusIds: [item.id], typeIds: nil, cap: Self.usageCap), page.total > 0 {
+            let prefixes = prefixes
+            let shown = page.items.prefix(6).map { SettingsRules.reference($0, prefixes: prefixes) }
+            uses.append(SettingsUsage(kind: .tasks(page.total), name: shown.joined(separator: ", ") + (page.total > 6 ? " …" : "")))
+        }
+        for set in catalog.statusSets where set.statusIds.contains(item.id) {
+            uses.append(SettingsUsage(kind: .statusSet, name: set.name))
+        }
+        for board in catalog.boards {
+            for column in board.columns where column.statusIds.contains(item.id) || column.dropStatusIds.contains(item.id) {
+                uses.append(SettingsUsage(kind: .board(board.name), name: column.name))
+            }
+        }
+        return uses
+    }
+
+    func statusRemovalUsage(from set: SettingsStatusSetItem, lost: [UUID]) async -> [SettingsUsage] {
+        guard let catalog, !lost.isEmpty else { return [] }
+        let typeIds = catalog.types.filter { $0.statusSetId == set.id }.map(\.id)
+        guard !typeIds.isEmpty,
+              let page = try? await source.tasks(project: project, filter: [], statusIds: lost, typeIds: typeIds, cap: Self.usageCap), page.total > 0
+        else { return [] }
+        let prefixes = prefixes
+        let shown = page.items.prefix(6).map { SettingsRules.reference($0, prefixes: prefixes) }
+        return [SettingsUsage(kind: .tasks(page.total), name: shown.joined(separator: ", ") + (page.total > 6 ? " …" : ""))]
+    }
+
+    func statusSetUsage(of item: SettingsStatusSetItem) -> [SettingsUsage] {
+        guard let catalog else { return [] }
+        var uses: [SettingsUsage] = []
+        for type in catalog.types where type.statusSetId == item.id {
+            uses.append(SettingsUsage(kind: .type, name: type.name))
+        }
+        for board in catalog.boards where board.statusSetIds.contains(item.id) {
+            uses.append(SettingsUsage(kind: .boardName, name: board.name))
+        }
+        return uses
+    }
+
+    func taskTypeUsage(of item: SettingsTypeItem) async -> [SettingsUsage] {
+        guard let page = try? await source.tasks(project: project, filter: [], statusIds: nil, typeIds: [item.id], cap: Self.usageCap), page.total > 0 else { return [] }
+        let prefixes = prefixes
+        let shown = page.items.prefix(6).map { SettingsRules.reference($0, prefixes: prefixes) }
+        return [SettingsUsage(kind: .tasks(page.total), name: shown.joined(separator: ", ") + (page.total > 6 ? " …" : ""))]
+    }
+
+    func holdersOfRemovedFields(in item: SettingsTypeItem, fields removed: [UUID]) async -> (names: [String], tasks: Int)? {
+        guard let catalog else { return nil }
+        var names: [String] = []
+        var holders = Set<UUID>()
+        for id in removed {
+            guard let field = catalog.field(id) else { continue }
+            guard let page = try? await source.tasks(project: project, filter: ["\(field.name):set"], statusIds: nil, typeIds: [item.id], cap: Self.usageCap) else {
+                return nil
+            }
+            if page.total > 0 {
+                names.append(field.name)
+                holders.formUnion(page.items.map(\.id))
+                if !page.isComplete { holders.insert(UUID()) }
+            }
+        }
+        return (names, holders.count)
+    }
+
+    func createStatus(name: String, color: String, description: String, icon: String) async -> String? {
+        await run(.settingsStatusSaved) { try await source.createStatus(project: project, name: name, color: color, description: description, icon: icon) }
+    }
+
+    func updateStatus(_ item: SettingsStatusItem, name: String, color: String, description: String, icon: String) async -> String? {
+        await run(.settingsStatusSaved) { try await source.updateStatus(project: project, item: item, name: name, color: color, description: description, icon: icon) }
+    }
+
+    func deleteStatus(_ item: SettingsStatusItem) async -> Result<Void, any Error> {
+        let result = await attempt { try await source.deleteStatus(project: project, item: item) }
+        if case .success = result {
+            onNotice?(localizer.string(.settingsStatusDeleted))
+            await reload()
+        }
+        return result
+    }
+
+    func createStatusSet(name: String, statusIds: [UUID]) async -> String? {
+        await run(.settingsStatusSetSaved) { try await source.createStatusSet(project: project, name: name, statusIds: statusIds) }
+    }
+
+    func updateStatusSet(_ item: SettingsStatusSetItem, name: String, statusIds: [UUID]) async -> String? {
+        await run(.settingsStatusSetSaved) { try await source.updateStatusSet(project: project, item: item, name: name, statusIds: statusIds) }
+    }
+
+    func deleteStatusSet(_ item: SettingsStatusSetItem) async -> Result<Void, any Error> {
+        let result = await attempt { try await source.deleteStatusSet(project: project, item: item) }
+        if case .success = result {
+            onNotice?(localizer.string(.settingsStatusSetDeleted))
+            await reload()
+        }
+        return result
+    }
+
+    func createTaskType(name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField]) async -> String? {
+        await run(.settingsTypeSaved) { try await source.createTaskType(project: project, name: name, description: description, statusSetId: statusSetId, fields: fields) }
+    }
+
+    func updateTaskType(
+        _ item: SettingsTypeItem, name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField], removal: RemovedFieldChoice?
+    ) async -> String? {
+        guard !busy else { return nil }
+        busy = true
+        defer { busy = false }
+        let affected: Int
+        do {
+            affected = try await source.updateTaskType(
+                project: project, item: item, name: name, description: description, statusSetId: statusSetId, fields: fields, removal: removal)
+        } catch {
+            return message(error)
+        }
+        onNotice?(affected > 0 ? localizer.string(.settingsTypeChanged, String(affected)) : localizer.string(.settingsTypeSaved))
+        await reload()
+        return nil
+    }
+
+    func deleteTaskType(_ item: SettingsTypeItem) async -> Result<Void, any Error> {
+        let result = await attempt { try await source.deleteTaskType(project: project, item: item) }
+        if case .success = result {
+            onNotice?(localizer.string(.settingsTypeDeleted))
+            await reload()
+        }
+        return result
+    }
+
     func createSeries(name: String, prefix: String) async -> String? {
         await run(.seriesSaved) { try await source.createSeries(project: project, name: name, prefix: prefix) }
     }
@@ -376,6 +508,8 @@ struct SettingsUsage: Hashable, Sendable, Identifiable {
         case links(Int)
         case board(String)
         case field
+        case statusSet
+        case boardName
     }
 
     var kind: Kind
@@ -385,6 +519,9 @@ struct SettingsUsage: Hashable, Sendable, Identifiable {
 }
 
 enum SettingsPage: String, CaseIterable, Identifiable, Sendable {
+    case statuses
+    case statusSets
+    case types
     case series
     case linkTypes
     case fields
@@ -396,6 +533,9 @@ enum SettingsPage: String, CaseIterable, Identifiable, Sendable {
 
     var titleKey: L10nKey {
         switch self {
+        case .statuses: .settingsPageStatuses
+        case .statusSets: .settingsPageStatusSets
+        case .types: .settingsPageTypes
         case .series: .settingsPageSeries
         case .linkTypes: .settingsPageLinkTypes
         case .fields: .settingsPageFields
@@ -407,6 +547,9 @@ enum SettingsPage: String, CaseIterable, Identifiable, Sendable {
 
     var keywords: String {
         switch self {
+        case .statuses: "statuses status color icon"
+        case .statusSets: "status sets workflow"
+        case .types: "task types fields"
         case .series: "series prefix"
         case .linkTypes: "link types relations"
         case .fields: "fields custom"

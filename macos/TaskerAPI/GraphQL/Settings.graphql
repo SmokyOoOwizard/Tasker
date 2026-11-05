@@ -45,12 +45,34 @@ query SettingsCatalog($projectId: UUID!) {
         version
       }
     }
-    taskTypes(limit: 200, descriptionLength: 0) {
+    statuses(limit: 200) {
       data {
         id
         name
+        color
+        description
+        icon
+        version
+      }
+    }
+    statusSets(limit: 200) {
+      data {
+        id
+        name
+        statusIds
+        version
+      }
+    }
+    taskTypes(limit: 200) {
+      data {
+        id
+        name
+        description
+        statusSetId
+        version
         fields {
           fieldId
+          required
         }
       }
     }
@@ -58,9 +80,15 @@ query SettingsCatalog($projectId: UUID!) {
       data {
         id
         name
+        statusSetIds
         columns {
           id
           name
+          statusIds
+          dropStatuses {
+            statusSetId
+            statusId
+          }
           fieldConditions {
             fieldId
             value
@@ -85,10 +113,10 @@ query SettingsCatalog($projectId: UUID!) {
   }
 }
 
-query SettingsTasks($projectId: UUID!, $field: [String!], $offset: Int, $limit: Int) {
+query SettingsTasks($projectId: UUID!, $field: [String!], $statusIds: [UUID!], $typeIds: [UUID!], $offset: Int, $limit: Int) {
   project(id: $projectId) {
     id
-    tasks(field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
+    tasks(statusIds: $statusIds, typeIds: $typeIds, field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
       totalCount
       data {
         id

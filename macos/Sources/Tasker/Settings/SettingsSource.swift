@@ -4,7 +4,7 @@ import TaskerAPI
 protocol SettingsSource: Sendable {
     func mode() async -> ProjectMode
     func catalog(project: UUID) async throws -> SettingsCatalog
-    func tasks(project: UUID, filter: [String], cap: Int) async throws -> SettingsTaskPage
+    func tasks(project: UUID, filter: [String], statusIds: [UUID]?, typeIds: [UUID]?, cap: Int) async throws -> SettingsTaskPage
     func seriesStats(project: UUID, series: [UUID]) async throws -> [UUID: SettingsSeriesStat]
     func members(project: UUID) async throws -> [SettingsMember]
     func users() async throws -> [SettingsMember]
@@ -23,6 +23,20 @@ protocol SettingsSource: Sendable {
     func updateLinkType(project: UUID, item: SettingsLinkTypeItem, name: String, outward: String, inward: String, allowCycles: Bool, hierarchical: Bool) async throws
     func deleteLinkType(project: UUID, item: SettingsLinkTypeItem) async throws
 
+    func createStatus(project: UUID, name: String, color: String, description: String, icon: String) async throws
+    func updateStatus(project: UUID, item: SettingsStatusItem, name: String, color: String, description: String, icon: String) async throws
+    func deleteStatus(project: UUID, item: SettingsStatusItem) async throws
+
+    func createStatusSet(project: UUID, name: String, statusIds: [UUID]) async throws
+    func updateStatusSet(project: UUID, item: SettingsStatusSetItem, name: String, statusIds: [UUID]) async throws
+    func deleteStatusSet(project: UUID, item: SettingsStatusSetItem) async throws
+
+    func createTaskType(project: UUID, name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField]) async throws
+    func updateTaskType(
+        project: UUID, item: SettingsTypeItem, name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField], removal: RemovedFieldChoice?
+    ) async throws -> Int
+    func deleteTaskType(project: UUID, item: SettingsTypeItem) async throws
+
     func createSeries(project: UUID, name: String, prefix: String) async throws
     func updateSeries(project: UUID, item: SettingsSeriesItem, name: String, prefix: String) async throws
     func deleteSeries(project: UUID, item: SettingsSeriesItem) async throws
@@ -32,6 +46,12 @@ protocol SettingsSource: Sendable {
 
     func lock(project: UUID, target: SettingsLockTarget) async throws
     func unlock(project: UUID, target: SettingsLockTarget) async throws
+}
+
+extension SettingsSource {
+    func tasks(project: UUID, filter: [String], cap: Int) async throws -> SettingsTaskPage {
+        try await tasks(project: project, filter: filter, statusIds: nil, typeIds: nil, cap: cap)
+    }
 }
 
 private extension UUID {
@@ -65,7 +85,20 @@ struct GraphQLSettingsSource: SettingsSource {
                 hierarchical: $0.hierarchical, version: $0.version)
         }
         catalog.series = data.seriesList.data.map { SettingsSeriesItem(id: $0.id, name: $0.name, prefix: $0.prefix, version: $0.version) }
-        catalog.types = data.taskTypes.data.map { SettingsTypeItem(id: $0.id, name: $0.name, fieldIds: $0.fields.map(\.fieldId)) }
+        catalog.types = data.taskTypes.data.map {
+            SettingsTypeItem(
+                id: $0.id, name: $0.name, description: $0.description, statusSetId: $0.statusSetId,
+                fields: $0.fields.map { SettingsTypeField(fieldId: $0.fieldId, required: $0.required) }, version: $0.version)
+        }
+        catalog.statuses = data.statuses.data.map {
+            SettingsStatusItem(id: $0.id, name: $0.name, color: $0.color, description: $0.description, icon: $0.icon, version: $0.version)
+        }
+        catalog.statusSets = data.statusSets.data.map { SettingsStatusSetItem(id: $0.id, name: $0.name, statusIds: $0.statusIds, version: $0.version) }
+        catalog.boards = data.boards.data.map { board in
+            SettingsBoardItem(
+                name: board.name, statusSetIds: board.statusSetIds,
+                columns: board.columns.map { SettingsBoardColumnItem(name: $0.name, statusIds: $0.statusIds, dropStatusIds: $0.dropStatuses.map(\.statusId)) })
+        }
         catalog.conditions = data.boards.data.flatMap { board in
             board.columns.flatMap { column in
                 column.fieldConditions.map { SettingsBoardCondition(board: board.name, column: column.name, fieldId: $0.fieldId, value: $0.value) }
@@ -79,13 +112,13 @@ struct GraphQLSettingsSource: SettingsSource {
         return catalog
     }
 
-    func tasks(project: UUID, filter: [String], cap: Int) async throws -> SettingsTaskPage {
+    func tasks(project: UUID, filter: [String], statusIds: [UUID]?, typeIds: [UUID]?, cap: Int) async throws -> SettingsTaskPage {
         var items: [SettingsTaskBrief] = []
         var total = 0
         var offset = 0
         while offset < cap {
             guard let page = try await client.graphQL.fetch(
-                SettingsTasksQuery(projectId: project, field: filter, offset: offset, limit: Self.page)).project?.tasks
+                SettingsTasksQuery(projectId: project, field: filter.isEmpty ? nil : filter, statusIds: statusIds, typeIds: typeIds, offset: offset, limit: Self.page)).project?.tasks
             else { throw TaskerAPIError.notFound(project.uuidString) }
             total = page.totalCount
             for task in page.data {
@@ -231,6 +264,81 @@ struct GraphQLSettingsSource: SettingsSource {
         }
     }
 
+    func createStatus(project: UUID, name: String, color: String, description: String, icon: String) async throws {
+        _ = try await client.rest.perform {
+            try await $0.createStatus(
+                path: .init(projectId: project.wire), body: .json(.init(name: name, color: color, description: description, icon: icon))
+            ).created.body.json
+        }
+    }
+
+    func updateStatus(project: UUID, item: SettingsStatusItem, name: String, color: String, description: String, icon: String) async throws {
+        _ = try await client.rest.perform {
+            try await $0.updateStatus(
+                path: .init(projectId: project.wire, id: item.id.wire),
+                body: .json(.init(name: name, color: color, version: item.version, description: description, icon: icon))
+            ).ok.body.json
+        }
+    }
+
+    func deleteStatus(project: UUID, item: SettingsStatusItem) async throws {
+        try await client.rest.perform {
+            try await $0.deleteStatus(path: .init(projectId: project.wire, id: item.id.wire), query: .init(version: item.version)).noContent
+        }
+    }
+
+    func createStatusSet(project: UUID, name: String, statusIds: [UUID]) async throws {
+        _ = try await client.rest.perform {
+            try await $0.createStatusSet(path: .init(projectId: project.wire), body: .json(.init(name: name, statusIds: statusIds.map(\.wire)))).created.body.json
+        }
+    }
+
+    func updateStatusSet(project: UUID, item: SettingsStatusSetItem, name: String, statusIds: [UUID]) async throws {
+        _ = try await client.rest.perform {
+            try await $0.updateStatusSet(
+                path: .init(projectId: project.wire, id: item.id.wire), body: .json(.init(name: name, statusIds: statusIds.map(\.wire), version: item.version))
+            ).ok.body.json
+        }
+    }
+
+    func deleteStatusSet(project: UUID, item: SettingsStatusSetItem) async throws {
+        try await client.rest.perform {
+            try await $0.deleteStatusSet(path: .init(projectId: project.wire, id: item.id.wire), query: .init(version: item.version)).noContent
+        }
+    }
+
+    func createTaskType(project: UUID, name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField]) async throws {
+        _ = try await client.rest.perform {
+            try await $0.createTaskType(
+                path: .init(projectId: project.wire),
+                body: .json(.init(name: name, statusSetId: statusSetId.wire, fields: fields.map { .init(fieldId: $0.fieldId.wire, required: $0.required) }, description: description))
+            ).created.body.json
+        }
+    }
+
+    func updateTaskType(
+        project: UUID, item: SettingsTypeItem, name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField], removal: RemovedFieldChoice?
+    ) async throws -> Int {
+        var body = Components.Schemas.UpdateTaskType(
+            name: name, statusSetId: statusSetId.wire, version: item.version, fields: fields.map { .init(fieldId: $0.fieldId.wire, required: $0.required) },
+            description: description)
+        switch removal {
+        case .clear: body.removedFields = .init(value1: .clear)
+        case .keep: body.removedFields = .init(value1: .keep)
+        case nil: break
+        }
+        let result = try await client.rest.perform {
+            try await $0.updateTaskType(path: .init(projectId: project.wire, id: item.id.wire), body: .json(body)).ok.body.json
+        }
+        return Int(result.value2.affectedTasks)
+    }
+
+    func deleteTaskType(project: UUID, item: SettingsTypeItem) async throws {
+        try await client.rest.perform {
+            try await $0.deleteTaskType(path: .init(projectId: project.wire, id: item.id.wire), query: .init(version: item.version)).noContent
+        }
+    }
+
     func createSeries(project: UUID, name: String, prefix: String) async throws {
         _ = try await client.rest.perform {
             try await $0.createSeries(path: .init(projectId: project.wire), body: .json(.init(name: name, prefix: prefix))).created.body.json
@@ -272,6 +380,9 @@ struct GraphQLSettingsSource: SettingsSource {
             case .enumeration(let id): _ = try await client.acquireEnumLock(path: .init(projectId: projectId, id: id.wire)).ok.body.json
             case .linkType(let id): _ = try await client.acquireLinkTypeLock(path: .init(projectId: projectId, id: id.wire)).ok.body.json
             case .series(let id): _ = try await client.acquireSeriesLock(path: .init(projectId: projectId, id: id.wire)).ok.body.json
+            case .status(let id): _ = try await client.acquireStatusLock(path: .init(projectId: projectId, id: id.wire)).ok.body.json
+            case .statusSet(let id): _ = try await client.acquireStatusSetLock(path: .init(projectId: projectId, id: id.wire)).ok.body.json
+            case .taskType(let id): _ = try await client.acquireTaskTypeLock(path: .init(projectId: projectId, id: id.wire)).ok.body.json
             }
         }
     }
@@ -285,6 +396,9 @@ struct GraphQLSettingsSource: SettingsSource {
             case .enumeration(let id): _ = try await client.releaseEnumLock(path: .init(projectId: projectId, id: id.wire)).noContent
             case .linkType(let id): _ = try await client.releaseLinkTypeLock(path: .init(projectId: projectId, id: id.wire)).noContent
             case .series(let id): _ = try await client.releaseSeriesLock(path: .init(projectId: projectId, id: id.wire)).noContent
+            case .status(let id): _ = try await client.releaseStatusLock(path: .init(projectId: projectId, id: id.wire)).noContent
+            case .statusSet(let id): _ = try await client.releaseStatusSetLock(path: .init(projectId: projectId, id: id.wire)).noContent
+            case .taskType(let id): _ = try await client.releaseTaskTypeLock(path: .init(projectId: projectId, id: id.wire)).noContent
             }
         }
     }

@@ -78,6 +78,9 @@ private struct SettingsLayout: View {
     @ViewBuilder
     private var page: some View {
         switch current {
+        case .statuses: StatusesSettingsPage(model: model)
+        case .statusSets: StatusSetsSettingsPage(model: model)
+        case .types: TypesSettingsPage(model: model)
         case .series: SeriesSettingsPage(model: model)
         case .linkTypes: LinkTypesSettingsPage(model: model)
         case .fields: FieldsSettingsPage(model: model)
@@ -277,6 +280,7 @@ struct SettingsRefusal: Identifiable {
     var subject: String
     var uses: [SettingsUsage]
     var detail: String?
+    var body: String?
 }
 
 struct SettingsRefusalSheet: View {
@@ -286,7 +290,7 @@ struct SettingsRefusalSheet: View {
 
     var body: some View {
         SettingsSheet(title: l.string(.settingsUsedTitle), width: 460, cancelTitle: l.string(.settingsUsedOk), cancel: close) {
-            Text(l.string(.settingsUsedBody, refusal.subject))
+            Text(refusal.body ?? l.string(.settingsUsedBody, refusal.subject))
                 .fixedSize(horizontal: false, vertical: true)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -322,6 +326,8 @@ struct SettingsRefusalSheet: View {
         case .board(let board): l.string(.settingsUseBoard, board)
         case .links: l.string(.settingsUseLinks)
         case .field: l.string(.settingsUseField)
+        case .statusSet: l.string(.settingsUseSet)
+        case .boardName: l.string(.settingsUseBoardName)
         }
     }
 }
