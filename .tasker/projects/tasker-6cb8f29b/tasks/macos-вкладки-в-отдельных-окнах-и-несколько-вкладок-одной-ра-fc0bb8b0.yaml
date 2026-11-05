@@ -2,9 +2,9 @@ formatVersion: 10
 id: fc0bb8b0-d252-4447-872d-1b4ecd1eb380
 title: 'macOS: вкладки в отдельных окнах и несколько вкладок одной рабочей области'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-04T15:14:00.5064280+00:00
-updatedAt: 2026-11-05T00:06:06.5257230+00:00
+updatedAt: 2026-11-05T01:21:13.4565000+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 211
