@@ -109,6 +109,7 @@ struct NavigationCommands: Commands {
             item(.taskParent)
             Divider()
             item(.taskCopyKey)
+            item(.copyLink)
         }
         CommandGroup(after: .windowArrangement) {
             Divider()

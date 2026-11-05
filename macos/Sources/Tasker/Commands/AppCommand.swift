@@ -35,6 +35,7 @@ struct CommandState: Equatable, Sendable {
     var hasTab = false
     var hasProject = false
     var hasTask = false
+    var hasLink = false
     var tabCount = 0
     var otherWindows = 0
     var listMode: TaskListMode?
@@ -59,6 +60,7 @@ enum AppCommand: Hashable, Sendable {
     case taskLink
     case taskParent
     case taskCopyKey
+    case copyLink
     case nextTab
     case previousTab
     case moveTabToNewWindow
@@ -72,7 +74,7 @@ enum AppCommand: Hashable, Sendable {
 
     static let shortcutBearing: [AppCommand] = [
         .newTask, .newBoard, .newTab, .newWindow, .openFolder, .closeTab, .closeWindow, .palette, .toggleSidebar,
-        .taskStatus, .taskLink, .taskParent, .taskCopyKey, .nextTab, .previousTab, .shortcuts, .help
+        .taskStatus, .taskLink, .taskParent, .taskCopyKey, .copyLink, .nextTab, .previousTab, .shortcuts, .help
     ] + sectionCommands + listModes
 
     var id: String {
@@ -93,6 +95,7 @@ enum AppCommand: Hashable, Sendable {
         case .taskLink: "taskLink"
         case .taskParent: "taskParent"
         case .taskCopyKey: "taskCopyKey"
+        case .copyLink: "copyLink"
         case .nextTab: "nextTab"
         case .previousTab: "previousTab"
         case .moveTabToNewWindow: "moveTabToNewWindow"
@@ -120,6 +123,7 @@ enum AppCommand: Hashable, Sendable {
         case .taskLink: .taskLink
         case .taskParent: .taskSetParent
         case .taskCopyKey: .taskCopyKey
+        case .copyLink: .deeplinkCopy
         case .nextTab: .tabNext
         case .previousTab: .tabPrevious
         case .moveTabToNewWindow: .tabMoveToNewWindow
@@ -151,6 +155,7 @@ enum AppCommand: Hashable, Sendable {
         case .taskLink: CommandShortcut("l")
         case .taskParent: CommandShortcut("p", [.command, .option])
         case .taskCopyKey: CommandShortcut("c", [.command, .option])
+        case .copyLink: CommandShortcut("c", [.command, .shift])
         case .nextTab: CommandShortcut(key: .tab, symbol: "⇥", .control)
         case .previousTab: CommandShortcut(key: .tab, symbol: "⇥", [.control, .shift])
         case .shortcuts: CommandShortcut("/", [.command, .option])
@@ -167,6 +172,7 @@ enum AppCommand: Hashable, Sendable {
         case .go: state.hasTab
         case .listMode: state.hasProject
         case .taskStatus, .taskLink, .taskParent, .taskCopyKey: state.hasTask
+        case .copyLink: state.hasLink
         case .nextTab, .previousTab: state.tabCount > 1
         case .mergeWindows: state.otherWindows > 0
         case .newWindow, .openFolder, .closeTab, .closeWindow, .theme, .shortcuts, .help: true

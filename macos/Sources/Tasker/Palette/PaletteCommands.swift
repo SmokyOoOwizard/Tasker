@@ -61,6 +61,13 @@ enum PaletteCommands {
                         isEnabled: context.commands.listMode != mode, run: { actions.perform(command) }))
                 }
             }
+            if context.commands.hasLink {
+                let command = AppCommand.copyLink
+                result.append(PaletteEntry(
+                    id: "task:" + command.id, title: l.string(command.titleKey), detail: l.string(.paletteKindAction),
+                    icon: .system("link"), keywords: "copy link url", shortcut: command.shortcut?.display,
+                    run: { actions.perform(command) }))
+            }
             if context.commands.hasTask {
                 for command in [AppCommand.taskStatus, .taskLink, .taskParent, .taskCopyKey] {
                     result.append(PaletteEntry(

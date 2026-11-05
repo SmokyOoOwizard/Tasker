@@ -254,6 +254,7 @@ final class WorkspaceSessions {
     @ObservationIgnored private var sessions: [UUID: WorkspaceTabSession] = [:]
     @ObservationIgnored private var lives: [String: LiveWorkspace] = [:]
     @ObservationIgnored let idle: WorkspaceTabSession
+    @ObservationIgnored var onUpdate: ((String, LiveUpdate) -> Void)?
 
     init(layout: WorkspaceLayout, defaults: UserDefaults = .standard, makeLive: @escaping () -> LiveWorkspace = { LiveWorkspace() }) {
         self.layout = layout
@@ -322,6 +323,7 @@ final class WorkspaceSessions {
     func live(for path: String) -> LiveWorkspace {
         if let existing = lives[path] { return existing }
         let value = makeLive()
+        value.onUpdate = { [weak self] update in self?.onUpdate?(path, update) }
         lives[path] = value
         return value
     }

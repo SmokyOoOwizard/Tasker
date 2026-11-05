@@ -4,6 +4,15 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var layout: WorkspaceLayout?
     var releaseLocks: (() -> Task<Void, Never>?)?
+    var openLinks: (([URL]) -> Void)? {
+        didSet {
+            guard let openLinks, !pendingLinks.isEmpty else { return }
+            let urls = pendingLinks
+            pendingLinks = []
+            openLinks(urls)
+        }
+    }
+    private var pendingLinks: [URL] = []
     private var appearanceObservation: NSKeyValueObservation?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -27,6 +36,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain }) {
                 _ = NSApp.delegate?.applicationOpenUntitledFile?(NSApp)
             }
+        }
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let links = urls.filter { $0.scheme?.lowercased() == TaskerLink.scheme }
+        guard !links.isEmpty else { return }
+        if let openLinks {
+            openLinks(links)
+        } else {
+            pendingLinks += links
         }
     }
 

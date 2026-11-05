@@ -24,6 +24,7 @@ enum ShortcutTable {
             Row(title: .taskLink, keys: ["⌘", "L"], command: "taskLink"),
             Row(title: .taskSetParent, keys: ["⌥", "⌘", "P"], command: "taskParent"),
             Row(title: .taskCopyKey, keys: ["⌥", "⌘", "C"], command: "taskCopyKey"),
+            Row(title: .deeplinkCopy, keys: ["⇧", "⌘", "C"], command: "copyLink"),
         ]),
         Group(title: .shortcutsGroupView, rows: [
             Row(title: .taskListViewGroups, keys: ["⌥", "⌘", "1"], command: "listMode.groups"),

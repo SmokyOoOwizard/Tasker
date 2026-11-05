@@ -57,6 +57,11 @@
           "title": "task.copyKey",
           "keys": "⌥ ⌘ C",
           "command": "taskCopyKey"
+        },
+        {
+          "title": "deeplink.copy",
+          "keys": "⇧ ⌘ C",
+          "command": "copyLink"
         }
       ]
     },

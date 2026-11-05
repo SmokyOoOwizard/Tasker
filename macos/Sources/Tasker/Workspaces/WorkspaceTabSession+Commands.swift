@@ -71,4 +71,29 @@ extension WorkspaceTabSession {
         board.setString(reference, forType: .string)
         notice(l.string(.taskKeyCopied, reference))
     }
+
+    func currentLink() -> TaskerLink? {
+        guard let path else { return nil }
+        if let task = commandTask {
+            if let reference = taskReference(), TaskerLink.isReference(reference) {
+                return TaskerLink(path: path, target: .task(reference: reference))
+            }
+            return TaskerLink(path: path, target: .taskID(task))
+        }
+        if section == .tasks, seriesPage != nil, let prefix = seriesPrefix, TaskerLink.isPrefix(prefix) {
+            return TaskerLink(path: path, target: .series(prefix: prefix))
+        }
+        if section == .boards, let board = boardEditor?.target.board {
+            return TaskerLink(path: path, target: .board(board))
+        }
+        return nil
+    }
+
+    func copyLink(_ l: Localizer) {
+        guard let link = currentLink() else { return }
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setString(link.string, forType: .string)
+        notice(l.string(.deeplinkCopied))
+    }
 }

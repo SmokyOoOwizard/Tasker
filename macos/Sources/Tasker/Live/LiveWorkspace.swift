@@ -78,6 +78,7 @@ final class LiveWorkspace {
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var projectsTask: Task<Void, Never>?
     @ObservationIgnored private var everConnected = false
+    @ObservationIgnored var onUpdate: ((LiveUpdate) -> Void)?
 
     static let maxToasts = ToastQueue.maxToasts
 
@@ -164,6 +165,7 @@ final class LiveWorkspace {
         case .update(let update):
             revision += 1
             if let message = LiveToastMessage(update, ownAuthorKey: ownAuthorKey) { show(message) }
+            onUpdate?(update)
         }
     }
 

@@ -34,6 +34,10 @@ targets:
       properties:
         CFBundleHelpBookFolder: Tasker.help
         CFBundleHelpBookName: com.technotronika.tasker.help
+        CFBundleURLTypes:
+          - CFBundleURLName: com.technotronika.tasker.link
+            CFBundleURLSchemes:
+              - tasker
     dependencies:
       - package: TaskerAPI
     settings:

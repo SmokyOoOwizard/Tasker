@@ -12,6 +12,21 @@ extension EnvironmentValues {
     }
 }
 
+@MainActor
+enum WorkspaceWindowRegistry {
+    private static let table = NSMapTable<NSUUID, NSWindow>(keyOptions: .strongMemory, valueOptions: .weakMemory)
+
+    static func register(_ window: NSWindow, id: UUID) {
+        table.setObject(window, forKey: id as NSUUID)
+    }
+
+    static func front(_ id: UUID) {
+        guard let window = table.object(forKey: id as NSUUID) else { return }
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
+    }
+}
+
 struct WorkspaceWindowBinder: NSViewRepresentable {
     let id: UUID
     let layout: WorkspaceLayout
@@ -61,6 +76,7 @@ struct WorkspaceWindowBinder: NSViewRepresentable {
         func bind(_ window: NSWindow) {
             guard self.window !== window else { return }
             self.window = window
+            WorkspaceWindowRegistry.register(window, id: id)
             window.isRestorable = false
             window.tabbingMode = .disallowed
             let button = window.standardWindowButton(.closeButton)
