@@ -2,9 +2,9 @@ formatVersion: 11
 id: dac4f632-fed6-4d03-bab7-2e51261a6e3c
 title: CompletionTests.Column_specs_and_column_conditions_are_suggested_for_board_options нестабилен на Linux
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: e419107c-3971-482e-b68f-46860d54f4d2
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-05T22:43:27.6398760+00:00
-updatedAt: 2026-11-05T23:04:17.6307520+00:00
+updatedAt: 2026-11-05T23:25:20.6933940+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 233
