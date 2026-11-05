@@ -49,7 +49,12 @@ internal static class Completer
 {
     public const int Limit = 50;
 
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan Timeout = ReadTimeout();
+
+    private static TimeSpan ReadTimeout() =>
+        int.TryParse(AppEnvironment.Get("TASKER_COMPLETION_TIMEOUT_MS"), out var ms) && ms > 0
+            ? TimeSpan.FromMilliseconds(ms)
+            : TimeSpan.FromSeconds(1.5);
 
     /// <summary>Значения аргумента подсказывает <paramref name="source"/>.</summary>
     public static Argument<T> Suggests<T>(this Argument<T> argument, GlobalOptions g, ValueSource source)
