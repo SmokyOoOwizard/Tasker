@@ -349,8 +349,10 @@ final class GroupCellView: NSTableCellView {
         identifier = Self.identifier
         name.font = TaskListFonts.emphasis
         name.textColor = DesignColor.mut.nsColor
+        name.lineBreakMode = .byTruncatingTail
         count.font = TaskListFonts.base
         count.textColor = DesignColor.dim.nsColor
+        count.lineBreakMode = .byClipping
         chevron.contentTintColor = DesignColor.mut.nsColor
         chevron.imageScaling = .scaleProportionallyDown
         for view in [chevron, glyph, name, count] as [NSView] { addSubview(view) }
@@ -378,11 +380,16 @@ final class GroupCellView: NSTableCellView {
         let side = DesignLayout.statusIconBox
         glyph.frame = NSRect(x: x, y: (height - side) / 2, width: side, height: side)
         x += side + gap
-        let nameWidth = min(ceil(name.intrinsicContentSize.width), max(0, bounds.width - x - 60))
-        let h = ceil(name.intrinsicContentSize.height)
+        let h = ceil(max(name.intrinsicContentSize.height, count.intrinsicContentSize.height))
+        let countWidth = Self.textWidth(count)
+        let nameWidth = min(Self.textWidth(name), max(0, bounds.width - x - gap - countWidth))
         name.frame = NSRect(x: x, y: (height - h) / 2, width: nameWidth, height: h)
         x += nameWidth + gap
-        count.frame = NSRect(x: x, y: (height - h) / 2, width: ceil(count.intrinsicContentSize.width), height: h)
+        count.frame = NSRect(x: x, y: (height - h) / 2, width: countWidth, height: h)
+    }
+
+    private static func textWidth(_ field: NSTextField) -> CGFloat {
+        ceil(max(field.intrinsicContentSize.width, field.attributedStringValue.size().width)) + 4
     }
 }
 
