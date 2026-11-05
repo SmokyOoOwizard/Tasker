@@ -38,6 +38,14 @@ struct TopBarView: View {
                     .foregroundStyle(DesignColor.dim.color)
                 Text(l.string(session.settingsPage.titleKey))
                     .font(.designEmphasis(DesignTypography.baseSize))
+            } else if section == .boards, session.boardEditor == nil, let name = session.boardModel?.board?.name {
+                Text(l.string(section.titleKey))
+                    .font(.design(DesignTypography.baseSize))
+                    .foregroundStyle(DesignColor.mut.color)
+                Text(l.string(.breadcrumbSeparator))
+                    .foregroundStyle(DesignColor.dim.color)
+                Text(name)
+                    .font(.designEmphasis(DesignTypography.baseSize))
             } else {
                 Text(l.string(section == .tasks ? .taskListTitle : section.titleKey))
                     .font(.designEmphasis(DesignTypography.baseSize))
@@ -45,6 +53,8 @@ struct TopBarView: View {
             Spacer(minLength: 0)
             if section == .tasks {
                 TaskListTopActions()
+            } else if section == .boards {
+                BoardTopActions()
             }
             LiveStatusLabel()
         }
