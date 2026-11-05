@@ -224,6 +224,7 @@ struct TitleEditor: View {
                 focused = false
             }
             .onChange(of: focused) { if !focused { commit() } }
+            .endsOnClickAway(active: focused) { focused = false }
             .onAppear {
                 if let stored = slot?.text {
                     draft = stored
@@ -275,7 +276,8 @@ struct DescriptionEditor: View {
                         editing = false
                     }
                     .onChange(of: focused) { if !focused { commit() } }
-                    .onAppear { focused = true }
+                    .endsOnClickAway(active: editing, perform: commit)
+                    .onAppear { DispatchQueue.main.async { focused = true } }
             } else {
                 Group {
                     if detail.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
