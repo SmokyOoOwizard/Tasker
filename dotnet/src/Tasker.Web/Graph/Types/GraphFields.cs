@@ -37,6 +37,7 @@ internal static class GraphFields
             .Argument("statusIds", x => x.Type<ListType<NonNullType<UuidType>>>())
             .Argument("typeIds", x => x.Type<ListType<NonNullType<UuidType>>>())
             .Argument("seriesIds", x => x.Type<ListType<NonNullType<UuidType>>>())
+            .Argument("search", x => x.Type<StringType>())
             .TaskQuery();
 
     public static IObjectFieldDescriptor Returns<TType>(this IObjectFieldDescriptor field) where TType : class, IOutputType =>
@@ -54,7 +55,8 @@ internal static class GraphFields
         Tasker.Core.Tasks.TaskFilter.Of(
             context.ArgumentValue<Guid[]?>("typeIds"),
             context.ArgumentValue<Guid[]?>("statusIds"),
-            context.ArgumentValue<Guid[]?>("seriesIds"));
+            context.ArgumentValue<Guid[]?>("seriesIds"),
+            context.ArgumentValue<string?>("search"));
 
     public static string[]? FieldFilters(this IResolverContext context) => context.ArgumentValue<string[]?>("field");
 

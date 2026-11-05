@@ -199,6 +199,7 @@ type Project {
     statusIds: [UUID!]
     typeIds: [UUID!]
     seriesIds: [UUID!]
+    search: String
     field: [String!]
     sort: String
     offset: Int
@@ -209,6 +210,7 @@ type Project {
     statusIds: [UUID!]
     typeIds: [UUID!]
     seriesIds: [UUID!]
+    search: String
     field: [String!]
     sort: String
     offset: Int

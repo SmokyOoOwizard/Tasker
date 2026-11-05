@@ -270,3 +270,22 @@ query TaskSearchPage($projectId: UUID!, $offset: Int, $limit: Int) {
     }
   }
 }
+
+query TaskPaletteSearch($projectId: UUID!, $search: String, $limit: Int) {
+  project(id: $projectId) {
+    id
+    tasks(search: $search, limit: $limit, descriptionLength: 0) {
+      totalCount
+      data {
+        id
+        title
+        statusId
+        typeId
+        seriesNumbers {
+          seriesId
+          number
+        }
+      }
+    }
+  }
+}

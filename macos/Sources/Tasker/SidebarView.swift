@@ -35,10 +35,14 @@ struct SidebarView: View {
 
 private struct SearchField: View {
     @Environment(\.localizer) private var l
+    @Environment(\.commandPalette) private var palette
+    @Environment(\.workspaceWindow) private var window
     @State private var hovering = false
 
     var body: some View {
-        Button {} label: {
+        Button {
+            palette?.present(window: window)
+        } label: {
             HStack(spacing: DesignSpacing.gap8) {
                 MockupIconView(icon: .search)
                 Text(l.string(.sidebarSearch))

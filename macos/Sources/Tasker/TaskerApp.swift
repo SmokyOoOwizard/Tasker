@@ -3,16 +3,22 @@ import SwiftUI
 @main
 struct TaskerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var connection = DaemonConnection.live()
+    @State private var connection: DaemonConnection
     @State private var workspaces: WorkspaceController
     @State private var sessions: WorkspaceSessions
+    @State private var palette: CommandPalette
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
 
     init() {
         UserDefaults.standard.register(defaults: ["NSQuitAlwaysKeepsWindows": false])
         let workspaces = WorkspaceController.live()
         _workspaces = State(initialValue: workspaces)
-        _sessions = State(initialValue: WorkspaceSessions(layout: workspaces.layout))
+        let sessions = WorkspaceSessions(layout: workspaces.layout)
+        _sessions = State(initialValue: sessions)
+        let connection = DaemonConnection.live()
+        _connection = State(initialValue: connection)
+        _palette = State(initialValue: CommandPalette(layout: workspaces.layout, sessions: sessions, workspaces: workspaces, connection: connection))
+        AppTheme.current().apply()
     }
 
     var body: some Scene {
@@ -22,13 +28,14 @@ struct TaskerApp: App {
                 .environment(connection)
                 .environment(workspaces)
                 .environment(sessions)
+                .environment(\.commandPalette, palette)
                 .onAppear { appDelegate.layout = workspaces.layout }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
         .commands {
-            NavigationCommands(layout: workspaces.layout, sessions: sessions)
+            NavigationCommands(layout: workspaces.layout, sessions: sessions, palette: palette)
         }
     }
 }

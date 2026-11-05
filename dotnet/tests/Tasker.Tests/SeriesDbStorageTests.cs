@@ -72,6 +72,20 @@ public sealed class SeriesDbStorageTests : IAsyncLifetime
 
     private static readonly Page All = new(0, 100);
 
+    [Fact]
+    public async Task TaskFilter_TitleContains_ignores_case()
+    {
+        await using var scope = _container.BeginLifetimeScope();
+        var tasks = scope.Resolve<ITaskStorage>();
+        foreach (var title in new[] { "Fix Login", "login page", "Яблоко", "100%_done", "other" })
+            await tasks.Add(NewTask() with { Title = title });
+
+        Assert.Equal(2, await tasks.Count(_projectId, new TaskFilter { TitleContains = "login" }));
+        Assert.Equal(1, await tasks.Count(_projectId, new TaskFilter { TitleContains = "яблок" }));
+        Assert.Equal(1, await tasks.Count(_projectId, new TaskFilter { TitleContains = "%_" }));
+        Assert.Equal(0, await tasks.Count(_projectId, new TaskFilter { TitleContains = "zzz" }));
+    }
+
     // ---- серии ----
 
     [Fact]

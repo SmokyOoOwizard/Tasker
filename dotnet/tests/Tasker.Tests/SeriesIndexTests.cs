@@ -166,6 +166,20 @@ public class SeriesIndexTests : IDisposable
     }
 
     [Fact]
+    public async Task TaskFilter_TitleContains_ignores_case_and_escapes_nothing()
+    {
+        foreach (var title in new[] { "Fix Login", "login page", "Яблоко", "100%_done", "other" })
+            await _h.Tasks.Add(_h.NewTask(title));
+
+        Assert.Equal(2, await _h.Tasks.Count(_h.ProjectId, new TaskFilter { TitleContains = "login" }));
+        Assert.Equal(1, await _h.Tasks.Count(_h.ProjectId, new TaskFilter { TitleContains = "яблок" }));
+        Assert.Equal(1, await _h.Tasks.Count(_h.ProjectId, new TaskFilter { TitleContains = "%_" }));
+        Assert.Equal(0, await _h.Tasks.Count(_h.ProjectId, new TaskFilter { TitleContains = "zzz" }));
+        Assert.Equal(5, await _h.Tasks.Count(_h.ProjectId, TaskFilter.Of(null, null, null, "  ")));
+        Assert.Equal(2, await _h.Tasks.Count(_h.ProjectId, TaskFilter.Of(null, null, null, " LOGIN ")));
+    }
+
+    [Fact]
     public async Task TaskFilter_SeriesIds_pages_and_counts()
     {
         var inS1 = Enumerable.Range(0, 7).Select(i => _h.NewTask("a" + i, T0.AddMinutes(i), N(_s1, i + 1))).ToList();

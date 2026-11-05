@@ -196,6 +196,8 @@ internal class TaskStorage(AppDbContext context) : ITaskStorage
             query = query.Where(x => statusIds.Contains(x.StatusId));
         if (filter?.SeriesIds is { } seriesIds)
             query = query.Where(x => context.TaskSeriesNumbers.Any(n => n.TaskId == x.Id && seriesIds.Contains(n.SeriesId)));
+        if (filter?.TitleContains is { } titleContains)
+            query = query.Where(x => x.Title.ToLower().Contains(titleContains));
         if (filter?.LinkTypeIds is { } linkTypeIds)
             query = query.Where(x => context.TaskLinks.Any(l => l.TaskId == x.Id && linkTypeIds.Contains(l.TypeId)));
         if (filter?.FieldIds is { } fieldIds)
