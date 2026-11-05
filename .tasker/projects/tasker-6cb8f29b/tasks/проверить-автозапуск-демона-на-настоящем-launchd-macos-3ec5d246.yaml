@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 3ec5d246-2866-4f4b-8648-61d023973cea
 title: Проверить автозапуск демона на настоящем launchd (macOS)
 typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-01T15:51:26.8232920+00:00
-updatedAt: 2026-10-14T11:17:22.5422180+00:00
+updatedAt: 2026-11-05T10:06:30.0021990+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 50
