@@ -262,7 +262,7 @@ private func isolatedDefaults() -> UserDefaults {
         #expect(layout.windows.count == 1)
     }
 
-    @Test func closingWindowDropsItsTabsUnlessItIsTheLastOne() {
+    @Test func closingWindowClosesItsTabsEvenTheLastOne() {
         let layout = WorkspaceLayout(defaults: isolatedDefaults())
         let first = layout.claimWindow(requested: nil)
         layout.open("/a", in: first)
@@ -274,10 +274,10 @@ private func isolatedDefaults() -> UserDefaults {
         #expect(layout.recents == ["/b"])
 
         layout.windowClosed(first)
-        #expect(paths(layout.window(first)) == ["/a"])
+        #expect(layout.window(first)?.tabs.isEmpty == true)
+        #expect(layout.window(first)?.selected == nil)
+        #expect(layout.recents == ["/a", "/b"])
         #expect(layout.createWindow() == first)
-        layout.windowClosed(first)
-        #expect(layout.claimWindow(requested: nil) == first)
     }
 
     @Test func quittingKeepsAllWindows() {
@@ -468,6 +468,51 @@ private func isolatedDefaults() -> UserDefaults {
         #expect(session.navigator.card == card)
         session.noteProject(UUID())
         #expect(session.navigator.card == nil)
+    }
+
+    @Test func draftsStayInTheirTabAndAreNotSaved() {
+        let (layout, sessions, window, defaults) = fixture()
+        layout.open("/w/a", in: window)
+        let tab = layout.window(window)!.selectedTab!
+        let first = sessions.session(for: tab)
+        let second = sessions.session(for: layout.tab(layout.newTab("/w/a", in: window)!)!)
+        let task = UUID()
+        first.drafts.set("Черновик", task: task, slot: "title")
+        #expect(first.drafts.text(task: task, slot: "title") == "Черновик")
+        #expect(second.drafts.text(task: task, slot: "title") == nil)
+
+        _ = layout.detach(tab.id)
+        #expect(sessions.session(for: layout.tab(tab.id)!).drafts.text(task: task, slot: "title") == "Черновик")
+
+        layout.flush()
+        let restored = WorkspaceLayout(defaults: defaults)
+        let after = WorkspaceSessions(layout: restored, defaults: defaults).session(for: restored.tab(tab.id)!)
+        #expect(after.drafts.isEmpty)
+    }
+
+    @Test func reportsUnsavedTabsOfAWindow() {
+        let (layout, sessions, first, _) = fixture()
+        layout.open("/w/a", in: first)
+        let second = layout.createWindow()
+        layout.open("/w/a", in: second)
+        layout.newTab("/w/b", in: second)
+        let tabs = layout.window(second)!.tabs
+        let drafted = sessions.session(for: tabs[0])
+        _ = sessions.session(for: tabs[1])
+        #expect(sessions.unsavedTabs(in: second).isEmpty)
+        drafted.drafts.set("Черновик", task: UUID(), slot: "title")
+        #expect(sessions.hasUnsaved(tabs[0].id))
+        #expect(!sessions.hasUnsaved(tabs[1].id))
+        #expect(sessions.unsavedTabs(in: second) == ["a"])
+        #expect(sessions.unsavedTabs(in: first).isEmpty)
+    }
+
+    @Test func draftSlotKeepsListsAndClears() {
+        let slot = TaskDraftSlot(drafts: TaskDrafts(), task: UUID(), slot: "field")
+        slot.set(list: ["a", "б"])
+        #expect(slot.list == ["a", "б"])
+        slot.set(list: nil)
+        #expect(slot.text == nil)
     }
 
     @Test func sectionLivesOnTheTab() {

@@ -121,6 +121,7 @@ private struct WorkspaceTabItem: View {
     let selected: Bool
     let status: WorkspaceTabStatus
     @Environment(WorkspaceController.self) private var workspaces
+    @Environment(WorkspaceSessions.self) private var sessions
     @Environment(\.localizer) private var l
     @Environment(\.colorScheme) private var scheme
     @Environment(\.displayScale) private var displayScale
@@ -135,7 +136,7 @@ private struct WorkspaceTabItem: View {
             selected: selected,
             hovering: hovering,
             status: status,
-            close: { layout.close(tab.id) },
+            close: { sessions.close(tab.id, l) },
             closeHelp: l.string(.workspaceCloseTab)
         )
     }
@@ -209,6 +210,7 @@ private struct WorkspaceTabMenu: View {
     let tab: UUID
     let window: WorkspaceWindow
     @Environment(WorkspaceController.self) private var workspaces
+    @Environment(WorkspaceSessions.self) private var sessions
     @Environment(\.localizer) private var l
     @Environment(\.openWindow) private var openWindow
 
@@ -229,7 +231,7 @@ private struct WorkspaceTabMenu: View {
             }
         }
         Divider()
-        Button(l.string(.workspaceCloseTab)) { layout.close(tab) }
+        Button(l.string(.workspaceCloseTab)) { sessions.close(tab, l) }
     }
 }
 

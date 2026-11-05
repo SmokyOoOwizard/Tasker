@@ -1425,6 +1425,74 @@
         }
       }
     },
+    "tab.unsaved.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The “%@” tab has unsaved text. It will be lost if you close the tab."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Во вкладке «%@» есть несохранённый текст. Если закрыть вкладку, он пропадёт."
+          }
+        }
+      }
+    },
+    "tab.unsaved.discard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close Without Saving"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закрыть без сохранения"
+          }
+        }
+      }
+    },
+    "tab.unsaved.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is unsaved text"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Есть несохранённый текст"
+          }
+        }
+      }
+    },
+    "tab.unsaved.windowBody" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This window has tabs with unsaved text: %@. The text will be lost if you close the window."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В этом окне есть вкладки с несохранённым текстом: %@. Если закрыть окно, текст пропадёт."
+          }
+        }
+      }
+    },
     "taskCreate.action" : {
       "extractionState" : "manual",
       "localizations" : {

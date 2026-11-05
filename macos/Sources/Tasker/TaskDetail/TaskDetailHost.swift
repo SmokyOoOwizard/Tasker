@@ -29,6 +29,7 @@ struct TaskDetailHost<Chrome: View>: View {
             value.localizer = l
             value.onNotice = { [session] text in session.notice(text) }
             value.onDeleted = deleted
+            value.drafts = session.drafts
             model = value
             value.load()
         }

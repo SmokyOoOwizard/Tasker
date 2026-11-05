@@ -210,12 +210,24 @@ struct TitleEditor: View {
                 focused = false
             }
             .onChange(of: focused) { if !focused { commit() } }
-            .onAppear { draft = detail.title }
-            .onChange(of: detail.title) { if !focused { draft = detail.title } }
+            .onAppear {
+                if let stored = slot?.text {
+                    draft = stored
+                    focused = true
+                    TaskDraftCaret.moveToEnd()
+                } else {
+                    draft = detail.title
+                }
+            }
+            .onChange(of: detail.title) { if !focused, slot?.text == nil { draft = detail.title } }
+            .onChange(of: draft) { slot?.set(draft == detail.title ? nil : draft) }
     }
+
+    private var slot: TaskDraftSlot? { model.draftSlot("title") }
 
     private func commit() {
         let value = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        slot?.set(nil)
         if value.isEmpty {
             draft = detail.title
             return
@@ -268,7 +280,17 @@ struct DescriptionEditor: View {
                 }
             }
         }
+        .onAppear {
+            if let stored = slot?.text {
+                draft = stored
+                editing = true
+            }
+        }
+        .onChange(of: draft) { if editing { slot?.set(draft == detail.description ? nil : draft) } }
+        .onChange(of: editing) { if !editing { slot?.set(nil) } }
     }
+
+    private var slot: TaskDraftSlot? { model.draftSlot("description") }
 
     private func commit() {
         guard editing else { return }

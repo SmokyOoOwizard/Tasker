@@ -16,6 +16,7 @@ struct WorkspaceWindowBinder: NSViewRepresentable {
     let id: UUID
     let layout: WorkspaceLayout
     let close: Bool
+    let confirmClose: () -> Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator(id: id, layout: layout)
@@ -24,10 +25,12 @@ struct WorkspaceWindowBinder: NSViewRepresentable {
     func makeNSView(context: Context) -> BinderView {
         let view = BinderView()
         view.coordinator = context.coordinator
+        context.coordinator.confirmClose = confirmClose
         return view
     }
 
     func updateNSView(_ nsView: BinderView, context: Context) {
+        context.coordinator.confirmClose = confirmClose
         if close { context.coordinator.closeWindow() }
     }
 
@@ -42,7 +45,8 @@ struct WorkspaceWindowBinder: NSViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator {
+    final class Coordinator: NSObject {
+        var confirmClose: () -> Bool = { true }
         private let id: UUID
         private let layout: WorkspaceLayout
         private weak var window: NSWindow?
@@ -59,6 +63,9 @@ struct WorkspaceWindowBinder: NSViewRepresentable {
             self.window = window
             window.isRestorable = false
             window.tabbingMode = .disallowed
+            let button = window.standardWindowButton(.closeButton)
+            button?.target = self
+            button?.action = #selector(closeClicked)
             if let frame = layout.takePendingFrame(id) ?? layout.window(id)?.frame {
                 window.setFrame(frame, display: true)
             } else if let name = layout.window(id)?.frameName {
@@ -76,6 +83,10 @@ struct WorkspaceWindowBinder: NSViewRepresentable {
         func closeWindow() {
             closing = true
             DispatchQueue.main.async { [weak self] in self?.window?.close() }
+        }
+
+        @objc private func closeClicked() {
+            if confirmClose() { window?.close() }
         }
 
         private func observe(_ window: NSWindow, _ name: Notification.Name, _ action: @escaping @MainActor (Coordinator) -> Void) {

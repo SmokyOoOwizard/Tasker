@@ -3,6 +3,8 @@ import SwiftUI
 struct WorkspaceWindowRoot: View {
     @Binding var requested: UUID?
     @Environment(WorkspaceController.self) private var workspaces
+    @Environment(WorkspaceSessions.self) private var sessions
+    @Environment(\.localizer) private var l
     @Environment(\.openWindow) private var openWindow
     @State private var id: UUID?
 
@@ -19,7 +21,9 @@ struct WorkspaceWindowRoot: View {
         }
         .background {
             if let id {
-                WorkspaceWindowBinder(id: id, layout: layout, close: layout.window(id) == nil)
+                WorkspaceWindowBinder(id: id, layout: layout, close: layout.window(id) == nil) {
+                    sessions.confirmClosing(window: id, l)
+                }
             }
         }
         .onAppear(perform: claim)

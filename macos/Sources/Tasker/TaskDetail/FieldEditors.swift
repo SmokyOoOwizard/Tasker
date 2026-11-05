@@ -6,6 +6,7 @@ struct FieldRowView: View {
     let vocabulary: TaskListVocabulary
     var highlight = false
     var popoverChoices = false
+    var draftSlot: TaskDraftSlot?
     let set: ([String]) -> Void
     var remove: (() -> Void)?
     @Environment(\.localizer) private var l
@@ -46,6 +47,22 @@ struct FieldRowView: View {
         }
         .onHover { hover = $0 }
         .onChange(of: field.values) { if !editing { draft = singleText } }
+        .onAppear(perform: restoreDraft)
+        .onChange(of: draft) { if editing, !field.multiple { draftSlot?.set(draft == singleText ? nil : draft) } }
+        .onChange(of: drafts) { if editing, field.multiple { draftSlot?.set(list: drafts == field.values ? nil : drafts) } }
+        .onChange(of: editing) { if !editing { draftSlot?.set(nil) } }
+    }
+
+    private func restoreDraft() {
+        guard let draftSlot else { return }
+        if field.multiple, let stored = draftSlot.list {
+            drafts = stored
+            editing = true
+        } else if !field.multiple, let stored = draftSlot.text {
+            draft = stored
+            editing = true
+            TaskDraftCaret.moveToEnd()
+        }
     }
 
     private var label: Text {
@@ -275,6 +292,7 @@ extension FieldRowView {
     init(model: TaskDetailModel, field: TaskFieldValue) {
         self.init(
             field: field, vocabulary: model.vocabulary,
+            draftSlot: model.draftSlot("field." + field.fieldId.uuidString),
             set: { model.perform(.setField(field.fieldId, $0)) },
             remove: { model.perform(.removeField(field.fieldId)) })
     }

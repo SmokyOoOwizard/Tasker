@@ -75,14 +75,15 @@ struct NavigationCommands: Commands {
         CommandGroup(replacing: .saveItem) {
             Button(l.string(.workspaceCloseTab)) {
                 if let tab = current?.selected {
-                    layout.close(tab)
+                    sessions.close(tab, l)
                 } else {
                     NSApp.keyWindow?.performClose(nil)
                 }
             }
             .keyboardShortcut("w", modifiers: .command)
             Button(l.string(.windowClose)) {
-                NSApp.keyWindow?.performClose(nil)
+                if let current, !sessions.confirmClosing(window: current.id, l) { return }
+                NSApp.keyWindow?.close()
             }
             .keyboardShortcut("w", modifiers: [.command, .shift])
         }

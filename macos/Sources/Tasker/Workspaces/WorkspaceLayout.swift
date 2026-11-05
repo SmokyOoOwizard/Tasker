@@ -140,8 +140,12 @@ final class WorkspaceLayout {
     func windowClosed(_ id: UUID) {
         guard !terminating else { return }
         attached.remove(id)
-        guard !attached.isEmpty, window(id) != nil else { return }
-        removeWindow(id)
+        guard window(id) != nil else { return }
+        if attached.isEmpty {
+            closeTabs(in: id)
+        } else {
+            removeWindow(id)
+        }
         save()
     }
 
@@ -357,12 +361,18 @@ final class WorkspaceLayout {
         state.windows.removeAll { $0.id == id }
     }
 
-    private func removeWindow(_ id: UUID) {
-        guard let window = window(id) else { return }
-        for tab in window.tabs {
+    private func closeTabs(in id: UUID) {
+        guard let index = index(ofWindow: id) else { return }
+        for tab in state.windows[index].tabs {
             remember(tab.path)
             onTabRemoved?(tab.id)
         }
+        state.windows[index].tabs = []
+        state.windows[index].selected = nil
+    }
+
+    private func removeWindow(_ id: UUID) {
+        closeTabs(in: id)
         state.windows.removeAll { $0.id == id }
     }
 

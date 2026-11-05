@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import TaskerAPI
@@ -10,6 +11,7 @@ final class WorkspaceTabSession: Identifiable {
     let live: LiveWorkspace
     let navigator = TaskNavigator()
     let creation = TaskCreationCoordinator()
+    let drafts = TaskDrafts()
     let toasts: ToastQueue
     let settings: TaskListSettings
     let selection: ProjectSelection
@@ -138,6 +140,38 @@ final class WorkspaceSessions {
         idle = WorkspaceTabSession(tab: nil, layout: layout, live: makeLive(), defaults: defaults)
         layout.viewSnapshot = { [weak self] id in self?.sessions[id]?.viewState }
         layout.onTabRemoved = { [weak self] id in self?.remove(id) }
+    }
+
+    func hasUnsaved(_ tab: UUID) -> Bool {
+        sessions[tab]?.drafts.isEmpty == false
+    }
+
+    func unsavedTabs(in window: UUID) -> [String] {
+        (layout.window(window)?.tabs ?? []).filter { hasUnsaved($0.id) }.map { WorkspacePath.name($0.path) }
+    }
+
+    func close(_ tab: UUID, _ l: Localizer) {
+        if hasUnsaved(tab) {
+            layout.select(tab)
+            let name = layout.tab(tab).map { WorkspacePath.name($0.path) } ?? ""
+            guard confirmDiscard(l, body: l.string(.tabUnsavedBody, name)) else { return }
+        }
+        layout.close(tab)
+    }
+
+    func confirmClosing(window: UUID, _ l: Localizer) -> Bool {
+        let names = unsavedTabs(in: window)
+        guard !names.isEmpty else { return true }
+        return confirmDiscard(l, body: l.string(.tabUnsavedWindowBody, names.joined(separator: ", ")))
+    }
+
+    private func confirmDiscard(_ l: Localizer, body: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = l.string(.tabUnsavedTitle)
+        alert.informativeText = body
+        alert.addButton(withTitle: l.string(.commonCancel))
+        alert.addButton(withTitle: l.string(.tabUnsavedDiscard))
+        return alert.runModal() == .alertSecondButtonReturn
     }
 
     func session(for tab: WorkspaceTab) -> WorkspaceTabSession {
