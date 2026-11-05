@@ -358,11 +358,11 @@ public class WindowsFileSystemTests : IDisposable
         await AtomicFile.WriteAllText(path, "one\n");
 
         var holder = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read); // как File.ReadAllBytes
-        _ = Task.Run(async () =>
+        new Thread(() =>
         {
-            await Task.Delay(150);
-            await holder.DisposeAsync();
-        });
+            Thread.Sleep(150);
+            holder.Dispose();
+        }) { IsBackground = true }.Start();
 
         await AtomicFile.WriteAllText(path, "two\n");
 
