@@ -36,6 +36,7 @@ final class CommandRunner {
             hasTab: session != nil,
             hasProject: hasProject,
             hasTask: hasProject && session?.commandTask != nil,
+            hasLink: hasProject && session?.currentLink() != nil,
             hasBoard: hasProject && session?.section == .boards && session?.currentBoard != nil,
             tabCount: window.tabs.count,
             otherWindows: layout.windows.count - 1,
@@ -98,6 +99,8 @@ final class CommandRunner {
             session?.requestLink(.parent)
         case .taskCopyKey:
             session?.copyTaskKey(l)
+        case .copyLink:
+            session?.copyLink(l)
         case .nextTab:
             if let window { layout.selectAdjacent(in: window.id, offset: 1) }
         case .previousTab:
