@@ -233,7 +233,7 @@ public class GoldenFilesTests
                 if (relative.EndsWith("from-the-future-ffffffff.yaml", StringComparison.Ordinal))
                 {
                     var error = await Assert.ThrowsAsync<UnsupportedFormatException>(() => RoundTrip(kind, project, file, scratch));
-                    Assert.Equal("from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker", error.Message);
+                    Assert.Equal("from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (11): update Tasker", error.Message);
                     continue;
                 }
 

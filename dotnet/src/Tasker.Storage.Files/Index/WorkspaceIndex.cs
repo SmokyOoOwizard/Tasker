@@ -80,7 +80,7 @@ internal record IndexQuery(IndexKind Kind)
 internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
 {
     // Поднять, если меняется схема или содержимое data: старый индекс пересоберётся.
-    private const int SchemaVersion = 10;
+    private const int SchemaVersion = 11;
 
     private readonly TaskerDirectory directory;
     private readonly ILogger<WorkspaceIndex> log;
