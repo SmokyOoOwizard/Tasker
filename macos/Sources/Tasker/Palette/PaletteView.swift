@@ -44,7 +44,7 @@ struct PaletteView: View {
                     .onKeyPress(.downArrow) { model.move(1); return .handled }
                     .onKeyPress(phases: .down) { press in
                         guard press.modifiers.contains(.control) else { return .ignored }
-                        switch press.characters {
+                        switch LatinKeys.character(for: NSApp.currentEvent) ?? press.characters {
                         case "n": model.move(1); return .handled
                         case "p": model.move(-1); return .handled
                         default: return .ignored
