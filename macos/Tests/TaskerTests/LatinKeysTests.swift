@@ -36,20 +36,40 @@ struct LatinKeysTests {
         }
     }
 
-    @Test func translatedEventKeepsKeyCodeAndUsesLatinLetter() throws {
-        let event = try #require(NSEvent.keyEvent(
-            with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: 0,
-            context: nil, characters: "л", charactersIgnoringModifiers: "л", isARepeat: false, keyCode: 40))
-        let latin = try #require(LatinKeys.translated(event))
-        #expect(latin.charactersIgnoringModifiers == "k")
-        #expect(latin.keyCode == 40)
-        #expect(latin.modifierFlags.contains(.command))
+    @Test func findsMenuItemByLatinKeyAndModifiers() {
+        let menu = NSMenu()
+        let top = NSMenuItem(title: "File", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        let palette = NSMenuItem(title: "Palette", action: nil, keyEquivalent: "k")
+        palette.keyEquivalentModifierMask = .command
+        let board = NSMenuItem(title: "Board", action: nil, keyEquivalent: "n")
+        board.keyEquivalentModifierMask = [.command, .option]
+        sub.addItem(palette)
+        sub.addItem(board)
+        top.submenu = sub
+        menu.addItem(top)
+        #expect(LatinKeys.menuItem(in: menu, key: "k", modifiers: .command)?.index == 0)
+        #expect(LatinKeys.menuItem(in: menu, key: "n", modifiers: [.command, .option])?.index == 1)
+        #expect(LatinKeys.menuItem(in: menu, key: "n", modifiers: .command) == nil)
+        #expect(LatinKeys.menuItem(in: menu, key: "k", modifiers: [.command, .shift]) == nil)
     }
 
-    @Test func plainLatinEventIsNotTranslated() throws {
+    @Test func everyRegistryShortcutIsFoundByItsOwnKeyAndModifiers() {
+        for command in AppCommand.shortcutBearing {
+            guard let shortcut = command.shortcut, shortcut.key != .tab else { continue }
+            let character = shortcut.key.character
+            var flags: NSEvent.ModifierFlags = []
+            if shortcut.modifiers.contains(.command) { flags.insert(.command) }
+            if shortcut.modifiers.contains(.option) { flags.insert(.option) }
+            if shortcut.modifiers.contains(.shift) { flags.insert(.shift) }
+            #expect(LatinKeys.command(key: character, modifiers: flags) == command, "\(command.id)")
+        }
+    }
+
+    @Test func plainLatinEventIsNotHandled() throws {
         let event = try #require(NSEvent.keyEvent(
             with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: 0,
             context: nil, characters: "k", charactersIgnoringModifiers: "k", isARepeat: false, keyCode: 40))
-        #expect(LatinKeys.translated(event) == nil)
+        #expect(!LatinKeys.perform(event))
     }
 }
