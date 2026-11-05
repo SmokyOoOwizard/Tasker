@@ -72,6 +72,7 @@
   --space-sidebar-pad-y: 10px;
   --space-row-pad-x: 8px;
   --space-row-pad-y: 5px;
+  --space-sidebar-sub-pad-y: 3px;
   --space-page-pad-x: 20px;
   --space-toast-pad-x: 14px;
   --space-toast-pad-y: 8px;
@@ -82,6 +83,7 @@
   --layout-task-row-height: 38px;
   --layout-logo-size: 20px;
   --layout-icon-column: 16px;
+  --layout-sidebar-sub-indent: 26px;
   --layout-search-pad-y: 6px;
   --layout-border-width: 1px;
   --layout-icon-stroke: 1.4px;
@@ -102,6 +104,7 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-size-base: 13px;
   --font-size-small: 12px;
+  --font-size-sidebar-sub: 12.5px;
   --font-size-caption: 11px;
   --font-size-mono: 12px;
   --font-size-kbd: 11px;

@@ -11,6 +11,9 @@ struct SidebarView: View {
             SearchField()
             ForEach(AppSection.allCases.filter { $0 != .settings && $0 != .admin }) { section in
                 SidebarRow(section: section, selection: $selection)
+                if section == .boards {
+                    SidebarBoardList()
+                }
             }
             Spacer(minLength: 0)
             ForEach([AppSection.settings, .admin]) { section in

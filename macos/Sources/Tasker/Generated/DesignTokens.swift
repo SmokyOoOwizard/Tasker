@@ -101,6 +101,7 @@ enum DesignSpacing {
     static let sidebarPadY: CGFloat = 10.0
     static let rowPadX: CGFloat = 8.0
     static let rowPadY: CGFloat = 5.0
+    static let sidebarSubPadY: CGFloat = 3.0
     static let pagePadX: CGFloat = 20.0
     static let toastPadX: CGFloat = 14.0
     static let toastPadY: CGFloat = 8.0
@@ -114,6 +115,7 @@ enum DesignLayout {
     static let taskRowHeight: CGFloat = 38.0
     static let logoSize: CGFloat = 20.0
     static let iconColumn: CGFloat = 16.0
+    static let sidebarSubIndent: CGFloat = 26.0
     static let searchPadY: CGFloat = 6.0
     static let borderWidth: CGFloat = 1.0
     static let iconStroke: CGFloat = 1.4
@@ -137,6 +139,7 @@ enum DesignTypography {
     static let monoFamily = "ui-monospace, SFMono-Regular, Menlo, monospace"
     static let baseSize: CGFloat = 13.0
     static let smallSize: CGFloat = 12.0
+    static let sidebarSubSize: CGFloat = 12.5
     static let captionSize: CGFloat = 11.0
     static let monoSize: CGFloat = 12.0
     static let kbdSize: CGFloat = 11.0
