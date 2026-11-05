@@ -2,9 +2,14 @@ import SwiftUI
 import TaskerAPI
 
 struct FieldRowView: View {
-    let model: TaskDetailModel
     let field: TaskFieldValue
+    let vocabulary: TaskListVocabulary
+    var highlight = false
+    var popoverChoices = false
+    let set: ([String]) -> Void
+    var remove: (() -> Void)?
     @Environment(\.localizer) private var l
+    @State private var picking = false
     @State private var editing = false
     @State private var draft = ""
     @State private var drafts: [String] = []
@@ -18,9 +23,9 @@ struct FieldRowView: View {
                 HStack(spacing: DesignSpacing.gap6) {
                     content
                     Spacer(minLength: 0)
-                    if field.source != .type, hover || editing {
+                    if field.source != .type, let remove, hover || editing {
                         Button {
-                            model.perform(.removeField(field.fieldId))
+                            remove()
                         } label: {
                             MockupIconView(icon: .x, size: 11)
                                 .foregroundStyle(DesignColor.dim.color)
@@ -44,12 +49,13 @@ struct FieldRowView: View {
     }
 
     private var label: Text {
-        field.required ? Text(verbatim: field.name) + Text(verbatim: " *").foregroundStyle(DesignColor.red.color) : Text(verbatim: field.name)
+        let name = Text(verbatim: field.name).foregroundColor(highlight ? DesignColor.red.color : DesignColor.mut.color)
+        return field.required ? name + Text(verbatim: " *").foregroundColor(DesignColor.red.color) : name
     }
 
     private var singleText: String { field.values.first ?? "" }
 
-    private var options: [TaskListVocabulary.EnumValue] { model.vocabulary.enumValues(field.enumId) }
+    private var options: [TaskListVocabulary.EnumValue] { vocabulary.enumValues(field.enumId) }
 
     private func isSelected(_ option: TaskListVocabulary.EnumValue) -> Bool {
         field.values.contains { $0.caseInsensitiveCompare(option.id) == .orderedSame }
@@ -57,7 +63,28 @@ struct FieldRowView: View {
 
     @ViewBuilder
     private var content: some View {
-        if field.multiple {
+        if field.multiple, popoverChoices, field.type == .enum {
+            Button {
+                picking = true
+            } label: {
+                HStack(spacing: 4) {
+                    displayValue
+                    MockupIconView(icon: .plus, size: 10).foregroundStyle(DesignColor.dim.color)
+                }
+                .padding(.horizontal, 6)
+                .frame(minHeight: 24)
+                .overlay(RoundedRectangle(cornerRadius: DesignRadius.chip).strokeBorder(highlight ? DesignColor.red.color : .clear, lineWidth: DesignLayout.borderWidth))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $picking, arrowEdge: .bottom) {
+                ChoicePopover(
+                    title: field.name,
+                    options: options.map { ChoicePopover.Option(id: $0.id.lowercased(), name: $0.name) },
+                    selected: field.values.map { $0.lowercased() }
+                ) { set($0) }
+            }
+        } else if field.multiple {
             Button {
                 drafts = field.values
                 editing.toggle()
@@ -70,7 +97,7 @@ struct FieldRowView: View {
             case .bool:
                 Toggle(isOn: Binding(
                     get: { field.values.first == "true" },
-                    set: { model.perform(.setField(field.fieldId, [$0 ? "true" : "false"])) }
+                    set: { set([$0 ? "true" : "false"]) }
                 )) { EmptyView() }
                 .labelsHidden()
                 .toggleStyle(.switch)
@@ -79,14 +106,14 @@ struct FieldRowView: View {
                 Menu {
                     ForEach(options, id: \.id) { option in
                         Button {
-                            model.perform(.setField(field.fieldId, [option.id.lowercased()]))
+                            set([option.id.lowercased()])
                         } label: {
                             if isSelected(option) { Label(option.name, systemImage: "checkmark") } else { Text(option.name) }
                         }
                     }
                     if !field.required, !field.isEmpty {
                         Divider()
-                        Button(l.string(.taskDetailClear)) { model.perform(.setField(field.fieldId, [])) }
+                        Button(l.string(.taskDetailClear)) { set([]) }
                     }
                 } label: {
                     displayValue
@@ -104,7 +131,7 @@ struct FieldRowView: View {
                         .padding(.horizontal, 6)
                         .frame(height: 24)
                         .background(DesignColor.panel.color, in: RoundedRectangle(cornerRadius: DesignRadius.chip))
-                        .overlay(RoundedRectangle(cornerRadius: DesignRadius.chip).strokeBorder(invalid ? DesignColor.red.color : DesignColor.acc.color, lineWidth: DesignLayout.borderWidth))
+                        .overlay(RoundedRectangle(cornerRadius: DesignRadius.chip).strokeBorder(invalid || highlight ? DesignColor.red.color : DesignColor.acc.color, lineWidth: DesignLayout.borderWidth))
                         .onSubmit(commitSingle)
                         .onExitCommand(perform: cancelSingle)
                         .onChange(of: focused) { if !focused { commitSingle() } }
@@ -130,13 +157,13 @@ struct FieldRowView: View {
             if let date = FieldValueCodec.day(from: singleText) {
                 DatePicker("", selection: Binding(
                     get: { date },
-                    set: { model.perform(.setField(field.fieldId, [FieldValueCodec.dayString($0)])) }
+                    set: { set([FieldValueCodec.dayString($0)]) }
                 ), displayedComponents: .date)
                 .labelsHidden()
                 .datePickerStyle(.compact)
                 .environment(\.locale, l.locale)
                 if !field.required {
-                    Button { model.perform(.setField(field.fieldId, [])) } label: {
+                    Button { set([]) } label: {
                         MockupIconView(icon: .x, size: 10).foregroundStyle(DesignColor.dim.color)
                     }
                     .buttonStyle(.plain)
@@ -144,7 +171,7 @@ struct FieldRowView: View {
                 }
             } else {
                 Button {
-                    model.perform(.setField(field.fieldId, [FieldValueCodec.dayString(Date())]))
+                    set([FieldValueCodec.dayString(Date())])
                 } label: {
                     displayValue
                 }
@@ -155,7 +182,7 @@ struct FieldRowView: View {
 
     @ViewBuilder
     private var displayValue: some View {
-        let texts = FieldValueCodec.display(field, vocabulary: model.vocabulary, l: l).filter { !$0.isEmpty }
+        let texts = FieldValueCodec.display(field, vocabulary: vocabulary, l: l).filter { !$0.isEmpty }
         if texts.isEmpty {
             Text(l.string(.taskDetailNotSet)).foregroundStyle(DesignColor.dim.color)
         } else if field.type == .enum {
@@ -223,7 +250,7 @@ struct FieldRowView: View {
         let current = field.values.first ?? ""
         guard value != current else { return }
         if value.isEmpty && field.required && current.isEmpty { return }
-        model.perform(.setField(field.fieldId, value.isEmpty ? [] : [value]))
+        set(value.isEmpty ? [] : [value])
     }
 
     private func cancelSingle() {
@@ -240,7 +267,84 @@ struct FieldRowView: View {
         editing = false
         invalid = false
         guard values != field.values else { return }
-        model.perform(.setField(field.fieldId, values))
+        set(values)
+    }
+}
+
+extension FieldRowView {
+    init(model: TaskDetailModel, field: TaskFieldValue) {
+        self.init(
+            field: field, vocabulary: model.vocabulary,
+            set: { model.perform(.setField(field.fieldId, $0)) },
+            remove: { model.perform(.removeField(field.fieldId)) })
+    }
+}
+
+struct ChoicePopover: View {
+    struct Option: Hashable, Identifiable {
+        var id: String
+        var name: String
+    }
+
+    let title: String
+    let options: [Option]
+    let selected: [String]
+    let change: ([String]) -> Void
+    @Environment(\.localizer) private var l
+    @State private var query = ""
+    @FocusState private var focused: Bool
+
+    private var shown: [Option] {
+        let text = query.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return options }
+        return options.filter { $0.name.localizedCaseInsensitiveContains(text) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: title)
+                .font(.design(DesignTypography.baseSize, weight: DesignTypography.semiboldWeight))
+                .padding(.horizontal, DesignSpacing.toastPadX)
+                .padding(.top, DesignSpacing.gap10)
+            TextField(l.string(.taskListSortSearch), text: $query)
+                .textFieldStyle(.roundedBorder)
+                .focused($focused)
+                .padding(.horizontal, DesignSpacing.toastPadX)
+                .padding(.vertical, DesignSpacing.gap10)
+            DesignDivider()
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if shown.isEmpty {
+                        Text(l.string(.taskCreateNothingFound)).foregroundStyle(DesignColor.dim.color).padding(DesignSpacing.gap10)
+                    }
+                    ForEach(shown) { option in
+                        let on = selected.contains(option.id)
+                        Button {
+                            change(on ? selected.filter { $0 != option.id } : selected + [option.id])
+                        } label: {
+                            HStack(spacing: DesignSpacing.gap8) {
+                                Image(systemName: on ? "checkmark.square.fill" : "square")
+                                    .foregroundStyle(on ? DesignColor.acc.color : DesignColor.dim.color)
+                                Text(verbatim: option.name)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, DesignSpacing.gap10)
+                            .frame(height: 28)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(DesignSpacing.gap6)
+            }
+            .frame(height: 220)
+        }
+        .font(.design(DesignTypography.baseSize))
+        .frame(width: 280)
+        .task {
+            try? await Task.sleep(for: .milliseconds(150))
+            focused = true
+        }
     }
 }
 

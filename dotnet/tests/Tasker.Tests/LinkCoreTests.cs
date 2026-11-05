@@ -129,6 +129,51 @@ public class LinkCoreTests
     }
 
     [Fact]
+    public async Task A_task_is_created_together_with_its_links_in_both_directions()
+    {
+        var env = new SeriesEnv();
+        var blocks = await Type(env, "Blocks");
+        var epic = await env.Create("Epic");
+        var other = await env.Create("Other");
+
+        var created = await env.TaskSvc.Create(env.Project, new CreateTask("New", null, env.TypeId, null, null, null,
+            [new NewTaskLink(blocks.Id, epic.Id, LinkDirection.Inward), new NewTaskLink(blocks.Id, other.Id)]));
+
+        Assert.Equal([new TaskLink(blocks.Id, other.Id)], env.Get(created.Id).Links);
+        Assert.Equal([new TaskLink(blocks.Id, created.Id)], env.Get(epic.Id).Links);
+        Assert.Equal(2, (await env.LinkSvc.GetLinks(env.Project, created.Id))!.Length);
+    }
+
+    [Fact]
+    public async Task A_failed_link_leaves_no_task_and_no_links_behind()
+    {
+        var env = new SeriesEnv();
+        var blocks = await Type(env, "Blocks");
+        var epic = await env.Create("Epic");
+        var before = env.Tasks.All().Length;
+
+        await Assert.ThrowsAsync<TaskerValidationException>(() => env.TaskSvc.Create(env.Project, new CreateTask("New", null, env.TypeId, null, null, null,
+            [new NewTaskLink(blocks.Id, epic.Id, LinkDirection.Inward), new NewTaskLink(blocks.Id, Guid.NewGuid())])));
+
+        Assert.Equal(before, env.Tasks.All().Length);
+        Assert.Empty(env.Get(epic.Id).Links);
+    }
+
+    [Fact]
+    public async Task Duplicate_links_at_creation_are_rejected_before_anything_is_written()
+    {
+        var env = new SeriesEnv();
+        var blocks = await Type(env, "Blocks");
+        var epic = await env.Create("Epic");
+        var before = env.Tasks.All().Length;
+
+        await Assert.ThrowsAsync<TaskerValidationException>(() => env.TaskSvc.Create(env.Project, new CreateTask("New", null, env.TypeId, null, null, null,
+            [new NewTaskLink(blocks.Id, epic.Id), new NewTaskLink(blocks.Id, epic.Id)])));
+
+        Assert.Equal(before, env.Tasks.All().Length);
+    }
+
+    [Fact]
     public async Task Adding_the_same_link_twice_changes_nothing_the_second_time()
     {
         var env = new SeriesEnv();

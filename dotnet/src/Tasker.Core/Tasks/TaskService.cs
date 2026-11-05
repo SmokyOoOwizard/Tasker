@@ -8,7 +8,11 @@ namespace Tasker.Core.Tasks;
 /// <param name="SeriesIds">Серии проекта, в которые сразу включить задачу (по номеру в каждой); null или пусто — без серий.</param>
 /// <param name="Fields">Значения полей и дополнительные поля; обязательные поля типа и собственные обязательные должны получить значения.
 /// Убирать поля (<see cref="TaskFieldChanges.RemoveFields"/>) у новой задачи нечего.</param>
-public record CreateTask(string Title, string? Description, Guid TypeId, Guid? StatusId, Guid[]? SeriesIds = null, TaskFieldChanges? Fields = null);
+/// <param name="Links">Связи новой задачи с другими задачами проекта. Создание и связи — одна операция: не удалась любая связь — задачи нет.</param>
+public record CreateTask(string Title, string? Description, Guid TypeId, Guid? StatusId, Guid[]? SeriesIds = null, TaskFieldChanges? Fields = null, NewTaskLink[]? Links = null);
+
+/// <summary>Связь новой задачи: <paramref name="TaskId"/> — другая задача; Outward — «новая —тип→ другая», Inward — «другая —тип→ новая».</summary>
+public record NewTaskLink(Guid TypeId, Guid TaskId, Links.LinkDirection Direction = Links.LinkDirection.Outward);
 
 /// <summary>
 /// Поля null — не меняются. Description: пустая строка — очистить.
@@ -41,7 +45,59 @@ public partial class TaskService(
 {
     public const int MaxTitleLength = 500;
 
+    public const int MaxNewLinks = 100;
+
     public async Task<TaskItem> Create(Guid projectId, CreateTask command, CancellationToken ct = default)
+    {
+        if (command.Links is not { Length: > 0 } newLinks)
+            return await CreateCore(projectId, command, ct);
+
+        if (newLinks.Length > MaxNewLinks)
+            throw new TaskerValidationException($"Links: at most {MaxNewLinks} links at creation");
+        if (newLinks.Distinct().Count() != newLinks.Length)
+            throw new TaskerValidationException("Links: duplicate links");
+
+        return await writes.Exclusive(projectId, async () =>
+        {
+            var created = await CreateCore(projectId, command, ct);
+            try
+            {
+                foreach (var link in newLinks)
+                {
+                    var added = link.Direction == Links.LinkDirection.Inward
+                        ? await links.Add(projectId, link.TaskId, link.TypeId, created.Id, null, ct)
+                        : await links.Add(projectId, created.Id, link.TypeId, link.TaskId, null, ct);
+                    if (added == null)
+                        throw new TaskerValidationException($"Links: task not found in the project: {link.TaskId}");
+                }
+            }
+            catch
+            {
+                await Rollback(projectId, created.Id);
+                throw;
+            }
+
+            return await tasks.GetById(projectId, created.Id, ct) ?? created;
+        }, ct);
+    }
+
+    private async Task Rollback(Guid projectId, Guid id)
+    {
+        try
+        {
+            if (await tasks.GetById(projectId, id) is { } current)
+            {
+                await tasks.Delete(projectId, id, current.Version);
+                await locks.Forget(Locks.LockedEntity.Task, id);
+                await Links.TaskLinks.RemoveInbound(tasks, time, projectId, id, CancellationToken.None);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task<TaskItem> CreateCore(Guid projectId, CreateTask command, CancellationToken ct)
     {
         var title = Validate.Name(command.Title, "Title", MaxTitleLength);
         var (type, set) = await GetType(projectId, command.TypeId, ct);

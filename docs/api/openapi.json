@@ -7996,6 +7996,13 @@
               }
             ],
             "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewTaskLink"
+            },
+            "nullable": true
           }
         }
       },
@@ -8580,6 +8587,26 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          }
+        }
+      },
+      "NewTaskLink": {
+        "required": [
+          "typeId",
+          "taskId"
+        ],
+        "type": "object",
+        "properties": {
+          "typeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/LinkDirection"
           }
         }
       },
