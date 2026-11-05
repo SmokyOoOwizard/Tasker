@@ -295,7 +295,7 @@ struct SettingsRefusalSheet: View {
                             Text(label(use.kind))
                                 .foregroundStyle(DesignColor.dim.color)
                                 .frame(width: 130, alignment: .leading)
-                            Text(use.name)
+                            Text(name(use))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, 5)
@@ -310,11 +310,17 @@ struct SettingsRefusalSheet: View {
         }
     }
 
+    private func name(_ use: SettingsUsage) -> String {
+        if case .links(let count) = use.kind { return l.string(.settingsUseLinksCount, String(count)) }
+        return use.name
+    }
+
     private func label(_ kind: SettingsUsage.Kind) -> String {
         switch kind {
         case .type: l.string(.settingsUseType)
         case .tasks(let count): l.string(.settingsUseTasks, String(count))
         case .board(let board): l.string(.settingsUseBoard, board)
+        case .links: l.string(.settingsUseLinks)
         case .field: l.string(.settingsUseField)
         }
     }

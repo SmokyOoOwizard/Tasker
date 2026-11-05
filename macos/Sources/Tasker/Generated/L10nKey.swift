@@ -377,6 +377,8 @@ enum L10nKey: String, CaseIterable, Sendable {
     case settingsUseType = "settings.useType"
     case settingsUseTasks = "settings.useTasks"
     case settingsUseBoard = "settings.useBoard"
+    case settingsUseLinks = "settings.useLinks"
+    case settingsUseLinksCount = "settings.useLinksCount"
     case settingsUseField = "settings.useField"
     case settingsFieldsLead = "settings.fieldsLead"
     case settingsFieldNew = "settings.fieldNew"

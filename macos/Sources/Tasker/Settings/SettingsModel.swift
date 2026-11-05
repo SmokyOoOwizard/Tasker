@@ -373,6 +373,7 @@ struct SettingsUsage: Hashable, Sendable, Identifiable {
     enum Kind: Hashable, Sendable {
         case type
         case tasks(Int)
+        case links(Int)
         case board(String)
         case field
     }

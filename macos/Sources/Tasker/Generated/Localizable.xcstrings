@@ -5481,6 +5481,40 @@
         }
       }
     },
+    "settings.useLinks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "links"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "связи"
+          }
+        }
+      }
+    },
+    "settings.useLinksCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ pcs."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ шт."
+          }
+        }
+      }
+    },
     "settings.useTasks" : {
       "extractionState" : "manual",
       "localizations" : {

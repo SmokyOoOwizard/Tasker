@@ -341,3 +341,11 @@ struct SettingsStringsTests {
         }
     }
 }
+
+struct LinkTypeRefusalTests {
+    @Test func countIsReadFromServerMessage() {
+        let uses = LinkTypesSettingsPage.linkUsage("Link type 'x' is used by links of 12 task(s) and cannot be deleted")
+        #expect(uses.map(\.kind) == [.links(12)])
+        #expect(LinkTypesSettingsPage.linkUsage("something else").isEmpty)
+    }
+}

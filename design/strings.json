@@ -376,6 +376,8 @@
     "settings.useType": {"ru": "тип задач", "en": "task type"},
     "settings.useTasks": {"ru": "задачи ({0})", "en": "tasks ({0})"},
     "settings.useBoard": {"ru": "доска «{0}», колонка", "en": "board “{0}”, column"},
+    "settings.useLinks": {"ru": "связи", "en": "links"},
+    "settings.useLinksCount": {"ru": "{0} шт.", "en": "{0} pcs."},
     "settings.useField": {"ru": "поле", "en": "field"},
     "settings.fieldsLead": {"ru": "Каталог полей проекта. Поле прикрепляется к типу, к отдельной задаче или создаётся прямо в задаче.", "en": "The project field catalog. A field is attached to a type, to a single task, or created right in the task."},
     "settings.fieldNew": {"ru": "Поле", "en": "Field"},
