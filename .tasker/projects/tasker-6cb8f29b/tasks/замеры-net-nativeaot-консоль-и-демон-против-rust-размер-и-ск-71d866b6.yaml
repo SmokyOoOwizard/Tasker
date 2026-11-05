@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 71d866b6-e724-45ea-a295-2270debcc651
 title: 'Замеры .NET NativeAOT: консоль и демон против Rust (размер и скорость)'
 typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-03T04:30:33.9807950+00:00
-updatedAt: 2026-11-03T15:32:17.0573740+00:00
+updatedAt: 2026-11-05T10:03:04.8560170+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 177

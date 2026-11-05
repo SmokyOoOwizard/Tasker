@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: b4b1ae26-f831-458a-a6b6-02e7711a3b05
 title: 'Сервер: поднять версию формата файлов из-за значка статуса (icon)'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-05T04:38:08.3213130+00:00
-updatedAt: 2026-11-05T08:37:50.8240560+00:00
+updatedAt: 2026-11-05T10:03:04.9796380+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 213
