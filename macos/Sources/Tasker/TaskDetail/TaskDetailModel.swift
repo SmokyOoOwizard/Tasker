@@ -1,6 +1,56 @@
+import AppKit
 import Foundation
 import Observation
 import TaskerAPI
+
+@MainActor
+final class TaskDrafts {
+    private var values: [String: String] = [:]
+
+    var isEmpty: Bool { values.isEmpty }
+
+    func text(task: UUID, slot: String) -> String? {
+        values[key(task, slot)]
+    }
+
+    func set(_ text: String?, task: UUID, slot: String) {
+        values[key(task, slot)] = text
+    }
+
+    private func key(_ task: UUID, _ slot: String) -> String {
+        task.uuidString + "/" + slot
+    }
+}
+
+@MainActor
+struct TaskDraftSlot {
+    let drafts: TaskDrafts
+    let task: UUID
+    let slot: String
+
+    var text: String? { drafts.text(task: task, slot: slot) }
+
+    var list: [String]? {
+        text.flatMap { try? JSONDecoder().decode([String].self, from: Data($0.utf8)) }
+    }
+
+    func set(_ text: String?) {
+        drafts.set(text, task: task, slot: slot)
+    }
+
+    func set(list: [String]?) {
+        set(list.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) })
+    }
+}
+
+enum TaskDraftCaret {
+    @MainActor
+    static func moveToEnd() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            (NSApp.keyWindow?.firstResponder as? NSTextView)?.moveToEndOfDocument(nil)
+        }
+    }
+}
 
 enum TaskDetailPhase: Equatable {
     case loading
@@ -31,6 +81,7 @@ final class TaskDetailModel {
     @ObservationIgnored var onNotice: ((String) -> Void)?
     @ObservationIgnored var onDeleted: (() -> Void)?
     @ObservationIgnored var onChanged: (() -> Void)?
+    @ObservationIgnored var drafts: TaskDrafts?
 
     @ObservationIgnored let source: any TaskDetailSource
     @ObservationIgnored private var loadTask: Task<Void, Never>?
@@ -40,6 +91,10 @@ final class TaskDetailModel {
         self.project = project
         taskId = task
         self.source = source
+    }
+
+    func draftSlot(_ slot: String) -> TaskDraftSlot? {
+        drafts.map { TaskDraftSlot(drafts: $0, task: taskId, slot: slot) }
     }
 
     var reference: String {

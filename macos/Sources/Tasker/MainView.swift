@@ -1,32 +1,92 @@
 import SwiftUI
 
-struct MainView: View {
-    @AppStorage(AppSection.storageKey) private var storedSection = AppSection.default.rawValue
-    @Environment(DaemonConnection.self) private var connection
-    @Environment(LiveWorkspace.self) private var live
+struct WorkspaceWindowRoot: View {
+    @Binding var requested: UUID?
     @Environment(WorkspaceController.self) private var workspaces
-    @AppStorage(SidebarState.storageKey) private var sidebarVisible = true
+    @Environment(WorkspaceSessions.self) private var sessions
+    @Environment(\.localizer) private var l
+    @Environment(\.openWindow) private var openWindow
+    @State private var id: UUID?
+
+    private var layout: WorkspaceLayout { workspaces.layout }
+
+    var body: some View {
+        Group {
+            if let id, let window = layout.window(id) {
+                MainView(window: window)
+            } else {
+                DesignColor.bg.color
+                    .frame(minWidth: 640, minHeight: 420)
+            }
+        }
+        .background {
+            if let id {
+                WorkspaceWindowBinder(id: id, layout: layout, close: layout.window(id) == nil) {
+                    sessions.confirmClosing(window: id, l)
+                }
+            }
+        }
+        .onAppear(perform: claim)
+    }
+
+    private func claim() {
+        guard id == nil else { return }
+        let claimed = layout.claimWindow(requested: requested)
+        id = claimed
+        if requested != claimed { requested = claimed }
+        for pending in layout.takePendingWindows() {
+            openWindow(value: pending)
+        }
+    }
+}
+
+struct MainView: View {
+    let window: WorkspaceWindow
+    @Environment(DaemonConnection.self) private var connection
+    @Environment(WorkspaceController.self) private var workspaces
+    @Environment(WorkspaceSessions.self) private var sessions
+    @Environment(\.localizer) private var l
+
+    private var layout: WorkspaceLayout { workspaces.layout }
+
+    private var session: WorkspaceTabSession {
+        window.selectedTab.map(sessions.session(for:)) ?? sessions.idle
+    }
 
     private var selection: Binding<AppSection> {
-        Binding(
-            get: { AppSection(storedValue: storedSection) },
-            set: { storedSection = $0.rawValue }
+        let session = session
+        return Binding(
+            get: { session.section },
+            set: { session.setSection($0) }
         )
     }
 
+    private var active: ActiveWorkspaceWindow {
+        ActiveWorkspaceWindow(
+            id: window.id,
+            tab: window.selected,
+            tabCount: window.tabs.count,
+            sidebarVisible: window.sidebarVisible,
+            others: layout.windows.filter { $0.id != window.id }.map { .init(id: $0.id, title: $0.title(fallback: l.string(.appName))) }
+        )
+    }
+
+    private func toggleSidebar() {
+        layout.setSidebar(!window.sidebarVisible, in: window.id)
+    }
+
     var body: some View {
+        let session = session
         VStack(spacing: 0) {
-            WorkspaceTabBar()
+            WorkspaceTabBar(window: window)
             WorkspaceFailureBanner()
             HStack(spacing: 0) {
-            if sidebarVisible {
+            if window.sidebarVisible {
                 SidebarView(selection: selection)
                     .transition(.move(edge: .leading))
             }
             VStack(spacing: 0) {
-                TopBarView(section: selection.wrappedValue, sidebarVisible: sidebarVisible) {
-                    sidebarVisible.toggle()
-                }
+                TopBarView(section: selection.wrappedValue, sidebarVisible: window.sidebarVisible, toggleSidebar: toggleSidebar)
                 DaemonGate {
                     WorkspaceGate {
                         SectionContentView(section: selection.wrappedValue)
@@ -40,19 +100,27 @@ struct MainView: View {
             .background(DesignColor.bg.color)
             }
         }
+        .environment(\.workspaceWindow, window.id)
+        .environment(session)
+        .environment(session.live)
+        .environment(session.selection)
+        .environment(session.settings)
+        .environment(session.creation)
         .ignoresSafeArea()
-        .animation(.easeInOut(duration: 0.18), value: sidebarVisible)
+        .animation(.easeInOut(duration: 0.18), value: window.sidebarVisible)
         .frame(minWidth: 640, minHeight: 420)
         .font(.design(DesignTypography.baseSize))
         .foregroundStyle(DesignColor.tx.color)
         .tint(DesignColor.acc.color)
+        .navigationTitle(window.title(fallback: l.string(.appName)))
+        .focusedSceneValue(\.activeWorkspaceWindow, active)
         .task { connection.start() }
         .onChange(of: connection.state, initial: true) {
             workspaces.sync(with: connection.state)
-            live.follow(connection.state, selected: workspaces.tabs.selected)
+            sessions.sync(with: connection.state)
         }
-        .onChange(of: workspaces.tabs.selected) {
-            live.follow(connection.state, selected: workspaces.tabs.selected)
+        .onChange(of: layout.openPaths) {
+            sessions.sync(with: connection.state)
         }
     }
 }

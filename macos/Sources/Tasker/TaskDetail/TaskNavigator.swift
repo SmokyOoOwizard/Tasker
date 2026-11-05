@@ -4,12 +4,20 @@ import Observation
 @MainActor
 @Observable
 final class TaskNavigator {
-    private(set) var peek: UUID?
-    private(set) var card: UUID?
-    private(set) var history: [UUID] = []
+    private(set) var peek: UUID? { didSet { onChange?() } }
+    private(set) var card: UUID? { didSet { onChange?() } }
+    private(set) var history: [UUID] = [] { didSet { onChange?() } }
     private(set) var labels: [UUID: String] = [:]
 
+    @ObservationIgnored var onChange: (() -> Void)?
+
     var canGoBack: Bool { !history.isEmpty }
+
+    func restore(peek: UUID?, card: UUID?, history: [UUID]) {
+        self.peek = peek
+        self.card = card
+        self.history = card == nil ? [] : history
+    }
 
     func togglePeek(_ id: UUID) {
         peek = peek == id ? nil : id

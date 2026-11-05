@@ -8,7 +8,7 @@ struct TaskCreateSheet: View {
     let request: TaskCreationRequest
     let navigator: TaskNavigator
     @Environment(TaskCreationCoordinator.self) private var creation
-    @Environment(LiveWorkspace.self) private var live
+    @Environment(WorkspaceTabSession.self) private var session
     @Environment(\.localizer) private var l
     @State private var model: TaskCreateModel?
 
@@ -26,8 +26,8 @@ struct TaskCreateSheet: View {
         .task {
             let value = TaskCreateModel(project: project, request: request, source: GraphQLTaskCreateSource(client: client))
             value.localizer = l
-            value.onCreated = { [live, creation, navigator, l] created, reference in
-                live.show(.notice(l.string(.taskCreateCreated, reference)))
+            value.onCreated = { [session, creation, navigator, l] created, reference in
+                session.notice(l.string(.taskCreateCreated, reference))
                 creation.dismiss()
                 navigator.open(created.id)
             }

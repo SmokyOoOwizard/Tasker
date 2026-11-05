@@ -5,30 +5,31 @@ import Observation
 @MainActor
 @Observable
 final class WorkspaceController {
-    let tabs: WorkspaceTabs
+    let layout: WorkspaceLayout
+    let dropZones = WorkspaceTabDropZones()
     private(set) var failure: String?
 
     @ObservationIgnored private let settings: WorkspaceSettingsFile
     @ObservationIgnored private let fileManager: FileManager
 
-    init(tabs: WorkspaceTabs, settings: WorkspaceSettingsFile, fileManager: FileManager = .default) {
-        self.tabs = tabs
+    init(layout: WorkspaceLayout, settings: WorkspaceSettingsFile, fileManager: FileManager = .default) {
+        self.layout = layout
         self.settings = settings
         self.fileManager = fileManager
     }
 
     static func live() -> WorkspaceController {
-        WorkspaceController(tabs: WorkspaceTabs(), settings: WorkspaceSettingsFile(directory: DaemonPaths().dataDirectory))
+        WorkspaceController(layout: WorkspaceLayout(), settings: WorkspaceSettingsFile(directory: DaemonPaths().dataDirectory))
     }
 
     func sync(with state: DaemonConnectionState) {
         guard let status = state.status else { return }
-        tabs.seed(from: status.workspaces.map(\.path))
+        layout.seed(from: status.workspaces.map(\.path))
     }
 
     func reopenable(in status: DaemonStatus?) -> [String] {
-        let open = Set(tabs.open)
-        var result = tabs.recents
+        let open = Set(layout.openPaths)
+        var result = layout.recents
         for path in (status?.workspaces ?? []).map({ WorkspacePath.canonical($0.path) }) where !open.contains(path) && !result.contains(path) {
             result.append(path)
         }
@@ -39,7 +40,7 @@ final class WorkspaceController {
         !WorkspacePath.hasData(WorkspacePath.canonical(path), fileManager: fileManager)
     }
 
-    func add(_ path: String, createData: Bool) async {
+    func add(_ path: String, createData: Bool, window: UUID) async {
         let canonical = WorkspacePath.canonical(path)
         failure = nil
         do {
@@ -48,27 +49,27 @@ final class WorkspaceController {
             }
             let settings = settings
             _ = try await Task.detached { try settings.add(canonical) }.value
-            tabs.open(canonical)
+            layout.open(canonical, in: window)
         } catch {
             failure = error.localizedDescription
         }
     }
 
-    func openFolder(_ l: Localizer) async {
+    func openFolder(_ l: Localizer, window: UUID) async {
         guard let chosen = FolderPicker.choose(prompt: l.string(.workspacePanelPrompt), message: l.string(.workspacePanelMessage)) else { return }
         let path = WorkspacePath.canonical(chosen)
         let create = needsData(path)
         if create, !FolderPicker.confirmCreate(l, folder: path) { return }
-        await add(path, createData: create)
+        await add(path, createData: create, window: window)
     }
 
-    func reopen(_ path: String) async {
+    func reopen(_ path: String, window: UUID) async {
         guard fileManager.fileExists(atPath: path) else {
-            tabs.forget(recent: path)
+            layout.forget(recent: path)
             failure = path
             return
         }
-        await add(path, createData: false)
+        await add(path, createData: false, window: window)
     }
 
     func reconnect(_ path: String) async {

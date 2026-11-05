@@ -89,6 +89,10 @@ final class TaskListModel {
     @ObservationIgnored var onPeek: ((TaskRow) -> Void)?
     @ObservationIgnored var onSelect: ((TaskRow) -> Void)?
     @ObservationIgnored var onEscape: (() -> Bool)?
+    @ObservationIgnored var onViewState: (() -> Void)?
+    @ObservationIgnored weak var changeOwner: AnyObject?
+    @ObservationIgnored var selectedRow: String?
+    @ObservationIgnored var scrollY: Double = 0
 
     @ObservationIgnored private let source: any TaskListSource
     @ObservationIgnored private let settings: TaskListSettings?
@@ -126,6 +130,23 @@ final class TaskListModel {
     func start() {
         started = true
         reload()
+    }
+
+    func resume() {
+        started = true
+        loadingMore = false
+        if phase == .ready, !roots.isEmpty {
+            scheduleRefresh()
+        } else {
+            reload()
+        }
+    }
+
+    func noteViewState(selectedRow: String?, scrollY: Double) {
+        guard selectedRow != self.selectedRow || scrollY != self.scrollY else { return }
+        self.selectedRow = selectedRow
+        self.scrollY = scrollY
+        onViewState?()
     }
 
     func stop() {

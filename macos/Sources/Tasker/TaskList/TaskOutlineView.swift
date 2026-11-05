@@ -186,6 +186,9 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
     private var suppress = 0
     private var observer: NSObjectProtocol?
     private var shownMode: TaskListMode?
+    private var restoreUntil: ContinuousClock.Instant?
+
+    static let restoreWindow: Duration = .seconds(5)
 
     init(model: TaskListModel) {
         self.model = model
@@ -207,15 +210,51 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
         outline.mode = model.mode
         shownMode = model.mode
         model.onChange = { [weak self] change in self?.apply(change) }
+        model.changeOwner = self
+        if model.scrollY > 0 || model.selectedRow != nil { restoreUntil = .now + Self.restoreWindow }
         observer = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: scroll.contentView, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.checkEnd() }
+            MainActor.assumeIsolated {
+                self?.checkEnd()
+                self?.noteViewState()
+            }
         }
         apply(.reload)
     }
 
     func detach() {
         if let observer { NotificationCenter.default.removeObserver(observer) }
-        model.onChange = nil
+        if model.changeOwner === self { model.onChange = nil }
+    }
+
+    private func noteViewState() {
+        guard restoreUntil == nil, let outline, let scroll = outline.enclosingScrollView else { return }
+        model.noteViewState(selectedRow: node(outline.selectedRow)?.key, scrollY: scroll.contentView.bounds.origin.y)
+    }
+
+    private func scheduleRestore() {
+        guard restoreUntil != nil else { return }
+        DispatchQueue.main.async { [weak self] in self?.restoreView() }
+    }
+
+    private func restoreView() {
+        guard let deadline = restoreUntil, let outline, let scroll = outline.enclosingScrollView, outline.numberOfRows > 0 else { return }
+        guard ContinuousClock.now < deadline else {
+            restoreUntil = nil
+            return
+        }
+        var selectionPlaced = model.selectedRow == nil
+        if let key = model.selectedRow, let row = rowFor(key: key) {
+            selectionPlaced = true
+            if outline.selectedRow != row {
+                suppress += 1
+                outline.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+                suppress -= 1
+            }
+        }
+        let limit = max(0, outline.frame.height - scroll.contentView.bounds.height)
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: min(model.scrollY, limit)))
+        scroll.reflectScrolledClipView(scroll.contentView)
+        if selectionPlaced, model.scrollY <= limit { restoreUntil = nil }
     }
 
     func syncMode() {
@@ -235,6 +274,7 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
         defer {
             suppress -= 1
             updateSticky()
+            scheduleRestore()
         }
         switch change {
         case .reload:
@@ -332,7 +372,9 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
     }
 
     func outlineViewSelectionDidChange(_ notification: Notification) {
-        guard suppress == 0, let outline, let node = node(outline.selectedRow), node.kind == .task else { return }
+        guard suppress == 0, let outline else { return }
+        noteViewState()
+        guard let node = node(outline.selectedRow), node.kind == .task else { return }
         model.selectionChanged(node)
     }
 

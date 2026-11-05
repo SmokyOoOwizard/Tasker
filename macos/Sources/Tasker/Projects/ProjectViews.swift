@@ -4,22 +4,23 @@ import TaskerAPI
 @MainActor
 @Observable
 final class ProjectSelection {
-    private let tabs: WorkspaceTabs
+    private let tab: UUID
+    private let layout: WorkspaceLayout
     private let live: LiveWorkspace
 
-    init(tabs: WorkspaceTabs, live: LiveWorkspace) {
-        self.tabs = tabs
+    init(tab: UUID, layout: WorkspaceLayout, live: LiveWorkspace) {
+        self.tab = tab
+        self.layout = layout
         self.live = live
     }
 
     var current: ProjectFields? {
-        guard let path = tabs.selected, let projects = live.projects else { return nil }
-        return ProjectChoice.resolve(projects, stored: tabs.projectId(in: path))
+        guard let projects = live.projects, let stored = layout.tab(tab) else { return nil }
+        return ProjectChoice.resolve(projects, stored: stored.project)
     }
 
     func choose(_ id: UUID) {
-        guard let path = tabs.selected else { return }
-        tabs.setProject(id, in: path)
+        layout.setProject(id, tab: tab)
     }
 }
 

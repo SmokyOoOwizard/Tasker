@@ -34,24 +34,54 @@ struct LiveToast: Identifiable, Equatable, Sendable {
 
 @MainActor
 @Observable
+final class ToastQueue {
+    static let maxToasts = 3
+
+    private(set) var toasts: [LiveToast] = []
+
+    @ObservationIgnored private let duration: Duration
+
+    init(duration: Duration = .milliseconds(2600)) {
+        self.duration = duration
+    }
+
+    func show(_ message: LiveToastMessage) {
+        let toast = LiveToast(id: UUID(), message: message)
+        toasts.append(toast)
+        if toasts.count > Self.maxToasts { toasts.removeFirst(toasts.count - Self.maxToasts) }
+        let duration = duration
+        Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            self?.dismiss(toast.id)
+        }
+    }
+
+    func dismiss(_ id: UUID) {
+        toasts.removeAll { $0.id == id }
+    }
+}
+
+@MainActor
+@Observable
 final class LiveWorkspace {
     private(set) var address: LiveWorkspaceAddress?
     private(set) var client: TaskerAPIClient?
     private(set) var connection: LiveConnection = .connecting
-    private(set) var toasts: [LiveToast] = []
     private(set) var projects: [ProjectFields]?
     private(set) var revision = 0
 
     @ObservationIgnored private let makeClient: (LiveWorkspaceAddress) -> TaskerAPIClient
     @ObservationIgnored private let reconnect: ReconnectPolicy
     @ObservationIgnored private let retryDelay: Duration
-    @ObservationIgnored private let toastDuration: Duration
+    let queue: ToastQueue
     @ObservationIgnored private let ownAuthorKey: String
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var projectsTask: Task<Void, Never>?
     @ObservationIgnored private var everConnected = false
 
-    static let maxToasts = 3
+    static let maxToasts = ToastQueue.maxToasts
+
+    var toasts: [LiveToast] { queue.toasts }
 
     init(
         makeClient: @escaping (LiveWorkspaceAddress) -> TaskerAPIClient = { TaskerAPIClient(endpoint: .local(port: $0.port, workspace: $0.key)) },
@@ -63,7 +93,7 @@ final class LiveWorkspace {
         self.makeClient = makeClient
         self.reconnect = reconnect
         self.retryDelay = retryDelay
-        self.toastDuration = toastDuration
+        queue = ToastQueue(duration: toastDuration)
         self.ownAuthorKey = ownAuthorKey
     }
 
@@ -115,7 +145,7 @@ final class LiveWorkspace {
     }
 
     func dismiss(_ id: UUID) {
-        toasts.removeAll { $0.id == id }
+        queue.dismiss(id)
     }
 
     func handle(_ event: LiveEvent, client: TaskerAPIClient) async {
@@ -138,14 +168,7 @@ final class LiveWorkspace {
     }
 
     func show(_ message: LiveToastMessage) {
-        let toast = LiveToast(id: UUID(), message: message)
-        toasts.append(toast)
-        if toasts.count > Self.maxToasts { toasts.removeFirst(toasts.count - Self.maxToasts) }
-        let duration = toastDuration
-        Task { [weak self] in
-            try? await Task.sleep(for: duration)
-            self?.dismiss(toast.id)
-        }
+        queue.show(message)
     }
 
     private func run(_ client: TaskerAPIClient) async {
