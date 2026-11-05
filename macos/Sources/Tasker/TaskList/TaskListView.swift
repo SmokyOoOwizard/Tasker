@@ -4,7 +4,15 @@ import TaskerAPI
 struct TaskListSection: View {
     @Environment(LiveWorkspace.self) private var live
     @Environment(ProjectSelection.self) private var selection
+    @Environment(TaskCreationCoordinator.self) private var creation
     @State private var navigator = TaskNavigator()
+
+    private var pending: Binding<TaskCreationRequest?> {
+        Binding(
+            get: { live.client != nil && selection.current != nil ? creation.request : nil },
+            set: { creation.request = $0 }
+        )
+    }
 
     var body: some View {
         ProjectScope {
@@ -13,7 +21,15 @@ struct TaskListSection: View {
                     .id(project.id)
             }
         }
-        .onChange(of: selection.current?.id) { navigator.reset() }
+        .sheet(item: pending) { request in
+            if let client = live.client, let project = selection.current {
+                TaskCreateSheet(client: client, project: project.id, request: request, navigator: navigator)
+            }
+        }
+        .onChange(of: selection.current?.id) {
+            navigator.reset()
+            creation.dismiss()
+        }
     }
 }
 
@@ -196,6 +212,7 @@ private struct TaskSortPills: View {
 struct TaskListTopActions: View {
     @Environment(ProjectSelection.self) private var selection
     @Environment(TaskListSettings.self) private var settings
+    @Environment(TaskCreationCoordinator.self) private var creation
     @Environment(\.localizer) private var l
     @State private var sorting = false
 
@@ -203,6 +220,8 @@ struct TaskListTopActions: View {
         if let project = selection.current?.id {
             let preferences = settings.preferences(for: project)
             HStack(spacing: DesignSpacing.gap8) {
+                GhostButton(title: l.string(.taskCreateAction), icon: .plus) { creation.present() }
+                    .help(l.string(.taskCreateAction) + " ⌘N")
                 Button {
                     sorting.toggle()
                 } label: {

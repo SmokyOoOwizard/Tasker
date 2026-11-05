@@ -8,6 +8,7 @@ struct TaskerApp: App {
     @State private var workspaces: WorkspaceController
     @State private var projects: ProjectSelection
     @State private var taskLists = TaskListSettings()
+    @State private var creation = TaskCreationCoordinator()
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
 
     init() {
@@ -28,12 +29,13 @@ struct TaskerApp: App {
                 .environment(workspaces)
                 .environment(projects)
                 .environment(taskLists)
+                .environment(creation)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
         .commands {
-            NavigationCommands()
+            NavigationCommands(creation: creation)
         }
     }
 }

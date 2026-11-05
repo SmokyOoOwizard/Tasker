@@ -87,6 +87,7 @@ struct MainColumn: View {
     let compact: Bool
     let open: (UUID) -> Void
     @Environment(\.localizer) private var l
+    @Environment(TaskCreationCoordinator.self) private var creation
     @State private var linkingAny = false
     @State private var linkingSubtask = false
 
@@ -115,7 +116,13 @@ struct MainColumn: View {
         SectionHeader(title: l.string(.taskDetailHierarchy)) {
             GhostButton(title: l.string(.taskDetailSubtask), icon: .plus) { linkingSubtask = true }
                 .popover(isPresented: $linkingSubtask, arrowEdge: .bottom) {
-                    LinkPicker(model: model, preset: .subtask) { linkingSubtask = false }
+                    LinkPicker(
+                        model: model, preset: .subtask,
+                        createNew: {
+                            creation.present(parent: TaskLinkedBrief(
+                                id: detail.id, title: detail.title, statusId: detail.statusId, typeId: detail.typeId, seriesNumbers: detail.seriesNumbers))
+                        }
+                    ) { linkingSubtask = false }
                 }
         }
         if !parents.isEmpty {
@@ -538,8 +545,13 @@ enum LinkPickerPreset: Identifiable {
 }
 
 struct LinkPicker: View {
-    let model: TaskDetailModel
+    let vocabulary: TaskListVocabulary
+    let heading: String
     let preset: LinkPickerPreset
+    let search: () async -> [TaskLinkedBrief]
+    let excluded: (Side) -> Set<UUID>
+    let choose: (Side, TaskLinkedBrief) -> Void
+    var createNew: (() -> Void)?
     let done: () -> Void
     @Environment(\.localizer) private var l
     @State private var query = ""
@@ -557,7 +569,7 @@ struct LinkPicker: View {
 
     private var sides: [Side] {
         var result: [Side] = []
-        for type in model.vocabulary.linkTypes {
+        for type in vocabulary.linkTypes {
             if preset == .subtask, !type.hierarchical { continue }
             result.append(Side(typeId: type.id, outward: true, name: type.outwardName))
             if preset == .subtask { continue }
@@ -571,17 +583,17 @@ struct LinkPicker: View {
     private var results: [TaskLinkedBrief] {
         let text = query.trimmingCharacters(in: .whitespaces)
         let chosen = side ?? sides.first
-        let linked = Set((model.detail?.links ?? []).filter { $0.typeId == chosen?.typeId }.map(\.task.id))
-        let base = all.filter { $0.id != model.taskId && !linked.contains($0.id) }
+        let skipped = chosen.map(excluded) ?? []
+        let base = all.filter { !skipped.contains($0.id) }
         guard !text.isEmpty else { return Array(base.prefix(50)) }
         return Array(base.filter {
-            model.vocabulary.reference($0.seriesNumbers, id: $0.id).localizedCaseInsensitiveContains(text) || $0.title.localizedCaseInsensitiveContains(text)
+            vocabulary.reference($0.seriesNumbers, id: $0.id).localizedCaseInsensitiveContains(text) || $0.title.localizedCaseInsensitiveContains(text)
         }.prefix(50))
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(l.string(.taskDetailLinkTitle, model.reference))
+            Text(verbatim: heading)
                 .font(.design(DesignTypography.baseSize, weight: DesignTypography.semiboldWeight))
                 .padding(.horizontal, DesignSpacing.toastPadX)
                 .padding(.top, DesignSpacing.gap10)
@@ -598,6 +610,22 @@ struct LinkPicker: View {
             DesignDivider()
             ScrollView {
                 LazyVStack(spacing: 0) {
+                    if let createNew {
+                        Button {
+                            done()
+                            createNew()
+                        } label: {
+                            HStack(spacing: DesignSpacing.gap8) {
+                                MockupIconView(icon: .plus, size: 12).foregroundStyle(DesignColor.acc.color)
+                                Text(l.string(.taskCreateNewSubtask))
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, DesignSpacing.gap10)
+                            .frame(height: 28)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                     if !loaded {
                         Text(l.string(.taskListLoading)).foregroundStyle(DesignColor.dim.color).padding(DesignSpacing.gap10)
                     } else if results.isEmpty {
@@ -606,14 +634,14 @@ struct LinkPicker: View {
                     ForEach(results) { brief in
                         Button {
                             guard let chosen = side ?? sides.first else { return }
-                            model.perform(.addLink(type: chosen.typeId, target: brief.id, outward: chosen.outward))
+                            choose(chosen, brief)
                             done()
                         } label: {
                             HStack(spacing: DesignSpacing.gap8) {
                                 GlyphView(
-                                    glyph: brief.typeId.map { model.vocabulary.glyph(status: brief.statusId, type: $0) } ?? model.vocabulary.glyph(status: brief.statusId),
-                                    color: model.vocabulary.status(brief.statusId).map { Color(designHex: $0.color) } ?? DesignColor.dim.color)
-                                Text(model.vocabulary.reference(brief.seriesNumbers, id: brief.id))
+                                    glyph: brief.typeId.map { vocabulary.glyph(status: brief.statusId, type: $0) } ?? vocabulary.glyph(status: brief.statusId),
+                                    color: vocabulary.status(brief.statusId).map { Color(designHex: $0.color) } ?? DesignColor.dim.color)
+                                Text(vocabulary.reference(brief.seriesNumbers, id: brief.id))
                                     .font(.design(DesignTypography.monoSize, mono: true))
                                     .foregroundStyle(DesignColor.dim.color)
                                 Text(brief.title).lineLimit(1)
@@ -638,8 +666,25 @@ struct LinkPicker: View {
             focused = true
         }
         .task {
-            all = (try? await model.source.search(project: model.project)) ?? []
+            all = await search()
             loaded = true
         }
+    }
+}
+
+extension LinkPicker {
+    init(model: TaskDetailModel, preset: LinkPickerPreset, createNew: (() -> Void)? = nil, done: @escaping () -> Void) {
+        self.init(
+            vocabulary: model.vocabulary,
+            heading: model.localizer.string(.taskDetailLinkTitle, model.reference),
+            preset: preset,
+            search: { [source = model.source, project = model.project] in (try? await source.search(project: project)) ?? [] },
+            excluded: { [weak model] side in
+                var skipped = Set((model?.detail?.links ?? []).filter { $0.typeId == side.typeId }.map(\.task.id))
+                if let id = model?.taskId { skipped.insert(id) }
+                return skipped
+            },
+            choose: { side, brief in model.perform(.addLink(type: side.typeId, target: brief.id, outward: side.outward)) },
+            createNew: createNew, done: done)
     }
 }

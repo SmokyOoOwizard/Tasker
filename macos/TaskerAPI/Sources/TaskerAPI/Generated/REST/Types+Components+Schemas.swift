@@ -801,6 +801,8 @@ extension Components {
             }
             /// - Remark: Generated from `#/components/schemas/CreateTask/fields`.
             public var fields: Components.Schemas.CreateTask.FieldsPayload?
+            /// - Remark: Generated from `#/components/schemas/CreateTask/links`.
+            public var links: [Components.Schemas.NewTaskLink]?
             /// Creates a new `CreateTask`.
             ///
             /// - Parameters:
@@ -810,13 +812,15 @@ extension Components {
             ///   - statusId:
             ///   - seriesIds:
             ///   - fields:
+            ///   - links:
             public init(
                 title: Swift.String,
                 description: Swift.String? = nil,
                 typeId: Swift.String,
                 statusId: Swift.String? = nil,
                 seriesIds: [Swift.String]? = nil,
-                fields: Components.Schemas.CreateTask.FieldsPayload? = nil
+                fields: Components.Schemas.CreateTask.FieldsPayload? = nil,
+                links: [Components.Schemas.NewTaskLink]? = nil
             ) {
                 self.title = title
                 self.description = description
@@ -824,6 +828,7 @@ extension Components {
                 self.statusId = statusId
                 self.seriesIds = seriesIds
                 self.fields = fields
+                self.links = links
             }
             public enum CodingKeys: String, CodingKey {
                 case title
@@ -832,6 +837,7 @@ extension Components {
                 case statusId
                 case seriesIds
                 case fields
+                case links
             }
         }
         /// - Remark: Generated from `#/components/schemas/CreateTaskType`.
@@ -1545,6 +1551,35 @@ extension Components {
                 case required
                 case multiple
                 case enumId
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/NewTaskLink`.
+        public struct NewTaskLink: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/NewTaskLink/typeId`.
+            public var typeId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/NewTaskLink/taskId`.
+            public var taskId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/NewTaskLink/direction`.
+            public var direction: Components.Schemas.LinkDirection?
+            /// Creates a new `NewTaskLink`.
+            ///
+            /// - Parameters:
+            ///   - typeId:
+            ///   - taskId:
+            ///   - direction:
+            public init(
+                typeId: Swift.String,
+                taskId: Swift.String,
+                direction: Components.Schemas.LinkDirection? = nil
+            ) {
+                self.typeId = typeId
+                self.taskId = taskId
+                self.direction = direction
+            }
+            public enum CodingKeys: String, CodingKey {
+                case typeId
+                case taskId
+                case direction
             }
         }
         /// - Remark: Generated from `#/components/schemas/NotReadyResponse`.

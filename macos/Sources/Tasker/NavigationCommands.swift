@@ -6,6 +6,7 @@ enum SidebarState {
 }
 
 struct NavigationCommands: Commands {
+    let creation: TaskCreationCoordinator
     @AppStorage(AppSection.storageKey) private var storedSection = AppSection.default.rawValue
     @AppStorage(SidebarState.storageKey) private var sidebarVisible = true
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
@@ -19,6 +20,13 @@ struct NavigationCommands: Commands {
             Button(l.string(.menuAbout, l.string(.appName))) {
                 showAbout()
             }
+        }
+        CommandGroup(replacing: .newItem) {
+            Button(l.string(.taskCreateAction)) {
+                storedSection = AppSection.tasks.rawValue
+                creation.present()
+            }
+            .keyboardShortcut("n", modifiers: .command)
         }
         CommandGroup(replacing: .sidebar) {
             Button(sidebarVisible ? l.string(.sidebarHide) : l.string(.sidebarShow)) {
