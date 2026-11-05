@@ -74,6 +74,18 @@ final class TaskOutlineView: NSOutlineView {
         return NSRect(x: x, y: rect.minY, width: max(0, rect.width - x), height: rect.height)
     }
 
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window, window.isKeyWindow else { return }
+            if window.firstResponder is NSText { return }
+            window.makeFirstResponder(self)
+        }
+    }
+
     override func keyDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection([.command, .control, .option])
         guard modifiers.isEmpty else { return super.keyDown(with: event) }
