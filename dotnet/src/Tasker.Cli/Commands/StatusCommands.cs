@@ -19,6 +19,8 @@ internal static class StatusCommands
         var reference = Kit.Ref("Status");
         var newName = new Option<string?>("--name") { Description = "New name" };
         var newColor = new Option<string?>("--color") { Description = "New color in #RRGGBB format" };
+        var icon = new Option<string?>("--icon") { Description = "Icon: " + string.Join(", ", StatusIcons.All) + " (default - by position in the set)" };
+        var newIcon = new Option<string?>("--icon") { Description = "New icon: " + string.Join(", ", StatusIcons.All) + "; an empty one resets to the default" };
         var description = Kit.NewDescription("status");
         var newDescription = Kit.ChangedDescription();
         var expected = Kit.ExpectedVersion();
@@ -30,11 +32,12 @@ internal static class StatusCommands
             {
                 c.Arguments.Add(name);
                 c.Options.Add(color);
+                c.Options.Add(icon);
                 c.Options.Add(description);
             }, async (parse, ctx) =>
             {
                 var status = await ctx.Get<StatusService>().Create(
-                    await ctx.ProjectId(), new CreateStatus(parse.GetRequiredValue(name), parse.GetRequiredValue(color), parse.GetValue(description)), ctx.Ct);
+                    await ctx.ProjectId(), new CreateStatus(parse.GetRequiredValue(name), parse.GetRequiredValue(color), parse.GetValue(description), parse.GetValue(icon)), ctx.Ct);
                 ctx.Print(status, $"Created status '{status.Name}' {status.Id}");
             }),
             Kit.ListWithDescriptions(g, "Lists statuses", "status",
@@ -44,22 +47,23 @@ internal static class StatusCommands
             {
                 var status = await Find(ctx, await ctx.ProjectId(), parse.GetRequiredValue(reference));
                 ctx.Print(status, Kit.WithDescription(
-                    Kit.Fields(("id", status.Id), ("name", status.Name), ("color", status.Color), ("version", status.Version)), status.Description));
+                    Kit.Fields(("id", status.Id), ("name", status.Name), ("color", status.Color), ("icon", status.Icon), ("version", status.Version)), status.Description));
             }),
             Kit.Leaf(g, "update", "Changes a status", c =>
             {
                 c.Arguments.Add(reference);
                 c.Options.Add(newName);
                 c.Options.Add(newColor);
+                c.Options.Add(newIcon);
                 c.Options.Add(newDescription);
                 c.Options.Add(expected);
             }, async (parse, ctx) =>
             {
-                Kit.RequireChange(parse, newName, newColor, newDescription);
+                Kit.RequireChange(parse, newName, newColor, newIcon, newDescription);
                 var projectId = await ctx.ProjectId();
                 var status = await Find(ctx, projectId, parse.GetRequiredValue(reference));
                 var updated = await ctx.Get<StatusService>().Update(projectId, status.Id,
-                    new UpdateStatus(parse.GetValue(newName), parse.GetValue(newColor), parse.GetValue(expected) ?? status.Version, parse.GetValue(newDescription)), ctx.Ct)
+                    new UpdateStatus(parse.GetValue(newName), parse.GetValue(newColor), parse.GetValue(expected) ?? status.Version, parse.GetValue(newDescription), parse.GetValue(newIcon)), ctx.Ct)
                     ?? throw new CliException($"No status '{status.Id}'");
                 ctx.Print(updated, $"Updated status '{updated.Name}' {updated.Id}");
             }),

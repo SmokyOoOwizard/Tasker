@@ -16,6 +16,8 @@ public record Status
     /// <summary>Что означает статус и когда его ставить; пустая строка — описания нет. В списках может быть усечено (<see cref="StatusListItem"/>).</summary>
     public string Description { get; init; } = "";
 
+    public string Icon { get; init; } = "";
+
     /// <summary>См. <see cref="Versioning"/>.</summary>
     public required string Version { get; init; }
 }

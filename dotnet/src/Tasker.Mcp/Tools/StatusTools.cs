@@ -23,8 +23,11 @@ public static class StatusTools
 
     private const string DescriptionParamHint = "`description` is free text (Unicode, line breaks); an empty string clears it.";
 
+    private const string IconHint =
+        "`icon` is one of: dashed, empty, quarter, half, three, review, pause, blocked, done, cancel, flag, star; an empty string means the default icon (chosen by the status position in the set).";
+
     [McpServerTool(Name = "list_statuses", ReadOnly = true)]
-    [Description("Lists statuses of a project (name, #RRGGBB color, description). Their order is defined by status sets. Paged: offset/limit (limit 1-200, default 50); the result has totalCount. " + DescriptionLengthHint)]
+    [Description("Lists statuses of a project (name, #RRGGBB color, icon, description). Their order is defined by status sets. Paged: offset/limit (limit 1-200, default 50); the result has totalCount. " + DescriptionLengthHint)]
     public static Task<ListDto<StatusListItem>> ListStatuses(ProjectService projects, StatusService statuses, Guid projectId,
         int offset = 0, int limit = Page.DefaultLimit, int descriptionLength = DescriptionPreview.McpDefault, CancellationToken ct = default) =>
         McpCall.Run(async () =>
@@ -34,23 +37,23 @@ public static class StatusTools
         });
 
     [McpServerTool(Name = "create_status")]
-    [Description("Creates a status. Color is #RRGGBB. `description` (optional) says what the status means and when to set it. " + DescriptionParamHint)]
-    public static Task<Status> CreateStatus(ProjectService projects, StatusService statuses, Guid projectId, string name, string color, string? description = null, CancellationToken ct = default) =>
+    [Description("Creates a status. Color is #RRGGBB. `description` (optional) says what the status means and when to set it. " + DescriptionParamHint + " `icon` (optional). " + IconHint)]
+    public static Task<Status> CreateStatus(ProjectService projects, StatusService statuses, Guid projectId, string name, string color, string? description = null, string? icon = null, CancellationToken ct = default) =>
         McpCall.Run(async () =>
         {
             await McpCall.RequireProject(projects, projectId, ct);
-            return await statuses.Create(projectId, new CreateStatus(name, color, description), ct);
+            return await statuses.Create(projectId, new CreateStatus(name, color, description, icon), ct);
         });
 
     [McpServerTool(Name = "update_status", Idempotent = true)]
-    [Description("Changes a status name, color and/or description (null keeps the value). " + DescriptionParamHint + " " + VersionHint)]
+    [Description("Changes a status name, color, icon and/or description (null keeps the value). " + DescriptionParamHint + " " + IconHint + " " + VersionHint)]
     public static Task<Status> UpdateStatus(
         ProjectService projects, StatusService statuses, Guid projectId, Guid statusId, string version,
-        string? name = null, string? color = null, string? description = null, CancellationToken ct = default) =>
+        string? name = null, string? color = null, string? description = null, string? icon = null, CancellationToken ct = default) =>
         McpCall.Run(async () =>
         {
             await McpCall.RequireProject(projects, projectId, ct);
-            return McpCall.Found(await statuses.Update(projectId, statusId, new UpdateStatus(name, color, version, description), ct), $"Status {statusId}");
+            return McpCall.Found(await statuses.Update(projectId, statusId, new UpdateStatus(name, color, version, description, icon), ct), $"Status {statusId}");
         });
 
     [McpServerTool(Name = "delete_status", Destructive = true)]

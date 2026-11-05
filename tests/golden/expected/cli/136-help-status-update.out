@@ -10,6 +10,7 @@ Arguments:
 Options:
   --name <name>                          New name
   --color <color>                        New color in #RRGGBB format
+  --icon <icon>                          New icon: dashed, empty, quarter, half, three, review, pause, blocked, done, cancel, flag, star; an empty one resets to the default
   -d, --description                      New description; an empty one clears it
   --expected-version <expected-version>  Fail if the entity was changed after this version (as shown by get). Default: the current version
   -?, -h, --help                         Show help and usage information

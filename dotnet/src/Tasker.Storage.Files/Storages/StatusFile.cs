@@ -10,8 +10,9 @@ namespace Tasker.Storage.Files.Storages;
 /// color: '#3B82F6'
 /// description: |
 ///   Задачу взял исполнитель.
+/// icon: half
 /// </code>
-/// <c>description</c> пишется, только если описание не пусто.
+/// <c>description</c> и <c>icon</c> пишутся, только если не пусты.
 /// </summary>
 internal static class StatusFile
 {
@@ -30,7 +31,8 @@ internal static class StatusFile
         Id = status.Id,
         Name = status.Name,
         Color = status.Color,
-        Description = string.IsNullOrEmpty(status.Description) ? null : status.Description
+        Description = string.IsNullOrEmpty(status.Description) ? null : status.Description,
+        Icon = string.IsNullOrEmpty(status.Icon) ? null : status.Icon
     };
 
     private static Status Map(Guid projectId, Versioned<StatusFileModel> file) => new()
@@ -40,6 +42,7 @@ internal static class StatusFile
         Name = file.Model.Name ?? "",
         Color = file.Model.Color ?? "",
         Description = file.Model.Description ?? "",
+        Icon = file.Model.Icon ?? "",
         Version = file.Version
     };
 
@@ -49,5 +52,6 @@ internal static class StatusFile
         public string? Name { get; set; }
         public string? Color { get; set; }
         public string? Description { get; set; }
+        public string? Icon { get; set; }
     }
 }

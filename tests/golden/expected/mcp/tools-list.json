@@ -454,7 +454,7 @@
       },
       {
         "name": "list_statuses",
-        "description": "Lists statuses of a project (name, #RRGGBB color, description). Their order is defined by status sets. Paged: offset/limit (limit 1-200, default 50); the result has totalCount. Each entry carries `description` (what the entity means and when to use it; empty - none): `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of an entry is the length of its full description; repeat the call with descriptionLength -1 for the full text.",
+        "description": "Lists statuses of a project (name, #RRGGBB color, icon, description). Their order is defined by status sets. Paged: offset/limit (limit 1-200, default 50); the result has totalCount. Each entry carries `description` (what the entity means and when to use it; empty - none): `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of an entry is the length of its full description; repeat the call with descriptionLength -1 for the full text.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -543,7 +543,7 @@
       },
       {
         "name": "create_status",
-        "description": "Creates a status. Color is #RRGGBB. `description` (optional) says what the status means and when to set it. `description` is free text (Unicode, line breaks); an empty string clears it.",
+        "description": "Creates a status. Color is #RRGGBB. `description` (optional) says what the status means and when to set it. `description` is free text (Unicode, line breaks); an empty string clears it. `icon` (optional). `icon` is one of: dashed, empty, quarter, half, three, review, pause, blocked, done, cancel, flag, star; an empty string means the default icon (chosen by the status position in the set).",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -559,6 +559,13 @@
               "type": "string"
             },
             "description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "icon": {
               "type": [
                 "string",
                 "null"
@@ -1832,7 +1839,7 @@
       },
       {
         "name": "update_status",
-        "description": "Changes a status name, color and/or description (null keeps the value). `description` is free text (Unicode, line breaks); an empty string clears it. `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
+        "description": "Changes a status name, color, icon and/or description (null keeps the value). `description` is free text (Unicode, line breaks); an empty string clears it. `icon` is one of: dashed, empty, quarter, half, three, review, pause, blocked, done, cancel, flag, star; an empty string means the default icon (chosen by the status position in the set). `version` is the entity's current version (from the list/get call); if someone changed it since, the call fails with [modified] — re-read and retry.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1863,6 +1870,13 @@
               "default": null
             },
             "description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "icon": {
               "type": [
                 "string",
                 "null"

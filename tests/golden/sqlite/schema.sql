@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS "statuses" (
     "Name" TEXT NOT NULL,
     "Color" TEXT NOT NULL,
     "Description" TEXT NULL,
+    "Icon" TEXT NULL,
     "Version" INTEGER NOT NULL,
     CONSTRAINT "FK_statuses_projects_ProjectId" FOREIGN KEY ("ProjectId") REFERENCES "projects" ("Id") ON DELETE CASCADE
 );
