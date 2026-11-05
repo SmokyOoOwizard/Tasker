@@ -225,7 +225,7 @@ final class TaskListModel {
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
-            phase = .failed(error.localizedDescription)
+            phase = .failed(localizer.message(for: error))
         }
     }
 
@@ -251,7 +251,7 @@ final class TaskListModel {
             if mode == .tree { expandRemembered(Array(roots[before...])) }
         } catch {
             guard current == generation else { return }
-            onNotice?(localizer.string(.taskListLoadFailed, error.localizedDescription))
+            onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
         }
     }
 
@@ -329,7 +329,7 @@ final class TaskListModel {
                 onChange?(.inserted(parent: node, indexes: IndexSet(loaded..<(loaded + fresh.count))))
             } catch {
                 guard current == generation else { return }
-                onNotice?(localizer.string(.taskListLoadFailed, error.localizedDescription))
+                onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
             }
         }
     }
@@ -383,7 +383,7 @@ final class TaskListModel {
                 expandRemembered(node.children ?? [])
             } catch {
                 guard current == generation else { return }
-                onNotice?(localizer.string(.taskListLoadFailed, error.localizedDescription))
+                onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
             }
         }
     }
@@ -488,7 +488,7 @@ final class TaskListModel {
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
-            onNotice?(localizer.string(.taskListLoadFailed, error.localizedDescription))
+            onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
         }
     }
 
@@ -666,26 +666,19 @@ final class TaskListModel {
 
     static func statusFailure(_ error: any Error, reference: String, l: Localizer) -> String {
         guard let error = error as? TaskerAPIError else {
-            return l.string(.taskListStatusFailed, reference, error.localizedDescription)
+            return l.string(.taskListStatusFailed, reference, l.message(for: error))
         }
         switch error {
-        case .conflict(let conflict):
-            switch conflict.kind {
-            case .locked:
-                return l.string(.taskListStatusLocked, reference, conflict.heldBy?.name ?? conflict.message)
-            case .modified:
-                return l.string(.taskListStatusModified, reference)
-            default:
-                return l.string(.taskListStatusFailed, reference, conflict.message)
-            }
+        case .conflict(let conflict) where conflict.kind == .modified:
+            return l.string(.taskListStatusModified, reference)
         case .notFound:
             return l.string(.taskListStatusDeleted, reference)
-        case .forbidden(let message):
-            return l.string(.taskListStatusForbidden, reference, message)
+        case .forbidden(let refusal):
+            return l.string(.taskListStatusForbidden, reference, l.refusal(refusal))
         case .timedOut, .network:
             return l.string(.taskListStatusOffline, reference)
         default:
-            return l.string(.taskListStatusFailed, reference, error.message)
+            return l.string(.taskListStatusFailed, reference, l.message(for: error))
         }
     }
 }

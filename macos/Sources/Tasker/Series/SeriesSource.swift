@@ -21,7 +21,7 @@ struct GraphQLSeriesSource: SeriesSource {
 
     func overview(project: UUID, series: UUID) async throws -> SeriesOverview? {
         guard let data = try await client.graphQL.fetch(SeriesOverviewQuery(projectId: project, id: series)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         guard let found = data.series else { return nil }
         return SeriesOverview(
@@ -37,7 +37,7 @@ struct GraphQLSeriesSource: SeriesSource {
         while offset < Self.cap {
             guard let page = try await client.graphQL.fetch(
                 SeriesNumbersPageQuery(projectId: project, seriesIds: [series], offset: offset, limit: Self.page)).project?.tasks
-            else { throw TaskerAPIError.notFound(project.uuidString) }
+            else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString)) }
             total = page.totalCount
             for task in page.data {
                 for number in task.seriesNumbers where number.seriesId == series { maxNumber = max(maxNumber, number.number) }
@@ -50,7 +50,7 @@ struct GraphQLSeriesSource: SeriesSource {
 
     func plan(project: UUID, series: UUID) async throws -> SeriesConflictPlan {
         guard let plan = try await client.graphQL.fetch(SeriesConflictPlanQuery(projectId: project, seriesId: series)).project?.seriesConflictPlan else {
-            throw TaskerAPIError.notFound(series.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: series.uuidString))
         }
         return SeriesConflictPlan(
             token: plan.token,

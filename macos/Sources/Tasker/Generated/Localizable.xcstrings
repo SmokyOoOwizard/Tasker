@@ -698,23 +698,6 @@
         }
       }
     },
-    "board.saveBlocked" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ is editing the board — cannot save"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Доску правит %@ — сохранить нельзя"
-          }
-        }
-      }
-    },
     "board.saveFailed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1149,6 +1132,1936 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "неизвестна"
+          }
+        }
+      }
+    },
+    "error.agent.expiresAtPast" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The expiry date must be in the future."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Срок действия должен быть в будущем."
+          }
+        }
+      }
+    },
+    "error.auth.invalidCredentials" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid username, email or password."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Неверное имя для входа, адрес почты или пароль."
+          }
+        }
+      }
+    },
+    "error.auth.localOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only local requests are allowed."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Разрешены только локальные запросы."
+          }
+        }
+      }
+    },
+    "error.auth.required" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to continue."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Войдите в учётную запись."
+          }
+        }
+      }
+    },
+    "error.auth.sessionExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The session has expired. Sign in again."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сессия истекла. Войдите снова."
+          }
+        }
+      }
+    },
+    "error.board.columnOverlap" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status “%1$@” is already in column “%2$@”, and the field conditions of these columns do not exclude each other."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статус «%1$@» уже есть в колонке «%2$@», а условия этих колонок по полям не исключают друг друга."
+          }
+        }
+      }
+    },
+    "error.board.conditionNoValue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condition “%2$@” on field “%1$@” takes no value."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Условию «%2$@» по полю «%1$@» значение не нужно."
+          }
+        }
+      }
+    },
+    "error.board.conditionNotApplicable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condition “%2$@” does not apply to field “%1$@” of type “%3$@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Условие «%2$@» нельзя применить к полю «%1$@» типа «%3$@»."
+          }
+        }
+      }
+    },
+    "error.board.conditionValueRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condition “%2$@” on field “%1$@” needs a value."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Условию «%2$@» по полю «%1$@» нужно значение."
+          }
+        }
+      }
+    },
+    "error.board.dropSetNotOnBoard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status set “%@” is not on the board."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Набора статусов «%@» нет на доске."
+          }
+        }
+      }
+    },
+    "error.board.dropStatusNotInColumn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status “%@” does not belong to this column."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статус «%@» не относится к этой колонке."
+          }
+        }
+      }
+    },
+    "error.board.dropStatusNotInSet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status “%1$@” is not in set “%2$@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статуса «%1$@» нет в наборе «%2$@»."
+          }
+        }
+      }
+    },
+    "error.board.noColumns" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A board needs at least one column."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На доске должна быть хотя бы одна колонка."
+          }
+        }
+      }
+    },
+    "error.board.noDropRule" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Column “%1$@” has no rule for tasks of type “%2$@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В колонке «%1$@» нет правила для задач типа «%2$@»."
+          }
+        }
+      }
+    },
+    "error.board.noStatusSets" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A board needs at least one status set."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На доске должен быть хотя бы один набор статусов."
+          }
+        }
+      }
+    },
+    "error.board.taskNotMatchColumn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task “%1$@” does not match the conditions of column “%2$@”: %3$@. Change its fields first."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задача «%1$@» не подходит под условия колонки «%2$@»: %3$@. Сначала измените её поля."
+          }
+        }
+      }
+    },
+    "error.board.taskTypeNotOnBoard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task type “%1$@” is not on board “%2$@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Типа задач «%1$@» нет на доске «%2$@»."
+          }
+        }
+      }
+    },
+    "error.entity.locked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” is being edited by %2$@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%1$@» сейчас редактирует %2$@."
+          }
+        }
+      }
+    },
+    "error.entity.modified" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Someone else already changed “%@”. Reload and try again."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%@» уже изменил кто-то другой. Обновите данные и повторите."
+          }
+        }
+      }
+    },
+    "error.entity.notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not found."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не найдено."
+          }
+        }
+      }
+    },
+    "error.enum.columnsCollide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On board “%1$@”, columns “%2$@” and “%3$@” would show the same tasks after the change."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На доске «%1$@» колонки «%2$@» и «%3$@» после изменения показывали бы одни и те же задачи."
+          }
+        }
+      }
+    },
+    "error.enum.inUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enum “%@” is in use."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перечисление «%@» используется."
+          }
+        }
+      }
+    },
+    "error.enum.nameTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enum “%@” already exists in the project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перечисление «%@» в проекте уже есть."
+          }
+        }
+      }
+    },
+    "error.enum.noValues" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An enum needs at least one value."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В перечислении должно быть хотя бы одно значение."
+          }
+        }
+      }
+    },
+    "error.enum.valueRepeated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Value “%@” is repeated."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значение «%@» повторяется."
+          }
+        }
+      }
+    },
+    "error.enum.valuesInUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Values of enum “%1$@” are in use and cannot be removed: %2$@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значения перечисления «%1$@» используются и не могут быть удалены: %2$@."
+          }
+        }
+      }
+    },
+    "error.field.changeBlockedByColumns" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%@” is used in column conditions. Remove those conditions first."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поле «%@» используется в условиях колонок. Сначала уберите эти условия."
+          }
+        }
+      }
+    },
+    "error.field.conversionBlocked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field values cannot be converted without instructions for the incompatible ones."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значения поля нельзя преобразовать без указаний, что делать с несовместимыми."
+          }
+        }
+      }
+    },
+    "error.field.enumNotAllowed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only a field of type enum can have an enum."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перечисление можно указать только у поля типа «перечисление»."
+          }
+        }
+      }
+    },
+    "error.field.enumRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A field of type enum must refer to an enum of the project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У поля типа «перечисление» должно быть указано перечисление проекта."
+          }
+        }
+      }
+    },
+    "error.field.inUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%@” is in use."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поле «%@» используется."
+          }
+        }
+      }
+    },
+    "error.field.nameTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%@” already exists in the project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поле «%@» в проекте уже есть."
+          }
+        }
+      }
+    },
+    "error.field.typeChangeNotAllowed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The field type cannot be changed from “%1$@” to “%2$@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип поля нельзя сменить с «%1$@» на «%2$@»."
+          }
+        }
+      }
+    },
+    "error.fieldValue.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%@”: a value must not be empty."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В поле «%@» значение не может быть пустым."
+          }
+        }
+      }
+    },
+    "error.fieldValue.invalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Value “%2$@” does not fit field “%1$@” of type “%3$@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значение «%2$@» не подходит для поля «%1$@» типа «%3$@»."
+          }
+        }
+      }
+    },
+    "error.fieldValue.notInEnum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%1$@” has no value “%2$@” (enum “%3$@”: %4$@)."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В поле «%1$@» нет значения «%2$@» (перечисление «%3$@»: %4$@)."
+          }
+        }
+      }
+    },
+    "error.fieldValue.repeated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%1$@”: value “%2$@” is repeated."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В поле «%1$@» значение «%2$@» повторяется."
+          }
+        }
+      }
+    },
+    "error.fieldValue.single" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%1$@” holds a single value, but %2$@ were given."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поле «%1$@» хранит одно значение, а передано %2$@."
+          }
+        }
+      }
+    },
+    "error.fieldValue.tooLong" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field “%1$@”: a value must be at most %2$@ characters."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В поле «%1$@» значение длиннее допустимого: не больше %2$@ зн."
+          }
+        }
+      }
+    },
+    "error.format.unsupported" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The data was written by a newer version of Tasker. Update the app."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Данные записаны более новой версией Tasker. Обновите приложение."
+          }
+        }
+      }
+    },
+    "error.internal.unexpected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An unexpected server error occurred."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На сервере произошла непредвиденная ошибка."
+          }
+        }
+      }
+    },
+    "error.label.boardName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Board name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название доски"
+          }
+        }
+      }
+    },
+    "error.label.columnName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Column name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название колонки"
+          }
+        }
+      }
+    },
+    "error.label.enumName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enum name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название перечисления"
+          }
+        }
+      }
+    },
+    "error.label.enumValue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enum value"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значение перечисления"
+          }
+        }
+      }
+    },
+    "error.label.fieldName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя поля"
+          }
+        }
+      }
+    },
+    "error.label.inwardName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inward name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обратное название"
+          }
+        }
+      }
+    },
+    "error.label.linkTypeName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link type name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название типа связи"
+          }
+        }
+      }
+    },
+    "error.label.outwardName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outward name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прямое название"
+          }
+        }
+      }
+    },
+    "error.label.projectName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название проекта"
+          }
+        }
+      }
+    },
+    "error.label.seriesName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Series name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название серии"
+          }
+        }
+      }
+    },
+    "error.label.statusName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название статуса"
+          }
+        }
+      }
+    },
+    "error.label.statusSetName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status set name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название набора статусов"
+          }
+        }
+      }
+    },
+    "error.label.taskTypeName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task type name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название типа задач"
+          }
+        }
+      }
+    },
+    "error.label.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Title"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заголовок"
+          }
+        }
+      }
+    },
+    "error.label.tokenName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Token name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название токена"
+          }
+        }
+      }
+    },
+    "error.link.cycle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link “%1$@” would create a cycle: %2$@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Связь «%1$@» создала бы цикл: %2$@."
+          }
+        }
+      }
+    },
+    "error.link.self" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A task cannot be linked to itself."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задачу нельзя связать с ней самой."
+          }
+        }
+      }
+    },
+    "error.linkType.hierarchicalNoCycles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hierarchical links cannot form cycles."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Иерархические связи не могут образовывать циклы."
+          }
+        }
+      }
+    },
+    "error.linkType.hierarchicalSameNames" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A hierarchical link needs different names for its two directions."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У иерархической связи названия в обе стороны должны различаться."
+          }
+        }
+      }
+    },
+    "error.linkType.inUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link type “%@” is in use."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип связи «%@» используется."
+          }
+        }
+      }
+    },
+    "error.linkType.nameTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link type “%@” already exists in the project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип связи «%@» в проекте уже есть."
+          }
+        }
+      }
+    },
+    "error.project.agentOfAnotherUser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent “%@” belongs to another user."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Агент «%@» принадлежит другому пользователю."
+          }
+        }
+      }
+    },
+    "error.project.lastPerson" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The last person cannot be removed from the project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нельзя убрать из проекта последнего человека."
+          }
+        }
+      }
+    },
+    "error.project.notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project not found."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проект не найден."
+          }
+        }
+      }
+    },
+    "error.series.planChanged" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The conflicts changed since the plan was built. Reload the plan and confirm it again."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфликты изменились с момента построения плана. Обновите план и подтвердите его снова."
+          }
+        }
+      }
+    },
+    "error.series.prefixInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Series prefix: 1 to %@ Latin letters or digits."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Префикс серии: от 1 до %@ латинских букв или цифр."
+          }
+        }
+      }
+    },
+    "error.series.prefixTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prefix “%@” is already used in the project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Префикс «%@» в проекте уже занят."
+          }
+        }
+      }
+    },
+    "error.status.inUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status “%@” is in use."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статус «%@» используется."
+          }
+        }
+      }
+    },
+    "error.statusSet.inUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status set “%@” is in use."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Набор статусов «%@» используется."
+          }
+        }
+      }
+    },
+    "error.statusSet.noStatuses" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A status set needs at least one status."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В наборе должен быть хотя бы один статус."
+          }
+        }
+      }
+    },
+    "error.statusSet.statusInUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status “%1$@” cannot be removed from set “%2$@” while it is in use."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статус «%1$@» нельзя убрать из набора «%2$@», пока он используется."
+          }
+        }
+      }
+    },
+    "error.task.fieldNameTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The task already has a field “%@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У задачи уже есть поле «%@»."
+          }
+        }
+      }
+    },
+    "error.task.numberInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The number must be 1 or greater, got %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Номер должен быть не меньше 1, указан %@."
+          }
+        }
+      }
+    },
+    "error.task.numberTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Number %@ is already taken in the series."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Номер %@ в серии уже занят."
+          }
+        }
+      }
+    },
+    "error.task.requiredFields" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Required fields have no value: %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не заполнены обязательные поля: %@."
+          }
+        }
+      }
+    },
+    "error.taskType.fieldsHaveValues" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Tasks of type “%1$@” have values in the fields being removed (%2$@): %3$lld task."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Tasks of type “%1$@” have values in the fields being removed (%2$@): %3$lld tasks."
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "У задач типа «%1$@» есть значения в убираемых полях (%2$@): %3$lld задачи."
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "У задач типа «%1$@» есть значения в убираемых полях (%2$@): %3$lld задача."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "У задач типа «%1$@» есть значения в убираемых полях (%2$@): %3$lld задач."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "error.taskType.inUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task type “%@” is in use."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип задач «%@» используется."
+          }
+        }
+      }
+    },
+    "error.taskType.statusesNotInSet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Type “%1$@” has tasks with statuses outside set “%2$@”: %3$lld task."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Type “%1$@” has tasks with statuses outside set “%2$@”: %3$lld tasks."
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "У типа «%1$@» есть задачи со статусами не из набора «%2$@»: %3$lld задачи."
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "У типа «%1$@» есть задачи со статусами не из набора «%2$@»: %3$lld задача."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "У типа «%1$@» есть задачи со статусами не из набора «%2$@»: %3$lld задач."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "error.usage.board" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "board"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "доска"
+          }
+        }
+      }
+    },
+    "error.usage.boardColumn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "board “%@”, column"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "доска «%@», колонка"
+          }
+        }
+      }
+    },
+    "error.usage.field" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "field"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "поле"
+          }
+        }
+      }
+    },
+    "error.usage.links" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "task links (%@)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "связи задач (%@)"
+          }
+        }
+      }
+    },
+    "error.usage.ownFields" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "own fields of tasks (%@)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "собственные поля задач (%@)"
+          }
+        }
+      }
+    },
+    "error.usage.statusSet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "set"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "набор"
+          }
+        }
+      }
+    },
+    "error.usage.taskType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "task type"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "тип задач"
+          }
+        }
+      }
+    },
+    "error.usage.tasks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tasks (%@)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "задачи (%@)"
+          }
+        }
+      }
+    },
+    "error.user.adminOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only an administrator can do this."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это может сделать только администратор."
+          }
+        }
+      }
+    },
+    "error.user.adminRightsAdminOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only an administrator can change admin rights."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Менять права администратора может только администратор."
+          }
+        }
+      }
+    },
+    "error.user.cannotDeleteSelf" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You cannot delete your own account."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нельзя удалить собственную учётную запись."
+          }
+        }
+      }
+    },
+    "error.user.currentPasswordIncorrect" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The current password is incorrect."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текущий пароль указан неверно."
+          }
+        }
+      }
+    },
+    "error.user.emailTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email “%@” is already taken."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адрес «%@» уже занят."
+          }
+        }
+      }
+    },
+    "error.user.lastAdmin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is the last administrator, so this is not possible."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — последний администратор, это действие недоступно."
+          }
+        }
+      }
+    },
+    "error.user.ownAccountOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can change only your own account."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Менять можно только свою учётную запись."
+          }
+        }
+      }
+    },
+    "error.user.personOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only a person can do this, not an agent."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это может сделать только человек, а не агент."
+          }
+        }
+      }
+    },
+    "error.user.registrationClosed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registration is closed. Ask an administrator to create an account."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Регистрация закрыта. Попросите администратора создать учётную запись."
+          }
+        }
+      }
+    },
+    "error.user.signInRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in required."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нужно войти в учётную запись."
+          }
+        }
+      }
+    },
+    "error.user.usernameOrEmailTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This username or email is already taken."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Такое имя для входа или адрес почты уже заняты."
+          }
+        }
+      }
+    },
+    "error.user.usernameTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Username “%@” is already taken."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя для входа «%@» уже занято."
+          }
+        }
+      }
+    },
+    "error.validation.color" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color must be in #RRGGBB format."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цвет нужно указать в формате #RRGGBB."
+          }
+        }
+      }
+    },
+    "error.validation.email" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The email address is not valid."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адрес почты указан неверно."
+          }
+        }
+      }
+    },
+    "error.validation.fieldNameChars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field name “%@” may contain only letters and digits, no spaces or symbols."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя поля «%@» может состоять только из букв и цифр, без пробелов и символов."
+          }
+        }
+      }
+    },
+    "error.validation.invalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server rejected the request."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сервер отклонил запрос."
+          }
+        }
+      }
+    },
+    "error.validation.password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The password must be at least %@ characters."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пароль должен быть не короче %@ зн."
+          }
+        }
+      }
+    },
+    "error.validation.required" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fill in “%@”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заполните поле «%@»."
+          }
+        }
+      }
+    },
+    "error.validation.statusIcon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No such icon. Available: %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Такого значка нет. Доступны: %@."
+          }
+        }
+      }
+    },
+    "error.validation.tooLong" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” is too long: %2$@ characters at most."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поле «%1$@» длиннее допустимого: не больше %2$@ зн."
+          }
+        }
+      }
+    },
+    "error.validation.username" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Username: 3 to 50 characters, Latin letters, digits, dot, underscore and hyphen."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя для входа: от 3 до 50 символов, латиница, цифры, точка, подчёркивание и дефис."
+          }
+        }
+      }
+    },
+    "error.workspace.notInAddress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The address does not name a workspace."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В адресе не указана рабочая область."
+          }
+        }
+      }
+    },
+    "error.workspace.notOpen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The workspace is not open."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Рабочая область не открыта."
           }
         }
       }
@@ -3036,23 +4949,6 @@
         }
       }
     },
-    "series.saveLocked" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ is editing the series right now"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Серию сейчас правит %@"
-          }
-        }
-      }
-    },
     "series.saveModified" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3610,23 +5506,6 @@
         }
       }
     },
-    "settings.enumSubject" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enum “%@”"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перечисление «%@»"
-          }
-        }
-      }
-    },
     "settings.enumUp" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4031,23 +5910,6 @@
         }
       }
     },
-    "settings.fieldSubject" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Field “%@”"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Поле «%@»"
-          }
-        }
-      }
-    },
     "settings.fieldType" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4078,23 +5940,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Каталог полей проекта. Поле прикрепляется к типу, к отдельной задаче или создаётся прямо в задаче."
-          }
-        }
-      }
-    },
-    "settings.inUse" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Used by: %@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Используется: %@"
           }
         }
       }
@@ -4422,23 +6267,6 @@
         }
       }
     },
-    "settings.linkTypeSubject" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Link type “%@”"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Тип связи «%@»"
-          }
-        }
-      }
-    },
     "settings.linkTypesLead" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4503,23 +6331,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Загружаю настройки…"
-          }
-        }
-      }
-    },
-    "settings.lockedBy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ is editing this right now. Try again later."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сейчас это правит %@. Попробуйте позже."
           }
         }
       }
@@ -6280,23 +8091,6 @@
         }
       }
     },
-    "settings.statusSetRemoveBody" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ cannot be removed from the set while it is in use:"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ нельзя убрать из набора, пока он используется:"
-          }
-        }
-      }
-    },
     "settings.statusSetSaved" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6327,23 +8121,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Поиск по статусам проекта"
-          }
-        }
-      }
-    },
-    "settings.statusSetSubject" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set “%@”"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Набор «%@»"
           }
         }
       }
@@ -6412,23 +8189,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Упорядоченный путь, по которому идёт задача."
-          }
-        }
-      }
-    },
-    "settings.statusSubject" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Status “%@”"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Статус «%@»"
           }
         }
       }
@@ -6926,23 +8686,6 @@
         }
       }
     },
-    "settings.typeSubject" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Type “%@”"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Тип «%@»"
-          }
-        }
-      }
-    },
     "settings.typeSummary" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6990,159 +8733,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Тип задаёт набор статусов и поля, которые есть у каждой задачи этого типа."
-          }
-        }
-      }
-    },
-    "settings.useBoard" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "board “%@”, column"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "доска «%@», колонка"
-          }
-        }
-      }
-    },
-    "settings.useBoardName" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "board"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "доска"
-          }
-        }
-      }
-    },
-    "settings.useField" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "field"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "поле"
-          }
-        }
-      }
-    },
-    "settings.useLinks" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "links"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "связи"
-          }
-        }
-      }
-    },
-    "settings.useLinksCount" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ pcs."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ шт."
-          }
-        }
-      }
-    },
-    "settings.useSet" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "set"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "набор"
-          }
-        }
-      }
-    },
-    "settings.useTasks" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tasks (%@)"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "задачи (%@)"
-          }
-        }
-      }
-    },
-    "settings.useType" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "task type"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "тип задач"
-          }
-        }
-      }
-    },
-    "settings.usedBody" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ cannot be deleted while it is in use:"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ нельзя удалить, пока оно используется:"
           }
         }
       }
@@ -8286,23 +9876,6 @@
         }
       }
     },
-    "taskDetail.locked" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't save %1$@: %2$@ is editing it"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось сохранить %1$@: задачу сейчас правит %2$@"
-          }
-        }
-      }
-    },
     "taskDetail.missing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9425,23 +10998,6 @@
         }
       }
     },
-    "taskList.status.locked" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't change the status of %1$@: %2$@ is editing it"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось сменить статус %1$@: задачу сейчас правит %2$@"
-          }
-        }
-      }
-    },
     "taskList.status.modified" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9880,6 +11436,3021 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ переименована"
+          }
+        }
+      }
+    },
+    "web.agents.confirmDelete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete agent “%@”? Its tokens will stop working and it will be removed from project members."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить агента «%@»? Его токены перестанут работать, а сам он пропадёт из участников проектов."
+          }
+        }
+      }
+    },
+    "web.agents.confirmRevoke" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoke token “%@”? An agent using it will lose access immediately."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отозвать токен «%@»? Агент с этим токеном сразу потеряет доступ."
+          }
+        }
+      }
+    },
+    "web.agents.connect" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключить"
+          }
+        }
+      }
+    },
+    "web.agents.connectDetails" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MCP address `%1$@` is shared by all folders of the tasker-mcpd daemon; a folder opened in Tasker is added to it automatically (list: `tasker mcp workspace list`). The agent selects a folder with the `workspace` argument of the tools%2$@; if the daemon has only one folder, the argument can be omitted. The list of folders is available through the `list_workspaces` tool. An agent connected with the `%3$@` header acts only in this folder; to work with several folders, connect the agent without the header (in each folder it acts as that folder’s “agent”):"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адрес MCP `%1$@` у демона tasker-mcpd один на все его папки; открытая в Tasker папка добавляется в них сама (список — `tasker mcp workspace list`). Папку агент указывает аргументом `workspace` инструментов%2$@; если папка у демона одна, аргумент можно опустить. Список папок — инструмент `list_workspaces`. Агент в заголовке `%3$@` действует только в этой папке; чтобы работать с несколькими папками, подключите агента без заголовка (в каждой папке он работает от имени её агента «agent»):"
+          }
+        }
+      }
+    },
+    "web.agents.connectInClaude" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect in Claude Code:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключение в Claude Code:"
+          }
+        }
+      }
+    },
+    "web.agents.connectRun" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Run the command: the agent will work with this folder’s tasks as itself."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выполните команду: агент будет работать с задачами этой папки от своего имени."
+          }
+        }
+      }
+    },
+    "web.agents.connectTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect agent “%@” in Claude Code."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключение агента «%@» в Claude Code."
+          }
+        }
+      }
+    },
+    "web.agents.connectWorkspace" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ": for this one — `%@`"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ": для этой — `%@`"
+          }
+        }
+      }
+    },
+    "web.agents.copied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировано"
+          }
+        }
+      }
+    },
+    "web.agents.copy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Копировать"
+          }
+        }
+      }
+    },
+    "web.agents.create" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create agent"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создать агента"
+          }
+        }
+      }
+    },
+    "web.agents.created" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "created %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "создан %@"
+          }
+        }
+      }
+    },
+    "web.agents.daemonFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MCP daemon failed to start: %@. Start it again from the “MCP” item in the tray menu or with tasker mcp start."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Демон MCP не запустился: %@. Запустить снова — пункт «MCP» в меню трея или tasker mcp start."
+          }
+        }
+      }
+    },
+    "web.agents.daemonKeepsRunning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The daemon keeps running after Tasker is closed."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Демон работает и после закрытия Tasker."
+          }
+        }
+      }
+    },
+    "web.agents.daemonServing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP is served by the tasker-mcpd daemon on port %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP обслуживает демон tasker-mcpd на порту %@."
+          }
+        }
+      }
+    },
+    "web.agents.daemonStarting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MCP daemon is starting…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Демон MCP запускается…"
+          }
+        }
+      }
+    },
+    "web.agents.daemonStopped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MCP daemon is not running. Start it from the “MCP” item in the tray menu or with tasker mcp start."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Демон MCP не работает. Запустить — пункт «MCP» в меню трея или tasker mcp start."
+          }
+        }
+      }
+    },
+    "web.agents.deleteAgent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete agent"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить агента"
+          }
+        }
+      }
+    },
+    "web.agents.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Готово"
+          }
+        }
+      }
+    },
+    "web.agents.doneCopied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done, I copied it"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Готово, скопировал"
+          }
+        }
+      }
+    },
+    "web.agents.introDesktop" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agents work with tasks over MCP. The desktop app needs no tokens: MCP is reachable only from this computer, and the agent is chosen in the connect command. Without one, MCP acts as this folder’s “agent”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Агенты работают с задачами через MCP. На десктопе токены не нужны: MCP доступен только с этого компьютера, а агент выбирается в команде подключения. Без него MCP работает от имени агента «agent» этой папки."
+          }
+        }
+      }
+    },
+    "web.agents.introServer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An agent works with tasks over MCP using its own token. For the agent to see a project, add it to the project’s members: project “Settings” → “Members”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Агент работает с задачами через MCP по своему токену. Чтобы агент видел проект, добавьте его в участники проекта: «Настройки» проекта → «Участники»."
+          }
+        }
+      }
+    },
+    "web.agents.issueToken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Issue token"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выпустить токен"
+          }
+        }
+      }
+    },
+    "web.agents.lifetime30" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 days"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 дней"
+          }
+        }
+      }
+    },
+    "web.agents.lifetime90" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "90 days"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "90 дней"
+          }
+        }
+      }
+    },
+    "web.agents.lifetimeLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expiry"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Срок действия"
+          }
+        }
+      }
+    },
+    "web.agents.lifetimeNone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No expiry"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Без срока"
+          }
+        }
+      }
+    },
+    "web.agents.lifetimeYear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 year"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 год"
+          }
+        }
+      }
+    },
+    "web.agents.newPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New agent name, for example claude"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя нового агента, например claude"
+          }
+        }
+      }
+    },
+    "web.agents.ownerPrefix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent of %@ · "
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Агент пользователя %@ · "
+          }
+        }
+      }
+    },
+    "web.agents.reasonInLog" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "see the log for the reason"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "причина в журнале"
+          }
+        }
+      }
+    },
+    "web.agents.rename" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rename"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переименовать"
+          }
+        }
+      }
+    },
+    "web.agents.revokeToken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoke token"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отозвать токен"
+          }
+        }
+      }
+    },
+    "web.agents.tokenCopyNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy it now: it will not be shown again."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопируйте его сейчас: больше он не будет показан."
+          }
+        }
+      }
+    },
+    "web.agents.tokenExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "expired"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "истёк"
+          }
+        }
+      }
+    },
+    "web.agents.tokenIssued" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "issued %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "выпущен %@"
+          }
+        }
+      }
+    },
+    "web.agents.tokenIssuedTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Token “%@” issued."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Токен «%@» выпущен."
+          }
+        }
+      }
+    },
+    "web.agents.tokenNamePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where it is used, for example “Claude Code on my laptop”"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Где используется, например «Claude Code на ноутбуке»"
+          }
+        }
+      }
+    },
+    "web.agents.tokenNeverUsed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "not used yet"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ещё не использовался"
+          }
+        }
+      }
+    },
+    "web.agents.tokenRevoked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "revoked"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "отозван"
+          }
+        }
+      }
+    },
+    "web.agents.tokenUsed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "used %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "использован %@"
+          }
+        }
+      }
+    },
+    "web.agents.tokenValidUntil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "valid until %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "действует до %@"
+          }
+        }
+      }
+    },
+    "web.agents.tokens" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tokens"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Токены"
+          }
+        }
+      }
+    },
+    "web.agents.tokensEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No tokens — issue a token to connect the agent."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Токенов нет — выпустите токен, чтобы подключить агента."
+          }
+        }
+      }
+    },
+    "web.agents.workspaceFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MCP daemon could not open this folder: %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Демон MCP не смог открыть эту папку: %@."
+          }
+        }
+      }
+    },
+    "web.agents.workspaceMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MCP daemon is running, but this folder is not in its list (tasker mcp workspace add)."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Демон MCP работает, но этой папки нет в его списке (tasker mcp workspace add)."
+          }
+        }
+      }
+    },
+    "web.agents.workspaceOpening" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MCP daemon is opening this folder…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Демон MCP открывает эту папку…"
+          }
+        }
+      }
+    },
+    "web.boards.conditions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field conditions: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Условий по полям: %@"
+          }
+        }
+      }
+    },
+    "web.boards.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No boards yet. Boards cannot be created from the interface yet — only through the API or an agent over MCP."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Досок пока нет. Создать доску из интерфейса пока нельзя — только через API или агента в MCP."
+          }
+        }
+      }
+    },
+    "web.boards.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boards"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доски"
+          }
+        }
+      }
+    },
+    "web.common.add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить"
+          }
+        }
+      }
+    },
+    "web.common.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отмена"
+          }
+        }
+      }
+    },
+    "web.common.create" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создать"
+          }
+        }
+      }
+    },
+    "web.common.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить"
+          }
+        }
+      }
+    },
+    "web.common.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описание"
+          }
+        }
+      }
+    },
+    "web.common.edit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменить"
+          }
+        }
+      }
+    },
+    "web.common.email" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Почта"
+          }
+        }
+      }
+    },
+    "web.common.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загрузка…"
+          }
+        }
+      }
+    },
+    "web.common.password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пароль"
+          }
+        }
+      }
+    },
+    "web.common.passwordMin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At least 8 characters"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не короче 8 символов"
+          }
+        }
+      }
+    },
+    "web.common.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранить"
+          }
+        }
+      }
+    },
+    "web.common.username" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Username"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя пользователя"
+          }
+        }
+      }
+    },
+    "web.language.en" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English"
+          }
+        }
+      }
+    },
+    "web.language.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interface language"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Язык интерфейса"
+          }
+        }
+      }
+    },
+    "web.language.ru" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Русский"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Русский"
+          }
+        }
+      }
+    },
+    "web.language.system" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Как в системе"
+          }
+        }
+      }
+    },
+    "web.language.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Язык"
+          }
+        }
+      }
+    },
+    "web.lock.badge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is editing"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Правит %@"
+          }
+        }
+      }
+    },
+    "web.lock.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is editing this. The lock is released when they finish, and no later than %2$@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Правит %1$@. Блокировка снимется, когда он закончит, но не позже %2$@."
+          }
+        }
+      }
+    },
+    "web.login.firstUserHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create the first user — they will become the administrator"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создайте первого пользователя — он станет администратором"
+          }
+        }
+      }
+    },
+    "web.login.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log in to Tasker"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Войдите в Tasker"
+          }
+        }
+      }
+    },
+    "web.login.loginLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Username or email"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя или почта"
+          }
+        }
+      }
+    },
+    "web.login.register" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create and log in"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создать и войти"
+          }
+        }
+      }
+    },
+    "web.login.signIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log in"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Войти"
+          }
+        }
+      }
+    },
+    "web.login.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log in"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вход"
+          }
+        }
+      }
+    },
+    "web.login.welcome" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welcome"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добро пожаловать"
+          }
+        }
+      }
+    },
+    "web.members.admin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Admin"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Админ"
+          }
+        }
+      }
+    },
+    "web.members.agent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Агент"
+          }
+        }
+      }
+    },
+    "web.members.agentSuffix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(agent)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(агент)"
+          }
+        }
+      }
+    },
+    "web.members.confirmLeave" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave the project? You will no longer see it; another member or an administrator can add you back."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выйти из проекта? Вы перестанете его видеть, вернуть вас сможет другой участник или админ."
+          }
+        }
+      }
+    },
+    "web.members.confirmRemove" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@ from the project?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Убрать %@ из проекта?"
+          }
+        }
+      }
+    },
+    "web.members.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only members and administrators can see the project. Agents work in the project over MCP."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проект видят только участники и администраторы. Агенты работают в проекте через MCP."
+          }
+        }
+      }
+    },
+    "web.members.leave" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выйти из проекта"
+          }
+        }
+      }
+    },
+    "web.members.nobody" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no one to add: all users are already in the project. New users are created by an administrator."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить некого: все пользователи уже в проекте. Новых пользователей создаёт администратор."
+          }
+        }
+      }
+    },
+    "web.members.remove" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Убрать из проекта"
+          }
+        }
+      }
+    },
+    "web.members.user" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пользователь"
+          }
+        }
+      }
+    },
+    "web.members.you" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы"
+          }
+        }
+      }
+    },
+    "web.nav.boards" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boards"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доски"
+          }
+        }
+      }
+    },
+    "web.nav.logout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log out"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выйти"
+          }
+        }
+      }
+    },
+    "web.nav.profile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Профиль"
+          }
+        }
+      }
+    },
+    "web.nav.settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки"
+          }
+        }
+      }
+    },
+    "web.nav.tasks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задачи"
+          }
+        }
+      }
+    },
+    "web.profile.admin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Administrator"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Администратор"
+          }
+        }
+      }
+    },
+    "web.profile.changePassword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change password"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сменить пароль"
+          }
+        }
+      }
+    },
+    "web.profile.currentPassword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current password"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текущий пароль"
+          }
+        }
+      }
+    },
+    "web.profile.folder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folder: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Папка: %@"
+          }
+        }
+      }
+    },
+    "web.profile.localInfo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The desktop app has no sign-in or accounts: everything you do in the interface happens on this computer, and agents over MCP act as this folder’s “agent” user."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В десктопном приложении нет входа и учётных записей: всё, что вы делаете в интерфейсе, делается на этом компьютере, а агенты через MCP работают от имени пользователя «agent» этой папки."
+          }
+        }
+      }
+    },
+    "web.profile.localMode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local mode"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Локальный режим"
+          }
+        }
+      }
+    },
+    "web.profile.newPassword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New password"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новый пароль"
+          }
+        }
+      }
+    },
+    "web.profile.passwordChanged" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password changed. Other sessions have been ended."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пароль изменён. Остальные сессии завершены."
+          }
+        }
+      }
+    },
+    "web.profile.passwordHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At least 8 characters. After the password changes, other devices will be signed out of Tasker."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не короче 8 символов. После смены пароля другие устройства выйдут из Tasker."
+          }
+        }
+      }
+    },
+    "web.profile.passwordMismatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new passwords do not match"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новые пароли не совпадают"
+          }
+        }
+      }
+    },
+    "web.profile.repeatPassword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat the new password"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повторите новый пароль"
+          }
+        }
+      }
+    },
+    "web.profile.since" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · on Tasker since %2$@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · в Tasker с %2$@"
+          }
+        }
+      }
+    },
+    "web.profile.tabAgents" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agents"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Агенты"
+          }
+        }
+      }
+    },
+    "web.profile.tabProfile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Профиль"
+          }
+        }
+      }
+    },
+    "web.profile.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User settings"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки пользователя"
+          }
+        }
+      }
+    },
+    "web.project.confirmLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project name to confirm"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название проекта для подтверждения"
+          }
+        }
+      }
+    },
+    "web.project.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить проект"
+          }
+        }
+      }
+    },
+    "web.project.deleteConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To confirm, enter the project name:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтобы подтвердить, введите название проекта:"
+          }
+        }
+      }
+    },
+    "web.project.deleteLead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything in the project will be deleted: %@. This cannot be undone."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаляется всё, что в проекте: %@. Отменить нельзя."
+          }
+        }
+      }
+    },
+    "web.project.deleteTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаление проекта"
+          }
+        }
+      }
+    },
+    "web.project.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the project is empty"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "проект пуст"
+          }
+        }
+      }
+    },
+    "web.project.fallbackLoss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tasks, boards, statuses and task types"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "задачи, доски, статусы и типы задач"
+          }
+        }
+      }
+    },
+    "web.project.lossBoards" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld board"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld boards"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld доски"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld доска"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld досок"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web.project.lossLinkTypes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld link type"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld link types"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld типа связи"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld тип связи"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld типов связи"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web.project.lossSeries" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld series"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld series"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld серии"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld серия"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld серий"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web.project.lossStatusSets" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld status set"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld status sets"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld набора статусов"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld набор статусов"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld наборов статусов"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web.project.lossStatuses" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld status"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld statuses"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld статуса"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld статус"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld статусов"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web.project.lossTaskTypes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld task type"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld task types"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld типа задач"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld тип задач"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld типов задач"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web.project.lossTasks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld task"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tasks"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld задачи"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld задача"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld задач"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web.project.nameLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название проекта"
+          }
+        }
+      }
+    },
+    "web.projects.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No projects yet — create the first one."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проектов пока нет — создайте первый."
+          }
+        }
+      }
+    },
+    "web.projects.new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новый проект"
+          }
+        }
+      }
+    },
+    "web.projects.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет проекта"
+          }
+        }
+      }
+    },
+    "web.projects.noneSelected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No project selected"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проект не выбран"
+          }
+        }
+      }
+    },
+    "web.projects.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projects"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проекты"
+          }
+        }
+      }
+    },
+    "web.settings.members" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Members"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Участники"
+          }
+        }
+      }
+    },
+    "web.settings.project" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проект"
+          }
+        }
+      }
+    },
+    "web.settings.statuses" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statuses"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статусы"
+          }
+        }
+      }
+    },
+    "web.settings.taskTypes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task types"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Типы задач"
+          }
+        }
+      }
+    },
+    "web.settings.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project settings"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки проекта"
+          }
+        }
+      }
+    },
+    "web.statusSets.addLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить:"
+          }
+        }
+      }
+    },
+    "web.statusSets.confirmDelete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete set “%@”?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить набор «%@»?"
+          }
+        }
+      }
+    },
+    "web.statusSets.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No sets yet."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наборов пока нет."
+          }
+        }
+      }
+    },
+    "web.statusSets.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A set lists the statuses a task goes through, in display order. A task type takes its statuses from its set."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Набор — статусы, по которым проходит задача, в порядке отображения. Тип задачи берёт статусы из своего набора."
+          }
+        }
+      }
+    },
+    "web.statusSets.moveDown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move down"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ниже"
+          }
+        }
+      }
+    },
+    "web.statusSets.moveUp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move up"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выше"
+          }
+        }
+      }
+    },
+    "web.statusSets.namePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set name"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Название набора"
+          }
+        }
+      }
+    },
+    "web.statusSets.needStatuses" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add statuses first"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сначала добавьте статусы"
+          }
+        }
+      }
+    },
+    "web.statusSets.new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New set"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новый набор"
+          }
+        }
+      }
+    },
+    "web.statusSets.removeFromSet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from set"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Убрать из набора"
+          }
+        }
+      }
+    },
+    "web.statusSets.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status sets"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наборы статусов"
+          }
+        }
+      }
+    },
+    "web.statuses.color" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цвет"
+          }
+        }
+      }
+    },
+    "web.statuses.confirmDelete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete status “%@”?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить статус «%@»?"
+          }
+        }
+      }
+    },
+    "web.statuses.descriptionOptional" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description (optional)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описание (необязательно)"
+          }
+        }
+      }
+    },
+    "web.statuses.descriptionPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description: what the status means and when to set it (optional)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описание: что значит статус и когда его ставить (необязательно)"
+          }
+        }
+      }
+    },
+    "web.statuses.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No statuses yet. Add, for example, “Open”, “In progress” and “Done”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статусов пока нет. Добавьте, например, «Открыта», «В работе» и «Готово»."
+          }
+        }
+      }
+    },
+    "web.statuses.newPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New status"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новый статус"
+          }
+        }
+      }
+    },
+    "web.taskTypes.confirmDelete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete task type “%@”?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить тип «%@»?"
+          }
+        }
+      }
+    },
+    "web.taskTypes.descriptionPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description: when to use this type (optional)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Описание: когда использовать этот тип (необязательно)"
+          }
+        }
+      }
+    },
+    "web.taskTypes.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No task types yet. For example: “Task”, “Bug”, “Feature”."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Типов пока нет. Например: «Задача», «Баг», «Фича»."
+          }
+        }
+      }
+    },
+    "web.taskTypes.needSet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First create a status set on the “Statuses” tab: a task type takes its statuses from a set."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сначала создайте набор статусов на вкладке «Статусы»: тип задачи берёт статусы из набора."
+          }
+        }
+      }
+    },
+    "web.taskTypes.newPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New task type"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новый тип задачи"
+          }
+        }
+      }
+    },
+    "web.taskTypes.setTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status set"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Набор статусов"
+          }
+        }
+      }
+    },
+    "web.tasks.colStatus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статус"
+          }
+        }
+      }
+    },
+    "web.tasks.colTask" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задача"
+          }
+        }
+      }
+    },
+    "web.tasks.colType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип"
+          }
+        }
+      }
+    },
+    "web.tasks.colUpdated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменена"
+          }
+        }
+      }
+    },
+    "web.tasks.newPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New task"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новая задача"
+          }
+        }
+      }
+    },
+    "web.tasks.setupBefore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To create tasks, set up statuses, status sets and task types "
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтобы создавать задачи, настройте проект: статусы, наборы статусов и типы задач — "
+          }
+        }
+      }
+    },
+    "web.tasks.setupLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "in the project settings"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "в настройках"
+          }
+        }
+      }
+    },
+    "web.tasks.showMore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show more"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показать ещё"
+          }
+        }
+      }
+    },
+    "web.tasks.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задачи"
+          }
+        }
+      }
+    },
+    "web.tasks.typeTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task type"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип задачи"
           }
         }
       }

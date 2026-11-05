@@ -1,1 +1,1 @@
-{"errors":[{"message":"Task is being edited by alice","path":["project","task"],"extensions":{"code":"CONFLICT","status":409,"conflict":"locked","heldBy":{"name":"alice","expiresAt":"2026-11-04T10:00:00Z"}}}],"data":null}
+{"errors":[{"message":"Task is being edited by alice","path":["project","task"],"extensions":{"code":"entity.locked","status":409,"params":{"name":"Fix","holder":"alice","entity":"task","expiresAt":"2026-11-04T10:00:00Z"},"usages":[]}}],"data":null}

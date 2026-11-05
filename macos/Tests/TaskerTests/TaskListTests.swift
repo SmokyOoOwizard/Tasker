@@ -389,21 +389,21 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
         await until { source.requests.contains { $0.hasPrefix("status") } }
         #expect(source.rows[0].statusId == doing)
 
-        source.failure = .conflict(Conflict(kind: .locked, message: "locked", heldBy: LockHolder(name: "Claude", expiresAt: nil)))
+        source.failure = TaskerAPIError.locked(by: "Claude")
         model.changeStatus(model.roots[1], to: done)
         #expect(model.roots[1].row?.statusId == done)
         await until { !notices.isEmpty }
         #expect(model.roots[1].row?.statusId == todo)
-        #expect(notices == ["Не удалось сменить статус TSK-2: задачу сейчас правит Claude"])
+        #expect(notices == ["Не удалось сменить статус TSK-2: «Item» сейчас редактирует Claude."])
     }
 
     @Test func statusRefusalsReadLikeSentences() {
-        #expect(TaskListModel.statusFailure(TaskerAPIError.conflict(Conflict(kind: .modified, message: "x")), reference: "TSK-7", l: ru)
+        #expect(TaskListModel.statusFailure(TaskerAPIError.modified(), reference: "TSK-7", l: ru)
             == "Не удалось сменить статус TSK-7: задачу только что изменили, список обновлён")
-        #expect(TaskListModel.statusFailure(TaskerAPIError.badRequest("Status is not in the set of the type"), reference: "TSK-7", l: en)
+        #expect(TaskListModel.statusFailure(TaskerAPIError.badRequest(Refusal(code: "validation.invalid", message: "Status is not in the set of the type")), reference: "TSK-7", l: en)
             == "Couldn't change the status of TSK-7: Status is not in the set of the type")
-        #expect(TaskListModel.statusFailure(TaskerAPIError.notFound("gone"), reference: "TSK-7", l: ru) == "Не удалось сменить статус TSK-7: задача удалена")
+        #expect(TaskListModel.statusFailure(TaskerAPIError.notFound(Refusal(message: "gone")), reference: "TSK-7", l: ru) == "Не удалось сменить статус TSK-7: задача удалена")
         #expect(TaskListModel.statusFailure(TaskerAPIError.timedOut, reference: "TSK-7", l: ru) == "Не удалось сменить статус TSK-7: нет связи с демоном")
-        #expect(TaskListModel.statusFailure(TaskerAPIError.forbidden("read only"), reference: "TSK-7", l: en) == "You can't change the status of TSK-7: read only")
+        #expect(TaskListModel.statusFailure(TaskerAPIError.forbidden(Refusal(code: "validation.invalid", message: "read only")), reference: "TSK-7", l: en) == "You can't change the status of TSK-7: read only")
     }
 }

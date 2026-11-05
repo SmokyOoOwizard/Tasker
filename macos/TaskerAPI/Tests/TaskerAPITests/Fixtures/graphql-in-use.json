@@ -1,0 +1,1 @@
+{"errors":[{"message":"Status is in use","path":["deleteStatus"],"extensions":{"code":"status.inUse","status":409,"params":{"name":"Open"},"usages":[{"kind":"tasks","count":3,"tasks":["TSK-1","TSK-2"]},{"kind":"boardColumn","board":"Main","column":"Todo"},{"kind":"statusSet","name":"Default"}]}}],"data":null}

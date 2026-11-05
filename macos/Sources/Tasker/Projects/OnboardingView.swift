@@ -81,7 +81,7 @@ struct OnboardingView: View {
                     session.notice(l.string(.onboardingReady))
                 }
             } catch {
-                self.error = error.localizedDescription
+                self.error = l.message(for: error)
             }
             running = nil
         }

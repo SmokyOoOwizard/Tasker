@@ -28,7 +28,7 @@ struct GraphQLTaskDetailSource: TaskDetailSource {
 
     func load(project: UUID, task: UUID) async throws -> TaskDetailData? {
         guard let data = try await client.graphQL.fetch(TaskQuery(projectId: project, id: task)).project else {
-            throw TaskerAPIError.notFound(project.uuidString)
+            throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
         return data.task.map(TaskDetailData.init)
     }

@@ -101,7 +101,7 @@ enum LiveQuery {
         _ query: Query,
         retryDelay: Duration = .seconds(2),
         value: @MainActor (Query.Data) -> Void,
-        failed: @MainActor (String) -> Void = { _ in }
+        failed: @MainActor (any Error) -> Void = { _ in }
     ) async {
         while !Task.isCancelled {
             do {
@@ -112,7 +112,7 @@ enum LiveQuery {
             } catch is CancellationError {
                 return
             } catch {
-                failed(error.localizedDescription)
+                failed(error)
             }
             try? await Task.sleep(for: retryDelay)
         }

@@ -265,11 +265,6 @@ enum SettingsRules {
         return old.map(\.fieldId).filter { !kept.contains($0) }
     }
 
-    static func lostStatuses(old: [UUID], new: [UUID]) -> [UUID] {
-        let kept = Set(new)
-        return old.filter { !kept.contains($0) }
-    }
-
     static func canRemoveMember(_ member: SettingsMember, among members: [SettingsMember]) -> Bool {
         guard !member.isAgent else { return true }
         return members.filter { !$0.isAgent }.count > 1

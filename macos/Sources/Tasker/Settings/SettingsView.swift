@@ -275,12 +275,36 @@ struct SettingsLabeled<Content: View>: View {
     }
 }
 
+struct SettingsRefusalRow: Hashable, Identifiable {
+    var label: String
+    var value: String?
+    var id: String { "\(label)|\(value ?? "")" }
+}
+
 struct SettingsRefusal: Identifiable {
     let id = UUID()
-    var subject: String
-    var uses: [SettingsUsage]
-    var detail: String?
-    var body: String?
+    var refusal: Refusal
+
+    func body(_ l: Localizer) -> String { l.refusal(refusal) }
+
+    func rows(_ l: Localizer) -> [SettingsRefusalRow] {
+        refusal.usages.compactMap { usage in
+            guard let key = ErrorCatalog.usages[usage.kind] else { return nil }
+            switch usage.kind {
+            case "tasks":
+                let count = usage.count ?? usage.tasks?.count ?? 0
+                let listed = usage.tasks ?? []
+                let value = listed.joined(separator: ", ") + (count > listed.count ? " …" : "")
+                return SettingsRefusalRow(label: l.string(key, String(count)), value: value.isEmpty ? nil : value)
+            case "links", "ownFields":
+                return SettingsRefusalRow(label: l.string(key, String(usage.count ?? 0)), value: nil)
+            case "boardColumn":
+                return SettingsRefusalRow(label: l.string(key, usage.board ?? ""), value: usage.column)
+            default:
+                return SettingsRefusalRow(label: l.string(key), value: usage.name)
+            }
+        }
+    }
 }
 
 struct SettingsRefusalSheet: View {
@@ -290,44 +314,24 @@ struct SettingsRefusalSheet: View {
 
     var body: some View {
         SettingsSheet(title: l.string(.settingsUsedTitle), width: 460, cancelTitle: l.string(.settingsUsedOk), cancel: close) {
-            Text(refusal.body ?? l.string(.settingsUsedBody, refusal.subject))
+            Text(refusal.body(l))
                 .fixedSize(horizontal: false, vertical: true)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(refusal.uses) { use in
+                    ForEach(refusal.rows(l)) { row in
                         HStack(alignment: .top, spacing: DesignSpacing.gap10) {
-                            Text(label(use.kind))
+                            Text(row.label)
                                 .foregroundStyle(DesignColor.dim.color)
                                 .frame(width: 130, alignment: .leading)
-                            Text(name(use))
+                            Text(row.value ?? "")
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, 5)
                         .overlay(alignment: .bottom) { DesignDivider() }
                     }
-                    if let detail = refusal.detail, refusal.uses.isEmpty {
-                        Text(detail).foregroundStyle(DesignColor.mut.color)
-                    }
                 }
             }
             .frame(maxHeight: 220)
-        }
-    }
-
-    private func name(_ use: SettingsUsage) -> String {
-        if case .links(let count) = use.kind { return l.string(.settingsUseLinksCount, String(count)) }
-        return use.name
-    }
-
-    private func label(_ kind: SettingsUsage.Kind) -> String {
-        switch kind {
-        case .type: l.string(.settingsUseType)
-        case .tasks(let count): l.string(.settingsUseTasks, String(count))
-        case .board(let board): l.string(.settingsUseBoard, board)
-        case .links: l.string(.settingsUseLinks)
-        case .field: l.string(.settingsUseField)
-        case .statusSet: l.string(.settingsUseSet)
-        case .boardName: l.string(.settingsUseBoardName)
         }
     }
 }

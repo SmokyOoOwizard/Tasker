@@ -157,7 +157,7 @@ struct BoardEditorTests {
         let record = existing()
         await source.setCatalog(catalog)
         await source.setStored(record)
-        await source.setAcquireFailure(TaskerAPIError.conflict(Conflict(kind: .locked, message: "locked", heldBy: LockHolder(name: "Claude", expiresAt: nil))))
+        await source.setAcquireFailure(TaskerAPIError.locked(by: "Claude"))
         let model = editor(source, board: record.id)
         model.load()
         await settle(model) { model.holder != nil }
@@ -173,7 +173,7 @@ struct BoardEditorTests {
         let record = existing()
         await source.setCatalog(catalog)
         await source.setStored(record)
-        await source.setAcquireFailure(TaskerAPIError.conflict(Conflict(kind: .locked, message: "locked", heldBy: LockHolder(name: "Claude", expiresAt: nil))))
+        await source.setAcquireFailure(TaskerAPIError.locked(by: "Claude"))
         let model = editor(source, board: record.id)
         model.load()
         await settle(model) { model.holder != nil }
@@ -195,13 +195,27 @@ struct BoardEditorTests {
         model.load()
         await settle(model) { model.lock == .mine }
         model.edit { draft, _ in draft.columns.append(BoardColumnDraft(name: "Again", statusIds: [todo])) }
-        await source.setSaveFailure(TaskerAPIError.badRequest(
-            "Columns[1].StatusIds: status \(todo.uuidString.lowercased()) is already used by column 'Open', and the columns' field conditions do not exclude each other"))
+        let overlap = Refusal(code: "board.columnOverlap", message: "overlap", params: ["status": .string("Todo"), "otherColumn": .string("Open"), "columnIndex": .int(1)])
+        await source.setSaveFailure(TaskerAPIError.badRequest(overlap))
         #expect(await model.save() == false)
         let second = model.draft.columns[1].id
         #expect(model.issues.board.isEmpty)
-        #expect(model.issues.columns[second] == ["Board rejected: status “Todo” is in columns Open and Again without mutually exclusive conditions"])
+        #expect(model.issues.columns[second] == [model.localizer.refusal(overlap)])
+        #expect(model.issues.columns[second]?.first?.contains("Todo") == true)
         model.release()
+    }
+
+    @Test func serverIssueWithoutColumnIndexStaysOnBoard() async {
+        let draft = BoardDraft(name: "B", setIds: [], columns: [BoardColumnDraft(name: "A", statusIds: [])])
+        let l = Localizer(language: .en)
+        let inRange = BoardServerIssue.map(Refusal(code: "board.noDropRule", message: "m", params: ["column": .string("A"), "taskType": .string("T"), "columnIndex": .int(0)]), draft: draft, l: l)
+        #expect(inRange.columns[draft.columns[0].id]?.count == 1)
+        #expect(inRange.board.isEmpty)
+        let outOfRange = BoardServerIssue.map(Refusal(code: "board.noColumns", message: "m", params: ["columnIndex": .int(5)]), draft: draft, l: l)
+        #expect(outOfRange.columns.isEmpty)
+        #expect(outOfRange.board == [l.refusal(Refusal(code: "board.noColumns", message: "m"))])
+        let none = BoardServerIssue.map(Refusal(code: "board.noColumns", message: "m"), draft: draft, l: l)
+        #expect(none.board.count == 1)
     }
 
     @Test func modifiedBoardAsksToReload() async {
@@ -212,7 +226,7 @@ struct BoardEditorTests {
         let model = editor(source, board: record.id)
         model.load()
         await settle(model) { model.lock == .mine }
-        await source.setSaveFailure(TaskerAPIError.conflict(Conflict(kind: .modified, message: "changed")))
+        await source.setSaveFailure(TaskerAPIError.modified())
         model.draft.name = "Renamed"
         #expect(await model.save() == false)
         #expect(model.staleVersion)

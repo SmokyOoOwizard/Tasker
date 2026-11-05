@@ -82,7 +82,7 @@ final class SeriesPageModel {
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
-            if overview == nil { phase = .failed(error.localizedDescription) }
+            if overview == nil { phase = .failed(localizer.message(for: error)) }
         }
     }
 
@@ -114,15 +114,9 @@ final class SeriesPageModel {
     }
 
     static func saveFailure(_ error: any Error, l: Localizer) -> String {
-        guard let error = error as? TaskerAPIError else { return l.string(.seriesSaveFailed, error.localizedDescription) }
-        if case .conflict(let conflict) = error {
-            switch conflict.kind {
-            case .modified: return l.string(.seriesSaveModified)
-            case .locked: return l.string(.seriesSaveLocked, conflict.heldBy?.name ?? conflict.message)
-            default: break
-            }
-        }
-        return l.string(.seriesSaveFailed, error.message)
+        if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .modified { return l.string(.seriesSaveModified) }
+        if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .locked { return l.refusal(conflict.refusal) }
+        return l.string(.seriesSaveFailed, l.message(for: error))
     }
 
     func prepareResolve() {
@@ -148,7 +142,7 @@ final class SeriesPageModel {
                 }
             } catch {
                 guard let self else { return }
-                self.resolve = .failed(self.localizer.string(.seriesResolvePlanFailed, Self.reason(error)))
+                self.resolve = .failed(self.localizer.string(.seriesResolvePlanFailed, self.localizer.message(for: error)))
             }
         }
     }
@@ -170,7 +164,7 @@ final class SeriesPageModel {
                     self.load()
                     self.loadPlan(stale: true)
                 } else {
-                    self.resolve = .failed(self.localizer.string(.seriesResolveFailed, Self.reason(error)))
+                    self.resolve = .failed(self.localizer.string(.seriesResolveFailed, self.localizer.message(for: error)))
                 }
                 return
             }
@@ -180,9 +174,5 @@ final class SeriesPageModel {
             self.onRenumbered?()
             self.load()
         }
-    }
-
-    private static func reason(_ error: any Error) -> String {
-        (error as? TaskerAPIError)?.message ?? error.localizedDescription
     }
 }

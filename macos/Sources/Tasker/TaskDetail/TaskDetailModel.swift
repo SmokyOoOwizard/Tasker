@@ -194,10 +194,10 @@ final class TaskDetailModel {
                 detail = nil
                 phase = .missing
             } else if initial || detail == nil {
-                phase = .failed(error.message)
+                phase = .failed(localizer.message(for: error))
             }
         } catch {
-            if initial || detail == nil { phase = .failed(error.localizedDescription) }
+            if initial || detail == nil { phase = .failed(localizer.message(for: error)) }
         }
     }
 
@@ -227,7 +227,7 @@ final class TaskDetailModel {
             await fail(error, edit: edit)
         } catch is CancellationError {
         } catch {
-            onNotice?(localizer.string(.taskDetailFailed, error.localizedDescription))
+            onNotice?(localizer.string(.taskDetailFailed, localizer.message(for: error)))
         }
     }
 
@@ -237,22 +237,22 @@ final class TaskDetailModel {
             switch conflict.kind {
             case .modified:
                 await fetch(initial: false)
-                self.conflict = TaskEditConflict(edit: edit, message: conflict.message)
+                self.conflict = TaskEditConflict(edit: edit, message: localizer.refusal(conflict.refusal))
             case .locked:
-                onNotice?(localizer.string(.taskDetailLocked, reference, conflict.heldBy?.name ?? conflict.message))
+                onNotice?(localizer.refusal(conflict.refusal))
             default:
-                onNotice?(localizer.string(.taskDetailFailed, conflict.message))
+                onNotice?(localizer.string(.taskDetailFailed, localizer.refusal(conflict.refusal)))
             }
         case .notFound:
             phase = .missing
             detail = nil
             onNotice?(localizer.string(.taskDetailDeleted, reference))
-        case .forbidden(let message):
-            onNotice?(localizer.string(.taskDetailForbidden, message))
+        case .forbidden(let refusal):
+            onNotice?(localizer.string(.taskDetailForbidden, localizer.refusal(refusal)))
         case .timedOut, .network:
             onNotice?(localizer.string(.taskDetailOffline))
         default:
-            onNotice?(localizer.string(.taskDetailFailed, error.message))
+            onNotice?(localizer.string(.taskDetailFailed, localizer.message(for: error)))
         }
         if case .conflict = error {} else { await fetch(initial: false) }
     }

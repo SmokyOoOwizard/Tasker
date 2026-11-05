@@ -176,7 +176,7 @@ struct SeriesTests {
             SeriesConflictPlan(token: "old", steps: [step(2, to: 141)]),
             SeriesConflictPlan(token: "new", steps: [step(2, to: 142)])
         ]
-        source.failResolve(.conflict(Conflict(kind: .modified, message: "changed")))
+        source.failResolve(TaskerAPIError.modified())
         let model = await readyModel(source)
         model.prepareResolve()
         await until { if case .ready = model.resolve { true } else { false } }
@@ -199,7 +199,7 @@ struct SeriesTests {
     @Test func otherFailuresAreShownAndNothingIsRetried() async {
         let source = StubSeriesSource()
         source.plans = [SeriesConflictPlan(token: "abc", steps: [step(2, to: 141)])]
-        source.failResolve(.conflict(Conflict(kind: .locked, message: "locked by Аня")))
+        source.failResolve(TaskerAPIError.locked(by: "Аня"))
         let model = await readyModel(source)
         model.prepareResolve()
         await until { if case .ready = model.resolve { true } else { false } }
@@ -209,7 +209,7 @@ struct SeriesTests {
             Issue.record("expected a failure")
             return
         }
-        #expect(message.contains("locked by Аня"))
+        #expect(message.contains("Аня"))
         #expect(source.resolved.isEmpty)
     }
 
@@ -261,10 +261,10 @@ struct SeriesTests {
         model.localizer = ru
         model.load()
         await until { model.phase == .ready }
-        source.failUpdate(.conflict(Conflict(kind: .modified, message: "x")))
+        source.failUpdate(TaskerAPIError.modified())
         #expect(await model.save(name: "Новое", prefix: "TSK") == ru.string(.seriesSaveModified))
-        source.failUpdate(.conflict(Conflict(kind: .locked, message: "x", heldBy: LockHolder(name: "Аня", expiresAt: nil))))
-        #expect(await model.save(name: "Новое", prefix: "TSK") == ru.string(.seriesSaveLocked, "Аня"))
+        source.failUpdate(TaskerAPIError.locked(by: "Аня"))
+        #expect(await model.save(name: "Новое", prefix: "TSK")?.contains("Аня") == true)
     }
 
     @Test func sessionShowsAndClosesTheSeriesPage() {

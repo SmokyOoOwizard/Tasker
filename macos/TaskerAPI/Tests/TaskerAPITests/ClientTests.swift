@@ -33,7 +33,7 @@ import Testing
     @Test func throwsDomainErrors() async throws {
         let server = StubServer { _, _ in .fixture("project-not-found.json") }
         let api = server.client()
-        await #expect(throws: TaskerAPIError.notFound("Project 6cb8f29b-d6d5-4987-a61d-745df39b1ded not found")) {
+        await #expect(throws: TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: "Project 6cb8f29b-d6d5-4987-a61d-745df39b1ded not found"))) {
             try await api.graphQL.fetch(ProjectQuery(id: UUID()))
         }
     }
@@ -192,7 +192,7 @@ import Testing
         let api = server.client()
         let id = UUID().uuidString
 
-        await #expect(throws: TaskerAPIError.conflict(Conflict(kind: .modified, message: "Project was changed by someone else"))) {
+        await #expect(throws: TaskerAPIError.conflict(Conflict(kind: .modified, refusal: Refusal(code: "entity.modified", message: "Project was changed by someone else", params: ["name": .string("Site"), "entity": .string("project")])))) {
             try await api.rest.perform { client in
                 try await client.updateProject(path: .init(projectId: id), body: .json(.init(name: "X", version: "1"))).ok.body.json
             }
@@ -216,7 +216,7 @@ import Testing
     @Test func mapsBadRequest() async throws {
         let server = StubServer { _, _ in .fixture("rest-bad-request.json", status: 400) }
         let api = server.client()
-        await #expect(throws: TaskerAPIError.badRequest("Name is required")) {
+        await #expect(throws: TaskerAPIError.badRequest(Refusal(code: "validation.required", message: "Name is required", params: ["field": .string("projectName")]))) {
             try await api.rest.perform { client in
                 try await client.createProject(body: .json(.init(name: ""))).created.body.json
             }
@@ -275,7 +275,7 @@ import Testing
         }
         let session = Self.session(server: server)
         let api = server.client(authorization: session)
-        await #expect(throws: TaskerAPIError.unauthenticated("Sign in to read data")) {
+        await #expect(throws: TaskerAPIError.unauthenticated(Refusal(code: "auth.required", message: "Sign in to read data"))) {
             try await api.graphQL.fetch(ProjectsQuery())
         }
         #expect(await session.current == nil)

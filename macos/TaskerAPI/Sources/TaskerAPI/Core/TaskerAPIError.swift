@@ -1,31 +1,40 @@
 import Foundation
 
 public enum TaskerAPIError: Error, Sendable, Hashable {
-    case badRequest(String)
-    case unauthenticated(String)
-    case forbidden(String)
-    case notFound(String)
+    case badRequest(Refusal)
+    case unauthenticated(Refusal)
+    case forbidden(Refusal)
+    case notFound(Refusal)
     case conflict(Conflict)
-    case server(status: Int, message: String)
+    case server(status: Int, refusal: Refusal)
     case graphQL([GraphQLError])
     case timedOut
     case network(URLError.Code, String)
     case invalidResponse(String)
 
+    public var refusal: Refusal? {
+        switch self {
+        case .badRequest(let refusal), .unauthenticated(let refusal), .forbidden(let refusal), .notFound(let refusal):
+            return refusal
+        case .conflict(let conflict):
+            return conflict.refusal
+        case .server(_, let refusal):
+            return refusal
+        default:
+            return nil
+        }
+    }
+
     public var message: String {
         switch self {
-        case .badRequest(let message), .unauthenticated(let message), .forbidden(let message), .notFound(let message):
-            return message
-        case .conflict(let conflict):
-            return conflict.message
-        case .server(_, let message):
-            return message
         case .graphQL(let errors):
             return errors.map(\.message).joined(separator: "\n")
         case .timedOut:
             return "The request timed out"
         case .network(_, let message), .invalidResponse(let message):
             return message
+        default:
+            return refusal?.message ?? ""
         }
     }
 
@@ -41,33 +50,103 @@ public enum TaskerAPIError: Error, Sendable, Hashable {
     }
 }
 
+public struct RefusalUsage: Sendable, Hashable {
+    public var kind: String
+    public var name: String?
+    public var count: Int?
+    public var tasks: [String]?
+    public var board: String?
+    public var column: String?
+
+    public init(kind: String, name: String? = nil, count: Int? = nil, tasks: [String]? = nil, board: String? = nil, column: String? = nil) {
+        self.kind = kind
+        self.name = name
+        self.count = count
+        self.tasks = tasks
+        self.board = board
+        self.column = column
+    }
+
+    init?(_ value: JSONValue) {
+        guard let kind = value["kind"]?.stringValue else { return nil }
+        self.init(
+            kind: kind,
+            name: value["name"]?.stringValue,
+            count: value["count"]?.intValue,
+            tasks: value["tasks"]?.arrayValue?.compactMap(\.stringValue),
+            board: value["board"]?.stringValue,
+            column: value["column"]?.stringValue)
+    }
+}
+
+public struct Refusal: Sendable, Hashable {
+    public var code: String
+    public var message: String
+    public var params: [String: JSONValue]
+    public var usages: [RefusalUsage]
+
+    public init(code: String = "", message: String, params: [String: JSONValue] = [:], usages: [RefusalUsage] = []) {
+        self.code = code
+        self.message = message
+        self.params = params
+        self.usages = usages
+    }
+
+    init(message: String, code: String?, params: JSONValue?, usages: JSONValue?) {
+        self.init(
+            code: code ?? "",
+            message: message,
+            params: params?.objectValue ?? [:],
+            usages: usages?.arrayValue?.compactMap(RefusalUsage.init) ?? [])
+    }
+
+    public var columnIndex: Int? { params["columnIndex"]?.intValue }
+}
+
 public struct Conflict: Sendable, Hashable {
     public enum Kind: Sendable, Hashable {
         case inUse
         case modified
         case locked
         case unsupportedFormat
-        case other(String?)
+        case other(String)
 
-        init(code: String?) {
+        init(refusal: Refusal) {
+            let code = refusal.code
             switch code {
-            case "in_use": self = .inUse
-            case "modified": self = .modified
-            case "locked": self = .locked
-            case "unsupported_format": self = .unsupportedFormat
-            default: self = .other(code)
+            case "entity.modified", "series.planChanged": self = .modified
+            case "entity.locked": self = .locked
+            case "format.unsupported": self = .unsupportedFormat
+            default:
+                if !refusal.usages.isEmpty || code.hasSuffix(".inUse") || code.hasSuffix("InUse") {
+                    self = .inUse
+                } else {
+                    self = .other(code)
+                }
             }
         }
     }
 
     public var kind: Kind
-    public var message: String
-    public var heldBy: LockHolder?
+    public var refusal: Refusal
 
-    public init(kind: Kind, message: String, heldBy: LockHolder? = nil) {
+    public init(kind: Kind, refusal: Refusal) {
         self.kind = kind
-        self.message = message
-        self.heldBy = heldBy
+        self.refusal = refusal
+    }
+
+    public init(refusal: Refusal) {
+        self.init(kind: Kind(refusal: refusal), refusal: refusal)
+    }
+
+    public var message: String { refusal.message }
+    public var code: String { refusal.code }
+    public var params: [String: JSONValue] { refusal.params }
+    public var usages: [RefusalUsage] { refusal.usages }
+
+    public var heldBy: LockHolder? {
+        guard kind == .locked, let name = refusal.params["holder"]?.stringValue else { return nil }
+        return LockHolder(name: name, expiresAt: refusal.params["expiresAt"]?.stringValue.flatMap(TaskerDate.parse))
     }
 }
 
@@ -78,11 +157,6 @@ public struct LockHolder: Sendable, Hashable {
     public init(name: String, expiresAt: Date?) {
         self.name = name
         self.expiresAt = expiresAt
-    }
-
-    init?(_ value: JSONValue?) {
-        guard let name = value?["name"]?.stringValue else { return nil }
-        self.init(name: name, expiresAt: value?["expiresAt"]?.stringValue.flatMap(TaskerDate.parse))
     }
 }
 
@@ -102,27 +176,26 @@ public struct GraphQLError: Sendable, Hashable, Decodable {
 }
 
 extension TaskerAPIError {
+    static func make(status: Int, refusal: Refusal) -> TaskerAPIError {
+        switch status {
+        case 400: return .badRequest(refusal)
+        case 401: return .unauthenticated(refusal)
+        case 403: return .forbidden(refusal)
+        case 404: return .notFound(refusal)
+        case 409: return .conflict(Conflict(refusal: refusal))
+        default: return .server(status: status, refusal: refusal)
+        }
+    }
+
     static func from(graphQL errors: [GraphQLError]) -> TaskerAPIError {
         guard let first = errors.first(where: { $0.code != nil }) ?? errors.first else {
             return .invalidResponse("Empty GraphQL error list")
         }
-        switch first.code {
-        case "UNAUTHENTICATED":
-            return .unauthenticated(first.message)
-        case "BAD_REQUEST":
-            return .badRequest(first.message)
-        case "NOT_FOUND":
-            return .notFound(first.message)
-        case "FORBIDDEN":
-            return .forbidden(first.message)
-        case "CONFLICT":
-            return .conflict(Conflict(
-                kind: Conflict.Kind(code: first.extensions?["conflict"]?.stringValue),
-                message: first.message,
-                heldBy: LockHolder(first.extensions?["heldBy"])))
-        default:
+        guard let code = first.code, let status = first.status else {
             return .graphQL(errors)
         }
+        let refusal = Refusal(message: first.message, code: code, params: first.extensions?["params"], usages: first.extensions?["usages"])
+        return make(status: status, refusal: refusal)
     }
 
     static func from(status: Int, body: Data) -> TaskerAPIError {
@@ -133,15 +206,8 @@ extension TaskerAPIError {
         let message = json?["error"]?.stringValue
             ?? String(decoding: body.prefix(512), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         let text = message.isEmpty ? HTTPURLResponse.localizedString(forStatusCode: status) : message
-        switch status {
-        case 400: return .badRequest(text)
-        case 401: return .unauthenticated(text)
-        case 403: return .forbidden(text)
-        case 404: return .notFound(text)
-        case 409:
-            return .conflict(Conflict(kind: Conflict.Kind(code: json?["code"]?.stringValue), message: text, heldBy: LockHolder(json?["heldBy"])))
-        default: return .server(status: status, message: text)
-        }
+        let refusal = Refusal(message: text, code: json?["code"]?.stringValue, params: json?["params"], usages: json?["usages"])
+        return make(status: status, refusal: refusal)
     }
 
     static func wrap(_ error: any Error) -> any Error {

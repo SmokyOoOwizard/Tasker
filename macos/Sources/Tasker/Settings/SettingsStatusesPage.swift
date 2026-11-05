@@ -59,7 +59,6 @@ struct StatusesSettingsPage: View {
     @State private var editing: StatusEditTarget?
     @State private var refusal: SettingsRefusal?
     @State private var deleting: SettingsStatusItem?
-    @State private var checking = false
 
     var body: some View {
         let catalog = model.catalog
@@ -79,8 +78,7 @@ struct StatusesSettingsPage: View {
                     } actions: {
                         Circle().fill(Color(designHex: item.color)).frame(width: 10, height: 10).padding(.horizontal, 6).padding(.top, 7)
                         SettingsIconButton(icon: .pen, help: l.string(.settingsEdit)) { editing = .edit(item) }
-                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { askDelete(item) }
-                            .disabled(checking)
+                        SettingsIconButton(icon: .trash, help: l.string(.settingsDelete), destructive: true) { deleting = item }
                     }
                 }
             }
@@ -101,24 +99,11 @@ struct StatusesSettingsPage: View {
         }
     }
 
-    private func askDelete(_ item: SettingsStatusItem) {
-        checking = true
-        Task {
-            let uses = await model.statusUsage(of: item)
-            checking = false
-            if uses.isEmpty {
-                deleting = item
-            } else {
-                refusal = SettingsRefusal(subject: l.string(.settingsStatusSubject, item.name), uses: uses)
-            }
-        }
-    }
-
     private func confirmDelete(_ item: SettingsStatusItem) {
         Task {
             if case .failure(let error) = await model.deleteStatus(item) {
-                if let detail = SettingsModel.isInUse(error) {
-                    refusal = SettingsRefusal(subject: l.string(.settingsStatusSubject, item.name), uses: [], detail: detail)
+                if let detail = SettingsModel.inUseRefusal(error) {
+                    refusal = SettingsRefusal(refusal: detail)
                 } else {
                     model.onNotice?(model.message(error))
                 }

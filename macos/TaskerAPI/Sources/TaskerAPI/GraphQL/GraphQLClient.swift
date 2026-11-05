@@ -45,7 +45,7 @@ public final class GraphQLClient: Sendable {
             return cached
         }
         if cachePolicy == .cacheOnly {
-            throw TaskerAPIError.notFound("\(Query.operationName) is not in the cache")
+            throw TaskerAPIError.notFound(Refusal(message: "\(Query.operationName) is not in the cache"))
         }
         let data = try await execute(query)
         await cache.write(data, selections: Query.selections, variables: query.variables)

@@ -262,12 +262,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/agents/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/agents/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -652,12 +652,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/agents/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/agents/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -1033,12 +1033,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/agents/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/agents/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -1423,12 +1423,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/agents/{id}/tokens/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/agents/{id}/tokens/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -1795,12 +1795,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/agents/{id}/tokens/{tokenId}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/agents/{id}/tokens/{tokenId}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -2118,12 +2118,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/auth/login/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/auth/login/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -2425,12 +2425,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/auth/logout/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/auth/logout/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -2748,12 +2748,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/auth/refresh/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/auth/refresh/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -3071,12 +3071,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/auth/register/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/auth/register/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -3502,12 +3502,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -3892,12 +3892,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -4273,12 +4273,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -4663,12 +4663,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -5060,12 +5060,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -5448,12 +5448,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -5850,12 +5850,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/columns/{columnId}/move/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/columns/{columnId}/move/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -6238,12 +6238,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -6610,12 +6610,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/boards/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -7000,12 +7000,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -7447,12 +7447,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -7835,12 +7835,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -8223,12 +8223,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -8595,12 +8595,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -8985,12 +8985,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -9382,12 +9382,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -9770,12 +9770,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -10158,12 +10158,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -10530,12 +10530,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/fields/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -10920,12 +10920,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -11317,12 +11317,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -11705,12 +11705,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -12093,12 +12093,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -12465,12 +12465,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/link-types/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -12846,12 +12846,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -13211,12 +13211,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -13601,12 +13601,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/members/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/members/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -13973,12 +13973,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/members/{userId}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/members/{userId}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -14363,12 +14363,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -14760,12 +14760,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -15148,12 +15148,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -15536,12 +15536,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -15908,12 +15908,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -16305,12 +16305,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/resolve-conflicts/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/series/{id}/resolve-conflicts/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -16695,12 +16695,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -17092,12 +17092,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -17480,12 +17480,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -17868,12 +17868,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -18240,12 +18240,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/status-sets/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -18630,12 +18630,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -19027,12 +19027,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -19415,12 +19415,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -19803,12 +19803,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -20175,12 +20175,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/statuses/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -20565,12 +20565,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -21012,12 +21012,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -21400,12 +21400,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -21788,12 +21788,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -22160,12 +22160,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -22550,12 +22550,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -22947,12 +22947,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -23335,12 +23335,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -23732,12 +23732,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/links/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/links/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -24148,12 +24148,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/links/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/links/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -24536,12 +24536,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/lock/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/lock/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -24908,12 +24908,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/lock/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/lock/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -25305,12 +25305,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/series/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/series/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -25714,12 +25714,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/series/{seriesId}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/series/{seriesId}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -26116,12 +26116,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/series/{seriesId}/renumber/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/projects/{projectId}/tasks/{id}/series/{seriesId}/renumber/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -26439,12 +26439,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/users/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/users/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -26829,12 +26829,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/users/{id}/PATCH/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/users/{id}/PATCH/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -27210,12 +27210,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/users/{id}/DELETE/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/users/{id}/DELETE/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -27584,12 +27584,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/api/users/{id}/password/POST/responses/409/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/api/users/{id}/password/POST/responses/409/content/application\/json`.
-                    case json(Components.Schemas.ConflictError)
+                    case json(Components.Schemas.ApiError)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.ConflictError {
+                    public var json: Components.Schemas.ApiError {
                         get throws {
                             switch self {
                             case let .json(body):
