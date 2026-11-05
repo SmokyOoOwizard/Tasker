@@ -40,6 +40,7 @@ private struct BoardsSection: View {
     @Environment(WorkspaceTabSession.self) private var session
     @Environment(WorkspaceSessions.self) private var sessions
     @Environment(LiveWorkspace.self) private var live
+    @Environment(ProjectSelection.self) private var selection
     @Environment(\.localizer) private var l
 
     var body: some View {
@@ -48,17 +49,9 @@ private struct BoardsSection: View {
                 .id(ObjectIdentifier(editor))
                 .onChange(of: live.revision) { editor.refreshLock() }
                 .onChange(of: l.language, initial: true) { editor.localizer = l }
-        } else {
-            VStack(spacing: 8) {
-                MockupIconView(icon: AppSection.boards.icon, size: 36)
-                    .foregroundStyle(DesignColor.dim.color)
-                Text(l.string(AppSection.boards.titleKey))
-                    .font(.design(DesignTypography.pageTitleSize, weight: DesignTypography.semiboldWeight))
-                Text(l.string(.boardHint))
-                    .font(.design(DesignTypography.baseSize))
-                    .foregroundStyle(DesignColor.mut.color)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let client = live.client, let project = selection.current {
+            BoardWorkArea(client: client, project: project, navigator: session.navigator)
+                .id(project.id)
         }
     }
 

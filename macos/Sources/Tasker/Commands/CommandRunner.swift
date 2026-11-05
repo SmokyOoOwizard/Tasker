@@ -37,6 +37,7 @@ final class CommandRunner {
             hasProject: hasProject,
             hasTask: hasProject && session?.commandTask != nil,
             hasLink: hasProject && session?.currentLink() != nil,
+            hasBoard: hasProject && session?.section == .boards && session?.currentBoard != nil,
             tabCount: window.tabs.count,
             otherWindows: layout.windows.count - 1,
             listMode: hasProject && session?.section == .tasks ? session?.currentListMode : nil)
@@ -59,6 +60,10 @@ final class CommandRunner {
             guard let session, let project = session.selection.current?.id,
                   sessions.confirmDiscardingBoardEditor(in: session, replacing: BoardEditorTarget(project: project, board: nil), l) else { return }
             session.openBoardEditor(project: project, board: nil, localizer: l)
+        case .editBoard:
+            guard let session, let project = session.selection.current?.id, let board = session.currentBoard,
+                  sessions.confirmDiscardingBoardEditor(in: session, replacing: BoardEditorTarget(project: project, board: board), l) else { return }
+            session.openBoardEditor(project: project, board: board, localizer: l)
         case .newTab:
             if let tab = window?.selected { layout.duplicate(tab) }
         case .newWindow:

@@ -137,6 +137,23 @@
         }
       }
     },
+    "board.cards" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cards %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Карточек %@"
+          }
+        }
+      }
+    },
     "board.close" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -392,6 +409,57 @@
         }
       }
     },
+    "board.dropHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moving the card…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Карточка переносится…"
+          }
+        }
+      }
+    },
+    "board.edit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editor"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Редактор"
+          }
+        }
+      }
+    },
+    "board.editHelp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Columns, conditions and drop rules of the board"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Колонки, условия и правила переноса доски"
+          }
+        }
+      }
+    },
     "board.editingMine" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -405,23 +473,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "вы правите, блокировка продлевается"
-          }
-        }
-      }
-    },
-    "board.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Boards will appear here soon. You can create or edit a board from the command palette (⌘K)."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Доски скоро появятся здесь. Создать или настроить доску можно из палитры команд (⌘K)."
           }
         }
       }
@@ -528,6 +579,57 @@
         }
       }
     },
+    "board.moveFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not move %1$@: %2$@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось перенести %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "board.moveTo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move to column"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перенести в колонку"
+          }
+        }
+      }
+    },
+    "board.moved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ → “%2$@”"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ → «%2$@»"
+          }
+        }
+      }
+    },
     "board.name" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -592,6 +694,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Новая колонка"
+          }
+        }
+      }
+    },
+    "board.noBoards" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The project has no boards yet"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В проекте пока нет досок"
           }
         }
       }
@@ -715,6 +834,87 @@
         }
       }
     },
+    "board.outside" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld task outside the columns"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tasks outside the columns"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld задачи вне колонок"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld задача вне колонок"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld задач вне колонок"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "board.outsideBody" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The status of these tasks is in no column, or the column conditions are not met."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статус этих задач не входит ни в одну колонку или условия колонок не выполнены."
+          }
+        }
+      }
+    },
+    "board.outsideShow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "show"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "показать"
+          }
+        }
+      }
+    },
     "board.overlap" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -728,6 +928,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Доска не принимается: статус «%1$@» в колонках %2$@ и %3$@ без взаимоисключающих условий"
+          }
+        }
+      }
+    },
+    "board.pick" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a board"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать доску"
           }
         }
       }
@@ -813,6 +1030,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Наборы статусов"
+          }
+        }
+      }
+    },
+    "board.showAll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "show all %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "показать все %@"
           }
         }
       }
@@ -4269,6 +4503,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Настроить доску: %@"
+          }
+        }
+      }
+    },
+    "palette.boardOpen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Board: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доска: %@"
           }
         }
       }

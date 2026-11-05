@@ -466,3 +466,155 @@ public struct BoardLockQuery: GraphQLQuery {
         }
     }
 }
+
+public struct BoardColumnTasksQuery: GraphQLQuery {
+    public static let operationName = "BoardColumnTasks"
+    public static let document = """
+    query BoardColumnTasks($projectId: UUID!, $boardId: UUID!, $columnId: UUID!, $field: [String!], $offset: Int, $limit: Int) {
+      project(id: $projectId) {
+        __typename
+        id
+        columnTasks(boardId: $boardId, columnId: $columnId, field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
+          __typename
+          totalCount
+          offset
+          limit
+          data {
+            __typename
+            id
+            ...TaskRowFields
+          }
+        }
+      }
+    }
+    fragment TaskRowFields on TaskListItem {
+      __typename
+      id
+      projectId
+      title
+      typeId
+      statusId
+      seriesNumbers {
+        __typename
+        seriesId
+        number
+      }
+      createdAt
+      updatedAt
+      version
+      parentIds
+      childCount
+      fields {
+        __typename
+        fieldId
+        values
+        own {
+          __typename
+          name
+          type
+          enumId
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("columnTasks", arguments: ["boardId": .variable("boardId"), "columnId": .variable("columnId"), "field": .variable("field"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("totalCount"),
+                GraphQLField("offset"),
+                GraphQLField("limit"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("projectId"),
+                    GraphQLField("title"),
+                    GraphQLField("typeId"),
+                    GraphQLField("statusId"),
+                    GraphQLField("seriesNumbers", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("seriesId"),
+                        GraphQLField("number")
+                    ]),
+                    GraphQLField("createdAt"),
+                    GraphQLField("updatedAt"),
+                    GraphQLField("version"),
+                    GraphQLField("parentIds"),
+                    GraphQLField("childCount"),
+                    GraphQLField("fields", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("fieldId"),
+                        GraphQLField("values"),
+                        GraphQLField("own", selections: [
+                            GraphQLField("__typename"),
+                            GraphQLField("name"),
+                            GraphQLField("type"),
+                            GraphQLField("enumId")
+                        ])
+                    ])
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var boardId: UUID
+    public var columnId: UUID
+    public var field: [String]?
+    public var offset: Int?
+    public var limit: Int?
+
+    public init(projectId: UUID, boardId: UUID, columnId: UUID, field: [String]? = nil, offset: Int? = nil, limit: Int? = nil) {
+        self.projectId = projectId
+        self.boardId = boardId
+        self.columnId = columnId
+        self.field = field
+        self.offset = offset
+        self.limit = limit
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        result["boardId"] = boardId.graphQLValue
+        result["columnId"] = columnId.graphQLValue
+        if let field { result["field"] = field.graphQLValue }
+        if let offset { result["offset"] = offset.graphQLValue }
+        if let limit { result["limit"] = limit.graphQLValue }
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var columnTasks: ColumnTasks?
+
+            public init(id: UUID, columnTasks: ColumnTasks?) {
+                self.id = id
+                self.columnTasks = columnTasks
+            }
+
+            public struct ColumnTasks: Hashable, Sendable, Decodable {
+                public var totalCount: Int
+                public var offset: Int
+                public var limit: Int
+                public var data: [TaskRowFields]
+
+                public init(totalCount: Int, offset: Int, limit: Int, data: [TaskRowFields]) {
+                    self.totalCount = totalCount
+                    self.offset = offset
+                    self.limit = limit
+                    self.data = data
+                }
+            }
+        }
+    }
+}

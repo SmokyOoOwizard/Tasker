@@ -11,6 +11,7 @@ struct PaletteActions {
     var createTask: @MainActor () -> Void
     var createBoard: @MainActor () -> Void
     var editBoard: @MainActor (UUID) -> Void
+    var openBoard: @MainActor (UUID) -> Void = { _ in }
     var showSeries: @MainActor (UUID) -> Void
     var openSettings: @MainActor (SettingsPage) -> Void
     var chooseProject: @MainActor (UUID) -> Void
@@ -79,6 +80,9 @@ enum PaletteCommands {
             if context.hasProject {
                 for id in vocabulary.boardOrder {
                     guard let name = vocabulary.boardNames[id] else { continue }
+                    result.append(PaletteEntry(
+                        id: "board-open:" + id.uuidString, title: l.string(.paletteBoardOpen, name), detail: l.string(.paletteKindBoard),
+                        icon: .mockup(.board), keywords: "board open go kanban", run: { actions.openBoard(id) }))
                     result.append(PaletteEntry(
                         id: "board:" + id.uuidString, title: l.string(.paletteBoardEdit, name), detail: l.string(.paletteKindBoard),
                         icon: .mockup(.board), keywords: "board edit settings configure", run: { actions.editBoard(id) }))

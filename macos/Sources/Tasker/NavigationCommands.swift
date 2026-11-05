@@ -88,6 +88,7 @@ struct NavigationCommands: Commands {
             ForEach(AppSection.allCases) { section in
                 item(.go(section))
             }
+            item(.editBoard)
             Divider()
             Menu(l.string(.menuListLayout)) {
                 ForEach(TaskListMode.allCases) { modeItem($0) }

@@ -175,6 +175,11 @@ final class CommandPalette {
                       sessions.confirmDiscardingBoardEditor(in: session, replacing: BoardEditorTarget(project: project, board: id), l) else { return }
                 session.openBoardEditor(project: project, board: id, localizer: l)
             },
+            openBoard: { [sessions] id in
+                guard let session, sessions.confirmDiscardingBoardEditor(in: session, replacing: nil, l) else { return }
+                session.closeBoardEditor()
+                session.showBoard(id)
+            },
             showSeries: { id in session?.showSeries(id) },
             openSettings: { page in session?.openSettings(page) },
             chooseProject: { id in session?.selection.choose(id) },

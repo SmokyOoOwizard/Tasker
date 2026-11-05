@@ -30,6 +30,7 @@ enum ShortcutTable {
             Row(title: .taskListViewGroups, keys: ["⌥", "⌘", "1"], command: "listMode.groups"),
             Row(title: .taskListViewFlat, keys: ["⌥", "⌘", "2"], command: "listMode.flat"),
             Row(title: .taskListViewTree, keys: ["⌥", "⌘", "3"], command: "listMode.tree"),
+            Row(title: .boardTitleEdit, keys: ["⌥", "⌘", "E"], command: "editBoard"),
         ]),
         Group(title: .shortcutsGroupList, rows: [
             Row(title: .shortcutsListMove, keys: ["J", "K"], command: nil),
