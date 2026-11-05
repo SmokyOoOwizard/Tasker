@@ -31,7 +31,7 @@ public partial class ErrorCatalogTests
             codes = ErrorCatalog.All.ToDictionary(x => x.Code, x => new { status = x.Status, @params = x.Params, usages = x.HasUsages }),
             fields = ErrorCatalog.Fields,
             usageKinds = ErrorUsage.Kinds
-        }, new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        }, new JsonSerializerOptions { WriteIndented = true }).ReplaceLineEndings("\n") + "\n";
 
     [Fact]
     public void Committed_catalog_matches_the_code()
