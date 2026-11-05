@@ -2,9 +2,9 @@ formatVersion: 10
 id: c7dd9fd6-53c0-4b0d-94ef-fe8467b411c6
 title: 'macOS: редактор досок'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-03T21:32:48.8145580+00:00
-updatedAt: 2026-11-03T21:32:48.8145580+00:00
+updatedAt: 2026-11-05T02:55:00.0838880+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 194
