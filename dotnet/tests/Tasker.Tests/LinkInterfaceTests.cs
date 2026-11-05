@@ -32,6 +32,21 @@ public class LinkInterfaceTests
     // ---- консоль ----
 
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
+    public async Task A_default_link_type_is_locked_and_saved_as_it_was_read(string storage)
+    {
+        await using var api = await ApiHost.Start(storage);
+        var blocks = (await api.Get(api.P("/link-types"))).Body!["data"]!.AsArray().Single(x => x!["name"]!.GetValue<string>() == "Blocks")!;
+        var id = blocks["id"]!.GetValue<string>();
+        Assert.Equal("default", blocks["version"]!.GetValue<string>());
+
+        Assert.Equal(HttpStatusCode.OK, (await api.Post(api.P($"/link-types/{id}/lock"), new { })).Status);
+        var saved = await api.Patch(api.P($"/link-types/{id}"), new { name = "Blockers", version = "default" });
+
+        Assert.Equal(HttpStatusCode.OK, saved.Status);
+        Assert.Equal("Blockers", saved.Body!["name"]!.GetValue<string>());
+    }
+
+    [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
     public async Task Link_types_default_to_the_jira_set_and_can_be_managed(string storage)
     {
         using var home = new IsolatedHome();

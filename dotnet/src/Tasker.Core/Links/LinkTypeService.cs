@@ -29,7 +29,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
     /// <summary>Сколько файлов типов связей проекта не удалось прочитать (см. <see cref="ILinkTypeStorage.CountUnreadable"/>).</summary>
     public Task<int> CountUnreadable(Guid projectId, CancellationToken ct = default) => types.CountUnreadable(projectId, ct);
 
-    /// <summary>Версия типа по умолчанию, которого ещё нет в хранилище: после записи у него настоящая, так что изменение «со старой версией» даст <c>[modified]</c> и клиент перечитает.</summary>
+    /// <summary>Версия типа по умолчанию, которого ещё нет в хранилище.</summary>
     public const string DefaultVersion = "default";
 
     /// <summary>Сохранённые типы проекта; нет ни одного — типы по умолчанию (ничего не записывая).</summary>
@@ -210,7 +210,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
         if (type == null)
             return null;
         await locks.EnsureWritable(Locks.LockedEntity.LinkType, type.Id, Subject(type), ct);
-        var expected = Versioning.Check(type.Version, command.Version, Subject(type));
+        var expected = Versioning.Check(type.Version, SeenVersion(projectId, type, command.Version), Subject(type));
 
         var updated = type with
         {
@@ -240,7 +240,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
         if (type == null)
             return false;
         await locks.EnsureWritable(Locks.LockedEntity.LinkType, type.Id, Subject(type), ct);
-        var expected = Versioning.Check(type.Version, version, Subject(type));
+        var expected = Versioning.Check(type.Version, SeenVersion(projectId, type, version), Subject(type));
 
         var usages = new Usages(Subject(type));
         var linked = await tasks.Count(projectId, new TaskFilter { LinkTypeIds = [id] }, ct);
@@ -252,6 +252,14 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
             throw Versioning.Modified(Subject(type));
         await locks.Forget(Locks.LockedEntity.LinkType, type.Id, ct);
         return true;
+    }
+
+    private static string? SeenVersion(Guid projectId, LinkType stored, string? version)
+    {
+        if (version != DefaultVersion)
+            return version;
+        var definition = Defaults(projectId).FirstOrDefault(x => x.Id == stored.Id);
+        return definition != null && definition == stored with { Version = DefaultVersion } ? stored.Version : version;
     }
 
     /// <summary>Иерархический тип: циклы запрещены (граф эпиков без циклов), стороны названы по-разному (родителя не отличить от потомка иначе).</summary>

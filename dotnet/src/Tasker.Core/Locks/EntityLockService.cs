@@ -61,6 +61,13 @@ public class EntityLockService(
         return await ToInfo(await locks.Acquire(entity, id, subject, entity == LockedEntity.Project ? id : projectId, ct), ct);
     }
 
+    private async Task<string?> LinkTypeName(Guid project, Guid id, CancellationToken ct)
+    {
+        if (await linkTypes.GetById(project, id, ct) is { } stored)
+            return stored.Name;
+        return (await linkTypes.GetAll(project, ct)).Length == 0 ? Links.LinkTypeService.Defaults(project).FirstOrDefault(x => x.Id == id)?.Name : null;
+    }
+
     /// <summary>Действующие блокировки проекта — для индикаторов «правит Иван» в списках. Старые первыми.</summary>
     public async Task<LockInfo[]> GetByProject(Guid projectId, CancellationToken ct = default)
     {
@@ -96,7 +103,7 @@ public class EntityLockService(
             LockedEntity.Board => await boards.GetById(project, id, ct) is { } x ? ErrorSubject.Board(x.Name) : null,
             LockedEntity.Series => await series.GetById(project, id, ct) is { } x ? ErrorSubject.Series(x.Name) : null,
             LockedEntity.User => await users.GetById(id, ct) is { } x ? ErrorSubject.User(x.Username) : null,
-            LockedEntity.LinkType => await linkTypes.GetById(project, id, ct) is { } x ? ErrorSubject.LinkType(x.Name) : null,
+            LockedEntity.LinkType => await LinkTypeName(project, id, ct) is { } x ? ErrorSubject.LinkType(x) : null,
             LockedEntity.Field => await fields.GetById(project, id, ct) is { } x ? ErrorSubject.Field(x.Name) : null,
             LockedEntity.Enum => await fieldEnums.GetById(project, id, ct) is { } x ? ErrorSubject.Enum(x.Name) : null,
             _ => throw new ArgumentOutOfRangeException(nameof(entity), entity, null)
