@@ -1,40 +1,93 @@
 import SwiftUI
 
-struct ShortcutsWindow: View {
-    static let id = "shortcuts"
+@MainActor
+@Observable
+final class ShortcutsPresenter {
+    var window: UUID?
 
+    func show(in window: UUID) {
+        self.window = window
+    }
+
+    func hide() {
+        window = nil
+    }
+}
+
+struct ShortcutsDialog: View {
+    let close: () -> Void
     @Environment(\.localizer) private var l
+    @Environment(\.colorScheme) private var scheme
+    @FocusState private var focused: Bool
+
+    private var rows: [ShortcutTable.Row] {
+        ShortcutTable.groups.flatMap(\.rows)
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignSpacing.gap10) {
-                ForEach(Array(ShortcutTable.groups.enumerated()), id: \.offset) { _, group in
-                    Text(l.string(group.title).uppercased(with: l.locale))
-                        .font(.design(DesignTypography.smallSize))
-                        .tracking(0.6)
-                        .foregroundStyle(DesignColor.mut.color)
-                        .padding(.top, DesignSpacing.gap10)
-                    ForEach(Array(group.rows.enumerated()), id: \.offset) { _, row in
-                        HStack(spacing: DesignSpacing.gap8) {
-                            Text(l.string(row.title))
-                            Spacer(minLength: DesignSpacing.gap10)
-                            HStack(spacing: 4) {
-                                ForEach(Array(row.keys.enumerated()), id: \.offset) { _, key in
-                                    KeyCap(text: key)
+        ZStack {
+            DesignColor.ovl.color
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: close)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(l.string(.shortcutsTitle))
+                    .font(.design(15, weight: DesignTypography.semiboldWeight))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 4)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                            HStack(spacing: DesignSpacing.gap8) {
+                                Text(l.string(row.title))
+                                Spacer(minLength: DesignSpacing.gap10)
+                                HStack(spacing: 4) {
+                                    ForEach(Array(row.keys.enumerated()), id: \.offset) { _, key in
+                                        KeyCap(text: key)
+                                    }
                                 }
                             }
+                            .padding(.vertical, 4)
+                            .overlay(alignment: .bottom) { DesignDivider() }
                         }
-                        .frame(minHeight: 24)
-                        DesignDivider()
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
                 }
+                HStack {
+                    Spacer(minLength: 0)
+                    Button(action: close) {
+                        Text(l.string(.shortcutsClose))
+                            .foregroundStyle(DesignColor.onAcc.color)
+                            .padding(.horizontal, 14)
+                            .frame(height: 28)
+                            .background(DesignColor.acc.color, in: RoundedRectangle(cornerRadius: DesignRadius.control))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(.defaultAction)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
             }
-            .padding(DesignSpacing.pagePadX)
+            .font(.design(DesignTypography.baseSize))
+            .foregroundStyle(DesignColor.tx.color)
+            .frame(width: 640)
+            .frame(maxHeight: 560)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(DesignColor.panel.color, in: RoundedRectangle(cornerRadius: DesignRadius.dialog))
+            .overlay(RoundedRectangle(cornerRadius: DesignRadius.dialog).strokeBorder(DesignColor.line.color, lineWidth: DesignLayout.borderWidth))
+            .designShadow(DesignShadow.popup, scheme: scheme)
         }
-        .font(.design(DesignTypography.baseSize))
-        .foregroundStyle(DesignColor.tx.color)
-        .background(DesignColor.panel.color)
-        .navigationTitle(l.string(.shortcutsTitle))
-        .frame(width: 640, height: 560)
+        .focusable()
+        .focused($focused)
+        .focusEffectDisabled()
+        .onKeyPress(.escape) {
+            close()
+            return .handled
+        }
+        .onAppear { focused = true }
     }
 }

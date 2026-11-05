@@ -46,7 +46,6 @@ struct NavigationCommands: Commands {
 
     private func run(_ command: AppCommand) {
         runner.openWindow = { openWindow(value: $0) }
-        runner.openShortcuts = { openWindow(id: ShortcutsWindow.id) }
         runner.perform(command, window: active?.id)
     }
 

@@ -101,6 +101,11 @@ struct MainView: View {
             .background(DesignColor.bg.color)
             }
         }
+        .overlay {
+            if let runner, runner.shortcuts.window == window.id {
+                ShortcutsDialog { runner.shortcuts.hide() }
+            }
+        }
         .environment(\.workspaceWindow, window.id)
         .environment(session)
         .environment(session.live)

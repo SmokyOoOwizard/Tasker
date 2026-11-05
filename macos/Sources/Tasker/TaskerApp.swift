@@ -46,11 +46,6 @@ struct TaskerApp: App {
         .commands {
             NavigationCommands(runner: runner)
         }
-        Window(Localizer(choice: AppLanguage(storedValue: storedLanguage)).string(.shortcutsTitle), id: ShortcutsWindow.id) {
-            ShortcutsWindow()
-                .localized()
-        }
-        .windowResizability(.contentSize)
         Settings {
             AppSettingsView()
                 .localized()

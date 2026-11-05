@@ -9,8 +9,8 @@ final class CommandRunner {
     private let defaults: UserDefaults
 
     weak var palette: CommandPalette?
+    let shortcuts = ShortcutsPresenter()
     var openWindow: (UUID) -> Void = { _ in }
-    var openShortcuts: () -> Void = {}
 
     init(layout: WorkspaceLayout, sessions: WorkspaceSessions, workspaces: WorkspaceController, defaults: UserDefaults = .standard) {
         self.layout = layout
@@ -102,7 +102,7 @@ final class CommandRunner {
         case .mergeWindows:
             if let window { layout.mergeAll(into: window.id) }
         case .shortcuts:
-            openShortcuts()
+            if let id { shortcuts.show(in: id) }
         case .help:
             NSApp.showHelp(nil)
         }
