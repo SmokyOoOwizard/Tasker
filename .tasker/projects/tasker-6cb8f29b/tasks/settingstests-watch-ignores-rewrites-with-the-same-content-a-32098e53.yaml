@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 32098e53-caa6-4632-98f8-d39dd6abb7d0
 title: SettingsTests.Watch_ignores_rewrites_with_the_same_content_and_broken_files нестабильно падает на macOS
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: e419107c-3971-482e-b68f-46860d54f4d2
 createdAt: 2026-11-05T06:35:29.5808090+00:00
-updatedAt: 2026-11-05T06:35:29.5808090+00:00
+updatedAt: 2026-11-05T23:04:26.6499040+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 216

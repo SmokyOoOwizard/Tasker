@@ -2,9 +2,9 @@ formatVersion: 11
 id: ad259ec9-7b3e-412e-9e69-8e327bdbcbbb
 title: 'ProjectFolderTests: переименование проекта при читателе в другом процессе нестабильно на Windows'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-05T22:42:23.6228520+00:00
-updatedAt: 2026-11-05T22:43:59.9465510+00:00
+updatedAt: 2026-11-05T23:20:44.0811450+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 231
