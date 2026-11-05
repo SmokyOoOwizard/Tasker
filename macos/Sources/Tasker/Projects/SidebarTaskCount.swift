@@ -17,16 +17,12 @@ struct SidebarTaskCount: View {
 
     var body: some View {
         let scope = scope
-        Group {
-            if let count {
-                Text(String(count))
-                    .font(.design(DesignTypography.captionSize))
-                    .foregroundStyle(DesignColor.dim.color)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-        }
+        Text(count.map(String.init) ?? "")
+            .font(.design(DesignTypography.captionSize))
+            .foregroundStyle(DesignColor.dim.color)
+            .monospacedDigit()
+            .lineLimit(1)
+            .fixedSize()
         .task(id: scope) {
             count = nil
             guard let project = scope.project, let client = live.client else { return }
