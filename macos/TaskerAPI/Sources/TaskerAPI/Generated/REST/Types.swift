@@ -146,6 +146,9 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /api/projects/{projectId}/series/{id}/lock`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/series/{id}/lock/delete(releaseSeriesLock)`.
     func releaseSeriesLock(_ input: Operations.ReleaseSeriesLock.Input) async throws -> Operations.ReleaseSeriesLock.Output
+    /// - Remark: HTTP `POST /api/projects/{projectId}/series/{id}/resolve-conflicts`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/series/{id}/resolve-conflicts/post(resolveSeriesConflicts)`.
+    func resolveSeriesConflicts(_ input: Operations.ResolveSeriesConflicts.Input) async throws -> Operations.ResolveSeriesConflicts.Output
     /// - Remark: HTTP `POST /api/projects/{projectId}/status-sets`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/status-sets/post(createStatusSet)`.
     func createStatusSet(_ input: Operations.CreateStatusSet.Input) async throws -> Operations.CreateStatusSet.Output
@@ -764,6 +767,19 @@ extension APIProtocol {
         try await releaseSeriesLock(Operations.ReleaseSeriesLock.Input(
             path: path,
             headers: headers
+        ))
+    }
+    /// - Remark: HTTP `POST /api/projects/{projectId}/series/{id}/resolve-conflicts`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/series/{id}/resolve-conflicts/post(resolveSeriesConflicts)`.
+    public func resolveSeriesConflicts(
+        path: Operations.ResolveSeriesConflicts.Input.Path,
+        headers: Operations.ResolveSeriesConflicts.Input.Headers = .init(),
+        body: Operations.ResolveSeriesConflicts.Input.Body
+    ) async throws -> Operations.ResolveSeriesConflicts.Output {
+        try await resolveSeriesConflicts(Operations.ResolveSeriesConflicts.Input(
+            path: path,
+            headers: headers,
+            body: body
         ))
     }
     /// - Remark: HTTP `POST /api/projects/{projectId}/status-sets`.

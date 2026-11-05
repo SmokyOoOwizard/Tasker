@@ -16,6 +16,9 @@ final class WorkspaceTabSession: Identifiable {
     let settings: TaskListSettings
     let selection: ProjectSelection
 
+    private(set) var seriesPage: UUID?
+    var seriesPrefix: String?
+
     private var idleSection = AppSection.default
 
     @ObservationIgnored private weak var layout: WorkspaceLayout?
@@ -69,6 +72,8 @@ final class WorkspaceTabSession: Identifiable {
             listClient = nil
             listOwner = nil
             pendingFilter = nil
+            seriesPage = nil
+            seriesPrefix = nil
         }
         lastProject = project
     }
@@ -105,11 +110,24 @@ final class WorkspaceTabSession: Identifiable {
     }
 
     func showSeries(_ series: UUID) {
-        let filter = TaskListFilter(seriesIds: [series])
-        let visible = section == .tasks && listOwner != nil
+        if seriesPage != series { seriesPrefix = nil }
+        seriesPage = series
         navigator.closeCard()
         navigator.closePeek()
+        apply(TaskListFilter(seriesIds: [series]))
+    }
+
+    func closeSeries() {
+        guard seriesPage != nil else { return }
+        seriesPage = nil
+        seriesPrefix = nil
+        apply(.none)
+    }
+
+    private func apply(_ filter: TaskListFilter) {
+        let visible = section == .tasks && listOwner != nil
         if visible, let listModel {
+            pendingFilter = nil
             listModel.filter = filter
         } else {
             pendingFilter = filter

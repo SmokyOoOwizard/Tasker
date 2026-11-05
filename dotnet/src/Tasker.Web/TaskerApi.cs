@@ -36,6 +36,9 @@ internal static class TaskerApi
     /// <summary>Тело <c>POST /tasks/{id}/series/{seriesId}/renumber</c>: <c>to</c> null — следующий свободный номер.</summary>
     private record RenumberTask(int? To, string? Version);
 
+    /// <summary>Тело <c>POST /series/{id}/resolve-conflicts</c>: <c>token</c> — токен плана, который клиент видел (GraphQL <c>seriesConflictPlan</c>).</summary>
+    private record ResolveSeriesConflicts(string? Token);
+
     public static void MapTaskerApi(this IEndpointRouteBuilder api, TaskerMode mode)
     {
         // Сервер: без входа доступны только /health, регистрация первого пользователя и вход.
@@ -205,6 +208,13 @@ internal static class TaskerApi
         project.MapPatch("/series/{id:guid}", async (SeriesService service, Guid projectId, Guid id, UpdateSeries command, CancellationToken ct) =>
             OkOrNotFound(await service.Update(projectId, id, command, ct)))
             .RespondsOk<Series>("updateSeries");
+
+        // Разрешение конфликтов номеров серии: план строит GraphQL (seriesConflictPlan), здесь его подтверждают токеном. Токен не совпал
+        // (задачи изменились или план уже применил другой) — 409 modified, ничего не перенумеровано.
+        project.MapPost("/series/{id:guid}/resolve-conflicts",
+            async (SeriesConflictService service, Guid projectId, Guid id, ResolveSeriesConflicts command, CancellationToken ct) =>
+                Results.Ok(await service.Apply(projectId, id, command.Token, ct)))
+            .RespondsOk<ConflictPlan>("resolveSeriesConflicts");
 
         // Серию с задачами удалять можно: ссылки на неё из задач убираются в той же операции.
         project.MapDelete("/series/{id:guid}", async (SeriesService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>

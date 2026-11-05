@@ -142,6 +142,7 @@ final class TaskRowView: NSTableRowView {
 
 struct TaskCellContent {
     var reference: String
+    var conflict = false
     var title: String
     var repeated: Bool
     var typeName: String?
@@ -159,6 +160,7 @@ final class TaskCellView: NSTableCellView {
     private let reference = TaskCellView.label(TaskListFonts.mono, DesignColor.dim)
     private let title = TaskCellView.label(TaskListFonts.base, DesignColor.tx)
     private let repeated = TaskCellView.label(TaskListFonts.caption, DesignColor.dim)
+    private let conflictMark = TaskCellView.conflictMark()
     private let type = TaskCellView.label(TaskListFonts.small, DesignColor.mut)
     private let date = TaskCellView.label(TaskListFonts.small, DesignColor.mut)
     private var tags: [TaskTagView] = []
@@ -167,7 +169,7 @@ final class TaskCellView: NSTableCellView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         identifier = Self.identifier
-        for view in [statusButton, reference, title, repeated, type, date] as [NSView] { addSubview(view) }
+        for view in [statusButton, reference, conflictMark, title, repeated, type, date] as [NSView] { addSubview(view) }
         title.lineBreakMode = .byTruncatingTail
         date.alignment = .right
     }
@@ -184,8 +186,19 @@ final class TaskCellView: NSTableCellView {
         return field
     }
 
-    func configure(_ content: TaskCellContent, repeatedText: String, repeatedHint: String, statusHint: String) {
+    private static func conflictMark() -> NSImageView {
+        let configuration = NSImage.SymbolConfiguration(pointSize: TaskListFonts.small.pointSize, weight: .regular)
+        let view = NSImageView(image: NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)?.withSymbolConfiguration(configuration) ?? NSImage())
+        view.contentTintColor = DesignColor.amber.nsColor
+        view.imageScaling = .scaleProportionallyDown
+        return view
+    }
+
+    func configure(_ content: TaskCellContent, repeatedText: String, repeatedHint: String, statusHint: String, conflictHint: String) {
         self.content = content
+        conflictMark.isHidden = !content.conflict
+        conflictMark.toolTip = conflictHint
+        conflictMark.setAccessibilityLabel(conflictHint)
         reference.stringValue = content.reference
         reference.isHidden = content.reference.isEmpty
         title.stringValue = content.title
@@ -222,8 +235,14 @@ final class TaskCellView: NSTableCellView {
         statusButton.frame = NSRect(x: x, y: (height - button) / 2, width: button, height: button)
         x += button + gap
         if !reference.isHidden {
-            let width = max(DesignLayout.refMinWidth, ceil(reference.intrinsicContentSize.width))
-            reference.frame = centered(x, width, reference)
+            let text = ceil(reference.intrinsicContentSize.width)
+            let side = ceil(TaskListFonts.small.pointSize) + 2
+            let mark = conflictMark.isHidden ? 0 : side + 4
+            let width = max(DesignLayout.refMinWidth, text + mark)
+            reference.frame = centered(x, text, reference)
+            if !conflictMark.isHidden {
+                conflictMark.frame = NSRect(x: x + text + 4, y: (height - side) / 2, width: side, height: side)
+            }
             x += width + gap
         }
         var right = bounds.width - DesignSpacing.pagePadX

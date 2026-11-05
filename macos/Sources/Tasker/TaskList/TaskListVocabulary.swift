@@ -120,6 +120,7 @@ struct TaskListVocabulary: Hashable, Sendable {
     var prefixes: [UUID: String] = [:]
     var seriesNames: [UUID: String] = [:]
     var seriesOrder: [UUID] = []
+    var conflictedTasks: Set<UUID> = []
     var linkTypes: [LinkType] = []
     var fields: [Field] = []
     var enums: [UUID: [EnumValue]] = [:]
@@ -169,7 +170,10 @@ struct TaskListVocabulary: Hashable, Sendable {
         return glyph(status: statusId, type: type)
     }
 
-    func reference(_ row: TaskRow) -> String {
+    func reference(_ row: TaskRow, preferring series: UUID? = nil) -> String {
+        if let series, let number = row.seriesNumbers.first(where: { $0.seriesId == series }), let prefix = prefixes[series] {
+            return "\(prefix)-\(number.number)"
+        }
         for number in row.seriesNumbers {
             if let prefix = prefixes[number.seriesId] { return "\(prefix)-\(number.number)" }
         }
@@ -231,6 +235,7 @@ extension TaskListVocabulary {
         prefixes = Dictionary(project.seriesList.data.map { ($0.id, $0.prefix) }, uniquingKeysWith: { first, _ in first })
         seriesNames = Dictionary(project.seriesList.data.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         seriesOrder = project.seriesList.data.map(\.id)
+        conflictedTasks = Set(project.seriesHealth.numberConflicts.flatMap(\.taskIds))
         linkTypes = project.linkTypes.data.map {
             LinkType(id: $0.id, name: $0.name, outwardName: $0.outwardName, inwardName: $0.inwardName, hierarchical: $0.hierarchical, isSymmetric: $0.isSymmetric)
         }

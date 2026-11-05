@@ -74,6 +74,21 @@ type ColumnFieldFilter {
   value: String
 }
 
+type ConflictPlan {
+  seriesId: UUID!
+  token: String!
+  steps: [ConflictPlanStep!]!
+}
+
+type ConflictPlanStep {
+  taskId: UUID!
+  taskTitle: String!
+  oldNumber: Int!
+  newNumber: Int!
+  keeperId: UUID!
+  keeperTitle: String!
+}
+
 type DropStatus {
   statusSetId: UUID!
   statusId: UUID!
@@ -225,6 +240,7 @@ type Project {
   seriesList(offset: Int, limit: Int): SeriesPage!
   series(id: UUID!): Series
   seriesHealth: SeriesHealth!
+  seriesConflictPlan(seriesId: UUID!): ConflictPlan
   boards(offset: Int, limit: Int): BoardPage!
   board(id: UUID!): Board
   columnTasks(

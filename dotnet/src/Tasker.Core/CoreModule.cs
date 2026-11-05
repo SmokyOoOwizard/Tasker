@@ -47,6 +47,7 @@ public class CoreModule(bool lazy) : Module
         Scoped<TaskSeries.SeriesService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<TaskSeries.SeriesHealthService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<TaskSeries.CleanupService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
+        Scoped<TaskSeries.SeriesConflictService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
     }
 
     private void Scoped<T>(ContainerBuilder builder, Action<IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle>> configure) where T : notnull

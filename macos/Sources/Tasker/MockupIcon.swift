@@ -18,6 +18,7 @@ enum MockupIcon: Sendable {
     case chevronDown
     case warn
     case lock
+    case pen
 }
 
 struct MockupIconShape: Shape {
@@ -110,6 +111,13 @@ struct MockupIconShape: Shape {
             path.closeSubpath()
             line(&path, 8, 6.5, 8, 9.5)
             line(&path, 8, 11.2, 8, 11.21)
+        case .pen:
+            path.move(to: p(3, 13))
+            path.addLine(to: p(3.7, 10))
+            path.addLine(to: p(11, 2.7))
+            path.addLine(to: p(13.3, 5))
+            path.addLine(to: p(6, 12.3))
+            path.closeSubpath()
         case .lock:
             path.addPath(box(3.5, 7, 9, 6.5))
             path.move(to: p(5.5, 7))
