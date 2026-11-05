@@ -1,7 +1,7 @@
 #!/bin/bash
-# Устанавливает консольную утилиту tasker и демон MCP (tasker-mcpd) в каталог пользователя на macOS и Linux, чтобы команда `tasker`
+# Устанавливает консольную утилиту tasker и демон MCP (tasker-mcpd) в каталог пользователя на Linux, чтобы команда `tasker`
 # была доступна из любого места. Права администратора не нужны, ставить ничего не нужно: это две программы (.NET: консоль собрана NativeAOT, демон — один файл с рантаймом).
-# (Windows: scripts/install.ps1.)
+# (Windows: scripts/install.ps1. macOS: Tasker.app, он сам подключает консоль и демон; здесь на macOS работает только --uninstall.)
 #
 #   install.sh                                  из распакованного релиза (рядом со скриптом лежит каталог app/)
 #   install.sh --from ФАЙЛ.tar.gz | КАТАЛОГ     из архива релиза или каталога с готовой сборкой
@@ -34,7 +34,8 @@ usage() {
   cat <<'USAGE'
 Usage: install.sh [options]
 
-Installs the tasker command line tool and the MCP server (tasker-mcpd) for the current user (macOS and Linux).
+Installs the tasker command line tool and the MCP server (tasker-mcpd) for the current user (Linux).
+On macOS install Tasker.app instead: it brings the command and the MCP server; here only --uninstall works there.
 Where the files come from (one of; default: the release this script came with, i.e. the app/ folder next to it):
   --from PATH             a release archive (.tar.gz) or a folder with the ready build (tasker, tasker-mcpd inside it or in its app/)
   --url URL               download a release archive; URL.sha256 next to it is checked
@@ -132,6 +133,10 @@ case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) fail "this script is for macOS and Linux: on Windows use scripts/install.ps1 in PowerShell" ;;
   *) fail "unsupported system: $(uname -s) (macOS and Linux are supported; Windows: scripts/install.ps1)" ;;
 esac
+
+if [ "$OS" = osx ] && [ "$UNINSTALL" = false ] && [ "${TASKER_INSTALL_ON_MACOS:-}" != 1 ]; then
+  fail "on macOS tasker comes with Tasker.app: install the app, it connects the command and the MCP server. See docs/wiki/Установка.md"
+fi
 
 if [ "$OS" = osx ]; then
   DATA_TEXT="~/Library/Application Support/Tasker"

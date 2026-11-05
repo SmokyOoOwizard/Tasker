@@ -23,11 +23,12 @@ macOS (arm64, x64), Linux (x64, arm64; glibc 2.28+ или статическая
 Готовых релизов на GitHub пока нет: релиз собирается скриптом (для сборки нужен .NET SDK 10). Сама установка ставит консоль и демон одним скриптом, права администратора и ничего другого не нужно.
 
 ```bash
-scripts/release.sh --rid osx-arm64        # релиз для своей платформы (osx-arm64, osx-x64, linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, win-x64, win-arm64)
-artifacts/release/<версия>/install.sh --from artifacts/release/<версия>/tasker-<версия>-osx-arm64.tar.gz
+scripts/macos-build.sh release            # macOS: Tasker.app с консолью и демоном внутри, перенесите его в «Программы» и откройте
+scripts/release.sh --rid linux-x64        # Linux и Windows: релиз для своей платформы (linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, win-x64, win-arm64)
+artifacts/release/<версия>/install.sh --from artifacts/release/<версия>/tasker-<версия>-linux-x64.tar.gz
 ```
 
-Из исходников (нужен .NET SDK 10): `scripts/install.sh --from-source`. Обновление — тот же `install.sh` с новым архивом: работающий демон переходит на новую сборку без простоя. На Windows: `scripts/install.ps1`. Подробности и удаление: [Установка](https://github.com/SmokyOoOwizard/Tasker/wiki/Установка).
+На Linux из исходников (нужен .NET SDK 10): `scripts/install.sh --from-source`. Обновление — тот же `install.sh` с новым архивом: работающий демон переходит на новую сборку без простоя. На Windows: `scripts/install.ps1`. Подробности и удаление: [Установка](https://github.com/SmokyOoOwizard/Tasker/wiki/Установка).
 
 ## Быстрый старт
 

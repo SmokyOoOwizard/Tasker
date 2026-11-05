@@ -14,7 +14,13 @@
         <key>TASKER_HOME</key><string><ROOT>/home/data</string>
     </dict>
     <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>PathState</key>
+        <dict>
+            <key><DOTNET></key><true/>
+        </dict>
+    </dict>
     <key>ProcessType</key><string>Background</string>
     <key>StandardOutPath</key><string><ROOT>/home/data/logs/mcp-launchd.log</string>
     <key>StandardErrorPath</key><string><ROOT>/home/data/logs/mcp-launchd.log</string>

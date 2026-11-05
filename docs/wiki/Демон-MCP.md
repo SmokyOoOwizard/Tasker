@@ -47,7 +47,7 @@ tasker mcp config                           # файл настроек, пор�
 
 | Система | Механизм | Особенности |
 |---|---|---|
-| macOS | агент launchd `~/Library/LaunchAgents/com.tasker.mcp.plist` | запуск при входе, перезапуск при падении |
+| macOS | агент launchd `~/Library/LaunchAgents/com.technotronika.tasker.daemon.plist`, его ставит `Tasker.app` | запуск при входе, перезапуск при падении, пока файл программы существует; демон из удалённого приложения уходит сам ([Установка](Установка)) |
 | Linux | пользовательская служба systemd `~/.config/systemd/user/tasker-mcp.service` | перезапуск при падении; без входа в систему нужен `loginctl enable-linger`; нужен сеанс пользователя systemd |
 | Windows | задача Планировщика заданий «Tasker MCP» | текущий пользователь, права администратора не нужны, окно не показывается |
 

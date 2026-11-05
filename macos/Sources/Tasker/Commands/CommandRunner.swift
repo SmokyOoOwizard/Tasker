@@ -9,6 +9,7 @@ final class CommandRunner {
     private let defaults: UserDefaults
 
     weak var palette: CommandPalette?
+    var integration: AppIntegrationController?
     let shortcuts = ShortcutsPresenter()
     var openWindow: (UUID) -> Void = { _ in }
 
@@ -113,6 +114,10 @@ final class CommandRunner {
             if let id { shortcuts.show(in: id) }
         case .help:
             NSApp.showHelp(nil)
+        case .installCommand:
+            if let integration { Task { await integration.installCommandFromMenu() } }
+        case .removeIntegration:
+            if let integration { Task { await integration.removeFromMenu() } }
         }
     }
 

@@ -14,7 +14,13 @@ struct DaemonPaths: Sendable {
         self.label = label
     }
 
+    static func installHome(environment: [String: String], home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL {
+        if let root = environment[InstallLocation.rootVariable], !root.isEmpty { return URL(fileURLWithPath: root) }
+        return home
+    }
+
     init(environment: [String: String] = ProcessInfo.processInfo.environment, home: URL = FileManager.default.homeDirectoryForCurrentUser) {
+        let home = Self.installHome(environment: environment, home: home)
         let data: URL
         if let override = environment["TASKER_HOME"], !override.isEmpty {
             data = URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
@@ -27,7 +33,7 @@ struct DaemonPaths: Sendable {
         } else {
             agents = home.appending(path: "Library/LaunchAgents")
         }
-        let label = environment["TASKER_DAEMON_LABEL"].flatMap { $0.isEmpty ? nil : $0 } ?? Self.defaultLabel
+        let label = environment["TASKER_SERVICE_LABEL"].flatMap { $0.isEmpty ? nil : $0 } ?? Self.defaultLabel
         self.init(dataDirectory: data, launchAgentsDirectory: agents, label: label)
     }
 

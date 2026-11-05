@@ -46,6 +46,21 @@ struct DaemonLaunchAgent: DaemonService {
     var runner: any CommandRunning
     var userID: uid_t = getuid()
     var environment: [String: String] = [:]
+    var conflictingPlist: URL?
+    var unloadTimeout: Duration = .seconds(25)
+    var bootstrapAttempts = 5
+
+    static func live(paths: DaemonPaths, environment: [String: String]) -> DaemonLaunchAgent {
+        var serviceEnvironment: [String: String] = [:]
+        if let home = environment["TASKER_HOME"], !home.isEmpty {
+            serviceEnvironment["TASKER_HOME"] = paths.dataDirectory.path
+        }
+        var agent = DaemonLaunchAgent(paths: paths, runner: SystemCommandRunner(), environment: serviceEnvironment)
+        if let label = LegacyInstallation.label(environment: environment) {
+            agent.conflictingPlist = paths.launchAgentsDirectory.appending(path: label + ".plist")
+        }
+        return agent
+    }
 
     private var domain: String { "gui/\(userID)" }
     private var target: String { "\(domain)/\(paths.label)" }
@@ -73,7 +88,13 @@ struct DaemonLaunchAgent: DaemonService {
         }
         lines += [
             "    <key>RunAtLoad</key><true/>",
-            "    <key>KeepAlive</key><true/>",
+            "    <key>KeepAlive</key>",
+            "    <dict>",
+            "        <key>PathState</key>",
+            "        <dict>",
+            "            <key>\(Self.escape(program))</key><true/>",
+            "        </dict>",
+            "    </dict>",
             "    <key>ProcessType</key><string>Background</string>",
             "    <key>StandardOutPath</key><string>\(Self.escape(paths.launchLog.path))</string>",
             "    <key>StandardErrorPath</key><string>\(Self.escape(paths.launchLog.path))</string>",
@@ -85,21 +106,66 @@ struct DaemonLaunchAgent: DaemonService {
     }
 
     func start(program: String) async throws {
-        let desired = plist(program: program)
-        let current = try? String(contentsOf: paths.plistFile, encoding: .utf8)
+        if let conflictingPlist, FileManager.default.fileExists(atPath: conflictingPlist.path) {
+            throw DaemonServiceError(message: "the previous service is still installed: \(conflictingPlist.path)")
+        }
         let loaded = await runner.run("/bin/launchctl", ["print", target]).succeeded
 
-        if current != desired {
-            try FileManager.default.createDirectory(at: paths.launchAgentsDirectory, withIntermediateDirectories: true)
-            try FileManager.default.createDirectory(at: paths.logsDirectory, withIntermediateDirectories: true)
-            try desired.write(to: paths.plistFile, atomically: true, encoding: .utf8)
-            _ = await runner.run("/bin/launchctl", ["bootout", target])
-            try check(await runner.run("/bin/launchctl", ["bootstrap", domain, paths.plistFile.path]))
+        if !isCurrent(program: program) {
+            try await install(program: program)
         } else if loaded {
             try check(await runner.run("/bin/launchctl", ["kickstart", target]))
         } else {
-            try check(await runner.run("/bin/launchctl", ["bootstrap", domain, paths.plistFile.path]))
+            try await bootstrap()
         }
+    }
+
+    @discardableResult
+    func repair(program: String) async throws -> Bool {
+        guard FileManager.default.fileExists(atPath: paths.plistFile.path), !isCurrent(program: program) else { return false }
+        try await install(program: program)
+        return true
+    }
+
+    func remove() async throws {
+        _ = await runner.run("/bin/launchctl", ["bootout", target])
+        if FileManager.default.fileExists(atPath: paths.plistFile.path) {
+            try FileManager.default.removeItem(at: paths.plistFile)
+        }
+    }
+
+    func isCurrent(program: String) -> Bool {
+        guard let data = try? Data(contentsOf: paths.plistFile),
+              let current = Self.dictionary(data),
+              let desired = Self.dictionary(Data(plist(program: program).utf8)) else { return false }
+        return current.isEqual(to: desired as! [AnyHashable: Any])
+    }
+
+    private func install(program: String) async throws {
+        try FileManager.default.createDirectory(at: paths.launchAgentsDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: paths.logsDirectory, withIntermediateDirectories: true)
+        try plist(program: program).write(to: paths.plistFile, atomically: true, encoding: .utf8)
+        _ = await runner.run("/bin/launchctl", ["bootout", target])
+        try await bootstrap()
+    }
+
+    private func bootstrap() async throws {
+        let clock = ContinuousClock()
+        let deadline = clock.now + unloadTimeout
+        while clock.now < deadline, await runner.run("/bin/launchctl", ["print", target]).succeeded {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        var result = CommandResult(exitCode: 1, output: "")
+        for attempt in 1...bootstrapAttempts {
+            result = await runner.run("/bin/launchctl", ["bootstrap", domain, paths.plistFile.path])
+            if result.succeeded || attempt == bootstrapAttempts { break }
+            try await Task.sleep(for: .seconds(1))
+        }
+        try check(result)
+    }
+
+    private static func dictionary(_ data: Data) -> NSDictionary? {
+        try? PropertyListSerialization.propertyList(from: data, format: nil) as? NSDictionary
     }
 
     private func check(_ result: CommandResult) throws {

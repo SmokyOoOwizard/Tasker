@@ -18,6 +18,31 @@ public static class Launcher
         return dll is { Length: > 0 } ? (path, [dll]) : throw new InvalidOperationException("Cannot find tasker.dll");
     }
 
+    private const string AppBundleHelpers = ".app/Contents/Helpers/";
+
+    public static bool IsInAppBundle(string path) => path.Contains(AppBundleHelpers, StringComparison.Ordinal);
+
+    public static bool IsTemporaryLocation(string path) =>
+        IsInAppBundle(path) && (path.StartsWith("/Volumes/", StringComparison.Ordinal) || path.Contains("/AppTranslocation/", StringComparison.Ordinal));
+
+    public static bool RunsFromTemporaryLocation() =>
+        Environment.ProcessPath is { } path && IsTemporaryLocation(RealPath(path));
+
+    public static (string File, string[] Arguments) ScriptCommand() =>
+        ScriptCommand(Command(), AppEnvironment.Get("HOME") ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+    internal static (string File, string[] Arguments) ScriptCommand((string File, string[] Arguments) command, string home)
+    {
+        var real = RealPath(command.File);
+        if (!IsInAppBundle(real))
+            return command;
+
+        var link = Path.Combine(home, ".local", "bin", "tasker");
+        return File.Exists(link) && RealPath(link) == real ? (link, command.Arguments) : (real, command.Arguments);
+    }
+
+    private static string RealPath(string path) => new FileInfo(path).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? path;
+
     /// <summary>Имя программы демона (<c>tasker-mcpd</c>) — она лежит рядом с <c>tasker</c>.</summary>
     public const string DaemonName = "tasker-mcpd";
 
@@ -41,7 +66,7 @@ public static class Launcher
         var current = viaDotnet ? entryAssembly : path;
         if (string.IsNullOrEmpty(current))
             throw new InvalidOperationException("Cannot find the directory of the running program");
-        var directory = Path.GetDirectoryName(new FileInfo(current).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? current)!;
+        var directory = Path.GetDirectoryName(RealPath(current))!;
 
         var program = viaDotnet
             ? Path.Combine(directory, DaemonName + ".dll")
@@ -50,7 +75,9 @@ public static class Launcher
         {
             throw new DaemonStartException(
                 $"The MCP server program ({DaemonName}) is not installed next to tasker (looked in {directory}). " +
-                "Reinstall tasker with the MCP server: scripts/install.sh (macOS, Linux) or scripts/install.ps1 (Windows), without --no-daemon");
+                (OperatingSystem.IsMacOS()
+                    ? "Reinstall Tasker.app"
+                    : "Reinstall tasker with the MCP server: scripts/install.sh (Linux) or scripts/install.ps1 (Windows), without --no-daemon"));
         }
 
         return viaDotnet ? (path, [program]) : (program, []);

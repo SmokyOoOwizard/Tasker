@@ -8,7 +8,7 @@
 
 ## Шаги
 
-Установка из распакованного релиза (в `~/.local`, на Windows — в `%LOCALAPPDATA%\Programs\Tasker`): ставит `tasker` и демон `tasker-mcpd`, подключает автодополнение по Tab и включает автозапуск демона (launchd, systemd `--user` или Планировщик заданий).
+На macOS Tasker ставится приложением `Tasker.app`: оно само подключает команду `tasker` и демон (`install.sh` там не ставит). На Linux и Windows — установка из распакованного релиза (в `~/.local`, на Windows — в `%LOCALAPPDATA%\Programs\Tasker`): ставит `tasker` и демон `tasker-mcpd`, подключает автодополнение по Tab и включает автозапуск демона (launchd, systemd `--user` или Планировщик заданий).
 
 ```bash
 tar -xzf tasker-0.1.0-linux-x64.tar.gz

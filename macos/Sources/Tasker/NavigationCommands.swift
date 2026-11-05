@@ -68,6 +68,10 @@ struct NavigationCommands: Commands {
                 showAbout()
             }
         }
+        CommandGroup(after: .appSettings) {
+            item(.installCommand)
+            item(.removeIntegration)
+        }
         CommandGroup(replacing: .newItem) {
             item(.newTask)
             item(.newBoard)

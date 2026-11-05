@@ -5,8 +5,9 @@ using Tasker.Global;
 namespace Tasker.Daemon.Services;
 
 /// <summary>
-/// macOS: агент запуска пользователя <c>~/Library/LaunchAgents/com.tasker.mcp.plist</c>. RunAtLoad — стартует при входе
-/// в систему, KeepAlive — launchd перезапускает демон, если он упал. <c>TASKER_SERVICE_DIR</c> и <c>TASKER_SERVICE_LABEL</c>
+/// macOS: агент запуска пользователя <c>~/Library/LaunchAgents/com.technotronika.tasker.daemon.plist</c>, тот же, что ставит Tasker.app.
+/// RunAtLoad — стартует при входе в систему, KeepAlive с PathState — launchd перезапускает демон, пока файл программы существует:
+/// после удаления приложения нет бесконечных попыток запуска. <c>TASKER_SERVICE_DIR</c> и <c>TASKER_SERVICE_LABEL</c>
 /// переопределяют каталог и имя (тесты, вторая установка).
 /// </summary>
 public sealed class LaunchdService(IProcessRunner runner, string? directory = null, string? label = null) : IServiceManager
@@ -15,7 +16,9 @@ public sealed class LaunchdService(IProcessRunner runner, string? directory = nu
         ?? AppEnvironment.Get("TASKER_SERVICE_DIR")
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "LaunchAgents");
 
-    public string Label { get; } = label ?? AppEnvironment.Get("TASKER_SERVICE_LABEL") ?? "com.tasker.mcp";
+    public const string DefaultLabel = "com.technotronika.tasker.daemon";
+
+    public string Label { get; } = label ?? AppEnvironment.Get("TASKER_SERVICE_LABEL") ?? DefaultLabel;
 
     public string Name => "launchd";
 
@@ -88,7 +91,13 @@ public sealed class LaunchdService(IProcessRunner runner, string? directory = nu
 
         var log = Path.Combine(Global.AppDirectories.Logs, "mcp-launchd.log");
         text.AppendLine("    <key>RunAtLoad</key><true/>");
-        text.AppendLine("    <key>KeepAlive</key><true/>");
+        text.AppendLine("    <key>KeepAlive</key>");
+        text.AppendLine("    <dict>");
+        text.AppendLine("        <key>PathState</key>");
+        text.AppendLine("        <dict>");
+        text.AppendLine($"            <key>{Escape(command[0])}</key><true/>");
+        text.AppendLine("        </dict>");
+        text.AppendLine("    </dict>");
         text.AppendLine("    <key>ProcessType</key><string>Background</string>");
         text.AppendLine($"    <key>StandardOutPath</key><string>{Escape(log)}</string>");
         text.AppendLine($"    <key>StandardErrorPath</key><string>{Escape(log)}</string>");
