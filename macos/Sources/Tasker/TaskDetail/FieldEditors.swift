@@ -153,7 +153,8 @@ struct FieldRowView: View {
                         .onExitCommand(perform: cancelSingle)
                         .onChange(of: focused) { if !focused { commitSingle() } }
                         .onChange(of: draft) { invalid = false }
-                        .onAppear { focused = true }
+                        .endsOnClickAway(active: editing, perform: commitSingle)
+                        .onAppear { DispatchQueue.main.async { focused = true } }
                 } else {
                     Button {
                         draft = singleText
