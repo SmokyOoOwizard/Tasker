@@ -37,7 +37,26 @@ public class ApiSchemaTests
 
         Assert.True(File.Exists(SchemaPath), $"{SchemaPath} is missing: run the tests with TASKER_GOLDEN_UPDATE=1");
         var expected = File.ReadAllText(SchemaPath).ReplaceLineEndings("\n");
-        Assert.True(expected == actual, "docs/api/openapi.json differs from the current API: run the tests with TASKER_GOLDEN_UPDATE=1 and commit the file");
+        Assert.True(expected == actual, $"docs/api/openapi.json differs from the current API: run the tests with TASKER_GOLDEN_UPDATE=1 and commit the file{Environment.NewLine}{Difference(expected, actual)}");
+    }
+
+    private static string Difference(string expected, string actual)
+    {
+        if (expected == actual)
+            return "";
+
+        var index = 0;
+        while (index < expected.Length && index < actual.Length && expected[index] == actual[index])
+            index++;
+
+        static string Around(string text, int index)
+        {
+            var from = Math.Max(0, index - 80);
+            var to = Math.Min(text.Length, index + 80);
+            return text[from..to].Replace("\r", "\\r").Replace("\n", "\\n");
+        }
+
+        return $"first difference at {index} (committed length {expected.Length}, generated length {actual.Length}){Environment.NewLine}committed: {Around(expected, index)}{Environment.NewLine}generated: {Around(actual, index)}";
     }
 
     [Fact]
