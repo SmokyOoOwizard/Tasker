@@ -9,6 +9,8 @@ struct PaletteWorkspace: Equatable {
 struct PaletteActions {
     var goTo: @MainActor (AppSection) -> Void
     var createTask: @MainActor () -> Void
+    var createBoard: @MainActor () -> Void
+    var editBoard: @MainActor (UUID) -> Void
     var showSeries: @MainActor (UUID) -> Void
     var chooseProject: @MainActor (UUID) -> Void
     var openWorkspace: @MainActor (String) -> Void
@@ -38,13 +40,21 @@ enum PaletteCommands {
                 id: "create-task", title: l.string(.taskCreateAction), detail: l.string(.paletteKindAction), icon: .mockup(.plus),
                 keywords: "create new task", shortcut: "⌘N", isEnabled: context.hasProject, run: actions.createTask))
             result.append(PaletteEntry(
-                id: "create-board", title: l.string(.paletteNewBoard), detail: l.string(.paletteSoon), icon: .mockup(.plus),
-                keywords: "create new board", isEnabled: false, run: {}))
+                id: "create-board", title: l.string(.paletteNewBoard), detail: l.string(.paletteKindAction), icon: .mockup(.plus),
+                keywords: "create new board", isEnabled: context.hasProject, run: actions.createBoard))
             for section in AppSection.allCases {
                 result.append(PaletteEntry(
                     id: "go:" + section.rawValue, title: l.string(.paletteGoTo, l.string(section.titleKey)),
                     detail: l.string(section == .settings ? .paletteKindSettings : .paletteKindGo), icon: .mockup(section.icon),
                     keywords: section.rawValue, shortcut: "⌘" + String(section.shortcutKey), run: { actions.goTo(section) }))
+            }
+            if context.hasProject {
+                for id in vocabulary.boardOrder {
+                    guard let name = vocabulary.boardNames[id] else { continue }
+                    result.append(PaletteEntry(
+                        id: "board:" + id.uuidString, title: l.string(.paletteBoardEdit, name), detail: l.string(.paletteKindBoard),
+                        icon: .mockup(.board), keywords: "board edit settings configure", run: { actions.editBoard(id) }))
+                }
             }
             for id in vocabulary.seriesOrder {
                 guard let prefix = vocabulary.prefixes[id] else { continue }

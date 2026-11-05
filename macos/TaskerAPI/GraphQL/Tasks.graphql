@@ -149,6 +149,12 @@ query TaskListVocabulary($projectId: UUID!) {
         prefix
       }
     }
+    boards(limit: 200) {
+      data {
+        id
+        name
+      }
+    }
     seriesHealth {
       numberConflicts {
         seriesId

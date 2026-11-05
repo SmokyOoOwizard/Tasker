@@ -1,0 +1,75 @@
+query BoardEditorCatalog($projectId: UUID!) {
+  project(id: $projectId) {
+    id
+    statuses(limit: 200, descriptionLength: 0) {
+      data {
+        id
+        name
+        color
+      }
+    }
+    statusSets(limit: 200) {
+      data {
+        id
+        name
+        statusIds
+      }
+    }
+    fields(limit: 200) {
+      data {
+        id
+        name
+        type
+        multiple
+        enumId
+      }
+    }
+    enums(limit: 200) {
+      data {
+        id
+        name
+        values {
+          id
+          name
+        }
+      }
+    }
+  }
+}
+
+query BoardEditorBoard($projectId: UUID!, $id: UUID!) {
+  project(id: $projectId) {
+    id
+    board(id: $id) {
+      id
+      name
+      statusSetIds
+      version
+      columns {
+        id
+        name
+        statusIds
+        fieldConditions {
+          fieldId
+          operator
+          value
+        }
+        dropStatuses {
+          statusSetId
+          statusId
+        }
+      }
+    }
+  }
+}
+
+query BoardLock($projectId: UUID!, $entity: LockedEntity!, $id: UUID!) {
+  project(id: $projectId) {
+    id
+    lock(entity: $entity, id: $id) {
+      holder
+      mine
+      expiresAt
+    }
+  }
+}

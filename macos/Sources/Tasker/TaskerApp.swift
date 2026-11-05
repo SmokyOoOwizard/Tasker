@@ -29,7 +29,10 @@ struct TaskerApp: App {
                 .environment(workspaces)
                 .environment(sessions)
                 .environment(\.commandPalette, palette)
-                .onAppear { appDelegate.layout = workspaces.layout }
+                .onAppear {
+                    appDelegate.layout = workspaces.layout
+                    appDelegate.releaseLocks = { [sessions] in sessions.releaseEditorLocks() }
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 960, height: 640)
