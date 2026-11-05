@@ -1,0 +1,23 @@
+formatVersion: 10
+id: b579a22e-f970-490f-b6a5-a13d8f5156b8
+title: ApiSchemaTests.Committed_schema_matches_the_current_api падает на Windows в CI
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-11-05T06:35:29.5263450+00:00
+updatedAt: 2026-11-05T06:35:29.5263450+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 215
+description: |-
+  Проблема
+  Тест ApiSchemaTests.Committed_schema_matches_the_current_api падает в CI в задании dotnet test (windows-latest) с сообщением «docs/api/openapi.json differs from the current API». На Linux и macOS тот же тест проходит. Из-за этого статус .NET-тестов на Windows красный и у main, и у PR.
+
+  Что известно
+  - Падает на чистом main: запуски f958a848, ab1a53d0, ee437aba. Также упал в PR #60 (TSK-214).
+  - Причина не установлена. Сообщение теста не показывает, чем именно отличается схема.
+
+  Что сделать
+  1. Выяснить, чем сгенерированная на Windows схема отличается от закоммиченной: например, выложить её артефактом CI или показать первое расхождение в сообщении теста.
+  2. Сделать генерацию одинаковой на всех платформах. Сравнение в тесте и файл docs/api/openapi.json менять только если расхождение действительно не в схеме.
+
+  Готово, когда тест стабильно проходит в dotnet test (windows-latest), а openapi.json одинаков на всех платформах.
