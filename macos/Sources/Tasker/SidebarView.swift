@@ -63,7 +63,7 @@ private struct SearchField: View {
     }
 }
 
-private struct KeyCap: View {
+struct KeyCap: View {
     let text: String
 
     var body: some View {

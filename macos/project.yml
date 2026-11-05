@@ -21,11 +21,19 @@ targets:
     platform: macOS
     sources:
       - Sources/Tasker
+      - path: Resources/Tasker.help
+        type: folder
+        buildPhase: resources
       - path: build/daemon/tasker-mcpd
         buildPhase:
           copyFiles:
             destination: wrapper
             subpath: Contents/Helpers
+    info:
+      path: Support/Info.plist
+      properties:
+        CFBundleHelpBookFolder: Tasker.help
+        CFBundleHelpBookName: com.technotronika.tasker.help
     dependencies:
       - package: TaskerAPI
     settings:

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import TaskerAPI
 
@@ -32,6 +33,7 @@ struct TaskDetailHost<Chrome: View>: View {
             value.onDeleted = deleted
             value.drafts = session.drafts
             model = value
+            session.registerDetail(value, compact: compact)
             value.load()
         }
         .onChange(of: live.revision) { model?.refresh() }
@@ -124,8 +126,23 @@ struct TaskCardScreen: View {
             navigator.back()
             return .handled
         }
-        .onAppear { focused = true }
+        .onAppear {
+            WindowFocus.restoreContent { focused = true }
+        }
         .onChange(of: task) { focused = true }
+    }
+}
+
+@MainActor
+enum WindowFocus {
+    static func restoreContent(then apply: @escaping @MainActor () -> Void) {
+        DispatchQueue.main.async {
+            if let window = NSApp.keyWindow, !(window.firstResponder is NSText), let content = window.contentView,
+               window.firstResponder !== content {
+                window.makeFirstResponder(content)
+            }
+            DispatchQueue.main.async { apply() }
+        }
     }
 }
 

@@ -89,6 +89,7 @@ final class TaskListModel {
     @ObservationIgnored var onOpen: ((TaskRow) -> Void)?
     @ObservationIgnored var onPeek: ((TaskRow) -> Void)?
     @ObservationIgnored var onSelect: ((TaskRow) -> Void)?
+    @ObservationIgnored var onDeselect: (() -> Void)?
     @ObservationIgnored var onEscape: (() -> Bool)?
     @ObservationIgnored var onViewState: (() -> Void)?
     @ObservationIgnored weak var changeOwner: AnyObject?
@@ -628,6 +629,10 @@ final class TaskListModel {
 
     func selectionChanged(_ node: TaskNode) {
         if let row = node.row { onSelect?(row) }
+    }
+
+    func selectionCleared() {
+        onDeselect?()
     }
 
     func escape() -> Bool {
