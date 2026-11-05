@@ -59,6 +59,7 @@ public sealed class CoreServices(
         [typeof(SeriesService)] = x => x.Series,
         [typeof(SeriesHealthService)] = x => x.SeriesHealth,
         [typeof(CleanupService)] = x => x.Cleanup,
+        [typeof(SeriesConflictService)] = x => x.SeriesConflicts,
     };
 
     private readonly Dictionary<Type, object> _created = [];
@@ -110,6 +111,8 @@ public sealed class CoreServices(
 
     public SeriesService Series => One(() => new SeriesService(storage.Tasks, storage.Series, storage.Writes, Time, EditLocks));
     public SeriesHealthService SeriesHealth => One(() => new SeriesHealthService(storage.Tasks, storage.Series));
+
+    public SeriesConflictService SeriesConflicts => One(() => new SeriesConflictService(storage.Tasks, storage.Series, storage.Writes, EditLocks, Time));
 
     public CleanupService Cleanup => One(() => new CleanupService(storage.Tasks, Tasks, storage.Series, LinkTypes, storage.Writes, EditLocks, Time));
 

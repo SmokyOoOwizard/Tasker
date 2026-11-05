@@ -5,22 +5,25 @@ import TaskerAPI
 
 final class StubSeriesSource: SeriesSource, @unchecked Sendable {
     private let lock = NSLock()
-    private var _renumbered: [(task: UUID, to: Int, version: String)] = []
+    private var _resolved: [String] = []
     private var _updates: [(name: String, prefix: String, version: String)] = []
-    private var _failTask: UUID?
+    private var _resolveFailures: [TaskerAPIError] = []
     private var _updateFailure: TaskerAPIError?
     var overviewValue: SeriesOverview?
     var statsValue = SeriesStats(count: 0, maxNumber: 0)
-    var tasks: [UUID: SeriesConflictTask] = [:]
+    var plans: [SeriesConflictPlan] = []
 
-    var renumbered: [(task: UUID, to: Int, version: String)] { lock.withLock { _renumbered } }
+    var resolved: [String] { lock.withLock { _resolved } }
     var updates: [(name: String, prefix: String, version: String)] { lock.withLock { _updates } }
-    func failRenumber(of task: UUID) { lock.withLock { _failTask = task } }
+    func failResolve(_ error: TaskerAPIError) { lock.withLock { _resolveFailures.append(error) } }
     func failUpdate(_ error: TaskerAPIError) { lock.withLock { _updateFailure = error } }
 
     func overview(project: UUID, series: UUID) async throws -> SeriesOverview? { overviewValue }
     func stats(project: UUID, series: UUID) async throws -> SeriesStats { statsValue }
-    func conflictTask(project: UUID, task: UUID) async throws -> SeriesConflictTask? { tasks[task] }
+
+    func plan(project: UUID, series: UUID) async throws -> SeriesConflictPlan {
+        lock.withLock { plans.count > 1 ? plans.removeFirst() : plans[0] }
+    }
 
     func update(project: UUID, series: UUID, name: String, prefix: String, version: String) async throws {
         try lock.withLock {
@@ -29,10 +32,10 @@ final class StubSeriesSource: SeriesSource, @unchecked Sendable {
         }
     }
 
-    func renumber(project: UUID, task: UUID, series: UUID, to number: Int, version: String) async throws {
+    func resolve(project: UUID, series: UUID, token: String) async throws {
         try lock.withLock {
-            if _failTask == task { throw TaskerAPIError.conflict(Conflict(kind: .locked, message: "locked")) }
-            _renumbered.append((task, number, version))
+            if !_resolveFailures.isEmpty { throw _resolveFailures.removeFirst() }
+            _resolved.append(token)
         }
     }
 }
@@ -44,11 +47,10 @@ struct SeriesTests {
     let other = UUID()
     let ru = Localizer(choice: .ru)
 
-    private func task(_ index: Int, created: TimeInterval, number: Int = 133) -> SeriesConflictTask {
-        SeriesConflictTask(
-            id: UUID(uuidString: String(format: "%08d-0000-0000-0000-000000000000", index))!, title: "Задача \(index)",
-            createdAt: Date(timeIntervalSince1970: 1_800_000_000 + created), version: "v\(index)",
-            numbers: [TaskSeriesRef(seriesId: series, number: number)])
+    private func step(_ index: Int, from: Int = 133, to: Int, keeper: Int = 1) -> SeriesPlanStep {
+        SeriesPlanStep(
+            taskId: UUID(uuidString: String(format: "%08d-0000-0000-0000-000000000000", index))!, title: "Задача \(index)", from: from, to: to,
+            keeperId: UUID(uuidString: String(format: "%08d-0000-0000-0000-000000000000", keeper))!, keeperTitle: "Задача \(keeper)")
     }
 
     private func overview(conflicts: [SeriesNumberConflict] = [], prefix: String = "TSK") -> SeriesOverview {
@@ -65,41 +67,13 @@ struct SeriesTests {
         }
     }
 
-    @Test func earliestTaskKeepsTheNumberAndOthersGetNextFreeOnes() {
-        let early = task(2, created: 10)
-        let middle = task(1, created: 20)
-        let late = task(3, created: 30)
-        let plan = SeriesConflictPlanner.plan(conflicts: [(133, [late, early, middle])], maxNumber: 143)
-        #expect(plan.groups.count == 1)
-        #expect(plan.groups[0].keeper.id == early.id)
-        #expect(plan.steps.map(\.task.id) == [middle.id, late.id])
-        #expect(plan.steps.map(\.to) == [144, 145])
-        #expect(plan.steps.map(\.from) == [133, 133])
-    }
-
-    @Test func equalCreationDatesFallBackToIdentifierOrder() {
-        let first = task(1, created: 5)
-        let second = task(2, created: 5)
-        let plan = SeriesConflictPlanner.plan(conflicts: [(7, [second, first])], maxNumber: 9)
-        #expect(plan.groups[0].keeper.id == first.id)
-        #expect(plan.steps.map(\.to) == [10])
-    }
-
-    @Test func numbersContinueAcrossConflictsInAscendingOrder() {
-        let a = task(1, created: 1, number: 5)
-        let b = task(2, created: 2, number: 5)
-        let c = task(3, created: 3, number: 2)
-        let d = task(4, created: 4, number: 2)
-        let plan = SeriesConflictPlanner.plan(conflicts: [(5, [a, b]), (2, [c, d])], maxNumber: 10)
+    @Test func planGroupsStepsByNumberKeepingServerOrder() {
+        let plan = SeriesConflictPlan(token: "t", steps: [step(2, from: 2, to: 11, keeper: 1), step(4, from: 5, to: 12, keeper: 3), step(5, from: 5, to: 13, keeper: 3)])
         #expect(plan.groups.map(\.number) == [2, 5])
-        #expect(plan.steps.map(\.to) == [11, 12])
-        #expect(plan.steps.map(\.task.id) == [d.id, b.id])
-    }
-
-    @Test func conflictWithASingleTaskProducesNoSteps() {
-        let plan = SeriesConflictPlanner.plan(conflicts: [(1, [task(1, created: 1)])], maxNumber: 1)
-        #expect(plan.isEmpty)
-        #expect(plan.steps.isEmpty)
+        #expect(plan.groups[1].moves.map(\.to) == [12, 13])
+        #expect(plan.groups[1].keeperTitle == "Задача 3")
+        #expect(!plan.isEmpty)
+        #expect(SeriesConflictPlan(token: "t", steps: []).isEmpty)
     }
 
     @Test func formValidationFollowsTheServerRules() {
@@ -149,69 +123,84 @@ struct SeriesTests {
         #expect(model.phase == .missing)
     }
 
-    @Test func resolvingShowsAPlanFirstAndAppliesItInOrder() async {
-        let early = task(1, created: 1)
-        let late = task(2, created: 2)
-        let source = StubSeriesSource()
-        source.overviewValue = overview(conflicts: [SeriesNumberConflict(seriesId: series, number: 133, taskIds: [late.id, early.id])])
+    private func readyModel(_ source: StubSeriesSource) async -> SeriesPageModel {
+        source.overviewValue = overview(conflicts: [SeriesNumberConflict(seriesId: series, number: 133, taskIds: [UUID(), UUID()])])
         source.statsValue = SeriesStats(count: 2, maxNumber: 140)
-        source.tasks = [early.id: early, late.id: late]
         let model = SeriesPageModel(project: project, series: series, source: source)
         model.localizer = ru
+        model.load()
+        await until { model.phase == .ready }
+        return model
+    }
+
+    @Test func resolvingShowsTheServerPlanFirstAndConfirmsItByToken() async {
+        let source = StubSeriesSource()
+        source.plans = [SeriesConflictPlan(token: "abc", steps: [step(2, to: 141)])]
+        let model = await readyModel(source)
         var notes: [String] = []
         model.onNotice = { notes.append($0) }
         var renumbered = 0
         model.onRenumbered = { renumbered += 1 }
-        model.load()
-        await until { model.phase == .ready }
 
         model.prepareResolve()
         await until { if case .ready = model.resolve { true } else { false } }
-        guard case .ready(let plan) = model.resolve else {
+        guard case .ready(let plan, let stale) = model.resolve else {
             Issue.record("plan was not prepared")
             return
         }
-        #expect(plan.steps.map(\.task.id) == [late.id])
-        #expect(source.renumbered.isEmpty)
+        #expect(plan.token == "abc")
+        #expect(!stale)
+        #expect(source.resolved.isEmpty)
 
         model.applyResolve()
         await until { model.resolve == .idle }
-        #expect(source.renumbered.map(\.task) == [late.id])
-        #expect(source.renumbered.map(\.to) == [141])
-        #expect(source.renumbered.map(\.version) == ["v2"])
+        #expect(source.resolved == ["abc"])
         #expect(renumbered == 1)
         #expect(notes == [ru.string(.seriesResolveDone, 1)])
     }
 
     @Test func cancellingThePlanChangesNothing() async {
-        let early = task(1, created: 1)
-        let late = task(2, created: 2)
         let source = StubSeriesSource()
-        source.overviewValue = overview(conflicts: [SeriesNumberConflict(seriesId: series, number: 133, taskIds: [early.id, late.id])])
-        source.tasks = [early.id: early, late.id: late]
-        let model = SeriesPageModel(project: project, series: series, source: source)
-        model.load()
-        await until { model.phase == .ready }
+        source.plans = [SeriesConflictPlan(token: "abc", steps: [step(2, to: 141)])]
+        let model = await readyModel(source)
         model.prepareResolve()
         await until { if case .ready = model.resolve { true } else { false } }
         model.cancelResolve()
         #expect(model.resolve == .idle)
-        #expect(source.renumbered.isEmpty)
+        #expect(source.resolved.isEmpty)
     }
 
-    @Test func resolvingStopsAtTheFirstFailureAndReportsProgress() async {
-        let a = task(1, created: 1)
-        let b = task(2, created: 2)
-        let c = task(3, created: 3)
+    @Test func aStalePlanIsReplacedByTheFreshOneAndNeedsANewConfirmation() async {
         let source = StubSeriesSource()
-        source.overviewValue = overview(conflicts: [SeriesNumberConflict(seriesId: series, number: 133, taskIds: [a.id, b.id, c.id])])
-        source.statsValue = SeriesStats(count: 3, maxNumber: 133)
-        source.tasks = [a.id: a, b.id: b, c.id: c]
-        source.failRenumber(of: c.id)
-        let model = SeriesPageModel(project: project, series: series, source: source)
-        model.localizer = ru
-        model.load()
-        await until { model.phase == .ready }
+        source.plans = [
+            SeriesConflictPlan(token: "old", steps: [step(2, to: 141)]),
+            SeriesConflictPlan(token: "new", steps: [step(2, to: 142)])
+        ]
+        source.failResolve(.conflict(Conflict(kind: .modified, message: "changed")))
+        let model = await readyModel(source)
+        model.prepareResolve()
+        await until { if case .ready = model.resolve { true } else { false } }
+
+        model.applyResolve()
+        await until { if case .ready(let plan, true) = model.resolve { plan.token == "new" } else { false } }
+        guard case .ready(let plan, let stale) = model.resolve else {
+            Issue.record("expected a refreshed plan")
+            return
+        }
+        #expect(plan.token == "new")
+        #expect(stale)
+        #expect(source.resolved.isEmpty)
+
+        model.applyResolve()
+        await until { model.resolve == .idle }
+        #expect(source.resolved == ["new"])
+    }
+
+    @Test func otherFailuresAreShownAndNothingIsRetried() async {
+        let source = StubSeriesSource()
+        source.plans = [SeriesConflictPlan(token: "abc", steps: [step(2, to: 141)])]
+        source.failResolve(.conflict(Conflict(kind: .locked, message: "locked by Аня")))
+        let model = await readyModel(source)
         model.prepareResolve()
         await until { if case .ready = model.resolve { true } else { false } }
         model.applyResolve()
@@ -220,9 +209,8 @@ struct SeriesTests {
             Issue.record("expected a failure")
             return
         }
-        #expect(message.contains("Задача 3"))
-        #expect(message.contains("1 из 2"))
-        #expect(source.renumbered.map(\.task) == [b.id])
+        #expect(message.contains("locked by Аня"))
+        #expect(source.resolved.isEmpty)
     }
 
     @Test func resolvingWithoutConflictsOnlyTellsSo() async {

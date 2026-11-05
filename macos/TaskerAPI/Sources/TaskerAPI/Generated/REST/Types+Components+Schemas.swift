@@ -498,6 +498,82 @@ extension Components {
                 case heldBy
             }
         }
+        /// - Remark: Generated from `#/components/schemas/ConflictPlan`.
+        public struct ConflictPlan: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ConflictPlan/seriesId`.
+            public var seriesId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ConflictPlan/token`.
+            public var token: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ConflictPlan/steps`.
+            public var steps: [Components.Schemas.ConflictPlanStep]
+            /// Creates a new `ConflictPlan`.
+            ///
+            /// - Parameters:
+            ///   - seriesId:
+            ///   - token:
+            ///   - steps:
+            public init(
+                seriesId: Swift.String,
+                token: Swift.String,
+                steps: [Components.Schemas.ConflictPlanStep]
+            ) {
+                self.seriesId = seriesId
+                self.token = token
+                self.steps = steps
+            }
+            public enum CodingKeys: String, CodingKey {
+                case seriesId
+                case token
+                case steps
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ConflictPlanStep`.
+        public struct ConflictPlanStep: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ConflictPlanStep/taskId`.
+            public var taskId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ConflictPlanStep/taskTitle`.
+            public var taskTitle: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ConflictPlanStep/oldNumber`.
+            public var oldNumber: Swift.Int32
+            /// - Remark: Generated from `#/components/schemas/ConflictPlanStep/newNumber`.
+            public var newNumber: Swift.Int32
+            /// - Remark: Generated from `#/components/schemas/ConflictPlanStep/keeperId`.
+            public var keeperId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ConflictPlanStep/keeperTitle`.
+            public var keeperTitle: Swift.String
+            /// Creates a new `ConflictPlanStep`.
+            ///
+            /// - Parameters:
+            ///   - taskId:
+            ///   - taskTitle:
+            ///   - oldNumber:
+            ///   - newNumber:
+            ///   - keeperId:
+            ///   - keeperTitle:
+            public init(
+                taskId: Swift.String,
+                taskTitle: Swift.String,
+                oldNumber: Swift.Int32,
+                newNumber: Swift.Int32,
+                keeperId: Swift.String,
+                keeperTitle: Swift.String
+            ) {
+                self.taskId = taskId
+                self.taskTitle = taskTitle
+                self.oldNumber = oldNumber
+                self.newNumber = newNumber
+                self.keeperId = keeperId
+                self.keeperTitle = keeperTitle
+            }
+            public enum CodingKeys: String, CodingKey {
+                case taskId
+                case taskTitle
+                case oldNumber
+                case newNumber
+                case keeperId
+                case keeperTitle
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/ControlError`.
         public struct ControlError: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/ControlError/error`.
@@ -1886,6 +1962,21 @@ extension Components {
             public enum CodingKeys: String, CodingKey {
                 case to
                 case version
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ResolveSeriesConflicts`.
+        public struct ResolveSeriesConflicts: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ResolveSeriesConflicts/token`.
+            public var token: Swift.String?
+            /// Creates a new `ResolveSeriesConflicts`.
+            ///
+            /// - Parameters:
+            ///   - token:
+            public init(token: Swift.String? = nil) {
+                self.token = token
+            }
+            public enum CodingKeys: String, CodingKey {
+                case token
             }
         }
         /// - Remark: Generated from `#/components/schemas/Series`.

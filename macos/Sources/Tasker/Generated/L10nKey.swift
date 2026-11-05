@@ -303,6 +303,7 @@ enum L10nKey: String, CaseIterable, Sendable {
     case seriesResolveDone = "series.resolveDone"
     case seriesResolveFailed = "series.resolveFailed"
     case seriesResolvePlanFailed = "series.resolvePlanFailed"
+    case seriesResolveStale = "series.resolveStale"
     case seriesLoadFailed = "series.loadFailed"
     case seriesMissing = "series.missing"
     case seriesSwitch = "series.switch"

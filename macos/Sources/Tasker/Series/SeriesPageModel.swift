@@ -12,8 +12,8 @@ enum SeriesPhase: Equatable {
 enum SeriesResolveState: Equatable {
     case idle
     case preparing
-    case ready(SeriesConflictPlan)
-    case applying(done: Int, total: Int)
+    case ready(SeriesConflictPlan, stale: Bool)
+    case applying
     case failed(String)
 }
 
@@ -126,25 +126,24 @@ final class SeriesPageModel {
             return
         }
         resolve = .preparing
-        let conflicts = conflicts
-        let maxNumber = stats?.maxNumber ?? 0
-        Task { [weak self, source, project] in
+        loadPlan(stale: false)
+    }
+
+    private func loadPlan(stale: Bool) {
+        Task { [weak self, source, project, series] in
             do {
-                var groups: [(number: Int, tasks: [SeriesConflictTask])] = []
-                for conflict in conflicts {
-                    var tasks: [SeriesConflictTask] = []
-                    for id in conflict.taskIds {
-                        if let task = try await source.conflictTask(project: project, task: id) { tasks.append(task) }
-                    }
-                    groups.append((conflict.number, tasks))
-                }
-                let plan = SeriesConflictPlanner.plan(conflicts: groups, maxNumber: maxNumber)
+                let plan = try await source.plan(project: project, series: series)
                 guard let self else { return }
-                self.resolve = plan.isEmpty ? .idle : .ready(plan)
-                if plan.isEmpty { self.onNotice?(self.localizer.string(.seriesResolveEmpty)) }
+                if plan.isEmpty {
+                    self.resolve = .idle
+                    self.onNotice?(self.localizer.string(.seriesResolveEmpty))
+                    self.load()
+                } else {
+                    self.resolve = .ready(plan, stale: stale)
+                }
             } catch {
                 guard let self else { return }
-                self.resolve = .failed(self.localizer.string(.seriesResolvePlanFailed, error.localizedDescription))
+                self.resolve = .failed(self.localizer.string(.seriesResolvePlanFailed, Self.reason(error)))
             }
         }
     }
@@ -155,37 +154,27 @@ final class SeriesPageModel {
     }
 
     func applyResolve() {
-        guard case .ready(let plan) = resolve else { return }
-        let steps = plan.steps
-        resolve = .applying(done: 0, total: steps.count)
+        guard case .ready(let plan, _) = resolve else { return }
+        resolve = .applying
         Task { [weak self, source, project, series] in
-            var done = 0
-            for step in steps {
-                do {
-                    let fresh = try await source.conflictTask(project: project, task: step.task.id)
-                    try await source.renumber(project: project, task: step.task.id, series: series, to: step.to, version: fresh?.version ?? step.task.version)
-                } catch {
-                    guard let self else { return }
-                    self.resolve = .failed(self.localizer.string(
-                        .seriesResolveFailed, step.task.title, Self.reason(error),
-                        self.localizer.number(Double(done)), self.localizer.number(Double(steps.count))))
-                    self.finishRenumbering(done)
-                    return
+            do {
+                try await source.resolve(project: project, series: series, token: plan.token)
+            } catch {
+                guard let self else { return }
+                if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .modified {
+                    self.load()
+                    self.loadPlan(stale: true)
+                } else {
+                    self.resolve = .failed(self.localizer.string(.seriesResolveFailed, Self.reason(error)))
                 }
-                done += 1
-                self?.resolve = .applying(done: done, total: steps.count)
+                return
             }
             guard let self else { return }
             self.resolve = .idle
-            self.onNotice?(self.localizer.string(.seriesResolveDone, done))
-            self.finishRenumbering(done)
+            self.onNotice?(self.localizer.string(.seriesResolveDone, plan.steps.count))
+            self.onRenumbered?()
+            self.load()
         }
-    }
-
-    private func finishRenumbering(_ done: Int) {
-        guard done > 0 else { return }
-        onRenumbered?()
-        load()
     }
 
     private static func reason(_ error: any Error) -> String {

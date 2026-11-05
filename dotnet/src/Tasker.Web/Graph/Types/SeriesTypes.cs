@@ -64,3 +64,30 @@ internal sealed class PrefixConflictType : ObjectType<PrefixConflict>
         descriptor.Field(x => x.SeriesIds);
     }
 }
+
+internal sealed class ConflictPlanType : ObjectType<ConflictPlan>
+{
+    protected override void Configure(IObjectTypeDescriptor<ConflictPlan> descriptor)
+    {
+        descriptor.Name("ConflictPlan");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.SeriesId);
+        descriptor.Field(x => x.Token);
+        descriptor.Field(x => x.Steps);
+    }
+}
+
+internal sealed class ConflictPlanStepType : ObjectType<ConflictPlanStep>
+{
+    protected override void Configure(IObjectTypeDescriptor<ConflictPlanStep> descriptor)
+    {
+        descriptor.Name("ConflictPlanStep");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.TaskId);
+        descriptor.Field(x => x.TaskTitle);
+        descriptor.Field(x => x.OldNumber);
+        descriptor.Field(x => x.NewNumber);
+        descriptor.Field(x => x.KeeperId);
+        descriptor.Field(x => x.KeeperTitle);
+    }
+}

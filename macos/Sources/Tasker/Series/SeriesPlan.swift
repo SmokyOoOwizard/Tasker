@@ -30,54 +30,42 @@ struct SeriesStats: Hashable, Sendable {
     var maxNumber: Int
 }
 
-struct SeriesConflictTask: Hashable, Sendable {
-    var id: UUID
+struct SeriesPlanStep: Hashable, Sendable, Identifiable {
+    var taskId: UUID
     var title: String
-    var createdAt: Date
-    var version: String
-    var numbers: [TaskSeriesRef]
-}
-
-struct SeriesRenumberStep: Hashable, Sendable, Identifiable {
-    var task: SeriesConflictTask
     var from: Int
     var to: Int
+    var keeperId: UUID
+    var keeperTitle: String
 
-    var id: UUID { task.id }
+    var id: UUID { taskId }
 }
 
 struct SeriesConflictGroup: Hashable, Sendable, Identifiable {
     var number: Int
-    var keeper: SeriesConflictTask
-    var moves: [SeriesRenumberStep]
+    var keeperTitle: String
+    var moves: [SeriesPlanStep]
 
     var id: Int { number }
 }
 
 struct SeriesConflictPlan: Hashable, Sendable {
-    var groups: [SeriesConflictGroup]
+    var token: String
+    var steps: [SeriesPlanStep]
 
-    var steps: [SeriesRenumberStep] { groups.flatMap(\.moves) }
-    var isEmpty: Bool { groups.isEmpty }
-}
+    var isEmpty: Bool { steps.isEmpty }
 
-enum SeriesConflictPlanner {
-    static func plan(conflicts: [(number: Int, tasks: [SeriesConflictTask])], maxNumber: Int) -> SeriesConflictPlan {
-        var next = maxNumber
-        var groups: [SeriesConflictGroup] = []
-        for conflict in conflicts.sorted(by: { $0.number < $1.number }) {
-            let ordered = conflict.tasks.sorted {
-                $0.createdAt == $1.createdAt ? $0.id.uuidString < $1.id.uuidString : $0.createdAt < $1.createdAt
+    var groups: [SeriesConflictGroup] {
+        var order: [Int] = []
+        var byNumber: [Int: SeriesConflictGroup] = [:]
+        for step in steps {
+            if byNumber[step.from] == nil {
+                order.append(step.from)
+                byNumber[step.from] = SeriesConflictGroup(number: step.from, keeperTitle: step.keeperTitle, moves: [])
             }
-            guard let keeper = ordered.first, ordered.count > 1 else { continue }
-            var moves: [SeriesRenumberStep] = []
-            for task in ordered.dropFirst() {
-                next += 1
-                moves.append(SeriesRenumberStep(task: task, from: conflict.number, to: next))
-            }
-            groups.append(SeriesConflictGroup(number: conflict.number, keeper: keeper, moves: moves))
+            byNumber[step.from]?.moves.append(step)
         }
-        return SeriesConflictPlan(groups: groups)
+        return order.compactMap { byNumber[$0] }
     }
 }
 

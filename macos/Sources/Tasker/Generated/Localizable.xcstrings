@@ -1975,13 +1975,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Renumbering: %1$@ of %2$@"
+            "value" : "Applying the plan…"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Перенумерация: %1$@ из %2$@"
+            "value" : "Применяю план…"
           }
         }
       }
@@ -2056,13 +2056,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Could not renumber “%1$@”: %2$@. Renumbered %3$@ of %4$@."
+            "value" : "Could not resolve the conflicts: %@"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Не удалось перенумеровать «%1$@»: %2$@. Перенумеровано %3$@ из %4$@."
+            "value" : "Не удалось разрешить конфликты: %@"
           }
         }
       }
@@ -2148,6 +2148,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Не удалось подготовить план: %@"
+          }
+        }
+      }
+    },
+    "series.resolveStale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The conflicts changed while you were looking at the plan. The updated plan is shown: check it and confirm again."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пока вы смотрели на план, конфликты изменились. Показан обновлённый план: проверьте его и подтвердите ещё раз."
           }
         }
       }

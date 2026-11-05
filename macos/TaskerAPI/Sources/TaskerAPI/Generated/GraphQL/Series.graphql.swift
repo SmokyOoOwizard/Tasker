@@ -274,23 +274,25 @@ public struct SeriesNumbersPageQuery: GraphQLQuery {
     }
 }
 
-public struct SeriesConflictTaskQuery: GraphQLQuery {
-    public static let operationName = "SeriesConflictTask"
+public struct SeriesConflictPlanQuery: GraphQLQuery {
+    public static let operationName = "SeriesConflictPlan"
     public static let document = """
-    query SeriesConflictTask($projectId: UUID!, $id: UUID!) {
+    query SeriesConflictPlan($projectId: UUID!, $seriesId: UUID!) {
       project(id: $projectId) {
         __typename
         id
-        task(id: $id) {
+        seriesConflictPlan(seriesId: $seriesId) {
           __typename
-          id
-          title
-          createdAt
-          version
-          seriesNumbers {
+          seriesId
+          token
+          steps {
             __typename
-            seriesId
-            number
+            taskId
+            taskTitle
+            oldNumber
+            newNumber
+            keeperId
+            keeperTitle
           }
         }
       }
@@ -300,33 +302,35 @@ public struct SeriesConflictTaskQuery: GraphQLQuery {
         GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
             GraphQLField("__typename"),
             GraphQLField("id"),
-            GraphQLField("task", arguments: ["id": .variable("id")], selections: [
+            GraphQLField("seriesConflictPlan", arguments: ["seriesId": .variable("seriesId")], selections: [
                 GraphQLField("__typename"),
-                GraphQLField("id"),
-                GraphQLField("title"),
-                GraphQLField("createdAt"),
-                GraphQLField("version"),
-                GraphQLField("seriesNumbers", selections: [
+                GraphQLField("seriesId"),
+                GraphQLField("token"),
+                GraphQLField("steps", selections: [
                     GraphQLField("__typename"),
-                    GraphQLField("seriesId"),
-                    GraphQLField("number")
+                    GraphQLField("taskId"),
+                    GraphQLField("taskTitle"),
+                    GraphQLField("oldNumber"),
+                    GraphQLField("newNumber"),
+                    GraphQLField("keeperId"),
+                    GraphQLField("keeperTitle")
                 ])
             ])
         ])
     ]
 
     public var projectId: UUID
-    public var id: UUID
+    public var seriesId: UUID
 
-    public init(projectId: UUID, id: UUID) {
+    public init(projectId: UUID, seriesId: UUID) {
         self.projectId = projectId
-        self.id = id
+        self.seriesId = seriesId
     }
 
     public var variables: [String: JSONValue] {
         var result: [String: JSONValue] = [:]
         result["projectId"] = projectId.graphQLValue
-        result["id"] = id.graphQLValue
+        result["seriesId"] = seriesId.graphQLValue
         return result
     }
 
@@ -339,35 +343,39 @@ public struct SeriesConflictTaskQuery: GraphQLQuery {
 
         public struct Project: Hashable, Sendable, Decodable {
             public var id: UUID
-            public var task: Task?
+            public var seriesConflictPlan: SeriesConflictPlan?
 
-            public init(id: UUID, task: Task?) {
+            public init(id: UUID, seriesConflictPlan: SeriesConflictPlan?) {
                 self.id = id
-                self.task = task
+                self.seriesConflictPlan = seriesConflictPlan
             }
 
-            public struct Task: Hashable, Sendable, Decodable {
-                public var id: UUID
-                public var title: String
-                public var createdAt: Date
-                public var version: String
-                public var seriesNumbers: [SeriesNumbers]
+            public struct SeriesConflictPlan: Hashable, Sendable, Decodable {
+                public var seriesId: UUID
+                public var token: String
+                public var steps: [Steps]
 
-                public init(id: UUID, title: String, createdAt: Date, version: String, seriesNumbers: [SeriesNumbers]) {
-                    self.id = id
-                    self.title = title
-                    self.createdAt = createdAt
-                    self.version = version
-                    self.seriesNumbers = seriesNumbers
+                public init(seriesId: UUID, token: String, steps: [Steps]) {
+                    self.seriesId = seriesId
+                    self.token = token
+                    self.steps = steps
                 }
 
-                public struct SeriesNumbers: Hashable, Sendable, Decodable {
-                    public var seriesId: UUID
-                    public var number: Int
+                public struct Steps: Hashable, Sendable, Decodable {
+                    public var taskId: UUID
+                    public var taskTitle: String
+                    public var oldNumber: Int
+                    public var newNumber: Int
+                    public var keeperId: UUID
+                    public var keeperTitle: String
 
-                    public init(seriesId: UUID, number: Int) {
-                        self.seriesId = seriesId
-                        self.number = number
+                    public init(taskId: UUID, taskTitle: String, oldNumber: Int, newNumber: Int, keeperId: UUID, keeperTitle: String) {
+                        self.taskId = taskId
+                        self.taskTitle = taskTitle
+                        self.oldNumber = oldNumber
+                        self.newNumber = newNumber
+                        self.keeperId = keeperId
+                        self.keeperTitle = keeperTitle
                     }
                 }
             }

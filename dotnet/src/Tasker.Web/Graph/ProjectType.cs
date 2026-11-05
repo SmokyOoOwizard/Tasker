@@ -113,6 +113,10 @@ internal sealed class ProjectType : ObjectType<Project>
             .Returns<SeriesHealthType>()
             .Resolve(async x => await x.Service<SeriesHealthService>().Check(x.Parent<Project>().Id, x.RequestAborted));
 
+        descriptor.Read("seriesConflictPlan").Id("seriesId")
+            .Type<ConflictPlanType>()
+            .Resolve(async x => await x.Service<SeriesConflictService>().Plan(x.Parent<Project>().Id, x.Id("seriesId"), x.RequestAborted));
+
         descriptor.Read("boards").Paged()
             .Returns<PageType<Board>>()
             .Resolve(async x => await x.Service<IBoardStorage>().GetRange(x.Parent<Project>().Id, x.Page(), x.RequestAborted));

@@ -40,17 +40,19 @@ query SeriesNumbersPage($projectId: UUID!, $seriesIds: [UUID!], $offset: Int, $l
   }
 }
 
-query SeriesConflictTask($projectId: UUID!, $id: UUID!) {
+query SeriesConflictPlan($projectId: UUID!, $seriesId: UUID!) {
   project(id: $projectId) {
     id
-    task(id: $id) {
-      id
-      title
-      createdAt
-      version
-      seriesNumbers {
-        seriesId
-        number
+    seriesConflictPlan(seriesId: $seriesId) {
+      seriesId
+      token
+      steps {
+        taskId
+        taskTitle
+        oldNumber
+        newNumber
+        keeperId
+        keeperTitle
       }
     }
   }

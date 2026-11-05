@@ -4150,6 +4150,116 @@
         ]
       }
     },
+    "/api/projects/{projectId}/series/{id}/resolve-conflicts": {
+      "post": {
+        "tags": [
+          "series"
+        ],
+        "operationId": "resolveSeriesConflicts",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveSeriesConflicts"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {}
+        ],
+        "x-tasker-modes": [
+          "local",
+          "server"
+        ]
+      }
+    },
     "/api/projects/{projectId}/status-sets": {
       "post": {
         "tags": [
@@ -7761,6 +7871,64 @@
           }
         }
       },
+      "ConflictPlan": {
+        "required": [
+          "seriesId",
+          "token",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConflictPlanStep"
+            }
+          }
+        }
+      },
+      "ConflictPlanStep": {
+        "required": [
+          "taskId",
+          "taskTitle",
+          "oldNumber",
+          "newNumber",
+          "keeperId",
+          "keeperTitle"
+        ],
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskTitle": {
+            "type": "string"
+          },
+          "oldNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "keeperId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "keeperTitle": {
+            "type": "string"
+          }
+        }
+      },
       "ControlError": {
         "required": [
           "error"
@@ -8830,6 +8998,15 @@
             "nullable": true
           },
           "version": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ResolveSeriesConflicts": {
+        "type": "object",
+        "properties": {
+          "token": {
             "type": "string",
             "nullable": true
           }

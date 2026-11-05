@@ -233,7 +233,12 @@ private struct SeriesResolveSheet: View {
                 Text(l.string(.seriesResolveLoading)).foregroundStyle(DesignColor.mut.color)
             }
             footer(apply: nil)
-        case .ready(let plan):
+        case .ready(let plan, let stale):
+            if stale {
+                Text(l.string(.seriesResolveStale))
+                    .foregroundStyle(DesignColor.amber.color)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text(l.string(.seriesResolveHint)).foregroundStyle(DesignColor.mut.color)
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignSpacing.gap10) {
@@ -243,10 +248,10 @@ private struct SeriesResolveSheet: View {
             }
             .frame(maxHeight: 280)
             footer(apply: true)
-        case .applying(let done, let total):
+        case .applying:
             HStack(spacing: DesignSpacing.gap8) {
                 ProgressView().controlSize(.small)
-                Text(l.string(.seriesResolveApplying, l.number(Double(done)), l.number(Double(total)))).foregroundStyle(DesignColor.mut.color)
+                Text(l.string(.seriesResolveApplying)).foregroundStyle(DesignColor.mut.color)
             }
         case .failed(let message):
             Text(message)
@@ -259,11 +264,11 @@ private struct SeriesResolveSheet: View {
     private func groupView(_ group: SeriesConflictGroup) -> some View {
         let prefix = model.info?.prefix ?? ""
         return VStack(alignment: .leading, spacing: 3) {
-            Text(l.string(.seriesResolveKeeps, "\(prefix)-\(group.number)", group.keeper.title))
+            Text(l.string(.seriesResolveKeeps, "\(prefix)-\(group.number)", group.keeperTitle))
                 .font(.design(DesignTypography.baseSize, weight: DesignTypography.mediumWeight))
                 .lineLimit(2)
             ForEach(group.moves) { move in
-                Text(l.string(.seriesResolveMove, move.task.title, "\(prefix)-\(move.to)"))
+                Text(l.string(.seriesResolveMove, move.title, "\(prefix)-\(move.to)"))
                     .foregroundStyle(DesignColor.mut.color)
                     .lineLimit(2)
                     .padding(.leading, DesignSpacing.gap10)

@@ -4,9 +4,9 @@ import TaskerAPI
 protocol SeriesSource: Sendable {
     func overview(project: UUID, series: UUID) async throws -> SeriesOverview?
     func stats(project: UUID, series: UUID) async throws -> SeriesStats
-    func conflictTask(project: UUID, task: UUID) async throws -> SeriesConflictTask?
+    func plan(project: UUID, series: UUID) async throws -> SeriesConflictPlan
     func update(project: UUID, series: UUID, name: String, prefix: String, version: String) async throws
-    func renumber(project: UUID, task: UUID, series: UUID, to number: Int, version: String) async throws
+    func resolve(project: UUID, series: UUID, token: String) async throws
 }
 
 private extension UUID {
@@ -48,11 +48,15 @@ struct GraphQLSeriesSource: SeriesSource {
         return SeriesStats(count: total, maxNumber: maxNumber)
     }
 
-    func conflictTask(project: UUID, task: UUID) async throws -> SeriesConflictTask? {
-        guard let found = try await client.graphQL.fetch(SeriesConflictTaskQuery(projectId: project, id: task)).project?.task else { return nil }
-        return SeriesConflictTask(
-            id: found.id, title: found.title, createdAt: found.createdAt, version: found.version,
-            numbers: found.seriesNumbers.map { TaskSeriesRef(seriesId: $0.seriesId, number: $0.number) })
+    func plan(project: UUID, series: UUID) async throws -> SeriesConflictPlan {
+        guard let plan = try await client.graphQL.fetch(SeriesConflictPlanQuery(projectId: project, seriesId: series)).project?.seriesConflictPlan else {
+            throw TaskerAPIError.notFound(series.uuidString)
+        }
+        return SeriesConflictPlan(
+            token: plan.token,
+            steps: plan.steps.map {
+                SeriesPlanStep(taskId: $0.taskId, title: $0.taskTitle, from: $0.oldNumber, to: $0.newNumber, keeperId: $0.keeperId, keeperTitle: $0.keeperTitle)
+            })
     }
 
     func update(project: UUID, series: UUID, name: String, prefix: String, version: String) async throws {
@@ -64,11 +68,11 @@ struct GraphQLSeriesSource: SeriesSource {
         }
     }
 
-    func renumber(project: UUID, task: UUID, series: UUID, to number: Int, version: String) async throws {
+    func resolve(project: UUID, series: UUID, token: String) async throws {
         _ = try await client.rest.perform {
-            try await $0.renumberTask(
-                path: .init(projectId: project.wire, id: task.wire, seriesId: series.wire),
-                body: .json(.init(to: Int32(number), version: version))
+            try await $0.resolveSeriesConflicts(
+                path: .init(projectId: project.wire, id: series.wire),
+                body: .json(.init(token: token))
             ).ok.body.json
         }
     }

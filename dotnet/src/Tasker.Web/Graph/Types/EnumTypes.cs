@@ -48,6 +48,8 @@ internal static class TaskerTypes
             .AddType<SeriesHealthType>()
             .AddType<NumberConflictType>()
             .AddType<PrefixConflictType>()
+            .AddType<ConflictPlanType>()
+            .AddType<ConflictPlanStepType>()
             .AddType<BoardType>()
             .AddType<BoardColumnType>()
             .AddType<DropStatusType>()
