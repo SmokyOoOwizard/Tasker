@@ -259,6 +259,10 @@ struct FieldRowView: View {
 
     private func commitSingle() {
         guard editing else { return }
+        if draft.trimmingCharacters(in: .whitespacesAndNewlines) == singleText {
+            cancelSingle()
+            return
+        }
         guard let value = FieldValueCodec.normalize(draft, type: field.type) else {
             invalid = true
             focused = true
