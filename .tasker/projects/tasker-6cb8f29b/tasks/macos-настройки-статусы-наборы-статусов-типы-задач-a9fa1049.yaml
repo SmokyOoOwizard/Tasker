@@ -2,9 +2,9 @@ formatVersion: 10
 id: a9fa1049-e1f2-4920-aae1-c688862cc7c2
 title: 'macOS: настройки — статусы, наборы статусов, типы задач'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-03T21:33:20.8838150+00:00
-updatedAt: 2026-11-03T21:33:20.8838150+00:00
+updatedAt: 2026-11-05T04:03:34.8195150+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 197
