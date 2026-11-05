@@ -37,11 +37,12 @@ struct ShortcutsDialog: View {
                     .padding(.top, 16)
                     .padding(.bottom, 4)
                 ScrollView {
-                    VStack(spacing: 0) {
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 36), GridItem(.flexible())], spacing: 6) {
                         ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                             HStack(spacing: DesignSpacing.gap8) {
                                 Text(l.string(row.title))
-                                Spacer(minLength: DesignSpacing.gap10)
+                                    .lineLimit(1)
+                                Spacer(minLength: DesignSpacing.gap8)
                                 HStack(spacing: 4) {
                                     ForEach(Array(row.keys.enumerated()), id: \.offset) { _, key in
                                         KeyCap(text: key)
@@ -53,7 +54,8 @@ struct ShortcutsDialog: View {
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
+                    .padding(.top, 6)
+                    .padding(.bottom, 14)
                 }
                 HStack {
                     Spacer(minLength: 0)

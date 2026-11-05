@@ -11,18 +11,6 @@ enum ShortcutTable {
     }
 
     static let groups: [Group] = [
-        Group(title: .shortcutsGroupFile, rows: [
-            Row(title: .taskCreateAction, keys: ["⌘", "N"], command: "newTask"),
-            Row(title: .paletteNewBoard, keys: ["⌥", "⌘", "N"], command: "newBoard"),
-            Row(title: .tabNew, keys: ["⌘", "T"], command: "newTab"),
-            Row(title: .windowNew, keys: ["⇧", "⌘", "N"], command: "newWindow"),
-            Row(title: .workspaceOpen, keys: ["⌘", "O"], command: "openFolder"),
-            Row(title: .workspaceCloseTab, keys: ["⌘", "W"], command: "closeTab"),
-            Row(title: .windowClose, keys: ["⇧", "⌘", "W"], command: "closeWindow"),
-            Row(title: .tabNext, keys: ["⌃", "⇥"], command: "nextTab"),
-            Row(title: .tabPrevious, keys: ["⌃", "⇧", "⇥"], command: "previousTab"),
-            Row(title: .shortcutsSettings, keys: ["⌘", ","], command: nil),
-        ]),
         Group(title: .shortcutsGroupGo, rows: [
             Row(title: .paletteTitle, keys: ["⌘", "K"], command: "palette"),
             Row(title: .sectionTasks, keys: ["⌘", "1"], command: "go.tasks"),
@@ -48,6 +36,18 @@ enum ShortcutTable {
             Row(title: .shortcutsListOpen, keys: ["↵"], command: nil),
             Row(title: .shortcutsListStatus, keys: ["S"], command: nil),
             Row(title: .shortcutsEscape, keys: ["Esc"], command: nil),
+        ]),
+        Group(title: .shortcutsGroupFile, rows: [
+            Row(title: .taskCreateAction, keys: ["⌘", "N"], command: "newTask"),
+            Row(title: .paletteNewBoard, keys: ["⌥", "⌘", "N"], command: "newBoard"),
+            Row(title: .tabNew, keys: ["⌘", "T"], command: "newTab"),
+            Row(title: .windowNew, keys: ["⇧", "⌘", "N"], command: "newWindow"),
+            Row(title: .workspaceOpen, keys: ["⌘", "O"], command: "openFolder"),
+            Row(title: .workspaceCloseTab, keys: ["⌘", "W"], command: "closeTab"),
+            Row(title: .windowClose, keys: ["⇧", "⌘", "W"], command: "closeWindow"),
+            Row(title: .tabNext, keys: ["⌃", "⇥"], command: "nextTab"),
+            Row(title: .tabPrevious, keys: ["⌃", "⇧", "⇥"], command: "previousTab"),
+            Row(title: .shortcutsSettings, keys: ["⌘", ","], command: nil),
         ]),
         Group(title: .shortcutsGroupHelp, rows: [
             Row(title: .shortcutsOpenHelp, keys: ["⌘", "?"], command: "help"),
