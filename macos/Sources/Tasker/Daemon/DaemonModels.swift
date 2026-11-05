@@ -29,7 +29,7 @@ struct DaemonStatus: Decodable, Equatable, Sendable {
     var workspaces: [DaemonWorkspace]
 
     var activeVersion: String? {
-        workers.first(where: \.isActive)?.version
+        workers.first(where: \.isActive).flatMap { $0.version.isEmpty ? nil : $0.version }
     }
 
     var isSettled: Bool {

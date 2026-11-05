@@ -283,9 +283,81 @@ struct DaemonConnectionTests {
     }
 }
 
+@MainActor
+struct DaemonUpdateTests {
+    @Test func installedAppUpdatesAnOlderDaemonOnItsOwn() async throws {
+        let paths = try makeDirectory()
+        try writeInfo(paths)
+        let descriptor = hold(paths)
+        defer { close(descriptor) }
+        let fake = FakeDaemon()
+        fake.reachable = true
+        fake.version = "0.0.9"
+        let model = DaemonConnection(
+            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
+            sleep: { _ in }, allowsAutomaticUpdate: { true })
+        _ = await model.step()
+        #expect(fake.upgradeCalls == 0)
+        _ = await model.step()
+        #expect(fake.upgradeCalls == 1)
+        _ = await model.step()
+        #expect(model.state == .running(fake.status))
+    }
+
+    @Test func workerThatHasNotReportedItsVersionIsStillStarting() async throws {
+        let paths = try makeDirectory()
+        try writeInfo(paths)
+        let descriptor = hold(paths)
+        defer { close(descriptor) }
+        let fake = FakeDaemon()
+        fake.reachable = true
+        fake.version = ""
+        let model = DaemonConnection(
+            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
+            sleep: { _ in }, allowsAutomaticUpdate: { true })
+        _ = await model.step()
+        _ = await model.step()
+        #expect(model.state == .starting)
+        #expect(fake.upgradeCalls == 0)
+    }
+
+    @Test func failedAutomaticUpdateIsNotRepeatedAndLeavesTheButton() async throws {
+        let paths = try makeDirectory()
+        try writeInfo(paths)
+        let descriptor = hold(paths)
+        defer { close(descriptor) }
+        let fake = FakeDaemon()
+        fake.reachable = true
+        fake.version = "0.0.9"
+        fake.upgradeOk = false
+        let model = DaemonConnection(
+            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
+            sleep: { _ in }, allowsAutomaticUpdate: { true })
+        for _ in 0..<4 { _ = await model.step() }
+        #expect(fake.upgradeCalls == 1)
+        #expect(model.updateError == "refused")
+        if case .versionMismatch = model.state {} else { Issue.record("expected the mismatch screen") }
+    }
+
+    @Test func developmentBuildNeverUpdatesTheDaemonOnItsOwn() async throws {
+        let paths = try makeDirectory()
+        try writeInfo(paths)
+        let descriptor = hold(paths)
+        defer { close(descriptor) }
+        let fake = FakeDaemon()
+        fake.reachable = true
+        fake.version = "0.0.9"
+        let model = DaemonConnection(
+            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
+            sleep: { _ in })
+        _ = await model.step()
+        #expect(fake.upgradeCalls == 0)
+    }
+}
+
 struct DaemonPlatformTests {
     @Test func pathsFollowTaskerHome() {
-        let paths = DaemonPaths(environment: ["TASKER_HOME": "/tmp/th", "TASKER_DAEMON_LABEL": "x.y"], home: URL(fileURLWithPath: "/Users/u"))
+        let paths = DaemonPaths(environment: ["TASKER_HOME": "/tmp/th", "TASKER_SERVICE_LABEL": "x.y"], home: URL(fileURLWithPath: "/Users/u"))
         #expect(paths.infoFile.path == "/tmp/th/mcp/daemon.json")
         #expect(paths.lockFile.path == "/tmp/th/mcp/daemon.lock")
         #expect(paths.plistFile.path == "/Users/u/Library/LaunchAgents/x.y.plist")
@@ -316,7 +388,8 @@ struct DaemonPlatformTests {
         let plist = agent.plist(program: "/Applications/Tasker.app/Contents/Helpers/tasker-mcpd")
         #expect(plist.contains("<string>/Applications/Tasker.app/Contents/Helpers/tasker-mcpd</string>"))
         #expect(plist.contains("<string>--detached</string>"))
-        #expect(plist.contains("<key>KeepAlive</key><true/>"))
+        #expect(plist.contains("<key>PathState</key>"))
+        #expect(plist.contains("<key>/Applications/Tasker.app/Contents/Helpers/tasker-mcpd</key><true/>"))
         #expect(plist.contains("<key>TASKER_HOME</key><string>/d&amp;x</string>"))
         #expect(plist.contains("<key>Label</key><string>\(DaemonPaths.defaultLabel)</string>"))
     }

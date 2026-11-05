@@ -54,6 +54,7 @@ public partial class InstallScriptTests : IDisposable
         // Настоящая служба автозапуска тестам не нужна: uninstall выключает её у своего (тестового) имени.
         info.Environment["TASKER_SERVICE_DIR"] = Path.Combine(_root, "service");
         info.Environment["TASKER_SERVICE_LABEL"] = "com.tasker.install-tests";
+        info.Environment["TASKER_INSTALL_ON_MACOS"] = "1";
 
         foreach (var (name, value) in environment ?? new Dictionary<string, string>())
             info.Environment[name] = value;
@@ -63,6 +64,16 @@ public partial class InstallScriptTests : IDisposable
         var error = process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
         return new CliResult(process.ExitCode, await output, await error);
+    }
+
+    [PlatformFact(TestPlatform.MacOS)]
+    public async Task On_macOS_the_script_refuses_to_install_and_points_at_the_app()
+    {
+        var result = await Run(["--from", "/nowhere"], environment: new Dictionary<string, string> { ["TASKER_INSTALL_ON_MACOS"] = "" });
+
+        Assert.Equal(1, result.Code);
+        Assert.Contains("Tasker.app", result.Err);
+        Assert.Equal(0, (await Run(["--uninstall", "--prefix", Prefix], environment: new Dictionary<string, string> { ["TASKER_INSTALL_ON_MACOS"] = "" })).Code);
     }
 
     [UnixFact]

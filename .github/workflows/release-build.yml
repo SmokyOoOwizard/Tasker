@@ -1,4 +1,4 @@
-# Сборка релиза Tasker (.NET: консоль tasker — NativeAOT, демон tasker-mcpd — один файл с рантаймом) на всех платформах.
+# Сборка релиза Tasker (.NET: консоль tasker — NativeAOT, демон tasker-mcpd — один файл с рантаймом) на всех платформах; macOS — Tasker.app с ними внутри.
 # Архивы — scripts/release.sh --rid <RID> на машине своей ОС и архитектуры (Windows — в Git Bash, Linux musl x64 — в контейнере Alpine,
 # Linux musl arm64 — через --builder docker: JavaScript-действия GitHub не работают в Alpine на arm64) — остаются артефактами прогона;
 # релизы и теги этот workflow не создаёт и никуда ничего не публикует. Тесты — .NET tests.
@@ -15,6 +15,9 @@ on:
       - 'scripts/release.sh'
       - 'scripts/install.sh'
       - 'scripts/install.ps1'
+      - 'scripts/macos-build.sh'
+      - 'macos/**'
+      - 'design/**'
       - '.github/workflows/release-build.yml'
   workflow_dispatch:
 
@@ -37,8 +40,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rid: osx-arm64, os: macos-latest }
-          - { rid: osx-x64, os: macos-latest }
           - { rid: linux-x64, os: ubuntu-22.04 }
           - { rid: linux-arm64, os: ubuntu-22.04-arm }
           - { rid: linux-musl-x64, os: ubuntu-latest, container: 'mcr.microsoft.com/dotnet/sdk:10.0-alpine' }
@@ -82,10 +83,8 @@ jobs:
           export TASKER_HOME="$PWD/check/home"
           run=()
           case "${{ matrix.rid }}" in
-            osx-x64) run=(arch -x86_64) ;;
             linux-musl-arm64) run=(docker run --rm -v "$PWD:$PWD" -w "$PWD" -e TASKER_HOME mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine) ;;
           esac
-          if [ "${{ matrix.rid }}" = osx-x64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then echo "no Rosetta: not run"; exit 0; fi
           shown="$("${run[@]+"${run[@]}"}" "check/$name/app/tasker$exe" --version | tr -d '\r')"
           echo "tasker --version: $shown"
           [ "$shown" = "$version" ]
@@ -108,8 +107,46 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  macos-app:
+    name: Tasker.app ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [osx-arm64, osx-x64]
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: brew install xcodegen
+      - name: scripts/macos-build.sh package
+        env:
+          TASKER_RID: ${{ matrix.rid }}
+          TASKER_PACKAGE_DIR: ${{ github.workspace }}/dist
+        run: scripts/macos-build.sh package
+      - name: check the parts of the package
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          mkdir check
+          ditto -x -k "dist/Tasker-$version-${{ matrix.rid }}.zip" check
+          ls -la check/Tasker.app/Contents/Helpers
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' check/Tasker.app/Contents/Info.plist | grep -qxF "$version"
+          codesign --verify --deep --strict check/Tasker.app
+          file check/Tasker.app/Contents/Helpers/tasker check/Tasker.app/Contents/Helpers/tasker-mcpd
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tasker-${{ matrix.rid }}
+          path: |
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+
   collect:
-    needs: build
+    needs: [build, macos-app]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

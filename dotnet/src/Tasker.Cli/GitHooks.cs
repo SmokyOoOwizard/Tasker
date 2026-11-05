@@ -110,7 +110,7 @@ internal sealed class GitHooks(IProcessRunner runner)
     /// <summary>Блок хука: запускает <c>tasker sync</c> для этой папки (путь от корня репозитория — хук работает и в других рабочих деревьях).</summary>
     internal static string Block(HookTarget target)
     {
-        var (file, arguments) = Launcher.Command();
+        var (file, arguments) = Launcher.ScriptCommand();
         // Хук исполняет sh (на Windows — из Git for Windows): пути с «/», а не «\», иначе обратная косая — знак экранирования.
         var command = new[] { file }.Concat(arguments).Select(x => ToShellPath(x, OperatingSystem.IsWindows())).ToArray();
         var exists = string.Join(" && ", command.Select(x => $"[ -e {Quote(x)} ]"));

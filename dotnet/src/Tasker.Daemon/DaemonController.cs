@@ -141,6 +141,9 @@ public sealed class DaemonController(
     /// <summary>Включает автозапуск: служба запускает демон сейчас и при каждом входе в систему, перезапускает при падении.</summary>
     public async Task<DaemonStatus> EnableAutostart(CancellationToken ct = default)
     {
+        if (Launcher.RunsFromTemporaryLocation())
+            throw new ServiceException("Tasker.app runs from a temporary location: move it to Applications and open it, it enables the autostart itself");
+
         // Демон, запущенный не службой, держит порт и блокировку — освобождаем их для службы.
         await Stop(ct);
         await service.Enable();

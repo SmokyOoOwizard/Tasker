@@ -21,6 +21,10 @@ final class DaemonConnection {
     @ObservationIgnored private let appVersion: String
     @ObservationIgnored private let timings: DaemonTimings
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
+    @ObservationIgnored private let prepare: @MainActor () async -> Void
+    @ObservationIgnored private let allowsAutomaticUpdate: @MainActor () -> Bool
+    @ObservationIgnored private var automaticUpdateTried = false
+    @ObservationIgnored private var mismatchConfirmed = false
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var failures = 0
     @ObservationIgnored private var retryRequested = false
@@ -33,7 +37,9 @@ final class DaemonConnection {
         helperProgram: String?,
         appVersion: String,
         timings: DaemonTimings = DaemonTimings(),
-        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+        prepare: @escaping @MainActor () async -> Void = {},
+        allowsAutomaticUpdate: @escaping @MainActor () -> Bool = { false }
     ) {
         self.files = files
         self.transport = transport
@@ -42,21 +48,26 @@ final class DaemonConnection {
         self.appVersion = appVersion
         self.timings = timings
         self.sleep = sleep
+        self.prepare = prepare
+        self.allowsAutomaticUpdate = allowsAutomaticUpdate
     }
 
-    static func live() -> DaemonConnection {
-        let paths = DaemonPaths()
+    static func live(integration: AppIntegrationController) -> DaemonConnection {
+        let environment = ProcessInfo.processInfo.environment
+        let paths = DaemonPaths(environment: environment)
         let helper = Bundle.main.bundleURL.appending(path: "Contents/Helpers/tasker-mcpd")
-        var environment: [String: String] = [:]
-        if let home = ProcessInfo.processInfo.environment["TASKER_HOME"], !home.isEmpty {
-            environment["TASKER_HOME"] = paths.dataDirectory.path
-        }
+        let service: any DaemonService = integration.integration?.agent ?? DirectDaemonStart()
         return DaemonConnection(
             files: DaemonFiles(paths: paths),
             transport: URLSessionDaemonTransport(),
-            service: DaemonLaunchAgent(paths: paths, runner: SystemCommandRunner(), environment: environment),
+            service: service,
             helperProgram: FileManager.default.isExecutableFile(atPath: helper.path) ? helper.path : nil,
-            appVersion: AppInfo.version
+            appVersion: AppInfo.version,
+            prepare: {
+                await integration.reconcile()
+                Task { await integration.presentNotices() }
+            },
+            allowsAutomaticUpdate: { integration.allowsAutomaticDaemonUpdate }
         )
     }
 
@@ -98,6 +109,7 @@ final class DaemonConnection {
     }
 
     func run() async {
+        await prepare()
         while !Task.isCancelled {
             let delay = await step()
             await pause(delay)
@@ -109,6 +121,7 @@ final class DaemonConnection {
         if let status = await currentStatus() {
             failures = 0
             apply(status)
+            if await updateAutomaticallyIfNeeded() { return timings.pollWhileStarting }
             return timings.pollWhileRunning
         }
 
@@ -118,6 +131,7 @@ final class DaemonConnection {
         }
 
         state = .starting
+        if Task.isCancelled { return timings.pollWhileStarting }
         if !files.isRunning() {
             do {
                 try await service.start(program: helperProgram)
@@ -129,9 +143,27 @@ final class DaemonConnection {
         if let status = await waitForStatus() {
             failures = 0
             apply(status)
+            if await updateAutomaticallyIfNeeded() { return timings.pollWhileStarting }
             return timings.pollWhileRunning
         }
         return fail(.notResponding)
+    }
+
+    private func updateAutomaticallyIfNeeded() async -> Bool {
+        guard case .versionMismatch = state else {
+            mismatchConfirmed = false
+            if case .running = state { automaticUpdateTried = false }
+            return false
+        }
+        guard !automaticUpdateTried, allowsAutomaticUpdate() else { return false }
+        guard mismatchConfirmed else {
+            mismatchConfirmed = true
+            return false
+        }
+        automaticUpdateTried = true
+        mismatchConfirmed = false
+        await updateDaemon()
+        return true
     }
 
     private func fail(_ failure: DaemonFailure) -> Duration {

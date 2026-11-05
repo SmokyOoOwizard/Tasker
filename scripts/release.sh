@@ -7,9 +7,9 @@
 #                      [--no-archive] [--keep-work]
 #
 # Платформы (RID — имя платформы в имени архива, на него опираются установщики):
-#   osx-arm64 osx-x64 linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64
+#   linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64
 # По умолчанию (local) — все платформы, которые можно собрать на этой машине (остальные перечисляются с причиной); all — все
-# восемь, и если какую-то здесь не собрать, скрипт останавливается до сборки.
+# шесть, и если какую-то здесь не собрать, скрипт останавливается до сборки.
 #
 # Чем собирается платформа (--builder auto, по умолчанию; можно задать и переменной TASKER_RELEASE_BUILDER):
 #   dotnet — `dotnet publish` на этой машине: NativeAOT собирает только свою ОС; на macOS и Windows — обе архитектуры, на Linux —
@@ -40,7 +40,8 @@ checksums.
 
 Options:
   --rid LIST       comma-separated RIDs, 'local' (default: every platform this machine can build) or 'all' (all of them):
-                   osx-arm64 osx-x64 linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64
+                   linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64
+                   (macOS ships as Tasker.app, see scripts/macos-build.sh; osx-arm64, osx-x64 only when named, for tests)
   --version V      release version (default: the VERSION file; a git tag v* on HEAD must match it)
   --out DIR        output directory (default: artifacts/release/<version> in the repository)
   --builder B      auto (default), dotnet or docker: how the platforms are built (see the comment at the top)
@@ -55,7 +56,8 @@ fail() {
   exit 1
 }
 
-ALL_RIDS=(osx-arm64 osx-x64 linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64)
+ALL_RIDS=(linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 win-x64 win-arm64)
+EXPLICIT_RIDS=(osx-arm64 osx-x64)
 RID_MODE=local
 RIDS=()
 VERSION_OVERRIDE=""
@@ -100,8 +102,8 @@ case "$BUILDER" in auto|dotnet|docker) ;; *) echo "Error: unknown builder '$BUIL
 
 for rid in "${RIDS[@]+"${RIDS[@]}"}"; do
   known=false
-  for candidate in "${ALL_RIDS[@]}"; do [ "$rid" = "$candidate" ] && known=true; done
-  [ "$known" = true ] || { echo "Error: unknown platform '$rid' (known: ${ALL_RIDS[*]})" >&2; exit 2; }
+  for candidate in "${ALL_RIDS[@]}" "${EXPLICIT_RIDS[@]}"; do [ "$rid" = "$candidate" ] && known=true; done
+  [ "$known" = true ] || { echo "Error: unknown platform '$rid' (known: ${ALL_RIDS[*]} ${EXPLICIT_RIDS[*]})" >&2; exit 2; }
 done
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -220,7 +222,10 @@ for rid in "${CANDIDATES[@]}"; do
     fail "$rid cannot be built on this machine: $how"
   fi
 done
-[ "${#PLAN_RIDS[@]}" -gt 0 ] || fail "none of the platforms can be built on this machine (install the .NET SDK: https://dot.net)"
+if [ "${#PLAN_RIDS[@]}" -eq 0 ]; then
+  [ "$HOST_OS" != macos ] || fail "none of the platforms can be built on this machine: macOS ships as Tasker.app, build it with scripts/macos-build.sh package"
+  fail "none of the platforms can be built on this machine (install the .NET SDK: https://dot.net)"
+fi
 
 # ---- вспомогательное ----
 

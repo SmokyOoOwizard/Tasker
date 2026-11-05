@@ -152,6 +152,7 @@ internal sealed class Supervisor
 
         StartWorker(_command.File, _command.Arguments, activate: true);
         Log.Information("MCP server is running on port {Port} (supervisor pid {Pid})", _port, Environment.ProcessId);
+        _ = WatchProgram();
 
         var code = await _finished.Task;
         await StopWorkers();
@@ -165,6 +166,20 @@ internal sealed class Supervisor
         lock (_sync)
             _stopping = true;
         _finished.TrySetResult(0);
+    }
+
+    private async Task WatchProgram()
+    {
+        var watch = new ProgramWatch();
+        while (!_finished.Task.IsCompleted)
+        {
+            await Task.WhenAny(_finished.Task, Task.Delay(ProgramWatch.Poll));
+            string file;
+            lock (_sync)
+                file = _command.File;
+            if (watch.IsGone(file, DateTime.UtcNow))
+                Stop($"the program {file} is removed");
+        }
     }
 
     // ---- рабочие процессы ----

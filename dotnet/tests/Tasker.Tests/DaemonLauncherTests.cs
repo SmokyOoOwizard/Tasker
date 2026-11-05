@@ -80,7 +80,7 @@ public class DaemonLauncherTests : IDisposable
         Assert.Contains("tasker-mcpd", message);
         Assert.Contains("is not installed next to tasker", message);
         Assert.Contains(Path.GetFileName(copy), message);
-        Assert.Contains("--no-daemon", message);
+        Assert.Contains(OperatingSystem.IsMacOS() ? "Reinstall Tasker.app" : "--no-daemon", message);
     }
 
     [Fact]

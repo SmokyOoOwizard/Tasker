@@ -18,12 +18,15 @@ struct TaskerApp: App {
         _workspaces = State(initialValue: workspaces)
         let sessions = WorkspaceSessions(layout: workspaces.layout)
         _sessions = State(initialValue: sessions)
-        let connection = DaemonConnection.live()
+        let integration = AppIntegrationController.live()
+        let connection = DaemonConnection.live(integration: integration)
+        integration.stopConnection = { [weak connection] in connection?.stop() }
         _connection = State(initialValue: connection)
         let runner = CommandRunner(layout: workspaces.layout, sessions: sessions, workspaces: workspaces)
         _runner = State(initialValue: runner)
         let palette = CommandPalette(layout: workspaces.layout, sessions: sessions, workspaces: workspaces, connection: connection, runner: runner)
         runner.palette = palette
+        runner.integration = integration
         _palette = State(initialValue: palette)
         let opener = LinkOpener(layout: workspaces.layout, sessions: sessions, workspaces: workspaces, connection: connection, runner: runner)
         _opener = State(initialValue: opener)

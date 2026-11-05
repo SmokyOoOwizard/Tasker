@@ -69,6 +69,8 @@ enum AppCommand: Hashable, Sendable {
     case mergeWindows
     case shortcuts
     case help
+    case installCommand
+    case removeIntegration
 
     static let sectionCommands: [AppCommand] = AppSection.allCases.map(AppCommand.go)
     static let listModes: [AppCommand] = TaskListMode.allCases.map(AppCommand.listMode)
@@ -105,6 +107,8 @@ enum AppCommand: Hashable, Sendable {
         case .mergeWindows: "mergeWindows"
         case .shortcuts: "shortcuts"
         case .help: "help"
+        case .installCommand: "installCommand"
+        case .removeIntegration: "removeIntegration"
         }
     }
 
@@ -134,6 +138,8 @@ enum AppCommand: Hashable, Sendable {
         case .mergeWindows: .windowMergeAll
         case .shortcuts: .menuShortcuts
         case .help: .menuHelp
+        case .installCommand: .installMenuCommand
+        case .removeIntegration: .installMenuRemove
         }
     }
 
@@ -165,7 +171,7 @@ enum AppCommand: Hashable, Sendable {
         case .previousTab: CommandShortcut(key: .tab, symbol: "⇥", [.control, .shift])
         case .shortcuts: CommandShortcut("/", [.command, .option])
         case .help: CommandShortcut("?", .command)
-        case .theme, .moveTabToNewWindow, .mergeWindows: nil
+        case .theme, .moveTabToNewWindow, .mergeWindows, .installCommand, .removeIntegration: nil
         }
     }
 
@@ -181,7 +187,7 @@ enum AppCommand: Hashable, Sendable {
         case .copyLink: state.hasLink
         case .nextTab, .previousTab: state.tabCount > 1
         case .mergeWindows: state.otherWindows > 0
-        case .newWindow, .openFolder, .closeTab, .closeWindow, .theme, .shortcuts, .help: true
+        case .newWindow, .openFolder, .closeTab, .closeWindow, .theme, .shortcuts, .help, .installCommand, .removeIntegration: true
         }
     }
 }

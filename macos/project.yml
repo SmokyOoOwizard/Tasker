@@ -24,6 +24,11 @@ targets:
       - path: Resources/Tasker.help
         type: folder
         buildPhase: resources
+      - path: build/cli/tasker
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Helpers
       - path: build/daemon/tasker-mcpd
         buildPhase:
           copyFiles:
