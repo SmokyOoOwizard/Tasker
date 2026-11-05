@@ -73,6 +73,8 @@ struct PaletteTests {
         PaletteActions(
             goTo: { recorder.calls.append("go:\($0.rawValue)") },
             createTask: { recorder.calls.append("create") },
+            createBoard: { recorder.calls.append("create-board") },
+            editBoard: { recorder.calls.append("edit-board:\($0)") },
             showSeries: { recorder.calls.append("series:\($0)") },
             chooseProject: { recorder.calls.append("project:\($0)") },
             openWorkspace: { recorder.calls.append("workspace:\($0)") },
@@ -140,9 +142,26 @@ struct PaletteTests {
         #expect(!ids.contains("theme-system"))
     }
 
-    @Test func createBoardIsShownButUnavailable() {
-        let command = PaletteCommands.build(context(), vocabulary: vocabulary, actions: actions(Recorder()), l: l).first { $0.id == "create-board" }
-        #expect(command?.isEnabled == false)
+    @Test func createBoardRunsWhenProjectIsChosen() {
+        let recorder = Recorder()
+        let command = PaletteCommands.build(context(), vocabulary: vocabulary, actions: actions(recorder), l: l).first { $0.id == "create-board" }
+        #expect(command?.isEnabled == true)
+        command?.run()
+        #expect(recorder.calls == ["create-board"])
+        let without = PaletteCommands.build(context(hasProject: false), vocabulary: vocabulary, actions: actions(Recorder()), l: l).first { $0.id == "create-board" }
+        #expect(without?.isEnabled == false)
+    }
+
+    @Test func existingBoardsCanBeEdited() {
+        let board = UUID()
+        var value = vocabulary
+        value.boardNames = [board: "Main"]
+        value.boardOrder = [board]
+        let recorder = Recorder()
+        let entry = PaletteCommands.build(context(), vocabulary: value, actions: actions(recorder), l: l).first { $0.id == "board:" + board.uuidString }
+        #expect(entry?.title == "Edit board: Main")
+        entry?.run()
+        #expect(recorder.calls == ["edit-board:\(board)"])
     }
 
     @Test func createTaskNeedsProject() {
@@ -199,7 +218,7 @@ struct PaletteTests {
 
     @Test func disabledCommandDoesNothing() {
         let recorder = Recorder()
-        let model = model(StubPaletteSource(vocabulary: vocabulary), recorder: recorder)
+        let model = model(StubPaletteSource(vocabulary: vocabulary), recorder: recorder, context: context(hasProject: false))
         model.query = "new board"
         model.runSelected()
         #expect(recorder.closed == 0)

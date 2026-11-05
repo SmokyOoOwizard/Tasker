@@ -1,0 +1,299 @@
+import Foundation
+import Testing
+import TaskerAPI
+@testable import Tasker
+
+actor StubBoardSource: BoardEditorSource {
+    var catalogValue = BoardCatalog()
+    var stored: BoardRecord?
+    var lockState: BoardLockState = .none
+    var acquireFailure: (any Error)?
+    var saveFailure: (any Error)?
+    private(set) var acquired = 0
+    private(set) var released = 0
+    private(set) var created: [BoardDraft] = []
+    private(set) var updated: [BoardDraft] = []
+
+    func setCatalog(_ value: BoardCatalog) { catalogValue = value }
+    func setStored(_ value: BoardRecord?) { stored = value }
+    func setAcquireFailure(_ value: (any Error)?) { acquireFailure = value }
+    func setSaveFailure(_ value: (any Error)?) { saveFailure = value }
+    func setLock(_ value: BoardLockState) { lockState = value }
+
+    func catalog(project: UUID) async throws -> BoardCatalog { catalogValue }
+    func board(project: UUID, id: UUID) async throws -> BoardRecord? { stored }
+
+    func create(project: UUID, draft: BoardDraft, catalog: BoardCatalog) async throws -> UUID {
+        if let saveFailure { throw saveFailure }
+        created.append(draft)
+        return UUID()
+    }
+
+    func update(project: UUID, record: BoardRecord, draft: BoardDraft, catalog: BoardCatalog) async throws {
+        if let saveFailure { throw saveFailure }
+        updated.append(draft)
+        stored = BoardRecord(id: record.id, version: record.version + "1", draft: draft)
+    }
+
+    func lock(project: UUID, id: UUID) async throws -> BoardLockState { lockState }
+
+    func acquire(project: UUID, id: UUID) async throws {
+        if let acquireFailure { throw acquireFailure }
+        acquired += 1
+    }
+
+    func release(project: UUID, id: UUID) async throws { released += 1 }
+}
+
+@MainActor
+struct BoardEditorTests {
+    let project = UUID()
+    let todo = UUID()
+    let doing = UUID()
+    let done = UUID()
+    let set = UUID()
+    let otherSet = UUID()
+    let otherStatus = UUID()
+    let priority = UUID()
+    let high = UUID()
+    let low = UUID()
+    let estimate = UUID()
+    let l = Localizer(language: .en)
+
+    var catalog: BoardCatalog {
+        var value = BoardCatalog()
+        value.statuses = [
+            .init(id: todo, name: "Todo", color: "#8993a4"), .init(id: doing, name: "Doing", color: "#2684ff"),
+            .init(id: done, name: "Done", color: "#36b37e"), .init(id: otherStatus, name: "Backlog", color: "#8993a4")
+        ]
+        value.sets = [.init(id: set, name: "Main", statusIds: [todo, doing, done]), .init(id: otherSet, name: "Other", statusIds: [otherStatus, done])]
+        value.fields = [
+            .init(id: priority, name: "Priority", type: .enum, multiple: false, enumId: UUID(uuidString: "00000000-0000-0000-0000-0000000000aa")),
+            .init(id: estimate, name: "Estimate", type: .int, multiple: false, enumId: nil)
+        ]
+        value.enums = [UUID(uuidString: "00000000-0000-0000-0000-0000000000aa")!: [.init(id: high, name: "High"), .init(id: low, name: "Low")]]
+        return value
+    }
+
+    func existing() -> BoardRecord {
+        BoardRecord(id: UUID(), version: "v", draft: BoardDraft(
+            name: "Main", setIds: [set],
+            columns: [BoardColumnDraft(serverId: UUID(), name: "Open", statusIds: [todo, doing], drop: [set: todo])]))
+    }
+
+    func settle(_ model: BoardEditorModel, until check: @MainActor () -> Bool) async {
+        for _ in 0..<400 {
+            if check() { return }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    func editor(_ source: StubBoardSource, board: UUID?, heartbeat: Duration = .seconds(60)) -> BoardEditorModel {
+        let model = BoardEditorModel(target: BoardEditorTarget(project: project, board: board), source: source, heartbeat: heartbeat)
+        model.localizer = l
+        return model
+    }
+
+    @Test func newBoardStartsWithColumnsFromFirstSet() async {
+        let source = StubBoardSource()
+        await source.setCatalog(catalog)
+        let model = editor(source, board: nil)
+        model.load()
+        await settle(model) { model.phase == .ready }
+        #expect(model.draft.setIds == [set])
+        #expect(model.draft.columns.map(\.name) == ["Todo", "Doing", "Done"])
+        #expect(model.draft.columns.map(\.statusIds) == [[todo], [doing], [done]])
+        #expect(!model.isDirty)
+        #expect(await source.acquired == 0)
+    }
+
+    @Test func creatingRequiresNameAndPostsDraft() async {
+        let source = StubBoardSource()
+        await source.setCatalog(catalog)
+        let model = editor(source, board: nil)
+        model.load()
+        await settle(model) { model.phase == .ready }
+        #expect(await model.save() == false)
+        #expect(model.issues.board == [l.string(.boardNameRequired)])
+        model.draft.name = " Team "
+        var created = false
+        model.onCreated = { created = true }
+        #expect(await model.save())
+        #expect(created)
+        #expect(await source.created.count == 1)
+    }
+
+    @Test func editingTakesLockAndReleaseGivesItBack() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.lock == .mine }
+        #expect(model.lock == .mine)
+        #expect(model.draft == record.draft)
+        model.release()
+        await settle(model) { true }
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(await source.released == 1)
+    }
+
+    @Test func heartbeatRenewsTheLock() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        let model = editor(source, board: record.id, heartbeat: .milliseconds(20))
+        model.load()
+        await settle(model) { model.lock == .mine }
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(await source.acquired >= 3)
+        model.release()
+    }
+
+    @Test func foreignLockBlocksSaving() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        await source.setAcquireFailure(TaskerAPIError.conflict(Conflict(kind: .locked, message: "locked", heldBy: LockHolder(name: "Claude", expiresAt: nil))))
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.holder != nil }
+        #expect(model.holder == "Claude")
+        #expect(!model.canSave)
+        model.release()
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(await source.released == 0)
+    }
+
+    @Test func lockIsTakenAfterOtherReleasesIt() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        await source.setAcquireFailure(TaskerAPIError.conflict(Conflict(kind: .locked, message: "locked", heldBy: LockHolder(name: "Claude", expiresAt: nil))))
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.holder != nil }
+        await source.setAcquireFailure(nil)
+        await source.setLock(.none)
+        model.refreshLock()
+        await settle(model) { model.lock == .mine }
+        #expect(model.lock == .mine)
+        #expect(model.canSave)
+        model.release()
+    }
+
+    @Test func serverOverlapShowsNextToTheColumn() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.lock == .mine }
+        model.edit { draft, _ in draft.columns.append(BoardColumnDraft(name: "Again", statusIds: [todo])) }
+        await source.setSaveFailure(TaskerAPIError.badRequest(
+            "Columns[1].StatusIds: status \(todo.uuidString.lowercased()) is already used by column 'Open', and the columns' field conditions do not exclude each other"))
+        #expect(await model.save() == false)
+        let second = model.draft.columns[1].id
+        #expect(model.issues.board.isEmpty)
+        #expect(model.issues.columns[second] == ["Board rejected: status “Todo” is in columns Open and Again without mutually exclusive conditions"])
+        model.release()
+    }
+
+    @Test func modifiedBoardAsksToReload() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.lock == .mine }
+        await source.setSaveFailure(TaskerAPIError.conflict(Conflict(kind: .modified, message: "changed")))
+        model.draft.name = "Renamed"
+        #expect(await model.save() == false)
+        #expect(model.staleVersion)
+        model.release()
+    }
+
+    @Test func savingExistingBoardReloadsAndClearsDirty() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.lock == .mine }
+        model.draft.name = "Renamed"
+        #expect(model.isDirty)
+        #expect(await model.save())
+        #expect(!model.isDirty)
+        #expect(model.draft.name == "Renamed")
+        model.release()
+    }
+
+    @Test func removingASetDropsItsStatusesAndDropRules() {
+        var draft = BoardDraft(name: "B", setIds: [set, otherSet], columns: [
+            BoardColumnDraft(name: "Wide", statusIds: [todo, otherStatus], drop: [set: todo, otherSet: otherStatus])
+        ])
+        BoardEditing.toggleSet(otherSet, in: &draft, catalog: catalog)
+        #expect(draft.setIds == [set])
+        #expect(draft.columns[0].statusIds == [todo])
+        #expect(draft.columns[0].drop == [set: todo])
+    }
+
+    @Test func uncheckingAStatusDropsItsRule() {
+        var draft = BoardDraft(name: "B", setIds: [set], columns: [BoardColumnDraft(name: "C", statusIds: [todo, doing], drop: [set: doing])])
+        BoardEditing.toggleStatus(doing, column: 0, in: &draft)
+        #expect(draft.columns[0].statusIds == [todo])
+        #expect(draft.columns[0].drop.isEmpty)
+    }
+
+    @Test func columnsMoveWithinBounds() {
+        var draft = BoardDraft(name: "B", setIds: [set], columns: [BoardColumnDraft(name: "A"), BoardColumnDraft(name: "B"), BoardColumnDraft(name: "C")])
+        BoardEditing.move(column: 0, by: -1, in: &draft)
+        BoardEditing.move(column: 0, by: 1, in: &draft)
+        BoardEditing.move(column: 2, by: 1, in: &draft)
+        #expect(draft.columns.map(\.name) == ["B", "A", "C"])
+    }
+
+    @Test func conditionsFollowFieldTypes() {
+        let catalog = catalog
+        let enumField = catalog.field(priority)!
+        let numberField = catalog.field(estimate)!
+        #expect(!catalog.operators(for: enumField).contains(.greater))
+        #expect(catalog.operators(for: numberField).contains(.greaterOrEqual))
+        var condition = catalog.newCondition()!
+        #expect(condition.fieldId == priority)
+        #expect(condition.value == high.uuidString.lowercased())
+        BoardEditing.changeOperator(&condition, to: .set, field: enumField, catalog: catalog)
+        #expect(condition.value.isEmpty)
+        #expect(BoardEditing.filterText(condition, catalog: catalog) == "Priority:set")
+        BoardEditing.changeField(&condition, to: numberField, catalog: catalog)
+        #expect(condition.op == .set)
+        condition.op = .greaterOrEqual
+        condition.value = "3"
+        #expect(BoardEditing.filterText(condition, catalog: catalog) == "Estimate>=3")
+    }
+
+    @Test func unchangedConditionsAreSentAsNilAndChangedOnesAsText() {
+        let catalog = catalog
+        let condition = BoardCondition(fieldId: estimate, op: .greaterOrEqual, value: "3")
+        let original = BoardColumnDraft(serverId: UUID(), name: "A", statusIds: [todo], conditions: [condition])
+        #expect(GraphQLBoardEditorSource.input(original, original: original, catalog: catalog).fieldFilters == nil)
+        var changed = original
+        changed.conditions[0].value = "5"
+        #expect(GraphQLBoardEditorSource.input(changed, original: original, catalog: catalog).fieldFilters == ["Estimate>=5"])
+        #expect(GraphQLBoardEditorSource.input(BoardColumnDraft(name: "N", statusIds: []), original: nil, catalog: catalog).fieldFilters == [])
+    }
+
+    @Test func emptyConditionValueIsRejectedBeforeSending() {
+        let condition = BoardCondition(fieldId: estimate, op: .equal, value: " ")
+        let draft = BoardDraft(name: "B", setIds: [set], columns: [BoardColumnDraft(name: "A", conditions: [condition])])
+        let issues = BoardValidation.check(draft, catalog: catalog, l: l)
+        #expect(issues.conditions[condition.id] == l.string(.boardConditionValueRequired))
+    }
+}

@@ -120,6 +120,8 @@ struct TaskListVocabulary: Hashable, Sendable {
     var prefixes: [UUID: String] = [:]
     var seriesNames: [UUID: String] = [:]
     var seriesOrder: [UUID] = []
+    var boardNames: [UUID: String] = [:]
+    var boardOrder: [UUID] = []
     var conflictedTasks: Set<UUID> = []
     var linkTypes: [LinkType] = []
     var fields: [Field] = []
@@ -235,6 +237,8 @@ extension TaskListVocabulary {
         prefixes = Dictionary(project.seriesList.data.map { ($0.id, $0.prefix) }, uniquingKeysWith: { first, _ in first })
         seriesNames = Dictionary(project.seriesList.data.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         seriesOrder = project.seriesList.data.map(\.id)
+        boardNames = Dictionary(project.boards.data.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        boardOrder = project.boards.data.map(\.id)
         conflictedTasks = Set(project.seriesHealth.numberConflicts.flatMap(\.taskIds))
         linkTypes = project.linkTypes.data.map {
             LinkType(id: $0.id, name: $0.name, outwardName: $0.outwardName, inwardName: $0.inwardName, hierarchical: $0.hierarchical, isSymmetric: $0.isSymmetric)

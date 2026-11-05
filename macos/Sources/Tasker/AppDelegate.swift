@@ -3,6 +3,7 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var layout: WorkspaceLayout?
+    var releaseLocks: (() -> Task<Void, Never>?)?
     private var appearanceObservation: NSKeyValueObservation?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -31,7 +32,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         layout?.prepareToTerminate()
-        return .terminateNow
+        guard let release = releaseLocks?() else { return .terminateNow }
+        Task { @MainActor in
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await release.value }
+                group.addTask { try? await Task.sleep(for: .seconds(1.5)) }
+                await group.next()
+                group.cancelAll()
+            }
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

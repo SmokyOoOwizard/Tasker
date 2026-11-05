@@ -18,6 +18,7 @@ final class WorkspaceTabSession: Identifiable {
 
     private(set) var seriesPage: UUID?
     var seriesPrefix: String?
+    private(set) var boardEditor: BoardEditorModel?
 
     private var idleSection = AppSection.default
 
@@ -74,6 +75,7 @@ final class WorkspaceTabSession: Identifiable {
             pendingFilter = nil
             seriesPage = nil
             seriesPrefix = nil
+            closeBoardEditor()
         }
         lastProject = project
     }
@@ -124,6 +126,27 @@ final class WorkspaceTabSession: Identifiable {
         apply(.none)
     }
 
+    @discardableResult
+    func openBoardEditor(project: UUID, board: UUID?, localizer: Localizer) -> Bool {
+        guard let client = live.client else { return false }
+        setSection(.boards)
+        let target = BoardEditorTarget(project: project, board: board)
+        if boardEditor?.target == target { return true }
+        closeBoardEditor()
+        let model = BoardEditorModel(target: target, source: GraphQLBoardEditorSource(client: client))
+        model.localizer = localizer
+        model.onNotice = { [weak self] text in self?.notice(text) }
+        model.onCreated = { [weak self] in self?.closeBoardEditor() }
+        boardEditor = model
+        model.load()
+        return true
+    }
+
+    func closeBoardEditor() {
+        boardEditor?.release()
+        boardEditor = nil
+    }
+
     private func apply(_ filter: TaskListFilter) {
         let visible = section == .tasks && listOwner != nil
         if visible, let listModel {
@@ -158,6 +181,7 @@ final class WorkspaceTabSession: Identifiable {
     }
 
     func discard() {
+        closeBoardEditor()
         listModel?.stop()
         listModel = nil
         settings.removeTabData()
@@ -184,7 +208,21 @@ final class WorkspaceSessions {
     }
 
     func hasUnsaved(_ tab: UUID) -> Bool {
-        sessions[tab]?.drafts.isEmpty == false
+        guard let session = sessions[tab] else { return false }
+        return !session.drafts.isEmpty || session.boardEditor?.isDirty == true
+    }
+
+    func releaseEditorLocks() -> Task<Void, Never>? {
+        let editors = sessions.values.compactMap(\.boardEditor)
+        guard !editors.isEmpty else { return nil }
+        return Task { @MainActor in
+            for editor in editors { await editor.releaseNow() }
+        }
+    }
+
+    func confirmDiscardingBoardEditor(in session: WorkspaceTabSession, replacing target: BoardEditorTarget? = nil, _ l: Localizer) -> Bool {
+        guard let editor = session.boardEditor, editor.isDirty, editor.target != target else { return true }
+        return confirmDiscard(l, body: l.string(.boardDiscardBody))
     }
 
     func unsavedTabs(in window: UUID) -> [String] {

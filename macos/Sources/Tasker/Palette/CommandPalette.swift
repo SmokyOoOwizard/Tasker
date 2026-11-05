@@ -168,6 +168,16 @@ final class CommandPalette {
                 session?.setSection(.tasks)
                 session?.creation.present()
             },
+            createBoard: { [sessions] in
+                guard let session, let project = session.selection.current?.id,
+                      sessions.confirmDiscardingBoardEditor(in: session, replacing: BoardEditorTarget(project: project, board: nil), l) else { return }
+                session.openBoardEditor(project: project, board: nil, localizer: l)
+            },
+            editBoard: { [sessions] id in
+                guard let session, let project = session.selection.current?.id,
+                      sessions.confirmDiscardingBoardEditor(in: session, replacing: BoardEditorTarget(project: project, board: id), l) else { return }
+                session.openBoardEditor(project: project, board: id, localizer: l)
+            },
             showSeries: { id in session?.showSeries(id) },
             chooseProject: { id in session?.selection.choose(id) },
             openWorkspace: { [layout, workspaces] path in

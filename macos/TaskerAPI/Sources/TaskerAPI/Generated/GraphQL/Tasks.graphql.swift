@@ -1009,6 +1009,14 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
             prefix
           }
         }
+        boards(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+          }
+        }
         seriesHealth {
           __typename
           numberConflicts {
@@ -1102,6 +1110,14 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                     GraphQLField("prefix")
                 ])
             ]),
+            GraphQLField("boards", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name")
+                ])
+            ]),
             GraphQLField("seriesHealth", selections: [
                 GraphQLField("__typename"),
                 GraphQLField("numberConflicts", selections: [
@@ -1175,17 +1191,19 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
             public var statusSets: StatusSets
             public var taskTypes: TaskTypes
             public var seriesList: SeriesList
+            public var boards: Boards
             public var seriesHealth: SeriesHealth
             public var linkTypes: LinkTypes
             public var fields: Fields
             public var enums: Enums
 
-            public init(id: UUID, statuses: Statuses, statusSets: StatusSets, taskTypes: TaskTypes, seriesList: SeriesList, seriesHealth: SeriesHealth, linkTypes: LinkTypes, fields: Fields, enums: Enums) {
+            public init(id: UUID, statuses: Statuses, statusSets: StatusSets, taskTypes: TaskTypes, seriesList: SeriesList, boards: Boards, seriesHealth: SeriesHealth, linkTypes: LinkTypes, fields: Fields, enums: Enums) {
                 self.id = id
                 self.statuses = statuses
                 self.statusSets = statusSets
                 self.taskTypes = taskTypes
                 self.seriesList = seriesList
+                self.boards = boards
                 self.seriesHealth = seriesHealth
                 self.linkTypes = linkTypes
                 self.fields = fields
@@ -1280,6 +1298,24 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                         self.id = id
                         self.name = name
                         self.prefix = prefix
+                    }
+                }
+            }
+
+            public struct Boards: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+
+                    public init(id: UUID, name: String) {
+                        self.id = id
+                        self.name = name
                     }
                 }
             }
