@@ -49,7 +49,7 @@ internal abstract class FileModel
 /// <item><b>9</b> — у типов связей появился признак <c>hierarchical</c> (иерархический тип «Parent/Child»: эпик и его задачи, <c>link-types/</c>); в прежних файлах его нет,
 /// и тип обычный. Старый Tasker пропустил бы признак как неизвестный и при первой же правке типа стёр бы его (иерархия пропала бы из списка задач),
 /// поэтому версия поднята: такие файлы он покажет как «более нового формата».</item>
-/// <item><b>10</b> — текущий: папка проекта называется по названию проекта и короткому id (<c>projects/&lt;slug&gt;-&lt;id8&gt;/</c>,
+/// <item><b>10</b> — папка проекта называется по названию проекта и короткому id (<c>projects/&lt;slug&gt;-&lt;id8&gt;/</c>,
 /// <see cref="ProjectFolders"/>) вместо полного Guid; содержимое файлов то же. Старый Tasker такую папку не узнаёт и молча потерял бы
 /// проект целиком, поэтому версия поднята: <c>tasker migrate</c> переименовывает папки и записывает версию и в <c>project.yaml</c>, а
 /// проект, записанный новым Tasker, старый покажет как «более нового формата».</item>
@@ -64,7 +64,7 @@ internal abstract class FileModel
 /// </summary>
 internal static partial class FormatVersions
 {
-    public const int Current = 10;
+    public const int Current = 11;
 
     /// <summary>
     /// Шаги миграции: <c>To</c> — версия, в которую шаг приводит файл; <c>Apply</c> — преобразование текста YAML (и выставление версии).
@@ -91,7 +91,8 @@ internal static partial class FormatVersions
         // 8 → 9: содержимое то же (у типов связей появился необязательный признак hierarchical; в старых файлах его просто нет).
         (9, text => SetVersion(text, 9)),
         // 9 → 10: содержимое то же (меняется имя папки проекта — это делает tasker migrate, а не текстовый шаг).
-        (10, text => SetVersion(text, 10))
+        (10, text => SetVersion(text, 10)),
+        (11, text => SetVersion(text, 11))
     ];
 
     // \r?: у файлов с окончаниями строк Windows (autocrlf) перед концом строки стоит \r, а $ в .NET срабатывает только перед \n.

@@ -536,7 +536,7 @@ public partial class GoldenMcpTests
     public async Task Unreadable_files_answer_with_their_read_error()
     {
         const string conflict = "Unresolved git merge conflict (line 3)";
-        const string future = "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (10): update Tasker";
+        const string future = "from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (11): update Tasker";
         using var f = await Fixture.Start(golden =>
         {
             var project = Path.Combine(golden, ".tasker", "projects", LegacyProject);
