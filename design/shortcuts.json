@@ -1,0 +1,46 @@
+{
+  "groups": [
+    {"title": "shortcuts.groupFile", "rows": [
+      {"title": "taskCreate.action", "keys": "⌘ N", "command": "newTask"},
+      {"title": "palette.newBoard", "keys": "⌥ ⌘ N", "command": "newBoard"},
+      {"title": "tab.new", "keys": "⌘ T", "command": "newTab"},
+      {"title": "window.new", "keys": "⇧ ⌘ N", "command": "newWindow"},
+      {"title": "workspace.open", "keys": "⌘ O", "command": "openFolder"},
+      {"title": "workspace.closeTab", "keys": "⌘ W", "command": "closeTab"},
+      {"title": "window.close", "keys": "⇧ ⌘ W", "command": "closeWindow"},
+      {"title": "tab.next", "keys": "⌃ ⇥", "command": "nextTab"},
+      {"title": "tab.previous", "keys": "⌃ ⇧ ⇥", "command": "previousTab"},
+      {"title": "shortcuts.settings", "keys": "⌘ ,"}
+    ]},
+    {"title": "shortcuts.groupGo", "rows": [
+      {"title": "palette.title", "keys": "⌘ K", "command": "palette"},
+      {"title": "section.tasks", "keys": "⌘ 1", "command": "go.tasks"},
+      {"title": "section.boards", "keys": "⌘ 2", "command": "go.boards"},
+      {"title": "section.settings", "keys": "⌘ 3", "command": "go.settings"},
+      {"title": "section.admin", "keys": "⌘ 4", "command": "go.admin"},
+      {"title": "sidebar.hide", "keys": "⌘ 0", "command": "toggleSidebar"}
+    ]},
+    {"title": "shortcuts.groupTask", "rows": [
+      {"title": "task.changeStatus", "keys": "⌥ ⌘ S", "command": "taskStatus"},
+      {"title": "task.link", "keys": "⌘ L", "command": "taskLink"},
+      {"title": "task.setParent", "keys": "⌥ ⌘ P", "command": "taskParent"},
+      {"title": "task.copyKey", "keys": "⌥ ⌘ C", "command": "taskCopyKey"}
+    ]},
+    {"title": "shortcuts.groupView", "rows": [
+      {"title": "taskList.view.groups", "keys": "⌥ ⌘ 1", "command": "listMode.groups"},
+      {"title": "taskList.view.flat", "keys": "⌥ ⌘ 2", "command": "listMode.flat"},
+      {"title": "taskList.view.tree", "keys": "⌥ ⌘ 3", "command": "listMode.tree"}
+    ]},
+    {"title": "shortcuts.groupList", "rows": [
+      {"title": "shortcuts.listMove", "keys": "J K"},
+      {"title": "shortcuts.listPeek", "keys": "Space"},
+      {"title": "shortcuts.listOpen", "keys": "↵"},
+      {"title": "shortcuts.listStatus", "keys": "S"},
+      {"title": "shortcuts.escape", "keys": "Esc"}
+    ]},
+    {"title": "shortcuts.groupHelp", "rows": [
+      {"title": "shortcuts.openHelp", "keys": "⌘ ?", "command": "help"},
+      {"title": "palette.shortcuts", "keys": "⌥ ⌘ /", "command": "shortcuts"}
+    ]}
+  ]
+}

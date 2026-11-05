@@ -13,8 +13,8 @@ struct ActiveWorkspaceWindow: Equatable {
 
     let id: UUID
     let tab: UUID?
-    let tabCount: Int
     let sidebarVisible: Bool
+    let commands: CommandState
     let others: [Target]
 }
 
@@ -30,24 +30,37 @@ extension FocusedValues {
 }
 
 struct NavigationCommands: Commands {
-    let layout: WorkspaceLayout
-    let sessions: WorkspaceSessions
-    let palette: CommandPalette
+    let runner: CommandRunner
     @FocusedValue(\.activeWorkspaceWindow) private var active
     @Environment(\.openWindow) private var openWindow
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
+    @AppStorage(AppTheme.storageKey) private var storedTheme = AppTheme.system.rawValue
 
     private var l: Localizer {
         Localizer(choice: AppLanguage(storedValue: storedLanguage))
     }
 
-    private var current: WorkspaceWindow? {
-        guard let active else { return nil }
-        return layout.state.active.flatMap { layout.window($0) } ?? layout.window(active.id)
+    private var state: CommandState {
+        active?.commands ?? .none
     }
 
-    private var session: WorkspaceTabSession? {
-        current?.selectedTab.map(sessions.session(for:))
+    private func run(_ command: AppCommand) {
+        runner.openWindow = { openWindow(value: $0) }
+        runner.openShortcuts = { openWindow(id: ShortcutsWindow.id) }
+        runner.perform(command, window: active?.id)
+    }
+
+    private func item(_ command: AppCommand, title: String? = nil) -> some View {
+        Button(title ?? l.string(command.titleKey)) { run(command) }
+            .disabled(!command.isEnabled(state))
+            .optionalShortcut(command.shortcut)
+    }
+
+    private func modeItem(_ mode: TaskListMode) -> some View {
+        let command = AppCommand.listMode(mode)
+        return Toggle(l.string(mode.titleKey), isOn: Binding(get: { state.listMode == mode }, set: { _ in run(command) }))
+            .disabled(!command.isEnabled(state))
+            .optionalShortcut(command.shortcut)
     }
 
     var body: some Commands {
@@ -57,86 +70,64 @@ struct NavigationCommands: Commands {
             }
         }
         CommandGroup(replacing: .newItem) {
-            Button(l.string(.taskCreateAction)) {
-                session?.setSection(.tasks)
-                session?.creation.present()
-            }
-            .keyboardShortcut("n", modifiers: .command)
-            .disabled(session == nil)
-            Button(l.string(.tabNew)) {
-                if let tab = current?.selected { layout.duplicate(tab) }
-            }
-            .keyboardShortcut("t", modifiers: .command)
-            .disabled(active?.tab == nil)
-            Button(l.string(.windowNew)) {
-                openWindow(value: layout.createWindow())
-            }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
+            item(.newTask)
+            item(.newBoard)
+            Divider()
+            item(.newTab)
+            item(.newWindow)
+            Divider()
+            item(.openFolder)
         }
         CommandGroup(replacing: .saveItem) {
-            Button(l.string(.workspaceCloseTab)) {
-                if let tab = current?.selected {
-                    sessions.close(tab, l)
-                } else {
-                    NSApp.keyWindow?.performClose(nil)
-                }
-            }
-            .keyboardShortcut("w", modifiers: .command)
-            Button(l.string(.windowClose)) {
-                if let current, !sessions.confirmClosing(window: current.id, l) { return }
-                NSApp.keyWindow?.close()
-            }
-            .keyboardShortcut("w", modifiers: [.command, .shift])
+            item(.closeTab)
+            item(.closeWindow)
         }
         CommandGroup(replacing: .sidebar) {
-            Button(l.string(.paletteTitle)) {
-                palette.toggle(window: active?.id)
-            }
-            .keyboardShortcut("k", modifiers: .command)
-            .disabled(active == nil)
-            Button((active?.sidebarVisible ?? true) ? l.string(.sidebarHide) : l.string(.sidebarShow)) {
-                if let current { layout.setSidebar(!current.sidebarVisible, in: current.id) }
-            }
-            .keyboardShortcut("0", modifiers: .command)
-            .disabled(active == nil)
+            item(.palette)
+            item(.toggleSidebar, title: (active?.sidebarVisible ?? true) ? l.string(.sidebarHide) : l.string(.sidebarShow))
             Divider()
             ForEach(AppSection.allCases) { section in
-                Button(l.string(section.titleKey)) {
-                    session?.setSection(section)
-                }
-                .keyboardShortcut(KeyEquivalent(section.shortcutKey), modifiers: .command)
-                .disabled(session == nil)
+                item(.go(section))
             }
+            Divider()
+            Menu(l.string(.menuListLayout)) {
+                ForEach(TaskListMode.allCases) { modeItem($0) }
+            }
+            Menu(l.string(.menuTheme)) {
+                Picker(l.string(.menuTheme), selection: Binding(
+                    get: { AppTheme(storedValue: storedTheme) },
+                    set: { run(.theme($0)) }
+                )) {
+                    ForEach(AppTheme.allCases, id: \.self) { Text(l.string($0.titleKey)).tag($0) }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            }
+        }
+        CommandMenu(l.string(.menuTask)) {
+            item(.taskStatus)
+            item(.taskLink)
+            item(.taskParent)
+            Divider()
+            item(.taskCopyKey)
         }
         CommandGroup(after: .windowArrangement) {
             Divider()
-            Button(l.string(.tabPrevious)) {
-                if let current { layout.selectAdjacent(in: current.id, offset: -1) }
-            }
-            .keyboardShortcut(.tab, modifiers: [.control, .shift])
-            .disabled((active?.tabCount ?? 0) < 2)
-            Button(l.string(.tabNext)) {
-                if let current { layout.selectAdjacent(in: current.id, offset: 1) }
-            }
-            .keyboardShortcut(.tab, modifiers: .control)
-            .disabled((active?.tabCount ?? 0) < 2)
+            item(.previousTab)
+            item(.nextTab)
             Divider()
-            Button(l.string(.tabMoveToNewWindow)) {
-                if let tab = current?.selected, let id = layout.detach(tab) { openWindow(value: id) }
-            }
-            .disabled((active?.tabCount ?? 0) < 2)
+            item(.moveTabToNewWindow)
             Menu(l.string(.tabMoveToWindow)) {
                 ForEach(active?.others ?? []) { other in
-                    Button(other.title) {
-                        if let tab = current?.selected { layout.move(tab, to: other.id) }
-                    }
+                    Button(other.title) { runner.moveTab(in: active?.id, to: other.id) }
                 }
             }
             .disabled(active?.tab == nil || (active?.others ?? []).isEmpty)
-            Button(l.string(.windowMergeAll)) {
-                if let current { layout.mergeAll(into: current.id) }
-            }
-            .disabled((active?.others ?? []).isEmpty)
+            item(.mergeWindows)
+        }
+        CommandGroup(replacing: .help) {
+            item(.help)
+            item(.shortcuts)
         }
     }
 
@@ -147,5 +138,16 @@ struct NavigationCommands: Commands {
             .applicationVersion: AppInfo.version,
             .credits: credits
         ])
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func optionalShortcut(_ shortcut: CommandShortcut?) -> some View {
+        if let shortcut {
+            keyboardShortcut(shortcut.key, modifiers: shortcut.modifiers)
+        } else {
+            self
+        }
     }
 }

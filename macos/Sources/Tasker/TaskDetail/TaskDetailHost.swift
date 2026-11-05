@@ -32,6 +32,7 @@ struct TaskDetailHost<Chrome: View>: View {
             value.onDeleted = deleted
             value.drafts = session.drafts
             model = value
+            session.registerDetail(value, compact: compact)
             value.load()
         }
         .onChange(of: live.revision) { model?.refresh() }

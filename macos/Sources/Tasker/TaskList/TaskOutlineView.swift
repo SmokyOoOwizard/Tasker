@@ -374,7 +374,10 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
     func outlineViewSelectionDidChange(_ notification: Notification) {
         guard suppress == 0, let outline else { return }
         noteViewState()
-        guard let node = node(outline.selectedRow), node.kind == .task else { return }
+        guard let node = node(outline.selectedRow), node.kind == .task else {
+            model.selectionCleared()
+            return
+        }
         model.selectionChanged(node)
     }
 

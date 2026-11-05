@@ -7,6 +7,7 @@ struct TaskerApp: App {
     @State private var workspaces: WorkspaceController
     @State private var sessions: WorkspaceSessions
     @State private var palette: CommandPalette
+    @State private var runner: CommandRunner
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
 
     init() {
@@ -17,7 +18,11 @@ struct TaskerApp: App {
         _sessions = State(initialValue: sessions)
         let connection = DaemonConnection.live()
         _connection = State(initialValue: connection)
-        _palette = State(initialValue: CommandPalette(layout: workspaces.layout, sessions: sessions, workspaces: workspaces, connection: connection))
+        let runner = CommandRunner(layout: workspaces.layout, sessions: sessions, workspaces: workspaces)
+        _runner = State(initialValue: runner)
+        let palette = CommandPalette(layout: workspaces.layout, sessions: sessions, workspaces: workspaces, connection: connection, runner: runner)
+        runner.palette = palette
+        _palette = State(initialValue: palette)
         AppTheme.current().apply()
     }
 
@@ -29,6 +34,7 @@ struct TaskerApp: App {
                 .environment(workspaces)
                 .environment(sessions)
                 .environment(\.commandPalette, palette)
+                .environment(\.commandRunner, runner)
                 .onAppear {
                     appDelegate.layout = workspaces.layout
                     appDelegate.releaseLocks = { [sessions] in sessions.releaseEditorLocks() }
@@ -38,7 +44,16 @@ struct TaskerApp: App {
         .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
         .commands {
-            NavigationCommands(layout: workspaces.layout, sessions: sessions, palette: palette)
+            NavigationCommands(runner: runner)
+        }
+        Window(Localizer(choice: AppLanguage(storedValue: storedLanguage)).string(.shortcutsTitle), id: ShortcutsWindow.id) {
+            ShortcutsWindow()
+                .localized()
+        }
+        .windowResizability(.contentSize)
+        Settings {
+            AppSettingsView()
+                .localized()
         }
     }
 }

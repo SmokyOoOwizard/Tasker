@@ -18,6 +18,7 @@ struct PaletteActions {
     var openFolder: @MainActor () -> Void
     var setTheme: @MainActor (AppTheme) -> Void
     var setLanguage: @MainActor (AppLanguage) -> Void
+    var perform: @MainActor (AppCommand) -> Void = { _ in }
 }
 
 struct PaletteContext {
@@ -30,6 +31,7 @@ struct PaletteContext {
     var isDark: Bool
     var language: AppLanguage
     var settingsPages: [SettingsPage] = []
+    var commands = CommandState.none
 }
 
 @MainActor
@@ -40,15 +42,32 @@ enum PaletteCommands {
         if context.hasTab {
             result.append(PaletteEntry(
                 id: "create-task", title: l.string(.taskCreateAction), detail: l.string(.paletteKindAction), icon: .mockup(.plus),
-                keywords: "create new task", shortcut: "⌘N", isEnabled: context.hasProject, run: actions.createTask))
+                keywords: "create new task", shortcut: AppCommand.newTask.shortcut?.display, isEnabled: context.hasProject, run: actions.createTask))
             result.append(PaletteEntry(
                 id: "create-board", title: l.string(.paletteNewBoard), detail: l.string(.paletteKindAction), icon: .mockup(.plus),
-                keywords: "create new board", isEnabled: context.hasProject, run: actions.createBoard))
+                keywords: "create new board", shortcut: AppCommand.newBoard.shortcut?.display, isEnabled: context.hasProject, run: actions.createBoard))
             for section in AppSection.allCases {
                 result.append(PaletteEntry(
                     id: "go:" + section.rawValue, title: l.string(.paletteGoTo, l.string(section.titleKey)),
                     detail: l.string(section == .settings ? .paletteKindSettings : .paletteKindGo), icon: .mockup(section.icon),
-                    keywords: section.rawValue, shortcut: "⌘" + String(section.shortcutKey), run: { actions.goTo(section) }))
+                    keywords: section.rawValue, shortcut: AppCommand.go(section).shortcut?.display, run: { actions.goTo(section) }))
+            }
+            if context.hasProject {
+                for mode in TaskListMode.allCases {
+                    let command = AppCommand.listMode(mode)
+                    result.append(PaletteEntry(
+                        id: "listmode:" + mode.rawValue, title: l.string(.paletteListMode, l.string(mode.titleKey)), detail: l.string(.paletteKindView),
+                        icon: .mockup(.list), keywords: "list view layout tree flat groups", shortcut: command.shortcut?.display,
+                        isEnabled: context.commands.listMode != mode, run: { actions.perform(command) }))
+                }
+            }
+            if context.commands.hasTask {
+                for command in [AppCommand.taskStatus, .taskLink, .taskParent, .taskCopyKey] {
+                    result.append(PaletteEntry(
+                        id: "task:" + command.id, title: l.string(command.titleKey), detail: l.string(.paletteKindAction),
+                        icon: .system("checkmark.circle"), keywords: "task status link parent copy key", shortcut: command.shortcut?.display,
+                        run: { actions.perform(command) }))
+                }
             }
             if context.hasProject {
                 for id in vocabulary.boardOrder {
@@ -88,7 +107,10 @@ enum PaletteCommands {
         }
         result.append(PaletteEntry(
             id: "open-folder", title: l.string(.workspaceOpen), detail: l.string(.paletteKindWorkspace), icon: .system("folder.badge.plus"),
-            keywords: "open folder workspace", run: actions.openFolder))
+            keywords: "open folder workspace", shortcut: AppCommand.openFolder.shortcut?.display, run: actions.openFolder))
+        result.append(PaletteEntry(
+            id: "shortcuts", title: l.string(.paletteShortcuts), detail: l.string(.paletteKindView), icon: .system("keyboard"),
+            keywords: "keyboard shortcuts hotkeys help", shortcut: AppCommand.shortcuts.shortcut?.display, run: { actions.perform(.shortcuts) }))
 
         let target: AppTheme = context.isDark ? .light : .dark
         result.append(PaletteEntry(

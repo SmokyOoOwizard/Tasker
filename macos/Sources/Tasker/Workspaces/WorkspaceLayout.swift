@@ -82,6 +82,24 @@ final class WorkspaceLayout {
         }
     }
 
+    @discardableResult
+    func applyStartup(_ behavior: StartupBehavior) -> [UUID] {
+        guard behavior != .restore, state.initialized, !state.windows.isEmpty else { return [] }
+        let keep = state.windows.first { $0.id == state.active } ?? state.windows[0]
+        let kept: [WorkspaceTab] = behavior == .lastFolder ? keep.selectedTab.map { [$0] } ?? [] : []
+        let keptIds = Set(kept.map(\.id))
+        let dropped = state.windows.flatMap(\.tabs).filter { !keptIds.contains($0.id) }
+        var window = keep
+        window.tabs = kept
+        window.selected = kept.first?.id
+        state.windows = [window]
+        state.active = window.id
+        for tab in dropped.reversed() { remember(tab.path) }
+        if let tab = kept.first { remember(tab.path) }
+        save()
+        return dropped.map(\.id)
+    }
+
     var windows: [WorkspaceWindow] { state.windows }
 
     var recents: [String] {

@@ -20,13 +20,18 @@ final class WorkspaceTabSession: Identifiable {
     var seriesPrefix: String?
     private(set) var boardEditor: BoardEditorModel?
     var settingsPage = SettingsPage.statuses
+    var taskRequest: TaskRequest?
+    private(set) var listSelection: UUID?
+
+    @ObservationIgnored weak var cardModel: TaskDetailModel?
+    @ObservationIgnored weak var peekModel: TaskDetailModel?
 
     private var idleSection = AppSection.default
 
     @ObservationIgnored private weak var layout: WorkspaceLayout?
     @ObservationIgnored private var restored: WorkspaceTabViewState
     @ObservationIgnored private var lastProject: UUID?
-    @ObservationIgnored private var listModel: TaskListModel?
+    @ObservationIgnored private(set) var listModel: TaskListModel?
     @ObservationIgnored private var listClient: TaskerAPIClient?
     @ObservationIgnored private var listOwner: UUID?
     @ObservationIgnored private var pendingFilter: TaskListFilter?
@@ -45,6 +50,7 @@ final class WorkspaceTabSession: Identifiable {
         restored = tab?.view ?? WorkspaceTabViewState()
         lastProject = tab?.project
         navigator.restore(peek: restored.peek, card: restored.card, history: restored.history)
+        listSelection = restored.selectedRow.flatMap { $0.split(separator: "/").last }.flatMap { UUID(uuidString: String($0)) }
         navigator.onChange = { [weak layout] in layout?.scheduleSave() }
     }
 
@@ -74,6 +80,8 @@ final class WorkspaceTabSession: Identifiable {
         if let lastProject, lastProject != project {
             navigator.reset()
             creation.dismiss()
+            listSelection = nil
+            taskRequest = nil
             restored = WorkspaceTabViewState()
             listModel?.stop()
             listModel = nil
@@ -105,7 +113,11 @@ final class WorkspaceTabSession: Identifiable {
         model.onFailure = { [weak self] text in self?.failure(text) }
         model.onOpen = { [navigator] row in navigator.open(row.id) }
         model.onPeek = { [navigator] row in navigator.togglePeek(row.id) }
-        model.onSelect = { [navigator] row in if navigator.peek != nil { navigator.showPeek(row.id) } }
+        model.onSelect = { [weak self] row in
+            self?.listSelection = row.id
+            if self?.navigator.peek != nil { self?.navigator.showPeek(row.id) }
+        }
+        model.onDeselect = { [weak self] in self?.listSelection = nil }
         model.onEscape = { [navigator] in
             guard navigator.peek != nil else { return false }
             navigator.closePeek()

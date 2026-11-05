@@ -88,8 +88,10 @@ struct MainColumn: View {
     let open: (UUID) -> Void
     @Environment(\.localizer) private var l
     @Environment(TaskCreationCoordinator.self) private var creation
+    @Environment(WorkspaceTabSession.self) private var session
     @State private var linkingAny = false
     @State private var linkingSubtask = false
+    @State private var linkingParent = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -98,6 +100,14 @@ struct MainColumn: View {
                 .padding(.top, DesignSpacing.gap10)
             hierarchy
             links
+        }
+        .onChange(of: session.taskRequest, initial: true) {
+            guard let request = session.taskRequest else { return }
+            session.taskRequest = nil
+            switch request {
+            case .link: linkingAny = true
+            case .parent: linkingParent = true
+            }
         }
     }
 
@@ -114,6 +124,10 @@ struct MainColumn: View {
         let children = model.children
         let progress = model.childProgress
         SectionHeader(title: l.string(.taskDetailHierarchy)) {
+            GhostButton(title: l.string(.taskDetailParent), icon: .plus) { linkingParent = true }
+                .popover(isPresented: $linkingParent, arrowEdge: .bottom) {
+                    LinkPicker(model: model, preset: .parent) { linkingParent = false }
+                }
             GhostButton(title: l.string(.taskDetailSubtask), icon: .plus) { linkingSubtask = true }
                 .popover(isPresented: $linkingSubtask, arrowEdge: .bottom) {
                     LinkPicker(
@@ -562,8 +576,15 @@ struct SeriesRow: View {
 enum LinkPickerPreset: Identifiable {
     case any
     case subtask
+    case parent
 
-    var id: Int { self == .any ? 0 : 1 }
+    var id: Int {
+        switch self {
+        case .any: 0
+        case .subtask: 1
+        case .parent: 2
+        }
+    }
 }
 
 struct LinkPicker: View {
@@ -592,7 +613,11 @@ struct LinkPicker: View {
     private var sides: [Side] {
         var result: [Side] = []
         for type in vocabulary.linkTypes {
-            if preset == .subtask, !type.hierarchical { continue }
+            if preset != .any, !type.hierarchical { continue }
+            if preset == .parent {
+                result.append(Side(typeId: type.id, outward: false, name: type.inwardName))
+                continue
+            }
             result.append(Side(typeId: type.id, outward: true, name: type.outwardName))
             if preset == .subtask { continue }
             if !type.isSymmetric, !type.inwardName.isEmpty, type.inwardName != type.outwardName {
@@ -698,7 +723,7 @@ extension LinkPicker {
     init(model: TaskDetailModel, preset: LinkPickerPreset, createNew: (() -> Void)? = nil, done: @escaping () -> Void) {
         self.init(
             vocabulary: model.vocabulary,
-            heading: model.localizer.string(.taskDetailLinkTitle, model.reference),
+            heading: model.localizer.string(preset == .parent ? .taskDetailParentTitle : .taskDetailLinkTitle, model.reference),
             preset: preset,
             search: { [source = model.source, project = model.project] in (try? await source.search(project: project)) ?? [] },
             excluded: { [weak model] side in

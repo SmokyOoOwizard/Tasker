@@ -28,13 +28,15 @@ final class CommandPalette {
     private let workspaces: WorkspaceController
     private let connection: DaemonConnection
     private let defaults: UserDefaults
+    private let runner: CommandRunner
     private var panel: PalettePanel?
     private var model: PaletteModel?
     private var hosting: NSHostingView<PaletteView>?
     private var anchor: NSWindow?
     private var resizing: Task<Void, Never>?
 
-    init(layout: WorkspaceLayout, sessions: WorkspaceSessions, workspaces: WorkspaceController, connection: DaemonConnection, defaults: UserDefaults = .standard) {
+    init(layout: WorkspaceLayout, sessions: WorkspaceSessions, workspaces: WorkspaceController, connection: DaemonConnection, runner: CommandRunner, defaults: UserDefaults = .standard) {
+        self.runner = runner
         self.layout = layout
         self.sessions = sessions
         self.workspaces = workspaces
@@ -65,7 +67,7 @@ final class CommandPalette {
             makeCommands: { [weak self] vocabulary in
                 guard let self else { return [] }
                 return PaletteCommands.build(
-                    self.context(session: session, tab: tab), vocabulary: vocabulary,
+                    self.context(session: session, tab: tab, window: windowId), vocabulary: vocabulary,
                     actions: self.actions(session: session, window: windowId, l: l), l: l)
             },
             openTask: { [weak self] task in
@@ -144,7 +146,7 @@ final class CommandPalette {
         panel.setFrame(NSRect(x: x, y: top - size.height, width: size.width, height: size.height), display: true)
     }
 
-    private func context(session: WorkspaceTabSession?, tab: WorkspaceTab?) -> PaletteContext {
+    private func context(session: WorkspaceTabSession?, tab: WorkspaceTab?, window: UUID?) -> PaletteContext {
         let status = connection.state.status
         let open = layout.openPaths
         var paths = open
@@ -159,21 +161,15 @@ final class CommandPalette {
             theme: AppTheme.current(defaults: defaults),
             isDark: AppTheme.effectiveIsDark,
             language: AppLanguage(storedValue: defaults.string(forKey: AppLanguage.storageKey) ?? ""),
-            settingsPages: session?.settingsModel?.pages ?? SettingsPage.pages(in: .local))
+            settingsPages: session?.settingsModel?.pages ?? SettingsPage.pages(in: .local),
+            commands: runner.state(window: window))
     }
 
     private func actions(session: WorkspaceTabSession?, window: UUID?, l: Localizer) -> PaletteActions {
         PaletteActions(
-            goTo: { section in session?.setSection(section) },
-            createTask: {
-                session?.setSection(.tasks)
-                session?.creation.present()
-            },
-            createBoard: { [sessions] in
-                guard let session, let project = session.selection.current?.id,
-                      sessions.confirmDiscardingBoardEditor(in: session, replacing: BoardEditorTarget(project: project, board: nil), l) else { return }
-                session.openBoardEditor(project: project, board: nil, localizer: l)
-            },
+            goTo: { [runner] section in runner.perform(.go(section), window: window) },
+            createTask: { [runner] in runner.perform(.newTask, window: window) },
+            createBoard: { [runner] in runner.perform(.newBoard, window: window) },
             editBoard: { [sessions] id in
                 guard let session, let project = session.selection.current?.id,
                       sessions.confirmDiscardingBoardEditor(in: session, replacing: BoardEditorTarget(project: project, board: id), l) else { return }
@@ -190,12 +186,10 @@ final class CommandPalette {
                     Task { await workspaces.reopen(path, window: window) }
                 }
             },
-            openFolder: { [workspaces] in
-                guard let window else { return }
-                Task { await workspaces.openFolder(l, window: window) }
-            },
-            setTheme: { [defaults] theme in AppTheme.set(theme, defaults: defaults) },
-            setLanguage: { [defaults] option in defaults.set(option.rawValue, forKey: AppLanguage.storageKey) })
+            openFolder: { [runner] in runner.perform(.openFolder, window: window) },
+            setTheme: { [runner] theme in runner.perform(.theme(theme), window: window) },
+            setLanguage: { [defaults] option in defaults.set(option.rawValue, forKey: AppLanguage.storageKey) },
+            perform: { [runner] command in runner.perform(command, window: window) })
     }
 }
 

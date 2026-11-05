@@ -46,6 +46,7 @@ struct MainView: View {
     @Environment(WorkspaceController.self) private var workspaces
     @Environment(WorkspaceSessions.self) private var sessions
     @Environment(\.localizer) private var l
+    @Environment(\.commandRunner) private var runner
 
     private var layout: WorkspaceLayout { workspaces.layout }
 
@@ -65,8 +66,8 @@ struct MainView: View {
         ActiveWorkspaceWindow(
             id: window.id,
             tab: window.selected,
-            tabCount: window.tabs.count,
             sidebarVisible: window.sidebarVisible,
+            commands: runner.map { $0.state(window: window.id) } ?? .none,
             others: layout.windows.filter { $0.id != window.id }.map { .init(id: $0.id, title: $0.title(fallback: l.string(.appName))) }
         )
     }

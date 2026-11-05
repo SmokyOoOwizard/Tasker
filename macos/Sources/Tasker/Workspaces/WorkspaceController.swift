@@ -18,8 +18,12 @@ final class WorkspaceController {
         self.fileManager = fileManager
     }
 
-    static func live() -> WorkspaceController {
-        WorkspaceController(layout: WorkspaceLayout(), settings: WorkspaceSettingsFile(directory: DaemonPaths().dataDirectory))
+    static func live(defaults: UserDefaults = .standard) -> WorkspaceController {
+        let layout = WorkspaceLayout(defaults: defaults)
+        for tab in layout.applyStartup(StartupBehavior.current(defaults: defaults)) {
+            TaskListSettings(defaults: defaults, tab: tab).removeTabData()
+        }
+        return WorkspaceController(layout: layout, settings: WorkspaceSettingsFile(directory: DaemonPaths().dataDirectory))
     }
 
     func sync(with state: DaemonConnectionState) {
