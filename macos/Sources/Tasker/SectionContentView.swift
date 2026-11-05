@@ -11,6 +11,8 @@ struct SectionContentView: View {
             ProjectScope {
                 BoardsSection()
             }
+        } else if section == .settings {
+            SettingsSection()
         } else {
             placeholder
         }

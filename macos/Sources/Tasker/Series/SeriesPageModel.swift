@@ -56,6 +56,11 @@ final class SeriesPageModel {
         loadTask = Task { [weak self] in await self?.fetch(current) }
     }
 
+    func reload() async {
+        generation += 1
+        await fetch(generation)
+    }
+
     func stop() {
         generation += 1
         loadTask?.cancel()

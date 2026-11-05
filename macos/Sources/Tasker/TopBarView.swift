@@ -30,6 +30,14 @@ struct TopBarView: View {
                     .foregroundStyle(DesignColor.dim.color)
                 Text(session.seriesPrefix ?? "")
                     .font(.design(DesignTypography.baseSize, weight: DesignTypography.semiboldWeight, mono: true))
+            } else if section == .settings {
+                Text(l.string(section.titleKey))
+                    .font(.design(DesignTypography.baseSize))
+                    .foregroundStyle(DesignColor.mut.color)
+                Text(l.string(.breadcrumbSeparator))
+                    .foregroundStyle(DesignColor.dim.color)
+                Text(l.string(session.settingsPage.titleKey))
+                    .font(.designEmphasis(DesignTypography.baseSize))
             } else {
                 Text(l.string(section == .tasks ? .taskListTitle : section.titleKey))
                     .font(.designEmphasis(DesignTypography.baseSize))

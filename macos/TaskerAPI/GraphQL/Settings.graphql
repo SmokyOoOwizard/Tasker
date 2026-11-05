@@ -1,0 +1,136 @@
+query SettingsCatalog($projectId: UUID!) {
+  project(id: $projectId) {
+    id
+    name
+    createdAt
+    version
+    fields(limit: 200) {
+      data {
+        id
+        name
+        type
+        multiple
+        enumId
+        version
+      }
+    }
+    enums(limit: 200) {
+      data {
+        id
+        name
+        version
+        values {
+          id
+          name
+        }
+      }
+    }
+    linkTypes(limit: 200) {
+      data {
+        id
+        name
+        outwardName
+        inwardName
+        allowCycles
+        hierarchical
+        isSymmetric
+        version
+      }
+    }
+    seriesList(limit: 200) {
+      data {
+        id
+        name
+        prefix
+        version
+      }
+    }
+    taskTypes(limit: 200, descriptionLength: 0) {
+      data {
+        id
+        name
+        fields {
+          fieldId
+        }
+      }
+    }
+    boards(limit: 200) {
+      data {
+        id
+        name
+        columns {
+          id
+          name
+          fieldConditions {
+            fieldId
+            value
+          }
+        }
+      }
+    }
+    seriesHealth {
+      numberConflicts {
+        seriesId
+        number
+        taskIds
+      }
+      prefixConflicts {
+        prefix
+        seriesIds
+      }
+      tasksWithInvalidSeries
+      unreadableSeriesFiles
+      needsAttention
+    }
+  }
+}
+
+query SettingsTasks($projectId: UUID!, $field: [String!], $offset: Int, $limit: Int) {
+  project(id: $projectId) {
+    id
+    tasks(field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
+      totalCount
+      data {
+        id
+        title
+        seriesNumbers {
+          seriesId
+          number
+        }
+        fields {
+          fieldId
+          values
+        }
+      }
+    }
+  }
+}
+
+query SettingsMembers($projectId: UUID!) {
+  project(id: $projectId) {
+    id
+    members(limit: 200) {
+      data {
+        id
+        username
+        kind
+        email
+        isAdmin
+        ownerId
+      }
+    }
+  }
+}
+
+query SettingsUsers {
+  users(limit: 200) {
+    data {
+      id
+      username
+      kind
+      email
+      isAdmin
+      ownerId
+    }
+  }
+}

@@ -158,7 +158,8 @@ final class CommandPalette {
             workspaces: paths.map { path in PaletteWorkspace(path: path, current: current.map { WorkspacePath.same($0, path) } ?? false) },
             theme: AppTheme.current(defaults: defaults),
             isDark: AppTheme.effectiveIsDark,
-            language: AppLanguage(storedValue: defaults.string(forKey: AppLanguage.storageKey) ?? ""))
+            language: AppLanguage(storedValue: defaults.string(forKey: AppLanguage.storageKey) ?? ""),
+            settingsPages: session?.settingsModel?.pages ?? SettingsPage.pages(in: .local))
     }
 
     private func actions(session: WorkspaceTabSession?, window: UUID?, l: Localizer) -> PaletteActions {
@@ -179,6 +180,7 @@ final class CommandPalette {
                 session.openBoardEditor(project: project, board: id, localizer: l)
             },
             showSeries: { id in session?.showSeries(id) },
+            openSettings: { page in session?.openSettings(page) },
             chooseProject: { id in session?.selection.choose(id) },
             openWorkspace: { [layout, workspaces] path in
                 guard let window else { return }
