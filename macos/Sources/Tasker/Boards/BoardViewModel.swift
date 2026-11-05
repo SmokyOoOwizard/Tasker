@@ -94,6 +94,14 @@ final class BoardViewModel {
         loadTask?.cancel()
         refreshTask?.cancel()
         generation += 1
+        collapseColumns()
+    }
+
+    private func collapseColumns() {
+        for index in columns.indices where columns[index].expanded {
+            columns[index].expanded = false
+            columns[index].rows = Array(columns[index].rows.prefix(Self.pageSize))
+        }
     }
 
     func reload() {
