@@ -20,6 +20,8 @@ public static class AtomicFile
     // Паузы между попытками (мс): в сумме около полутора секунд — дольше антивирус файл не держит.
     private static readonly int[] Delays = [5, 10, 20, 40, 80, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100];
 
+    private static readonly int[] DirectoryDelays = [5, 10, 20, 40, 80, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200];
+
     private const int ErrorAccessDenied = 5;
     private const int ErrorSharingViolation = 32;
     private const int ErrorLockViolation = 33;
@@ -66,13 +68,13 @@ public static class AtomicFile
 
     /// <summary>
     /// Переименование папки одной операцией (другие процессы видят старую или новую папку, не смесь). На Windows папку с открытым
-    /// кем-то файлом переименовать нельзя — кратковременный отказ повторяется, как у файлов.
+    /// кем-то файлом переименовать нельзя — кратковременный отказ повторяется дольше, чем у файлов (около восьми секунд): читатель, который открывает файлы папки один за другим, почти не оставляет окна без открытого файла.
     /// </summary>
     public static void MoveDirectory(string from, string to) => Retry(() =>
     {
         Directory.Move(from, to);
         return 0;
-    });
+    }, OperatingSystem.IsWindows(), DirectoryDelays, Thread.Sleep);
 
     /// <summary>Удаление файла; файла нет — не ошибка.</summary>
     public static void Delete(string path) => Retry(() =>

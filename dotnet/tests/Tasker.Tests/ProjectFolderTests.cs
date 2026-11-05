@@ -173,6 +173,7 @@ public class ProjectFolderTests : IDisposable
                 Assert.NotNull(await readProjects.GetById(project.Id));
                 Assert.NotNull(await readStatuses.GetById(project.Id, status.Id));
                 Interlocked.Increment(ref count);
+                await Task.Delay(1);
             }
         });
 
