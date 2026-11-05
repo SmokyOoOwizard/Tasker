@@ -1,0 +1,91 @@
+import Foundation
+import TaskerAPI
+
+struct PaletteWorkspace: Equatable {
+    var path: String
+    var current: Bool
+}
+
+struct PaletteActions {
+    var goTo: @MainActor (AppSection) -> Void
+    var createTask: @MainActor () -> Void
+    var showSeries: @MainActor (UUID) -> Void
+    var chooseProject: @MainActor (UUID) -> Void
+    var openWorkspace: @MainActor (String) -> Void
+    var openFolder: @MainActor () -> Void
+    var setTheme: @MainActor (AppTheme) -> Void
+    var setLanguage: @MainActor (AppLanguage) -> Void
+}
+
+struct PaletteContext {
+    var hasTab: Bool
+    var hasProject: Bool
+    var projects: [ProjectFields]
+    var currentProject: UUID?
+    var workspaces: [PaletteWorkspace]
+    var theme: AppTheme
+    var isDark: Bool
+    var language: AppLanguage
+}
+
+@MainActor
+enum PaletteCommands {
+    static func build(_ context: PaletteContext, vocabulary: TaskListVocabulary, actions: PaletteActions, l: Localizer) -> [PaletteEntry] {
+        var result: [PaletteEntry] = []
+
+        if context.hasTab {
+            result.append(PaletteEntry(
+                id: "create-task", title: l.string(.taskCreateAction), detail: l.string(.paletteKindAction), icon: .mockup(.plus),
+                keywords: "create new task", shortcut: "⌘N", isEnabled: context.hasProject, run: actions.createTask))
+            result.append(PaletteEntry(
+                id: "create-board", title: l.string(.paletteNewBoard), detail: l.string(.paletteSoon), icon: .mockup(.plus),
+                keywords: "create new board", isEnabled: false, run: {}))
+            for section in AppSection.allCases {
+                result.append(PaletteEntry(
+                    id: "go:" + section.rawValue, title: l.string(.paletteGoTo, l.string(section.titleKey)),
+                    detail: l.string(section == .settings ? .paletteKindSettings : .paletteKindGo), icon: .mockup(section.icon),
+                    keywords: section.rawValue, shortcut: "⌘" + String(section.shortcutKey), run: { actions.goTo(section) }))
+            }
+            for id in vocabulary.seriesOrder {
+                guard let prefix = vocabulary.prefixes[id] else { continue }
+                let name = vocabulary.seriesNames[id] ?? prefix
+                result.append(PaletteEntry(
+                    id: "series:" + id.uuidString, title: l.string(.paletteSeries, prefix, name), detail: l.string(.paletteKindSeries),
+                    icon: .system("tag"), keywords: "series " + prefix, run: { actions.showSeries(id) }))
+            }
+            for project in context.projects where project.id != context.currentProject {
+                result.append(PaletteEntry(
+                    id: "project:" + project.id.uuidString, title: l.string(.paletteProject, project.name), detail: l.string(.paletteKindProject),
+                    icon: .system("folder"), keywords: "project switch", run: { actions.chooseProject(project.id) }))
+            }
+        }
+
+        for workspace in context.workspaces where !workspace.current {
+            result.append(PaletteEntry(
+                id: "workspace:" + workspace.path, title: l.string(.paletteWorkspace, WorkspacePath.name(workspace.path)),
+                detail: l.string(.paletteKindWorkspace), icon: .system("folder.badge.gearshape"), keywords: "workspace " + workspace.path,
+                run: { actions.openWorkspace(workspace.path) }))
+        }
+        result.append(PaletteEntry(
+            id: "open-folder", title: l.string(.workspaceOpen), detail: l.string(.paletteKindWorkspace), icon: .system("folder.badge.plus"),
+            keywords: "open folder workspace", run: actions.openFolder))
+
+        let target: AppTheme = context.isDark ? .light : .dark
+        result.append(PaletteEntry(
+            id: "theme-switch", title: l.string(.paletteThemeSwitch, l.string(target == .dark ? .paletteThemeDark : .paletteThemeLight)),
+            detail: l.string(.paletteKindView), icon: .system(target == .dark ? "moon" : "sun.max"), keywords: "theme dark light",
+            run: { actions.setTheme(target) }))
+        if context.theme != .system {
+            result.append(PaletteEntry(
+                id: "theme-system", title: l.string(.paletteThemeSystem), detail: l.string(.paletteKindView), icon: .system("circle.lefthalf.filled"),
+                keywords: "theme system", run: { actions.setTheme(.system) }))
+        }
+        for option in AppLanguage.allCases where option != context.language {
+            result.append(PaletteEntry(
+                id: "language:" + option.rawValue, title: l.string(.paletteLanguage, l.string(option.labelKey)),
+                detail: l.string(.paletteKindView), icon: .system("globe"), keywords: "language",
+                run: { actions.setLanguage(option) }))
+        }
+        return result
+    }
+}

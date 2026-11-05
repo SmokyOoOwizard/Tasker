@@ -119,17 +119,23 @@ public class TaskFilter
     /// Фильтр по значениям из параметров интерфейсов (REST, MCP): значения одного параметра — «ИЛИ», разные параметры — «И».
     /// Не заданный или пустой параметр не ограничивает (в отличие от пустого массива в самом фильтре); повторы убираются; ничего не задано — null.
     /// </summary>
-    public static TaskFilter? Of(IEnumerable<Guid>? typeIds, IEnumerable<Guid>? statusIds, IEnumerable<Guid>? seriesIds)
+    public static TaskFilter? Of(IEnumerable<Guid>? typeIds, IEnumerable<Guid>? statusIds, IEnumerable<Guid>? seriesIds, string? titleContains = null)
     {
         static Guid[]? Distinct(IEnumerable<Guid>? ids) => ids?.Distinct().ToArray() is { Length: > 0 } found ? found : null;
         var types = Distinct(typeIds);
         var statuses = Distinct(statusIds);
         var series = Distinct(seriesIds);
-        return types == null && statuses == null && series == null ? null : new TaskFilter { TypeIds = types, StatusIds = statuses, SeriesIds = series };
+        var title = titleContains?.Trim() is { Length: > 0 } text ? TaskSortNames.Fold(text) : null;
+        return types == null && statuses == null && series == null && title == null
+            ? null
+            : new TaskFilter { TypeIds = types, StatusIds = statuses, SeriesIds = series, TitleContains = title };
     }
 
     /// <summary>Задачи, у которых есть номер хотя бы в одной из этих серий.</summary>
     public Guid[]? SeriesIds { get; init; }
+
+    /// <summary>Часть заголовка без учёта регистра по Unicode (<see cref="TaskSortNames.Fold"/>, уже приведённая); null — без условия.</summary>
+    public string? TitleContains { get; init; }
 
     /// <summary>
     /// Только задачи с этими id (пересечение с остальными условиями): догрузить показанные задачи иерархии (<see cref="TaskService.ListTree"/>)
@@ -167,6 +173,7 @@ public class TaskFilter
         (TypeIds == null || TypeIds.Contains(task.TypeId)) &&
         (StatusIds == null || StatusIds.Contains(task.StatusId)) &&
         (SeriesIds == null || task.SeriesNumbers.Any(x => SeriesIds.Contains(x.SeriesId))) &&
+        (TitleContains == null || TaskSortNames.Fold(task.Title).Contains(TitleContains, StringComparison.Ordinal)) &&
         (LinkTypeIds == null || task.Links.Any(x => LinkTypeIds.Contains(x.TypeId))) &&
         (FieldIds == null || task.Fields.Any(x => FieldIds.Contains(x.FieldId))) &&
         (EnumIds == null || task.Fields.Any(x => x.Own?.EnumId is { } enumId && EnumIds.Contains(enumId))) &&

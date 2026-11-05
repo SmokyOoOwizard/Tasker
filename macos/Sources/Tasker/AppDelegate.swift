@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppTheme.current().apply()
         appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.initial, .new]) { _, _ in
             MainActor.assumeIsolated { AppDelegate.updateIcon() }
         }

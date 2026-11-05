@@ -32,6 +32,7 @@ extension FocusedValues {
 struct NavigationCommands: Commands {
     let layout: WorkspaceLayout
     let sessions: WorkspaceSessions
+    let palette: CommandPalette
     @FocusedValue(\.activeWorkspaceWindow) private var active
     @Environment(\.openWindow) private var openWindow
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
@@ -88,6 +89,11 @@ struct NavigationCommands: Commands {
             .keyboardShortcut("w", modifiers: [.command, .shift])
         }
         CommandGroup(replacing: .sidebar) {
+            Button(l.string(.paletteTitle)) {
+                palette.toggle(window: active?.id)
+            }
+            .keyboardShortcut("k", modifiers: .command)
+            .disabled(active == nil)
             Button((active?.sidebarVisible ?? true) ? l.string(.sidebarHide) : l.string(.sidebarShow)) {
                 if let current { layout.setSidebar(!current.sidebarVisible, in: current.id) }
             }

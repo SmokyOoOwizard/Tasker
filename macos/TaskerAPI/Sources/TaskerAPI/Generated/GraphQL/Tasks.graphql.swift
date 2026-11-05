@@ -1569,3 +1569,125 @@ public struct TaskSearchPageQuery: GraphQLQuery {
         }
     }
 }
+
+public struct TaskPaletteSearchQuery: GraphQLQuery {
+    public static let operationName = "TaskPaletteSearch"
+    public static let document = """
+    query TaskPaletteSearch($projectId: UUID!, $search: String, $limit: Int) {
+      project(id: $projectId) {
+        __typename
+        id
+        tasks(search: $search, limit: $limit, descriptionLength: 0) {
+          __typename
+          totalCount
+          data {
+            __typename
+            id
+            title
+            statusId
+            typeId
+            seriesNumbers {
+              __typename
+              seriesId
+              number
+            }
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("tasks", arguments: ["search": .variable("search"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("totalCount"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("title"),
+                    GraphQLField("statusId"),
+                    GraphQLField("typeId"),
+                    GraphQLField("seriesNumbers", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("seriesId"),
+                        GraphQLField("number")
+                    ])
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var search: String?
+    public var limit: Int?
+
+    public init(projectId: UUID, search: String? = nil, limit: Int? = nil) {
+        self.projectId = projectId
+        self.search = search
+        self.limit = limit
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        if let search { result["search"] = search.graphQLValue }
+        if let limit { result["limit"] = limit.graphQLValue }
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var tasks: Tasks
+
+            public init(id: UUID, tasks: Tasks) {
+                self.id = id
+                self.tasks = tasks
+            }
+
+            public struct Tasks: Hashable, Sendable, Decodable {
+                public var totalCount: Int
+                public var data: [DataItem]
+
+                public init(totalCount: Int, data: [DataItem]) {
+                    self.totalCount = totalCount
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var title: String
+                    public var statusId: UUID
+                    public var typeId: UUID
+                    public var seriesNumbers: [SeriesNumbers]
+
+                    public init(id: UUID, title: String, statusId: UUID, typeId: UUID, seriesNumbers: [SeriesNumbers]) {
+                        self.id = id
+                        self.title = title
+                        self.statusId = statusId
+                        self.typeId = typeId
+                        self.seriesNumbers = seriesNumbers
+                    }
+
+                    public struct SeriesNumbers: Hashable, Sendable, Decodable {
+                        public var seriesId: UUID
+                        public var number: Int
+
+                        public init(seriesId: UUID, number: Int) {
+                            self.seriesId = seriesId
+                            self.number = number
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

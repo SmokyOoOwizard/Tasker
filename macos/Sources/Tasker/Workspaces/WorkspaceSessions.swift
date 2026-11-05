@@ -24,6 +24,7 @@ final class WorkspaceTabSession: Identifiable {
     @ObservationIgnored private var listModel: TaskListModel?
     @ObservationIgnored private var listClient: TaskerAPIClient?
     @ObservationIgnored private var listOwner: UUID?
+    @ObservationIgnored private var pendingFilter: TaskListFilter?
 
     init(tab: WorkspaceTab?, layout: WorkspaceLayout, live: LiveWorkspace, defaults: UserDefaults) {
         let id = tab?.id ?? UUID()
@@ -67,6 +68,7 @@ final class WorkspaceTabSession: Identifiable {
             listModel = nil
             listClient = nil
             listOwner = nil
+            pendingFilter = nil
         }
         lastProject = project
     }
@@ -75,6 +77,7 @@ final class WorkspaceTabSession: Identifiable {
         if let listModel, listModel.project == project, listClient === client {
             listOwner = owner
             listModel.localizer = localizer
+            applyPendingFilter(to: listModel)
             listModel.resume()
             return listModel
         }
@@ -96,8 +99,28 @@ final class WorkspaceTabSession: Identifiable {
         listModel = model
         listClient = client
         listOwner = owner
+        applyPendingFilter(to: model)
         model.start()
         return model
+    }
+
+    func showSeries(_ series: UUID) {
+        let filter = TaskListFilter(seriesIds: [series])
+        let visible = section == .tasks && listOwner != nil
+        navigator.closeCard()
+        navigator.closePeek()
+        if visible, let listModel {
+            listModel.filter = filter
+        } else {
+            pendingFilter = filter
+            setSection(.tasks)
+        }
+    }
+
+    private func applyPendingFilter(to model: TaskListModel) {
+        guard let filter = pendingFilter else { return }
+        pendingFilter = nil
+        model.filter = filter
     }
 
     func detachList(owner: UUID) {

@@ -87,6 +87,7 @@ internal class TaskStorage(TaskerDirectory directory, WorkspaceIndex index) : IT
         TypeIds = filter?.TypeIds,
         StatusIds = filter?.StatusIds,
         SeriesIds = filter?.SeriesIds,
+        TitleContains = filter?.TitleContains,
         LinkTypeIds = filter?.LinkTypeIds,
         FieldIds = filter?.FieldIds,
         EnumIds = filter?.EnumIds,

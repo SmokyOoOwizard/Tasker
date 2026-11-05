@@ -36,6 +36,9 @@ internal record IndexQuery(IndexKind Kind)
     /// <summary>Задачи, у которых есть номер хотя бы в одной из этих серий (таблица <c>task_series</c>).</summary>
     public Guid[]? SeriesIds { get; init; }
 
+    /// <summary>Заголовок содержит эту строку (<see cref="TaskFilter.TitleContains"/>); ищется по <c>sort_text</c> — заголовку в нижнем регистре.</summary>
+    public string? TitleContains { get; init; }
+
     /// <summary>Задачи, у которых есть исходящая связь одного из этих типов (таблица <c>task_links</c>).</summary>
     public Guid[]? LinkTypeIds { get; init; }
 
@@ -913,6 +916,12 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
         {
             where.Add("path IN (SELECT path FROM task_series WHERE series_id IN (SELECT value FROM json_each(@series)))");
             command.Parameters.AddWithValue("@series", IndexJsonContext.Array(seriesIds.Select(Key)));
+        }
+
+        if (query.TitleContains is { } titleContains)
+        {
+            where.Add("instr(sort_text, @title) > 0");
+            command.Parameters.AddWithValue("@title", titleContains);
         }
 
         if (query.LinkTypeIds is { } linkTypeIds)

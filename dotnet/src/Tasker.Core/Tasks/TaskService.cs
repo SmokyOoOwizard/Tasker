@@ -394,7 +394,7 @@ public partial class TaskService(
         return new TaskFilter
         {
             Ids = filter?.Ids,
-            TypeIds = filter?.TypeIds, StatusIds = filter?.StatusIds, SeriesIds = filter?.SeriesIds,
+            TypeIds = filter?.TypeIds, StatusIds = filter?.StatusIds, SeriesIds = filter?.SeriesIds, TitleContains = filter?.TitleContains,
             LinkTypeIds = filter?.LinkTypeIds, FieldIds = filter?.FieldIds, EnumIds = filter?.EnumIds,
             // Условия, уже заданные фильтром (например, условия колонки доски), и условия клиента — вместе, по И.
             FieldValues = conditions == null ? filter?.FieldValues : [.. filter?.FieldValues ?? [], .. conditions],
