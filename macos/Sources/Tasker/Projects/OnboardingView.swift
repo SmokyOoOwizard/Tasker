@@ -28,7 +28,7 @@ struct OnboardingView: View {
     let client: TaskerAPIClient
     let project: ProjectFields
     let stats: ProjectQuery.Data.Project.Stats
-    @Environment(LiveWorkspace.self) private var live
+    @Environment(WorkspaceTabSession.self) private var session
     @Environment(\.localizer) private var l
     @State private var running: OnboardingStep?
     @State private var error: String?
@@ -76,9 +76,9 @@ struct OnboardingView: View {
         Task {
             do {
                 try await onboarding.run(step)
-                live.show(.notice(l.string(step.doneKey)))
+                session.notice(l.string(step.doneKey))
                 if let fresh = try? await client.graphQL.fetch(ProjectQuery(id: project.id)), let stats = fresh.project?.stats, !OnboardingStep.isEmpty(stats) {
-                    live.show(.notice(l.string(.onboardingReady)))
+                    session.notice(l.string(.onboardingReady))
                 }
             } catch {
                 self.error = error.localizedDescription

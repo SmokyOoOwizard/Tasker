@@ -149,19 +149,22 @@ struct TaskListPreferences: Hashable, Codable, Sendable {
 @Observable
 final class TaskListSettings {
     static let storagePrefix = "taskList."
+    static let tabStoragePrefix = "taskListTab."
 
     private(set) var revision = 0
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let tabKey: String?
     @ObservationIgnored private var cache: [UUID: TaskListPreferences] = [:]
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, tab: UUID? = nil) {
         self.defaults = defaults
+        tabKey = tab.map { Self.tabStoragePrefix + $0.uuidString.lowercased() }
     }
 
     func preferences(for project: UUID) -> TaskListPreferences {
         _ = revision
         if let cached = cache[project] { return cached }
-        let stored = defaults.data(forKey: Self.storagePrefix + project.uuidString.lowercased())
+        let stored = tabPreferences()[project.uuidString.lowercased()] ?? defaults.data(forKey: Self.storagePrefix + project.uuidString.lowercased())
             .flatMap { try? JSONDecoder().decode(TaskListPreferences.self, from: $0) } ?? TaskListPreferences()
         cache[project] = stored
         return stored
@@ -176,5 +179,21 @@ final class TaskListSettings {
         if let data = try? JSONEncoder().encode(value) {
             defaults.set(data, forKey: Self.storagePrefix + project.uuidString.lowercased())
         }
+        if let tabKey {
+            var stored = tabPreferences()
+            stored[project.uuidString.lowercased()] = value
+            if let data = try? JSONEncoder().encode(stored) {
+                defaults.set(data, forKey: tabKey)
+            }
+        }
+    }
+
+    func removeTabData() {
+        if let tabKey { defaults.removeObject(forKey: tabKey) }
+    }
+
+    private func tabPreferences() -> [String: TaskListPreferences] {
+        guard let tabKey, let data = defaults.data(forKey: tabKey) else { return [:] }
+        return (try? JSONDecoder().decode([String: TaskListPreferences].self, from: data)) ?? [:]
     }
 }

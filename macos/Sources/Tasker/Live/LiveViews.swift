@@ -3,12 +3,13 @@ import TaskerAPI
 
 struct LiveToastStack: View {
     @Environment(LiveWorkspace.self) private var live
+    @Environment(WorkspaceTabSession.self) private var session
     @Environment(\.localizer) private var l
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(spacing: DesignSpacing.gap8) {
-            ForEach(live.toasts) { toast in
+            ForEach(live.toasts + session.toasts.toasts) { toast in
                 HStack(spacing: DesignSpacing.gap8) {
                     MockupIconView(icon: .check)
                         .foregroundStyle(DesignColor.green.color)
@@ -23,11 +24,14 @@ struct LiveToastStack: View {
                 .designShadow(DesignShadow.popup, scheme: scheme)
                 .frame(maxWidth: DesignLayout.toastMaxWidth)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .onTapGesture { live.dismiss(toast.id) }
+                .onTapGesture {
+                    live.dismiss(toast.id)
+                    session.toasts.dismiss(toast.id)
+                }
             }
         }
         .padding(.bottom, DesignSpacing.toastBottom)
-        .animation(.easeOut(duration: 0.18), value: live.toasts)
+        .animation(.easeOut(duration: 0.18), value: live.toasts + session.toasts.toasts)
     }
 }
 
@@ -36,7 +40,7 @@ struct LiveStatusLabel: View {
     @Environment(\.localizer) private var l
 
     var body: some View {
-        if let text = LiveStatusText.text(connection: live.connection, l) {
+        if live.address != nil, let text = LiveStatusText.text(connection: live.connection, l) {
             HStack(spacing: DesignSpacing.gap6) {
                 Circle()
                     .fill(live.connection == .offline ? DesignColor.red.color : DesignColor.amber.color)

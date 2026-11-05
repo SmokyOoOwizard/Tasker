@@ -10,6 +10,7 @@ struct TaskDetailHost<Chrome: View>: View {
     let deleted: () -> Void
     @ViewBuilder var chrome: (TaskDetailModel) -> Chrome
     @Environment(LiveWorkspace.self) private var live
+    @Environment(WorkspaceTabSession.self) private var session
     @Environment(\.localizer) private var l
     @State private var model: TaskDetailModel?
 
@@ -26,7 +27,7 @@ struct TaskDetailHost<Chrome: View>: View {
             model?.stop()
             let value = TaskDetailModel(project: project, task: task, source: GraphQLTaskDetailSource(client: client))
             value.localizer = l
-            value.onNotice = { [live] text in live.show(.notice(text)) }
+            value.onNotice = { [session] text in session.notice(text) }
             value.onDeleted = deleted
             model = value
             value.load()

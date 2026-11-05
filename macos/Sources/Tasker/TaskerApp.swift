@@ -4,38 +4,31 @@ import SwiftUI
 struct TaskerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var connection = DaemonConnection.live()
-    @State private var live: LiveWorkspace
     @State private var workspaces: WorkspaceController
-    @State private var projects: ProjectSelection
-    @State private var taskLists = TaskListSettings()
-    @State private var creation = TaskCreationCoordinator()
+    @State private var sessions: WorkspaceSessions
     @AppStorage(AppLanguage.storageKey) private var storedLanguage = AppLanguage.system.rawValue
 
     init() {
-        let live = LiveWorkspace()
+        UserDefaults.standard.register(defaults: ["NSQuitAlwaysKeepsWindows": false])
         let workspaces = WorkspaceController.live()
-        _live = State(initialValue: live)
         _workspaces = State(initialValue: workspaces)
-        _projects = State(initialValue: ProjectSelection(tabs: workspaces.tabs, live: live))
+        _sessions = State(initialValue: WorkspaceSessions(layout: workspaces.layout))
     }
 
     var body: some Scene {
-        Window(Localizer(choice: AppLanguage(storedValue: storedLanguage)).string(.appName), id: "main") {
-            MainView()
-                .background(WindowFrameAutosave(name: "TaskerMainWindow"))
+        WindowGroup(Localizer(choice: AppLanguage(storedValue: storedLanguage)).string(.appName), id: "main", for: UUID.self) { $window in
+            WorkspaceWindowRoot(requested: $window)
                 .localized()
                 .environment(connection)
-                .environment(live)
                 .environment(workspaces)
-                .environment(projects)
-                .environment(taskLists)
-                .environment(creation)
+                .environment(sessions)
+                .onAppear { appDelegate.layout = workspaces.layout }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
         .commands {
-            NavigationCommands(creation: creation)
+            NavigationCommands(layout: workspaces.layout, sessions: sessions)
         }
     }
 }

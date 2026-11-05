@@ -5,7 +5,9 @@ struct TaskListSection: View {
     @Environment(LiveWorkspace.self) private var live
     @Environment(ProjectSelection.self) private var selection
     @Environment(TaskCreationCoordinator.self) private var creation
-    @State private var navigator = TaskNavigator()
+    @Environment(WorkspaceTabSession.self) private var session
+
+    private var navigator: TaskNavigator { session.navigator }
 
     private var pending: Binding<TaskCreationRequest?> {
         Binding(
@@ -26,9 +28,8 @@ struct TaskListSection: View {
                 TaskCreateSheet(client: client, project: project.id, request: request, navigator: navigator)
             }
         }
-        .onChange(of: selection.current?.id) {
-            navigator.reset()
-            creation.dismiss()
+        .onChange(of: selection.current?.id, initial: true) {
+            session.noteProject(selection.current?.id)
         }
     }
 }
@@ -64,34 +65,24 @@ struct TaskListScreen: View {
     let navigator: TaskNavigator
     @Environment(LiveWorkspace.self) private var live
     @Environment(TaskListSettings.self) private var settings
+    @Environment(WorkspaceTabSession.self) private var session
     @Environment(\.localizer) private var l
     @State private var model: TaskListModel?
+    @State private var owner = UUID()
 
     var body: some View {
         VStack(spacing: 0) {
             if let model {
                 TaskListQueryBar(model: model)
                 ZStack {
-                    TaskOutline(model: model, localizer: l) { live.show(.notice($0)) }
+                    TaskOutline(model: model, localizer: l) { session.notice($0) }
                     TaskListStateOverlay(model: model)
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
-            let model = TaskListModel(project: project.id, source: GraphQLTaskListSource(client: client), settings: settings)
-            model.localizer = l
-            model.onNotice = { [live] text in live.show(.notice(text)) }
-            model.onOpen = { [navigator] row in navigator.open(row.id) }
-            model.onPeek = { [navigator] row in navigator.togglePeek(row.id) }
-            model.onSelect = { [navigator] row in if navigator.peek != nil { navigator.showPeek(row.id) } }
-            model.onEscape = { [navigator] in
-                guard navigator.peek != nil else { return false }
-                navigator.closePeek()
-                return true
-            }
-            self.model = model
-            model.start()
+            model = session.attachList(owner: owner, project: project.id, client: client, localizer: l)
         }
         .onChange(of: live.revision) { model?.scheduleRefresh() }
         .onChange(of: settings.revision) { model?.apply(settings.preferences(for: project.id)) }
@@ -99,7 +90,7 @@ struct TaskListScreen: View {
             model?.localizer = l
             model?.apply(settings.preferences(for: project.id))
         }
-        .onDisappear { model?.stop() }
+        .onDisappear { session.detachList(owner: owner) }
     }
 }
 
