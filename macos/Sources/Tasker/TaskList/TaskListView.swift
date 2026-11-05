@@ -73,6 +73,9 @@ struct TaskListScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             if let model {
+                if let series = session.seriesPage {
+                    SeriesPageHeader(client: client, project: project.id, series: series) { model.scheduleRefresh() }
+                }
                 TaskListQueryBar(model: model)
                 ZStack {
                     TaskOutline(model: model, localizer: l) { session.notice($0) }

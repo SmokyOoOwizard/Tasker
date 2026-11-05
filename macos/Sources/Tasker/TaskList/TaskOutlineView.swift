@@ -442,7 +442,7 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
         case .task:
             guard let row = node.row else { return nil }
             let cell = outlineView.makeView(withIdentifier: TaskCellView.identifier, owner: nil) as? TaskCellView ?? TaskCellView()
-            cell.configure(content(row), repeatedText: localizer.string(.taskListRepeated), repeatedHint: localizer.string(.taskListRepeatedHint), statusHint: localizer.string(.taskListChangeStatus))
+            cell.configure(content(row), repeatedText: localizer.string(.taskListRepeated), repeatedHint: localizer.string(.taskListRepeatedHint), statusHint: localizer.string(.taskListChangeStatus), conflictHint: localizer.string(.seriesNumberConflict))
             cell.statusButton.target = self
             cell.statusButton.action = #selector(statusClicked(_:))
             return cell
@@ -502,7 +502,8 @@ final class TaskOutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOutline
         let columns = model.preferences.columns
         let status = vocabulary.status(row.statusId)
         return TaskCellContent(
-            reference: columns.key ? vocabulary.reference(row) : "",
+            reference: columns.key ? vocabulary.reference(row, preferring: model.keySeries) : "",
+            conflict: columns.key && vocabulary.conflictedTasks.contains(row.id),
             title: row.title,
             repeated: row.repeated,
             typeName: columns.type ? vocabulary.types[row.typeId]?.name : nil,

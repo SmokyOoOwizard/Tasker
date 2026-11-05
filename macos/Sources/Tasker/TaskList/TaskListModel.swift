@@ -125,6 +125,11 @@ final class TaskListModel {
         return value
     }
 
+    var keySeries: UUID? {
+        guard let ids = filter.seriesIds, ids.count == 1 else { return nil }
+        return ids[0]
+    }
+
     var hasMore: Bool { loadedCount < levelCount }
 
     func start() {

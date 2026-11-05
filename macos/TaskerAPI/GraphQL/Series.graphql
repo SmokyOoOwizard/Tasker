@@ -1,0 +1,57 @@
+query SeriesOverview($projectId: UUID!, $id: UUID!) {
+  project(id: $projectId) {
+    id
+    series(id: $id) {
+      id
+      name
+      prefix
+      version
+    }
+    seriesList(limit: 200) {
+      data {
+        id
+        name
+        prefix
+      }
+    }
+    seriesHealth {
+      numberConflicts {
+        seriesId
+        number
+        taskIds
+      }
+    }
+  }
+}
+
+query SeriesNumbersPage($projectId: UUID!, $seriesIds: [UUID!], $offset: Int, $limit: Int) {
+  project(id: $projectId) {
+    id
+    tasks(seriesIds: $seriesIds, offset: $offset, limit: $limit, descriptionLength: 0) {
+      totalCount
+      data {
+        id
+        seriesNumbers {
+          seriesId
+          number
+        }
+      }
+    }
+  }
+}
+
+query SeriesConflictTask($projectId: UUID!, $id: UUID!) {
+  project(id: $projectId) {
+    id
+    task(id: $id) {
+      id
+      title
+      createdAt
+      version
+      seriesNumbers {
+        seriesId
+        number
+      }
+    }
+  }
+}
