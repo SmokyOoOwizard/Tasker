@@ -130,7 +130,7 @@ public class GraphTests
             "query($id: UUID!) { project(id: $id) { statuses(descriptionLength: -5) { totalCount } } }", new { id = api.ProjectId });
         Assert.Equal(HttpStatusCode.OK, status);
         var error = body!["errors"]![0]!;
-        Assert.Equal("BAD_REQUEST", error["extensions"]!["code"]!.GetValue<string>());
+        Assert.Equal("validation.invalid", error["extensions"]!["code"]!.GetValue<string>());
         Assert.Equal(400, error["extensions"]!["status"]!.GetValue<int>());
         Assert.Contains("descriptionLength", error["message"]!.GetValue<string>());
 
@@ -140,7 +140,7 @@ public class GraphTests
 
         (status, body) = await GraphReads.Query(http, api.BaseUrl, "{ registration { open } }");
         Assert.Equal(HttpStatusCode.OK, status);
-        Assert.Equal("NOT_FOUND", body!["errors"]![0]!["extensions"]!["code"]!.GetValue<string>());
+        Assert.Equal("entity.notFound", body!["errors"]![0]!["extensions"]!["code"]!.GetValue<string>());
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class GraphTests
 
             (status, body) = await GraphReads.Query(http, api, "{ projects { totalCount } }");
             Assert.Equal(HttpStatusCode.Unauthorized, status);
-            Assert.Equal("UNAUTHENTICATED", body!["errors"]![0]!["extensions"]!["code"]!.GetValue<string>());
+            Assert.Equal("auth.required", body!["errors"]![0]!["extensions"]!["code"]!.GetValue<string>());
 
             using var register = await http.PostAsJsonAsync(api + "/auth/register", new { username = "owner", email = "owner@example.com", password = "Passw0rd!123" });
             var token = JsonNode.Parse(await register.Content.ReadAsStringAsync())!["accessToken"]!.GetValue<string>();
@@ -175,7 +175,7 @@ public class GraphTests
             Assert.Equal(0, body["data"]!["projects"]!["totalCount"]!.GetValue<int>());
 
             (status, body) = await GraphReads.Query(http, api, "{ workspaceMcp { daemon } }", token: token);
-            Assert.Equal("NOT_FOUND", body!["errors"]![0]!["extensions"]!["code"]!.GetValue<string>());
+            Assert.Equal("entity.notFound", body!["errors"]![0]!["extensions"]!["code"]!.GetValue<string>());
 
             using var subscribe = new HttpRequestMessage(HttpMethod.Post, api + GraphSetup.Path)
             {

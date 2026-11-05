@@ -35,7 +35,7 @@ internal static class ApiDoc
             if (route.RoutePattern.Parameters.Count > 0)
                 Add(endpoint, StatusCodes.Status404NotFound, typeof(ApiError));
             if (!readOnly)
-                Add(endpoint, StatusCodes.Status409Conflict, typeof(ConflictError));
+                Add(endpoint, StatusCodes.Status409Conflict, typeof(ApiError));
         });
 
     private static void Add(EndpointBuilder endpoint, int status, Type type)

@@ -7,13 +7,13 @@ internal static partial class Validate
     public const int MaxNameLength = 100;
 
     /// <summary>Непустое имя без пробелов по краям, не длиннее <paramref name="maxLength"/>.</summary>
-    public static string Name(string? value, string field, int maxLength = MaxNameLength)
+    public static string Name(string? value, ErrorField field, int maxLength = MaxNameLength, string? english = null)
     {
         var trimmed = value?.Trim();
         if (string.IsNullOrEmpty(trimmed))
-            throw new TaskerValidationException($"{field} is required");
+            throw TaskerErrors.Required(field, english == null ? null : $"{english} is required");
         if (trimmed.Length > maxLength)
-            throw new TaskerValidationException($"{field} must be at most {maxLength} characters");
+            throw TaskerErrors.TooLong(field, maxLength, english == null ? null : $"{english} must be at most {maxLength} characters");
         return trimmed;
     }
 
@@ -22,11 +22,11 @@ internal static partial class Validate
     /// «_», «-» и знаков «= ! &lt; &gt; :»: имя стоит в условии фильтра по полям (<c>Имя&gt;=3</c>, <c>Имя:set</c>) и в записи значений
     /// (<c>Имя=значение</c>), и по нему условие читается однозначно.
     /// </summary>
-    public static string FieldName(string? value, string field = "Field name")
+    public static string FieldName(string? value)
     {
-        var name = Name(value, field);
+        var name = Name(value, ErrorField.FieldName);
         if (!IsFieldName(name))
-            throw new TaskerValidationException($"{field} must consist of letters and digits only (no spaces or symbols such as _ - = ! < > :): '{name}'");
+            throw TaskerErrors.FieldNameChars(name);
         return name;
     }
 
@@ -46,14 +46,14 @@ internal static partial class Validate
         if (string.IsNullOrEmpty(value))
             return "";
         if (!Statuses.StatusIcons.All.Contains(value))
-            throw new TaskerValidationException($"Status icon must be one of: {string.Join(", ", Statuses.StatusIcons.All)}");
+            throw TaskerErrors.StatusIcon(Statuses.StatusIcons.All.ToArray());
         return value;
     }
 
     public static string Color(string? value)
     {
         if (value == null || !ColorRegex().IsMatch(value))
-            throw new TaskerValidationException("Color must be in #RRGGBB format");
+            throw TaskerErrors.Color();
         return value.ToUpperInvariant();
     }
 
@@ -61,7 +61,7 @@ internal static partial class Validate
     {
         ids ??= [];
         if (ids.Distinct().Count() != ids.Length)
-            throw new TaskerValidationException($"{field} contains duplicates");
+            throw TaskerErrors.Invalid($"{field} contains duplicates");
         return ids;
     }
 
@@ -70,7 +70,7 @@ internal static partial class Validate
     {
         var missing = ids.Except(known).ToArray();
         if (missing.Length > 0)
-            throw new TaskerValidationException($"{field}: not found in the project: {string.Join(", ", missing)}");
+            throw TaskerErrors.Invalid($"{field}: not found in the project: {string.Join(", ", missing)}");
     }
 
     public const int MinPasswordLength = 8;
@@ -80,7 +80,7 @@ internal static partial class Validate
     {
         var trimmed = value?.Trim() ?? "";
         if (!UsernameRegex().IsMatch(trimmed))
-            throw new TaskerValidationException("Username must be 3-50 characters: latin letters, digits, '.', '_' or '-'");
+            throw TaskerErrors.Username();
         return trimmed;
     }
 
@@ -91,14 +91,14 @@ internal static partial class Validate
     {
         var trimmed = value?.Trim() ?? "";
         if (trimmed.Length > 254 || !EmailRegex().IsMatch(trimmed))
-            throw new TaskerValidationException("Email is not valid");
+            throw TaskerErrors.Email();
         return trimmed;
     }
 
     public static string Password(string? value)
     {
         if (value == null || value.Length < MinPasswordLength)
-            throw new TaskerValidationException($"Password must be at least {MinPasswordLength} characters");
+            throw TaskerErrors.Password(MinPasswordLength);
         return value;
     }
 

@@ -29,9 +29,9 @@ public partial class TaskService
             var descending = text.StartsWith('-');
             var name = (descending ? text[1..] : text).Trim();
             if (name.Length == 0)
-                throw new TaskerValidationException($"Sort '{sort}': an empty key (expected keys separated by commas, '-' before a key for descending order)");
+                throw TaskerErrors.Invalid($"Sort '{sort}': an empty key (expected keys separated by commas, '-' before a key for descending order)");
             if (!seen.Add(FieldNames.Key(name)))
-                throw new TaskerValidationException($"Sort '{sort}': key '{name}' is listed twice");
+                throw TaskerErrors.Invalid($"Sort '{sort}': key '{name}' is listed twice");
 
             if (TaskSortNames.Builtin.TryGetValue(name, out var target))
             {
@@ -152,7 +152,7 @@ public partial class TaskService
             {
                 case 0:
                     var names = catalog.Select(x => x.Name).Order(StringComparer.OrdinalIgnoreCase).Take(30).ToArray();
-                    throw new TaskerValidationException(
+                    throw TaskerErrors.Invalid(
                         $"Sort '{sort}': unknown key '{name}'. Keys: {string.Join(", ", TaskSortNames.BuiltinNames)}, " +
                         $"or the name of a field ({(names.Length > 0 ? "catalog: " + string.Join(", ", names) + "; " : "")}or an own field of tasks); " +
                         "put '-' before a key for descending order, separate keys with commas");
@@ -161,7 +161,7 @@ public partial class TaskService
                     enumId = kinds[0].EnumId;
                     break;
                 default:
-                    throw new TaskerValidationException(
+                    throw TaskerErrors.Invalid(
                         $"Sort '{sort}': tasks have own fields '{name}' of several types ({string.Join(", ", await KindNames(projectId, kinds, ct))}) " +
                         "and the catalog has no such field, so it is unclear which one to sort by");
             }

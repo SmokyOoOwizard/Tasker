@@ -5,4 +5,11 @@ namespace Tasker.Core;
 /// или правкой задачи. Сервисы бросают её вместо голого <see cref="InvalidOperationException"/>, когда связанная запись «не может
 /// не быть», но данные проекта на лету пропали. В API — 404, в MCP — <c>[not_found]</c>, в консоли — <c>Not found: …</c>.
 /// </summary>
-public class TaskerNotFoundException(string message) : Exception(message);
+public class TaskerNotFoundException : TaskerException
+{
+    internal TaskerNotFoundException(TaskerError error) : base(error)
+    {
+    }
+
+    public override int Status => 404;
+}

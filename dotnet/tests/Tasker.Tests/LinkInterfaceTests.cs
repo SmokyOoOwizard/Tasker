@@ -384,7 +384,7 @@ public class LinkInterfaceTests
         // Версия указана и устарела — 409 modified; указана верная — проходит.
         var stale = await api.Post(api.P($"/tasks/{aId}/links"), new { typeId = blocks, targetId = bId, version = a["version"]!.GetValue<string>() });
         Assert.Equal(HttpStatusCode.Conflict, stale.Status);
-        Assert.Equal("modified", stale.Body!["code"]!.GetValue<string>());
+        Assert.Equal("entity.modified", stale.Body!["code"]!.GetValue<string>());
 
         var removed = await api.Delete(api.P($"/tasks/{aId}/links?typeId={blocks}&targetId={bId}"));
         Assert.Equal(HttpStatusCode.OK, removed.Status);
@@ -461,7 +461,7 @@ public class LinkInterfaceTests
 
         var inUse = await api.Delete(api.P($"/link-types/{blocks["id"]}?version={blocks["version"]!.GetValue<string>()}"));
         Assert.Equal(HttpStatusCode.Conflict, inUse.Status);
-        Assert.Equal("in_use", inUse.Body!["code"]!.GetValue<string>());
+        Assert.Equal("linkType.inUse", inUse.Body!["code"]!.GetValue<string>());
 
         // Консоль держит блокировку на задаче — связь через REST не добавить.
         var cli = storage == "sqlite" ? new[] { "--sqlite", Path.Combine(api.Root, "tasker.db") } : ["--workspace", api.Root];
@@ -470,7 +470,7 @@ public class LinkInterfaceTests
         Assert.Equal(0, locked.Code);
         var blocked = await api.Post(api.P($"/tasks/{bId}/links"), new { typeId = blocks["id"]!.GetValue<string>(), targetId = aId });
         Assert.Equal(HttpStatusCode.Conflict, blocked.Status);
-        Assert.Equal("locked", blocked.Body!["code"]!.GetValue<string>());
+        Assert.Equal("entity.locked", blocked.Body!["code"]!.GetValue<string>());
     }
 
     // ---- MCP ----

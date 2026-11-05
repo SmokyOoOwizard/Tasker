@@ -69,24 +69,27 @@ internal static class ColumnFilters
     /// </summary>
     /// <exception cref="TaskerValidationException">Условие не подходит каталогу.</exception>
     public static void Validate(
-        ColumnFieldFilter filter, IReadOnlyDictionary<Guid, FieldDefinition> fields, IReadOnlyDictionary<Guid, FieldEnum> enums, string where)
+        ColumnFieldFilter filter, IReadOnlyDictionary<Guid, FieldDefinition> fields, IReadOnlyDictionary<Guid, FieldEnum> enums, int columnIndex)
     {
+        var where = $"Columns[{columnIndex}].FieldFilters";
         if (!Enum.IsDefined(filter.Operator))
-            throw new TaskerValidationException($"{where}: unknown operator '{filter.Operator}'");
+            throw TaskerErrors.Invalid($"{where}: unknown operator '{filter.Operator}'");
         if (!fields.TryGetValue(filter.FieldId, out var field))
-            throw new TaskerValidationException($"{where}: field {filter.FieldId} not found in the project's catalog");
+            throw TaskerErrors.Invalid($"{where}: field {filter.FieldId} not found in the project's catalog");
 
         if (!HasOperand(filter.Operator))
         {
             if (filter.Value != null)
-                throw new TaskerValidationException($"{where}: '{Symbol(filter.Operator)}' on field '{field.Name}' takes no value");
+                throw TaskerErrors.BoardConditionNoValue(columnIndex, field.Name, Symbol(filter.Operator),
+                    $"{where}: '{Symbol(filter.Operator)}' on field '{field.Name}' takes no value");
             return;
         }
 
         if (filter.Value == null)
-            throw new TaskerValidationException($"{where}: '{Symbol(filter.Operator)}' on field '{field.Name}' needs a value");
+            throw TaskerErrors.BoardConditionValueRequired(columnIndex, field.Name, Symbol(filter.Operator),
+                $"{where}: '{Symbol(filter.Operator)}' on field '{field.Name}' needs a value");
         if (IsOrdered(filter.Operator) && field.Type is not (FieldType.Int or FieldType.Float or FieldType.Date))
-            throw new TaskerValidationException(
+            throw TaskerErrors.BoardConditionNotApplicable(columnIndex, field.Name, Symbol(filter.Operator), field.Type.ToString().ToLowerInvariant(),
                 $"{where}: '{Symbol(filter.Operator)}' does not apply to field '{field.Name}' of type {field.Type.ToString().ToLowerInvariant()} " +
                 "(only int, float and date can be compared; use = or !=)");
 
@@ -98,11 +101,11 @@ internal static class ColumnFilters
         }
         catch (TaskerValidationException e)
         {
-            throw new TaskerValidationException($"{where}: {e.Message}");
+            throw e.Reworded($"{where}: {e.Message}", ("columnIndex", columnIndex));
         }
         // Хранится только каноническая запись (у enum — id значения): по ней переименование значения колонку не ломает.
         if (canonical != filter.Value)
-            throw new TaskerValidationException($"{where}: value '{filter.Value}' of field '{field.Name}' is not in canonical form ('{canonical}')");
+            throw TaskerErrors.Invalid($"{where}: value '{filter.Value}' of field '{field.Name}' is not in canonical form ('{canonical}')");
     }
 
     /// <summary>

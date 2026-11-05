@@ -57,7 +57,7 @@ public class ProjectService(
         var project = new Project
         {
             Id = Guid.NewGuid(),
-            Name = Validate.Name(command.Name, "Project name"),
+            Name = Validate.Name(command.Name, ErrorField.ProjectName),
             CreatedAt = time.GetUtcNow(),
             Version = Versioning.New
         };
@@ -73,15 +73,15 @@ public class ProjectService(
         var project = await GetById(id, ct);
         if (project == null)
             return null;
-        await locks.EnsureWritable(Locks.LockedEntity.Project, project.Id, $"Project '{project.Name}'", ct);
-        var expected = Versioning.Check(project.Version, command.Version, $"Project '{project.Name}'");
+        await locks.EnsureWritable(Locks.LockedEntity.Project, project.Id, ErrorSubject.Project(project.Name), ct);
+        var expected = Versioning.Check(project.Version, command.Version, ErrorSubject.Project(project.Name));
 
         var updated = project with
         {
-            Name = command.Name == null ? project.Name : Validate.Name(command.Name, "Project name")
+            Name = command.Name == null ? project.Name : Validate.Name(command.Name, ErrorField.ProjectName)
         };
 
-        var version = await projects.Update(updated, expected, ct) ?? throw Versioning.Modified($"Project '{project.Name}'");
+        var version = await projects.Update(updated, expected, ct) ?? throw Versioning.Modified(ErrorSubject.Project(project.Name));
         return updated with { Version = version };
     }
 
@@ -95,11 +95,11 @@ public class ProjectService(
         var project = await GetById(id, ct);
         if (project == null)
             return false;
-        await locks.EnsureWritable(Locks.LockedEntity.Project, project.Id, $"Project '{project.Name}'", ct);
-        var expected = Versioning.Check(project.Version, version, $"Project '{project.Name}'");
+        await locks.EnsureWritable(Locks.LockedEntity.Project, project.Id, ErrorSubject.Project(project.Name), ct);
+        var expected = Versioning.Check(project.Version, version, ErrorSubject.Project(project.Name));
 
         if (!await projects.Delete(id, expected, ct))
-            throw Versioning.Modified($"Project '{project.Name}'");
+            throw Versioning.Modified(ErrorSubject.Project(project.Name));
         await locks.Forget(Locks.LockedEntity.Project, project.Id, ct);
         return true;
     }

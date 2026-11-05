@@ -67,13 +67,13 @@ internal static class GraphFields
     public static void RequireServer(this IResolverContext context, string field)
     {
         if (context.Mode() != TaskerMode.Server)
-            throw new TaskerNotFoundException($"{field} is available only on the server");
+            throw TaskerErrors.EntityNotFound($"{field} is available only on the server");
     }
 
     public static void RequireWorkspace(this IResolverContext context, string field)
     {
         if (context.Mode() == TaskerMode.Server)
-            throw new TaskerNotFoundException($"{field} is available only in a desktop workspace");
+            throw TaskerErrors.EntityNotFound($"{field} is available only in a desktop workspace");
     }
 
     public static ListDto<T> All<T>(this Page page, IReadOnlyCollection<T> items) => page.Apply(items);

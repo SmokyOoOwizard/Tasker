@@ -24,10 +24,10 @@ public class ProjectMemberService(IProjectMemberStorage members, IUserStorage us
     {
         var actor = await userService.GetCurrentHuman(ct);
         var user = await users.GetById(command.UserId, ct)
-            ?? throw new TaskerValidationException($"UserId: user not found: {command.UserId}");
+            ?? throw TaskerErrors.Invalid($"UserId: user not found: {command.UserId}");
 
         if (user.IsAgent && user.OwnerId != actor.Id && !actor.IsAdmin)
-            throw new TaskerForbiddenException($"Agent '{user.Username}' belongs to another user");
+            throw TaskerErrors.AgentOfAnotherUser(user.Username);
 
         await members.Add(projectId, user.Id, ct);
         return user;
@@ -50,7 +50,7 @@ public class ProjectMemberService(IProjectMemberStorage members, IUserStorage us
         var humansLeft = await users.Count(new UserFilter { Kind = UserKind.Human, Ids = others }, ct);
         var removed = await users.GetById(userId, ct);
         if (removed is { IsAgent: false } && humansLeft == 0)
-            throw new TaskerConflictException("The last person cannot be removed from the project");
+            throw TaskerErrors.LastPerson();
 
         return await members.Remove(projectId, userId, ct);
     }

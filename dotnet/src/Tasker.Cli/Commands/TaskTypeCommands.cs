@@ -180,9 +180,9 @@ internal static class TaskTypeCommands
                     }
                     ctx.Print(result, text);
                 }
-                catch (TaskerConflictException e) when (e.Code == ConflictCode.InUse && removing && choice == null && e.Message.Contains("have values in the field"))
+                catch (TaskerConflictException e) when (e.Kind == ConflictCode.InUse && removing && choice == null && e.Message.Contains("have values in the field"))
                 {
-                    throw new TaskerConflictException($"{e.Message}: repeat with --drop-values or --keep-values", e.Code);
+                    throw e.Reworded($"{e.Message}: repeat with --drop-values or --keep-values");
                 }
             }),
             Kit.Leaf(g, "delete", "Deletes a task type (without tasks)", c =>

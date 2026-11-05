@@ -70,7 +70,7 @@ internal class UserStorage(TaskerDirectory directory, WorkspaceIndex index) : IU
     private async Task EnsureUnique(User user, CancellationToken ct)
     {
         if (await GetByUsername(user.Username, ct) is { } taken && taken.Id != user.Id)
-            throw new TaskerConflictException($"Username '{user.Username}' is already taken");
+            throw Tasker.Core.TaskerErrors.UsernameTaken(user.Username);
     }
 
     // В файлах нет владельцев агентов и админов: фильтр по ним сразу пустой.

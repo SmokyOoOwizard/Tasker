@@ -89,9 +89,9 @@ internal static class TaskFieldRules
         foreach (var id in ids)
         {
             if (type.Fields.Any(x => x.FieldId == id))
-                throw new TaskerValidationException($"RemoveFields: {id} is a field of the task type '{type.Name}' and cannot be removed from the task");
+                throw TaskerErrors.Invalid($"RemoveFields: {id} is a field of the task type '{type.Name}' and cannot be removed from the task");
             if (entries.RemoveAll(x => x.FieldId == id) == 0)
-                throw new TaskerValidationException($"RemoveFields: the task has no additional or own field {id}");
+                throw TaskerErrors.Invalid($"RemoveFields: the task has no additional or own field {id}");
         }
     }
 
@@ -105,7 +105,7 @@ internal static class TaskFieldRules
         foreach (var id in ids)
         {
             if (!catalog.ContainsKey(id))
-                throw new TaskerValidationException($"AddFields: field not found in the project: {id}");
+                throw TaskerErrors.Invalid($"AddFields: field not found in the project: {id}");
             // Поле типа или уже добавленное — у задачи уже есть.
             if (type.Fields.Any(x => x.FieldId == id) || entries.Any(x => x.FieldId == id && x.Own == null))
                 continue;
@@ -121,17 +121,17 @@ internal static class TaskFieldRules
         {
             var name = Validate.FieldName(field.Name);
             if (!Enum.IsDefined(field.Type))
-                throw new TaskerValidationException($"Field type: unknown '{field.Type}'");
+                throw TaskerErrors.Invalid($"Field type: unknown '{field.Type}'");
             if (field.Type != FieldType.Enum && field.EnumId != null)
-                throw new TaskerValidationException($"Field '{name}': only a field of type enum has an enum");
+                throw TaskerErrors.Invalid($"Field '{name}': only a field of type enum has an enum");
             if (field.Type == FieldType.Enum && field.EnumId == null)
-                throw new TaskerValidationException($"Field '{name}': a field of type enum must refer to an enum of the project");
+                throw TaskerErrors.Invalid($"Field '{name}': a field of type enum must refer to an enum of the project");
             FieldEnum? enumeration = null;
             if (field.EnumId is { } enumId && !enums.TryGetValue(enumId, out enumeration))
-                throw new TaskerValidationException($"Field '{name}': enum not found in the project: {enumId}");
+                throw TaskerErrors.Invalid($"Field '{name}': enum not found in the project: {enumId}");
 
             if (Resolve(entries, type, catalog).Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
-                throw new TaskerValidationException($"Field '{name}': the task already has a field with this name");
+                throw TaskerErrors.TaskFieldNameTaken(name);
 
             var values = FieldValues.Normalize(name, field.Type, field.Multiple, enumeration, field.Values);
             entries.Add(new TaskField(Guid.NewGuid(), values, new OwnField(name, field.Type, field.Required, field.Multiple, field.EnumId)));
@@ -156,7 +156,7 @@ internal static class TaskFieldRules
             else if (catalog.TryGetValue(input.FieldId, out var added))
                 field = (added.Name, added.Type, added.Multiple, added.EnumId);
             else
-                throw new TaskerValidationException($"Values: the task has no field {input.FieldId} and it is not in the project's catalog");
+                throw TaskerErrors.Invalid($"Values: the task has no field {input.FieldId} and it is not in the project's catalog");
 
             FieldEnum? enumeration = null;
             if (field.EnumId is { } enumId)
@@ -174,6 +174,6 @@ internal static class TaskFieldRules
     private static void EnsureDistinct(Guid[] ids, string argument)
     {
         if (ids.Distinct().Count() != ids.Length)
-            throw new TaskerValidationException($"{argument} contains duplicates");
+            throw TaskerErrors.Invalid($"{argument} contains duplicates");
     }
 }

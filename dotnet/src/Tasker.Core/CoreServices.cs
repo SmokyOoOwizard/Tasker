@@ -83,18 +83,18 @@ public sealed class CoreServices(
     public ProjectService Projects => One(() => new ProjectService(storage.Projects, access, Time, EditLocks, storage.Tasks, storage.Boards,
         storage.Statuses, storage.StatusSets, storage.TaskTypes, storage.Series, storage.LinkTypes));
 
-    public StatusService Statuses => One(() => new StatusService(storage.Statuses, storage.StatusSets, storage.Boards, storage.Tasks, EditLocks));
+    public StatusService Statuses => One(() => new StatusService(storage.Statuses, storage.StatusSets, storage.Boards, storage.Tasks, EditLocks, storage.Series));
 
     public StatusSetService StatusSets => One(() => new StatusSetService(storage.StatusSets, storage.Statuses, storage.TaskTypes, storage.Boards,
-        storage.Tasks, EditLocks));
+        storage.Tasks, EditLocks, storage.Series));
 
     public TaskTypeService TaskTypes => One(() => new TaskTypeService(storage.TaskTypes, storage.StatusSets, storage.Tasks, storage.Fields,
-        storage.Writes, Time, EditLocks));
+        storage.Writes, Time, EditLocks, storage.Series));
 
     public TaskService Tasks => One(() => new TaskService(storage.Tasks, storage.TaskTypes, storage.StatusSets, Time, storage.Series,
         storage.Writes, EditLocks, storage.Fields, storage.FieldEnums, TaskLinks, storage.Statuses));
 
-    public BoardService Boards => One(() => new BoardService(storage.Boards, storage.StatusSets, storage.TaskTypes, storage.Tasks, storage.Fields,
+    public BoardService Boards => One(() => new BoardService(storage.Boards, storage.StatusSets, storage.Statuses, storage.TaskTypes, storage.Tasks, storage.Fields,
         storage.FieldEnums, Tasks, storage.Writes, EditLocks));
 
     public LinkTypeService LinkTypes => One(() => new LinkTypeService(storage.LinkTypes, storage.Tasks, EditLocks));
@@ -104,7 +104,7 @@ public sealed class CoreServices(
     public LinkHealthService LinkHealth => One(() => new LinkHealthService(storage.Tasks, storage.LinkTypes));
 
     public FieldService Fields => One(() => new FieldService(storage.Fields, storage.FieldEnums, storage.TaskTypes, storage.Tasks, storage.Boards,
-        storage.Writes, Time, EditLocks));
+        storage.Writes, Time, EditLocks, storage.Series));
 
     public FieldEnumService FieldEnums => One(() => new FieldEnumService(storage.FieldEnums, storage.Fields, storage.TaskTypes, storage.Tasks,
         storage.Boards, storage.Writes, Time, EditLocks));

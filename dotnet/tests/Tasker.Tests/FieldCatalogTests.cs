@@ -55,7 +55,7 @@ public abstract class FieldCatalogContract : IAsyncLifetime
         var types = scope.Resolve<ITaskTypeStorage>();
         var tasks = scope.Resolve<ITaskStorage>();
         return action(new Services(
-            new FieldService(fields, enums, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks),
+            new FieldService(fields, enums, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
             new FieldEnumService(enums, fields, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks), locks, entityLocks));
     });
 
@@ -197,8 +197,8 @@ public abstract class FieldCatalogContract : IAsyncLifetime
 
         var first = (await With(s => s.Enums.Update(project, e.Id, new UpdateFieldEnum("First", null, e.Version))))!.Value;
         var stale = await Conflict(With(s => s.Enums.Update(project, e.Id, new UpdateFieldEnum("Second", null, e.Version))));
-        Assert.Equal(ConflictCode.Modified, stale.Code);
-        Assert.Equal(ConflictCode.Modified, (await Conflict(With(s => s.Enums.Delete(project, e.Id, e.Version)))).Code);
+        Assert.Equal(ConflictCode.Modified, stale.Kind);
+        Assert.Equal(ConflictCode.Modified, (await Conflict(With(s => s.Enums.Delete(project, e.Id, e.Version)))).Kind);
         Assert.Equal("First", (await With(s => s.Enums.GetById(project, e.Id)))!.Name);
 
         Assert.True(await With(s => s.Enums.Delete(project, e.Id, first.Version)));
@@ -307,8 +307,8 @@ public abstract class FieldCatalogContract : IAsyncLifetime
         Assert.Contains("Version is required", (await Invalid(With(s => s.Fields.Update(project, field.Id, new UpdateField("X", null))))).Message);
         var first = (await With(s => s.Fields.Update(project, field.Id, new UpdateField("First", field.Version))))!;
 
-        Assert.Equal(ConflictCode.Modified, (await Conflict(With(s => s.Fields.Update(project, field.Id, new UpdateField("Second", field.Version))))).Code);
-        Assert.Equal(ConflictCode.Modified, (await Conflict(With(s => s.Fields.Delete(project, field.Id, field.Version)))).Code);
+        Assert.Equal(ConflictCode.Modified, (await Conflict(With(s => s.Fields.Update(project, field.Id, new UpdateField("Second", field.Version))))).Kind);
+        Assert.Equal(ConflictCode.Modified, (await Conflict(With(s => s.Fields.Delete(project, field.Id, field.Version)))).Kind);
         Assert.Equal("First", (await With(s => s.Fields.GetById(project, field.Id)))!.Name);
 
         Assert.True(await With(s => s.Fields.Delete(project, field.Id, first.Version)));
@@ -328,7 +328,7 @@ public abstract class FieldCatalogContract : IAsyncLifetime
         await NewField(project, "Level2", FieldType.Enum, multiple: true, enumId: priority.Id);
 
         var error = await Conflict(With(s => s.Enums.Delete(project, priority.Id, priority.Version)));
-        Assert.Equal(ConflictCode.InUse, error.Code);
+        Assert.Equal(ConflictCode.InUse, error.Kind);
         Assert.Contains("field 'Level'", error.Message);
         Assert.Contains("field 'Level2'", error.Message);
         Assert.NotNull(await With(s => s.Enums.GetById(project, priority.Id)));
@@ -354,8 +354,8 @@ public abstract class FieldCatalogContract : IAsyncLifetime
         var priority = await NewEnum(project);
         var field = await NewField(project, "Note");
 
-        await With(s => s.Locks.Acquire(LockedEntity.Field, field.Id, "Field 'Note'", project));
-        await With(s => s.Locks.Acquire(LockedEntity.Enum, priority.Id, "Enum 'Priority'", project));
+        await With(s => s.Locks.Acquire(LockedEntity.Field, field.Id, ErrorSubject.Field("Note"), project));
+        await With(s => s.Locks.Acquire(LockedEntity.Enum, priority.Id, ErrorSubject.Enum("Priority"), project));
 
         // Свой держатель правит свободно, чужой — нет.
         _editor.Holder = FakeEditor.Anna;

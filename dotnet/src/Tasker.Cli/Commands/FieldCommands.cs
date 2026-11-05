@@ -141,10 +141,9 @@ internal static class FieldCommands
                         ?? throw new CliException($"No field '{field.Id}'");
                     ctx.Print(updated, $"Updated field '{updated.Name}' ({TypeText(updated, await EnumNames(ctx, projectId))}) {updated.Id}");
                 }
-                catch (TaskerConflictException e) when (e.Code == ConflictCode.InUse && choice == null)
+                catch (TaskerConflictException e) when (e.Kind == ConflictCode.InUse && choice == null)
                 {
-                    throw new TaskerConflictException(
-                        $"{e.Message}: repeat with --clear-unconvertible, --several keep-first|clear or --map From=To as needed", e.Code);
+                    throw e.Reworded($"{e.Message}: repeat with --clear-unconvertible, --several keep-first|clear or --map From=To as needed");
                 }
             }),
             Kit.Leaf(g, "delete", "Deletes a field (not used by task types and tasks)", c =>
@@ -290,9 +289,9 @@ internal static class FieldCommands
                     }
                     ctx.Print(result, text);
                 }
-                catch (TaskerConflictException e) when (e.Code == ConflictCode.InUse && removing && choice == null)
+                catch (TaskerConflictException e) when (e.Kind == ConflictCode.InUse && removing && choice == null)
                 {
-                    throw new TaskerConflictException($"{e.Message}: repeat with --drop or --replace-with <value>", e.Code);
+                    throw e.Reworded($"{e.Message}: repeat with --drop or --replace-with <value>");
                 }
             }),
             Kit.Leaf(g, "delete", "Deletes an enum (not used by fields)", c =>

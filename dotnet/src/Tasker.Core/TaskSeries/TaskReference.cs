@@ -36,7 +36,7 @@ public readonly record struct TaskReference(Guid? Id, string? Prefix, int? Numbe
     }
 
     public static TaskReference Parse(string? text, bool allowIdPrefix = false) =>
-        TryParse(text, allowIdPrefix) ?? throw new TaskerValidationException(allowIdPrefix
+        TryParse(text, allowIdPrefix) ?? throw TaskerErrors.Invalid(allowIdPrefix
             ? $"'{text}' is neither a task id (full, or its first {ShortId.Length}+ hex characters) nor a reference like TSK-5"
             : $"'{text}' is neither a task id nor a reference like TSK-5");
 }

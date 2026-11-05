@@ -25,9 +25,9 @@ public class EditLockServiceTests
         var env = new SeriesEnv();
         var id = Guid.NewGuid();
 
-        var first = await env.Locks.Acquire(LockedEntity.Task, id, "Task 'A'");
+        var first = await env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("A"));
         env.Clock.Now += TimeSpan.FromMinutes(1);
-        var renewed = await env.Locks.Acquire(LockedEntity.Task, id, "Task 'A'");
+        var renewed = await env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("A"));
 
         Assert.Equal(Ivan, first.Holder);
         Assert.Equal(first.AcquiredAt, renewed.AcquiredAt);
@@ -39,12 +39,13 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var id = Guid.NewGuid();
-        await env.Locks.Acquire(LockedEntity.Task, id, "Task 'A'");
+        await env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("A"));
 
         env.Editor.Holder = Anna;
-        var error = await Assert.ThrowsAsync<TaskerLockedException>(() => env.Locks.Acquire(LockedEntity.Task, id, "Task 'A'"));
+        var error = await Assert.ThrowsAsync<TaskerLockedException>(() => env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("A")));
 
-        Assert.Equal(ConflictCode.Locked, error.Code);
+        Assert.Equal(ConflictCode.Locked, error.Kind);
+        Assert.Equal("entity.locked", error.Code);
         Assert.Equal(Ivan, error.HeldBy.Holder);
         Assert.Equal("Task 'A' is being edited by Ivan", error.Message);
     }
@@ -54,13 +55,13 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var id = Guid.NewGuid();
-        await env.Locks.Acquire(LockedEntity.Task, id, "Task 'A'");
+        await env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("A"));
 
         env.Clock.Now += EditLockService.Duration + TimeSpan.FromSeconds(1);
         env.Editor.Holder = Anna;
 
         Assert.Null(await env.Locks.Get(LockedEntity.Task, id));
-        Assert.Equal(Anna, (await env.Locks.Acquire(LockedEntity.Task, id, "Task 'A'")).Holder);
+        Assert.Equal(Anna, (await env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("A"))).Holder);
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var id = Guid.NewGuid();
-        await env.Locks.Acquire(LockedEntity.Task, id, "Task 'A'");
+        await env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("A"));
 
         env.Editor.Holder = Anna;
         Assert.False(await env.Locks.Release(LockedEntity.Task, id));
@@ -84,11 +85,11 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var id = Guid.NewGuid();
-        await env.Locks.Acquire(LockedEntity.Task, id, "Task");
+        await env.Locks.Acquire(LockedEntity.Task, id, ErrorSubject.Task("Task"));
 
         env.Editor.Holder = Anna;
-        await env.Locks.Acquire(LockedEntity.Status, id, "Status");
-        await env.Locks.EnsureWritable(LockedEntity.Board, id, "Board");
+        await env.Locks.Acquire(LockedEntity.Status, id, ErrorSubject.Status("Status"));
+        await env.Locks.EnsureWritable(LockedEntity.Board, id, ErrorSubject.Board("Board"));
     }
 
     [Fact]
@@ -96,7 +97,7 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var task = await env.Create("Fix login");
-        await env.Locks.Acquire(LockedEntity.Task, task.Id, "Task");
+        await env.Locks.Acquire(LockedEntity.Task, task.Id, ErrorSubject.Task("Task"));
 
         env.Editor.Holder = Anna;
         var error = await Assert.ThrowsAsync<TaskerLockedException>(() =>
@@ -127,7 +128,7 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var task = await env.Create("A");
-        await env.Locks.Acquire(LockedEntity.Task, task.Id, "Task");
+        await env.Locks.Acquire(LockedEntity.Task, task.Id, ErrorSubject.Task("Task"));
 
         env.Editor.Holder = Anna;
         env.Clock.Now += EditLockService.Duration + TimeSpan.FromSeconds(1);
@@ -141,7 +142,7 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var task = await env.Create("A");
-        await env.Locks.Acquire(LockedEntity.Task, task.Id, "Task");
+        await env.Locks.Acquire(LockedEntity.Task, task.Id, ErrorSubject.Task("Task"));
 
         env.Editor.Holder = Anna;
         await Assert.ThrowsAsync<TaskerLockedException>(() => env.TaskSvc.Delete(env.Project, task.Id, task.Version));
@@ -158,7 +159,7 @@ public class EditLockServiceTests
         var env = new SeriesEnv();
         var series = env.AddSeries("TSK");
         var task = await env.Create("A", series.Id);
-        await env.Locks.Acquire(LockedEntity.Task, task.Id, "Task");
+        await env.Locks.Acquire(LockedEntity.Task, task.Id, ErrorSubject.Task("Task"));
         env.Editor.Holder = Anna;
 
         await Assert.ThrowsAsync<TaskerLockedException>(() => env.TaskSvc.RemoveFromSeries(env.Project, task.Id, series.Id, task.Version));
@@ -172,7 +173,7 @@ public class EditLockServiceTests
     {
         var env = new SeriesEnv();
         var series = env.AddSeries("TSK");
-        await env.Locks.Acquire(LockedEntity.Series, series.Id, "Series");
+        await env.Locks.Acquire(LockedEntity.Series, series.Id, ErrorSubject.Series("Series"));
 
         env.Editor.Holder = Anna;
         await Assert.ThrowsAsync<TaskerLockedException>(() =>

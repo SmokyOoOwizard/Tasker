@@ -69,7 +69,7 @@ public class LinkCoreTests
         var stale = await Assert.ThrowsAsync<TaskerConflictException>(() =>
             env.LinkTypeSvc.Update(env.Project, shown.Id, new UpdateLinkType("Blockers", null, null, shown.Version)));
 
-        Assert.Equal(ConflictCode.Modified, stale.Code);
+        Assert.Equal(ConflictCode.Modified, stale.Kind);
         var saved = await Type(env, "Blocks"); // запись сохранила типы: теперь настоящая версия, тот же id
         Assert.Equal(shown.Id, saved.Id);
         Assert.NotEqual(LinkTypeService.DefaultVersion, saved.Version);
@@ -316,7 +316,7 @@ public class LinkCoreTests
         // Версия указана и устарела (задачу уже изменили) — [modified].
         env.Tasks.Touch(a.Id, t => t with { Title = "A renamed" });
         var stale = await Assert.ThrowsAsync<TaskerConflictException>(() => env.LinkSvc.Add(env.Project, a.Id, blocks.Id, b.Id, a.Version));
-        Assert.Equal(ConflictCode.Modified, stale.Code);
+        Assert.Equal(ConflictCode.Modified, stale.Kind);
         Assert.Empty(env.Get(a.Id).Links);
 
         // Версия не указана, а задачу меняют прямо во время записи — операция перечитывает и повторяет.
@@ -426,7 +426,7 @@ public class LinkCoreTests
         var blocks = await Type(env, "Blocks");
         var a = await env.Create("A");
         var b = await env.Create("B");
-        await env.Locks.Acquire(LockedEntity.Task, a.Id, "Task");
+        await env.Locks.Acquire(LockedEntity.Task, a.Id, ErrorSubject.Task("Task"));
 
         env.Editor.Holder = FakeEditor.Anna;
         await Assert.ThrowsAsync<TaskerLockedException>(() => env.LinkSvc.Add(env.Project, a.Id, blocks.Id, b.Id, null));
@@ -487,7 +487,7 @@ public class LinkCoreTests
         blocks = await Type(env, "Blocks"); // связь сохранила типы по умолчанию: у Blocks теперь настоящая версия
 
         var error = await Assert.ThrowsAsync<TaskerConflictException>(() => env.LinkTypeSvc.Delete(env.Project, blocks.Id, blocks.Version));
-        Assert.Equal(ConflictCode.InUse, error.Code);
+        Assert.Equal(ConflictCode.InUse, error.Kind);
         Assert.Contains("1 task(s)", error.Message);
 
         await env.LinkSvc.Remove(env.Project, a.Id, blocks.Id, b.Id, null);
@@ -500,7 +500,7 @@ public class LinkCoreTests
     {
         var env = new SeriesEnv();
         var blocks = await Type(env, "Blocks");
-        await env.Locks.Acquire(LockedEntity.LinkType, blocks.Id, "Link type");
+        await env.Locks.Acquire(LockedEntity.LinkType, blocks.Id, ErrorSubject.LinkType("Link type"));
 
         env.Editor.Holder = FakeEditor.Anna;
         await Assert.ThrowsAsync<TaskerLockedException>(() => env.LinkTypeSvc.Update(env.Project, blocks.Id, new UpdateLinkType("B2", null, null, blocks.Version)));

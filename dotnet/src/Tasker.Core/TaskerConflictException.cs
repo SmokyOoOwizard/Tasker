@@ -19,7 +19,16 @@ public enum ConflictCode
 /// Операция противоречит текущим данным — например, удаляется статус, который используют задачи,
 /// или изменяется запись, которую уже изменил кто-то другой. В API — 409 с кодом.
 /// </summary>
-public class TaskerConflictException(string message, ConflictCode code = ConflictCode.InUse) : Exception(message)
+public class TaskerConflictException : TaskerException
 {
-    public ConflictCode Code { get; } = code;
+    internal TaskerConflictException(TaskerError error, ConflictCode kind = ConflictCode.InUse) : base(error)
+    {
+        Kind = kind;
+    }
+
+    public ConflictCode Kind { get; }
+
+    public override int Status => 409;
+
+    public TaskerConflictException Reworded(string message) => new(Error.Reworded(message), Kind);
 }

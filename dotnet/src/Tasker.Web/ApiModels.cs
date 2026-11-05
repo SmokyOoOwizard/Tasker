@@ -1,14 +1,15 @@
+using Tasker.Core;
 using Tasker.Core.Agents;
 using Tasker.Daemon;
 using Tasker.Storage.Files.Workspaces;
 
 namespace Tasker.Web;
 
-public sealed record ApiError(string Error);
-
-public sealed record LockHolder(string Name, DateTimeOffset ExpiresAt);
-
-public sealed record ConflictError(string Error, string Code, LockHolder? HeldBy);
+public sealed record ApiError(string Error, string Code, IReadOnlyDictionary<string, object?> Params, IReadOnlyList<ErrorUsage> Usages)
+{
+    public static ApiError From(TaskerException exception) =>
+        new(exception.Error.Message, exception.Error.Code, exception.Error.Params, exception.Error.Usages);
+}
 
 public sealed record AuthRegistration(bool Open);
 

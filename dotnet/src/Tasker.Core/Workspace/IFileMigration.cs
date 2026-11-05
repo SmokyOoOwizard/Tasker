@@ -1,10 +1,11 @@
 namespace Tasker.Core.Workspace;
 
-/// <summary>
-/// Файл .tasker записан более новым Tasker, чем этот: формат (<c>formatVersion</c>) неизвестен, и читать или перезаписывать его нельзя —
-/// можно испортить. Нужно обновить Tasker. В API — 409 с кодом <c>unsupported_format</c>.
-/// </summary>
-public class UnsupportedFormatException(string message) : TaskerConflictException(message, ConflictCode.UnsupportedFormat);
+public class UnsupportedFormatException : TaskerConflictException
+{
+    internal UnsupportedFormatException(TaskerError error) : base(error, ConflictCode.UnsupportedFormat)
+    {
+    }
+}
 
 /// <param name="DryRun">Ничего не записывать, только рассказать, что было бы изменено.</param>
 public record MigrationOptions(bool DryRun = false);

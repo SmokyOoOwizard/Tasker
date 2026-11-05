@@ -52,8 +52,11 @@ public static class GraphReads
             var error = errors[0]!;
             var code = error["extensions"]?["status"]?.GetValue<int>() ?? (status == HttpStatusCode.OK ? 400 : (int)status);
             var rest = new JsonObject { ["error"] = error["message"]!.GetValue<string>() };
-            if (error["extensions"]?["conflict"] is { } conflict)
-                rest["code"] = conflict.GetValue<string>();
+            foreach (var name in new[] { "code", "params", "usages" })
+            {
+                if (error["extensions"]?[name] is { } value)
+                    rest[name] = value.DeepClone();
+            }
             return ((HttpStatusCode)code, rest);
         }
 

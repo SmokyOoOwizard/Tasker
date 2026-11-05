@@ -31,7 +31,7 @@ public record UpdateField(
 /// </summary>
 public class FieldService(
     IFieldStorage fields, IFieldEnumStorage enums, ITaskTypeStorage types, ITaskStorage tasks, IBoardStorage boards, IWriteScope writes, TimeProvider time,
-    Locks.EditLockService locks)
+    Locks.EditLockService locks, ISeriesStorage series)
 {
     private const int CascadeAttempts = 3;
 
@@ -68,7 +68,7 @@ public class FieldService(
         {
             0 => null,
             1 => byName[0],
-            _ => throw new TaskerValidationException(
+            _ => throw TaskerErrors.Invalid(
                 $"Several fields are named '{text}', use the id: {string.Join(", ", byName.Select(x => x.Id))}")
         };
     }
@@ -79,16 +79,16 @@ public class FieldService(
     {
         var name = Validate.FieldName(command.Name);
         if (!Enum.IsDefined(command.Type))
-            throw new TaskerValidationException($"Field type: unknown '{command.Type}'");
+            throw TaskerErrors.Invalid($"Field type: unknown '{command.Type}'");
         if (command.Type != FieldType.Enum && command.EnumId != null)
-            throw new TaskerValidationException("EnumId: only a field of type enum has an enum");
+            throw TaskerErrors.FieldEnumNotAllowed();
         if (command.Type == FieldType.Enum && command.EnumId == null)
-            throw new TaskerValidationException("EnumId: a field of type enum must refer to an enum of the project");
+            throw TaskerErrors.FieldEnumRequired();
 
         return await writes.Exclusive(projectId, async () =>
         {
             if (command.EnumId is { } enumId && await enums.GetById(projectId, enumId, ct) == null)
-                throw new TaskerValidationException($"EnumId: enum not found in the project: {enumId}");
+                throw TaskerErrors.Invalid($"EnumId: enum not found in the project: {enumId}");
             await EnsureNameFree(projectId, name, null, ct);
 
             var field = new FieldDefinition
@@ -127,12 +127,12 @@ public class FieldService(
             : Validate.FieldName(command.Name);
         var type = command.Type ?? field.Type;
         if (!Enum.IsDefined(type))
-            throw new TaskerValidationException($"Field type: unknown '{type}'");
+            throw TaskerErrors.Invalid($"Field type: unknown '{type}'");
         if (type != FieldType.Enum && command.EnumId != null)
-            throw new TaskerValidationException("EnumId: only a field of type enum has an enum");
+            throw TaskerErrors.FieldEnumNotAllowed();
         var enumId = type == FieldType.Enum ? command.EnumId ?? field.EnumId : null;
         if (type == FieldType.Enum && enumId == null)
-            throw new TaskerValidationException("EnumId: a field of type enum must refer to an enum of the project");
+            throw TaskerErrors.FieldEnumRequired();
         var changed = field with { Name = name, Type = type, Multiple = command.Multiple ?? field.Multiple, EnumId = enumId };
 
         // Значения задач меняются: ждём блокировки затрагиваемых задач до секции записи (см. EditLockService.WaitUntilWritable);
@@ -155,7 +155,7 @@ public class FieldService(
             {
                 var usages = new Usages(Subject(field));
                 await AddBoardColumns(projectId, id, usages, ct);
-                usages.ThrowIfAny("changed to another type, enum or multiplicity (remove its conditions from the columns first)");
+                usages.ThrowIfAny(u => TaskerErrors.FieldChangeBlockedByColumns(field.Name, u));
             }
 
             await ApplyValues(projectId, field, changed, command.Choice, ct);
@@ -173,7 +173,7 @@ public class FieldService(
         var oldEnum = field.EnumId is { } oldId ? await enums.GetById(projectId, oldId, ct) : null;
         var newEnum = changed.EnumId is { } newId ? await enums.GetById(projectId, newId, ct) : null;
         if (changed.EnumId != null && newEnum == null)
-            throw new TaskerValidationException($"EnumId: enum not found in the project: {changed.EnumId}");
+            throw TaskerErrors.Invalid($"EnumId: enum not found in the project: {changed.EnumId}");
 
         var conversion = FieldConversion.Create(field, oldEnum, changed, newEnum, choice);
         if (!conversion.ChangesValues)
@@ -233,7 +233,7 @@ public class FieldService(
     {
         var plan = await Plan(projectId, field, changed, choice, ct);
         if (plan.Problems != null)
-            throw new TaskerConflictException(plan.Problems);
+            throw TaskerErrors.FieldConversionBlocked(plan.Problems);
 
         // Массовая правка по общему правилу блокировок: сначала ждём все затрагиваемые задачи, потом пишем.
         await TaskRewrites.ModifyAll(tasks, time, locks, plan.Affected, plan.Change, CascadeAttempts, ct);
@@ -258,11 +258,11 @@ public class FieldService(
             foreach (var type in await types.GetAll(projectId, ct))
             {
                 if (type.Fields.Any(x => x.FieldId == id))
-                    usages.Add($"task type '{type.Name}'");
+                    usages.AddTaskType(type.Name);
             }
-            usages.AddTasks(await tasks.Count(projectId, new TaskFilter { FieldIds = [id] }, ct));
+            await TaskUsageRefs.AddTo(usages, tasks, series, projectId, new TaskFilter { FieldIds = [id] }, ct);
             await AddBoardColumns(projectId, id, usages, ct);
-            usages.ThrowIfAny("deleted");
+            usages.ThrowIfAny(u => TaskerErrors.FieldInUse(field.Name, u));
 
             if (!await fields.Delete(projectId, id, expected, ct))
                 throw Versioning.Modified(Subject(field));
@@ -285,8 +285,8 @@ public class FieldService(
     private async Task EnsureNameFree(Guid projectId, string name, Guid? exceptId, CancellationToken ct)
     {
         if ((await fields.GetAll(projectId, ct)).Any(x => x.Id != exceptId && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
-            throw new TaskerConflictException($"Field '{name}' already exists in the project");
+            throw TaskerErrors.FieldNameTaken(name);
     }
 
-    private static string Subject(FieldDefinition field) => $"Field '{field.Name}'";
+    private static ErrorSubject Subject(FieldDefinition field) => ErrorSubject.Field(field.Name);
 }

@@ -55,7 +55,7 @@ public static class DescriptionPreview
         descriptionLength switch
         {
             null => @default,
-            < Full => throw new TaskerValidationException(
+            < Full => throw TaskerErrors.Invalid(
                 $"descriptionLength: {descriptionLength} - use 0 (no description), N (first N characters) or -1 (full text)"),
             _ => descriptionLength.Value
         };

@@ -40,7 +40,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
         try
         {
             if (await users.Count(ct: ct) > 0)
-                throw new TaskerForbiddenException("Registration is closed: ask an administrator to create an account");
+                throw TaskerErrors.RegistrationClosed();
 
             return await Add(command.Username, command.Email, command.Password, isAdmin: true, ct);
         }
@@ -55,7 +55,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
         if (!options.RequireCredentials)
         {
             if (command.Email != null || command.Password != null || command.IsAdmin)
-                throw new TaskerValidationException("Local users have only a username: email, password and admin are not supported");
+                throw TaskerErrors.Invalid("Local users have only a username: email, password and admin are not supported");
             return await Add(command.Username, null, null, isAdmin: false, ct);
         }
 
@@ -83,14 +83,14 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
             if (command.IsAdmin != null && command.IsAdmin != user.IsAdmin)
             {
                 if (!actor.IsAdmin)
-                    throw new TaskerForbiddenException("Only an administrator can change admin rights");
+                    throw TaskerErrors.AdminRightsAdminOnly();
                 if (user.IsAdmin && !command.IsAdmin.Value)
                     await EnsureNotLastAdmin(user, "lose admin rights", ct);
             }
         }
         else if (command.Email != null || command.IsAdmin != null)
         {
-            throw new TaskerValidationException("Local users have only a username");
+            throw TaskerErrors.Invalid("Local users have only a username");
         }
 
         var username = command.Username == null ? user.Username : Validate.Username(command.Username);
@@ -119,7 +119,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
         if (actor.Id == id || !actor.IsAdmin)
         {
             if (command.CurrentPassword == null || !await CheckPassword(user, command.CurrentPassword, ct))
-                throw new TaskerValidationException("Current password is incorrect");
+                throw TaskerErrors.CurrentPasswordIncorrect();
         }
 
         var credentials = new UserCredentials(Hash(user, Validate.Password(command.NewPassword)), Guid.NewGuid());
@@ -144,7 +144,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
         {
             var actor = await RequireAdmin(ct);
             if (actor.Id == id)
-                throw new TaskerConflictException("You cannot delete your own account");
+                throw TaskerErrors.CannotDeleteSelf();
             if (user.IsAdmin)
                 await EnsureNotLastAdmin(user, "be deleted", ct);
         }
@@ -194,7 +194,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
     {
         return currentUser.Id is { } id && await users.GetById(id, ct) is { } user
             ? user
-            : throw new TaskerForbiddenException("Sign in required");
+            : throw TaskerErrors.SignInRequired();
     }
 
     /// <summary>Текущий человек сервера — для действий, которые агенту недоступны.</summary>
@@ -202,7 +202,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
     {
         var actor = await GetCurrent(ct);
         if (actor.IsAgent)
-            throw new TaskerForbiddenException("Agents cannot do this: only a person can");
+            throw TaskerErrors.PersonOnly();
         return actor;
     }
 
@@ -255,16 +255,16 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
     internal async Task EnsureUnique(string username, string? email, Guid? except, CancellationToken ct)
     {
         if (await users.GetByUsername(username, ct) is { } byName && byName.Id != except)
-            throw new TaskerConflictException($"Username '{username}' is already taken");
+            throw TaskerErrors.UsernameTaken(username);
         if (email != null && await users.GetByEmail(email, ct) is { } byEmail && byEmail.Id != except)
-            throw new TaskerConflictException($"Email '{email}' is already taken");
+            throw TaskerErrors.EmailTaken(email);
     }
 
     private async Task EnsureNotLastAdmin(User user, string action, CancellationToken ct)
     {
         var admins = await users.Count(new UserFilter { IsAdmin = true }, ct);
         if (admins <= 1)
-            throw new TaskerConflictException($"'{user.Username}' is the last administrator and cannot {action}");
+            throw TaskerErrors.LastAdmin(user.Username, action);
     }
 
     private async Task<bool> CheckPassword(User user, string password, CancellationToken ct) =>
@@ -275,7 +275,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
     {
         var actor = await GetCurrentHuman(ct);
         if (!actor.IsAdmin)
-            throw new TaskerForbiddenException("Only an administrator can do this");
+            throw TaskerErrors.AdminOnly();
         return actor;
     }
 
@@ -283,23 +283,23 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
     {
         var actor = await GetCurrentHuman(ct);
         if (actor.Id != id && !actor.IsAdmin)
-            throw new TaskerForbiddenException("You can change only your own account");
+            throw TaskerErrors.OwnAccountOnly();
         return actor;
     }
 
     private static void EnsureHuman(User user)
     {
         if (user.IsAgent)
-            throw new TaskerValidationException($"'{user.Username}' is an agent: manage it through /api/agents");
+            throw TaskerErrors.Invalid($"'{user.Username}' is an agent: manage it through /api/agents");
     }
 
     private void RequireServer()
     {
         if (!options.RequireCredentials)
-            throw new TaskerValidationException("Sign-in is available only on the server: local users have no passwords");
+            throw TaskerErrors.Invalid("Sign-in is available only on the server: local users have no passwords");
     }
 
     private static string Hash(User user, string password) => Hasher.HashPassword(user, password);
 
-    private static string Subject(User user) => $"User '{user.Username}'";
+    private static ErrorSubject Subject(User user) => ErrorSubject.User(user.Username);
 }

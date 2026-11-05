@@ -66,7 +66,7 @@ internal sealed class FieldConversion
         FieldDefinition old, FieldEnum? oldEnum, FieldDefinition updated, FieldEnum? newEnum, FieldChangeChoice? choice)
     {
         if (choice?.Several is { } several && !Enum.IsDefined(several))
-            throw new TaskerValidationException($"Choice.Several: unknown value '{several}'");
+            throw TaskerErrors.Invalid($"Choice.Several: unknown value '{several}'");
         EnsureAllowed(old.Type, updated.Type);
 
         var conversion = new FieldConversion(old, oldEnum, updated, newEnum, choice);
@@ -80,30 +80,28 @@ internal sealed class FieldConversion
         var allowed = from == to || to == FieldType.String || (from == FieldType.Int && to == FieldType.Float) ||
                       (from == FieldType.String && to is FieldType.Int or FieldType.Float or FieldType.Bool or FieldType.Date or FieldType.Enum);
         if (!allowed)
-            throw new TaskerValidationException(
-                $"Type: cannot change a field from {from.ToString().ToLowerInvariant()} to {to.ToString().ToLowerInvariant()} directly " +
-                "(it would lose values): change it to string first, then to the type you need");
+            throw TaskerErrors.FieldTypeChangeNotAllowed(from.ToString().ToLowerInvariant(), to.ToString().ToLowerInvariant());
     }
 
     private void ReadMapping(FieldValueMapping[] mapping)
     {
         if (_new.Type != FieldType.Enum)
-            throw new TaskerValidationException("Choice.Mapping: only when the new type is enum");
+            throw TaskerErrors.Invalid("Choice.Mapping: only when the new type is enum");
 
         foreach (var item in mapping)
         {
             var from = item?.From?.Trim();
             if (string.IsNullOrEmpty(from))
-                throw new TaskerValidationException("Choice.Mapping: 'from' must not be empty");
+                throw TaskerErrors.Invalid("Choice.Mapping: 'from' must not be empty");
 
             var target = Find(_newEnum, item!.To?.Trim())?.Id
-                ?? throw new TaskerValidationException($"Choice.Mapping: '{item.To}' is not a value of enum '{_newEnum?.Name}'");
+                ?? throw TaskerErrors.Invalid($"Choice.Mapping: '{item.To}' is not a value of enum '{_newEnum?.Name}'");
             var key = _old.Type == FieldType.Enum
-                ? (Find(_oldEnum, from) ?? throw new TaskerValidationException($"Choice.Mapping: '{from}' is not a value of enum '{_oldEnum?.Name}'"))
+                ? (Find(_oldEnum, from) ?? throw TaskerErrors.Invalid($"Choice.Mapping: '{from}' is not a value of enum '{_oldEnum?.Name}'"))
                     .Id.ToString("D")
                 : from;
             if (!_mapping.TryAdd(key, target))
-                throw new TaskerValidationException($"Choice.Mapping: '{from}' is mapped twice");
+                throw TaskerErrors.Invalid($"Choice.Mapping: '{from}' is mapped twice");
         }
     }
 

@@ -1,3 +1,4 @@
+using Tasker.Core;
 using HotChocolate;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
@@ -19,7 +20,7 @@ internal sealed class SubscriptionType : ObjectType
             {
                 x.RequireWorkspace("workspaceChanges");
                 var workspace = x.Service<IHttpContextAccessor>().HttpContext?.Features.Get<WorkspaceFeature>()
-                    ?? throw new Tasker.Core.TaskerNotFoundException("workspaceChanges needs a workspace address: /w/{folder}/api/graphql");
+                    ?? throw Tasker.Core.TaskerErrors.WorkspaceNotInAddress("workspaceChanges needs a workspace address: /w/{folder}/api/graphql");
                 return x.Service<WorkspaceEvents>().Watch(workspace.Closing, x.RequestAborted);
             });
     }

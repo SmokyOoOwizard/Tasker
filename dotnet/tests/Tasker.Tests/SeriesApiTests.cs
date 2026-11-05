@@ -183,7 +183,7 @@ public class SeriesApiTests
         var (status, body) = await api.Post(api.P("/series"), new { name = "Again", prefix = "TSK" });
 
         Assert.Equal(HttpStatusCode.Conflict, status);
-        Assert.Equal("in_use", body!["code"]!.GetValue<string>());
+        Assert.Equal("series.prefixTaken", body!["code"]!.GetValue<string>());
     }
 
     [Theory, MemberData(nameof(Storages))]
@@ -230,7 +230,7 @@ public class SeriesApiTests
         // Занятый префикс — 409, версия и содержимое не тронуты.
         var (conflict, body) = await api.Patch(api.P($"/series/{Id(series)}"), new { prefix = "BUG", version = Version(named) });
         Assert.Equal(HttpStatusCode.Conflict, conflict);
-        Assert.Equal("in_use", body!["code"]!.GetValue<string>());
+        Assert.Equal("series.prefixTaken", body!["code"]!.GetValue<string>());
         Assert.Equal("NEW", (await api.Get(api.P($"/series/{Id(series)}"))).Body!["prefix"]!.GetValue<string>());
         Assert.NotNull(other);
     }
@@ -246,9 +246,9 @@ public class SeriesApiTests
         var delete = await api.Delete(api.P($"/series/{Id(series)}?version={Uri.EscapeDataString(Version(series))}"));
 
         Assert.Equal(HttpStatusCode.Conflict, patch.Status);
-        Assert.Equal("modified", patch.Body!["code"]!.GetValue<string>());
+        Assert.Equal("entity.modified", patch.Body!["code"]!.GetValue<string>());
         Assert.Equal(HttpStatusCode.Conflict, delete.Status);
-        Assert.Equal("modified", delete.Body!["code"]!.GetValue<string>());
+        Assert.Equal("entity.modified", delete.Body!["code"]!.GetValue<string>());
         Assert.Equal("Changed", (await api.Get(api.P($"/series/{Id(series)}"))).Body!["name"]!.GetValue<string>());
     }
 
@@ -314,7 +314,7 @@ public class SeriesApiTests
 
         var stale = await api.Post(api.P($"/tasks/{Id(task)}/series"), new { seriesId = Id(tsk), version = "stale" });
         Assert.Equal(HttpStatusCode.Conflict, stale.Status);
-        Assert.Equal("modified", stale.Body!["code"]!.GetValue<string>());
+        Assert.Equal("entity.modified", stale.Body!["code"]!.GetValue<string>());
         Assert.Empty((await api.GetTask(task))["seriesNumbers"]!.AsArray());
     }
 

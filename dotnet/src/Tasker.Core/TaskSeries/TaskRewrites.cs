@@ -35,7 +35,7 @@ internal static class TaskRewrites
                 await Task.Delay(Random.Shared.Next(1, 6 << Math.Min(attempt, 5)), ct);
         }
 
-        throw Versioning.Modified($"Task '{task.Title}'");
+        throw Versioning.Modified(ErrorSubject.Task(task.Title));
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ internal static class TaskRewrites
 
     /// <summary>Ждёт снятия чужих блокировок задач (без записи): для проверки «до первой записи». Ожидание — <see cref="Locks.EditLockService.CascadeTimeout"/>, если не задано.</summary>
     public static Task WaitForLocks(Locks.EditLockService locks, IEnumerable<TaskItem> affected, CancellationToken ct, TimeSpan? timeout = null) =>
-        locks.WaitUntilWritable(affected.Select(x => (Locks.LockedEntity.Task, x.Id, $"Task '{x.Title}'")).ToArray(), timeout, ct);
+        locks.WaitUntilWritable(affected.Select(x => (Locks.LockedEntity.Task, x.Id, ErrorSubject.Task(x.Title))).ToArray(), timeout, ct);
 
     public static IReadOnlyList<TaskSeriesNumber> Without(TaskItem task, Func<TaskSeriesNumber, bool> remove) =>
         task.SeriesNumbers.Where(x => !remove(x)).ToArray();

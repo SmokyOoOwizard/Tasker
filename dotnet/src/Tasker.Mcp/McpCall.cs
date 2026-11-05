@@ -34,7 +34,7 @@ internal static class McpCall
         }
         catch (TaskerConflictException e)
         {
-            var code = e.Code switch
+            var code = e.Kind switch
             {
                 ConflictCode.Modified => "modified",
                 ConflictCode.Locked => "locked",

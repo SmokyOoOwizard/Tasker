@@ -79,7 +79,7 @@ internal static class BoardFile
                         f.Field,
                         Enum.TryParse<FieldOperator>(f.Op, ignoreCase: true, out var op) && Enum.IsDefined(op)
                             ? op
-                            : throw new UnsupportedFormatException($"{Path.GetFileName(path)}: unknown field filter operator '{f.Op}': update Tasker"),
+                            : throw Tasker.Core.TaskerErrors.UnsupportedFormat(Path.GetFileName(path), $"{Path.GetFileName(path)}: unknown field filter operator '{f.Op}': update Tasker"),
                         f.Value))
                     .ToArray() ?? []
             })

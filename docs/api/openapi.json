@@ -98,7 +98,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -199,7 +199,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -288,7 +288,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -389,7 +389,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -480,7 +480,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -558,7 +558,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -624,7 +624,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -697,7 +697,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -770,7 +770,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -940,7 +940,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1041,7 +1041,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1130,7 +1130,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1231,7 +1231,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1341,7 +1341,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1439,7 +1439,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1558,7 +1558,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1658,7 +1658,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1749,7 +1749,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1850,7 +1850,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1980,7 +1980,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2078,7 +2078,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2178,7 +2178,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2269,7 +2269,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2370,7 +2370,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2480,7 +2480,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2578,7 +2578,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2678,7 +2678,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2769,7 +2769,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2870,7 +2870,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2980,7 +2980,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3078,7 +3078,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3178,7 +3178,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3269,7 +3269,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3360,7 +3360,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3442,7 +3442,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3543,7 +3543,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3634,7 +3634,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3733,7 +3733,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3843,7 +3843,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3941,7 +3941,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4041,7 +4041,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4132,7 +4132,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4242,7 +4242,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4343,7 +4343,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4453,7 +4453,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4551,7 +4551,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4651,7 +4651,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4742,7 +4742,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4843,7 +4843,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -4953,7 +4953,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5051,7 +5051,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5151,7 +5151,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5242,7 +5242,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5343,7 +5343,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5473,7 +5473,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5571,7 +5571,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5671,7 +5671,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5762,7 +5762,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5863,7 +5863,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -5973,7 +5973,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6071,7 +6071,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6181,7 +6181,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6304,7 +6304,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6404,7 +6404,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6495,7 +6495,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6605,7 +6605,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6721,7 +6721,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6840,7 +6840,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -6920,7 +6920,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -7021,7 +7021,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -7110,7 +7110,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -7204,7 +7204,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -7650,12 +7650,118 @@
       },
       "ApiError": {
         "required": [
-          "error"
+          "error",
+          "code",
+          "params",
+          "usages"
         ],
         "type": "object",
         "properties": {
           "error": {
-            "type": "string"
+            "type": "string",
+            "description": "English text, the fallback when a client has no translation for the code."
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "agent.expiresAtPast",
+              "auth.invalidCredentials",
+              "auth.localOnly",
+              "auth.required",
+              "auth.sessionExpired",
+              "board.columnOverlap",
+              "board.conditionNoValue",
+              "board.conditionNotApplicable",
+              "board.conditionValueRequired",
+              "board.dropSetNotOnBoard",
+              "board.dropStatusNotInColumn",
+              "board.dropStatusNotInSet",
+              "board.noColumns",
+              "board.noDropRule",
+              "board.noStatusSets",
+              "board.taskNotMatchColumn",
+              "board.taskTypeNotOnBoard",
+              "entity.locked",
+              "entity.modified",
+              "entity.notFound",
+              "enum.columnsCollide",
+              "enum.inUse",
+              "enum.nameTaken",
+              "enum.noValues",
+              "enum.valueRepeated",
+              "enum.valuesInUse",
+              "field.changeBlockedByColumns",
+              "field.conversionBlocked",
+              "field.enumNotAllowed",
+              "field.enumRequired",
+              "field.inUse",
+              "field.nameTaken",
+              "field.typeChangeNotAllowed",
+              "fieldValue.empty",
+              "fieldValue.invalid",
+              "fieldValue.notInEnum",
+              "fieldValue.repeated",
+              "fieldValue.single",
+              "fieldValue.tooLong",
+              "format.unsupported",
+              "internal.unexpected",
+              "link.cycle",
+              "link.self",
+              "linkType.hierarchicalNoCycles",
+              "linkType.hierarchicalSameNames",
+              "linkType.inUse",
+              "linkType.nameTaken",
+              "project.agentOfAnotherUser",
+              "project.lastPerson",
+              "project.notFound",
+              "series.planChanged",
+              "series.prefixInvalid",
+              "series.prefixTaken",
+              "status.inUse",
+              "statusSet.inUse",
+              "statusSet.noStatuses",
+              "statusSet.statusInUse",
+              "task.fieldNameTaken",
+              "task.numberInvalid",
+              "task.numberTaken",
+              "task.requiredFields",
+              "taskType.fieldsHaveValues",
+              "taskType.inUse",
+              "taskType.statusesNotInSet",
+              "user.adminOnly",
+              "user.adminRightsAdminOnly",
+              "user.cannotDeleteSelf",
+              "user.currentPasswordIncorrect",
+              "user.emailTaken",
+              "user.lastAdmin",
+              "user.ownAccountOnly",
+              "user.personOnly",
+              "user.registrationClosed",
+              "user.signInRequired",
+              "user.usernameOrEmailTaken",
+              "user.usernameTaken",
+              "validation.color",
+              "validation.email",
+              "validation.fieldNameChars",
+              "validation.invalid",
+              "validation.password",
+              "validation.required",
+              "validation.statusIcon",
+              "validation.tooLong",
+              "validation.username",
+              "workspace.notInAddress",
+              "workspace.notOpen"
+            ],
+            "description": "Stable refusal code, see docs/api/error-codes.json for its parameters. The same code, params and usages come in GraphQL errors[].extensions."
+          },
+          "params": {
+            "type": "object"
+          },
+          "usages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorUsage"
+            }
           }
         }
       },
@@ -7837,36 +7943,6 @@
           },
           "value": {
             "type": "string",
-            "nullable": true
-          }
-        }
-      },
-      "ConflictError": {
-        "required": [
-          "error",
-          "code"
-        ],
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string",
-            "enum": [
-              "in_use",
-              "modified",
-              "locked",
-              "unsupported_format"
-            ],
-            "description": "in_use: the entity is used elsewhere; modified: someone changed it since the client read it; locked: someone is editing it (heldBy); unsupported_format: the data was written by a newer version of Tasker."
-          },
-          "heldBy": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/LockHolder"
-              }
-            ],
             "nullable": true
           }
         }
@@ -8301,6 +8377,51 @@
           }
         }
       },
+      "ErrorUsage": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "tasks",
+              "links",
+              "ownFields",
+              "board",
+              "boardColumn",
+              "taskType",
+              "statusSet",
+              "field"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "board": {
+            "type": "string",
+            "nullable": true
+          },
+          "column": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "FieldChangeChoice": {
         "type": "object",
         "properties": {
@@ -8642,22 +8763,6 @@
             "items": {
               "$ref": "#/components/schemas/TaskSeriesNumber"
             }
-          }
-        }
-      },
-      "LockHolder": {
-        "required": [
-          "name",
-          "expiresAt"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },
