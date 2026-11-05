@@ -4,7 +4,7 @@ title: 'Эпик: приложение Tasker для macOS (SwiftUI + AppKit)'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-03T21:31:22.8523980+00:00
-updatedAt: 2026-11-05T10:03:05.2544390+00:00
+updatedAt: 2026-11-05T10:16:21.0378760+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 178
@@ -71,6 +71,16 @@ links:
   taskId: 4b8d882b-eabc-451b-9820-d68e0d6e9c3a
 - typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
   taskId: 495f9e5a-6b0f-43a0-9d54-10ebd6717783
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 1e695b1e-8ad1-4e86-884e-94cfecff6f9d
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 0a230ac9-5c26-4649-8f62-191cfa78901e
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: b15003b2-7a6f-4aa1-ac50-95daf9a70bdb
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 3c199de9-de9b-4a04-b488-d4fc29560eb6
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 8bf987b4-2fc0-4986-8865-dd5609349b32
 description: |-
   Цель
   Нативное приложение Tasker для macOS на SwiftUI + AppKit: максимально быстрое и отзывчивое, по дизайну — docs/mockups/web/main-design.html. Решение и архитектура обсуждались в TSK-176; Windows (WinUI 3) — позже, отдельным эпиком.
