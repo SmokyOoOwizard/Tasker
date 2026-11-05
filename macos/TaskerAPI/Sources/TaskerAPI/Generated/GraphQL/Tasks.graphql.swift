@@ -975,6 +975,7 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
             id
             name
             color
+            icon
           }
         }
         statusSets(limit: 200) {
@@ -1075,7 +1076,8 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                     GraphQLField("__typename"),
                     GraphQLField("id"),
                     GraphQLField("name"),
-                    GraphQLField("color")
+                    GraphQLField("color"),
+                    GraphQLField("icon")
                 ])
             ]),
             GraphQLField("statusSets", arguments: ["limit": .value(.int(200))], selections: [
@@ -1221,11 +1223,13 @@ public struct TaskListVocabularyQuery: GraphQLQuery {
                     public var id: UUID
                     public var name: String
                     public var color: String
+                    public var icon: String
 
-                    public init(id: UUID, name: String, color: String) {
+                    public init(id: UUID, name: String, color: String, icon: String) {
                         self.id = id
                         self.name = name
                         self.color = color
+                        self.icon = icon
                     }
                 }
             }

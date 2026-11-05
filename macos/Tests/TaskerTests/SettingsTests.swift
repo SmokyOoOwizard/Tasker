@@ -9,6 +9,8 @@ final class StubSettingsSource: SettingsSource, @unchecked Sendable {
     var modeValue = ProjectMode.local
     var catalogValue: SettingsCatalog
     var tasksByFilter: [String: SettingsTaskPage] = [:]
+    var tasksByStatus: [UUID: SettingsTaskPage] = [:]
+    var tasksByType: [String: SettingsTaskPage] = [:]
     var statsValue: [UUID: SettingsSeriesStat] = [:]
     var membersValue: [SettingsMember] = []
     var lockFailure: TaskerAPIError?
@@ -16,6 +18,10 @@ final class StubSettingsSource: SettingsSource, @unchecked Sendable {
     var updateFailure: TaskerAPIError?
     private(set) var lastChange: FieldChangeRequest?
     private(set) var lastRemoval: EnumRemovalChoice?
+    private(set) var lastTypeRemoval: RemovedFieldChoice?
+    private(set) var lastTypeFields: [SettingsTypeField] = []
+    private(set) var lastSetIds: [UUID] = []
+    private(set) var lastStatusIcon = ""
 
     init(catalog: SettingsCatalog) { catalogValue = catalog }
 
@@ -25,8 +31,12 @@ final class StubSettingsSource: SettingsSource, @unchecked Sendable {
     func mode() async -> ProjectMode { modeValue }
     func catalog(project: UUID) async throws -> SettingsCatalog { catalogValue }
 
-    func tasks(project: UUID, filter: [String], cap: Int) async throws -> SettingsTaskPage {
-        tasksByFilter[filter.joined(separator: "|")] ?? SettingsTaskPage(total: 0, items: [])
+    func tasks(project: UUID, filter: [String], statusIds: [UUID]?, typeIds: [UUID]?, cap: Int) async throws -> SettingsTaskPage {
+        if let status = statusIds?.first { return tasksByStatus[status] ?? SettingsTaskPage(total: 0, items: []) }
+        if let type = typeIds?.first {
+            return tasksByType[type.uuidString + "|" + filter.joined(separator: "|")] ?? SettingsTaskPage(total: 0, items: [])
+        }
+        return tasksByFilter[filter.joined(separator: "|")] ?? SettingsTaskPage(total: 0, items: [])
     }
 
     func seriesStats(project: UUID, series: [UUID]) async throws -> [UUID: SettingsSeriesStat] { statsValue }
@@ -62,6 +72,54 @@ final class StubSettingsSource: SettingsSource, @unchecked Sendable {
     func deleteLinkType(project: UUID, item: SettingsLinkTypeItem) async throws {
         if let deleteFailure { throw deleteFailure }
         record("deleteLinkType")
+    }
+
+    func createStatus(project: UUID, name: String, color: String, description: String, icon: String) async throws {
+        lock.withLock { lastStatusIcon = icon }
+        record("createStatus:\(name)")
+    }
+
+    func updateStatus(project: UUID, item: SettingsStatusItem, name: String, color: String, description: String, icon: String) async throws {
+        if let updateFailure { throw updateFailure }
+        lock.withLock { lastStatusIcon = icon }
+        record("updateStatus:\(name)")
+    }
+
+    func deleteStatus(project: UUID, item: SettingsStatusItem) async throws {
+        if let deleteFailure { throw deleteFailure }
+        record("deleteStatus")
+    }
+
+    func createStatusSet(project: UUID, name: String, statusIds: [UUID]) async throws { record("createStatusSet:\(name)") }
+
+    func updateStatusSet(project: UUID, item: SettingsStatusSetItem, name: String, statusIds: [UUID]) async throws {
+        if let updateFailure { throw updateFailure }
+        lock.withLock { lastSetIds = statusIds }
+        record("updateStatusSet:\(name)")
+    }
+
+    func deleteStatusSet(project: UUID, item: SettingsStatusSetItem) async throws {
+        if let deleteFailure { throw deleteFailure }
+        record("deleteStatusSet")
+    }
+
+    func createTaskType(project: UUID, name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField]) async throws { record("createTaskType:\(name)") }
+
+    func updateTaskType(
+        project: UUID, item: SettingsTypeItem, name: String, description: String, statusSetId: UUID, fields: [SettingsTypeField], removal: RemovedFieldChoice?
+    ) async throws -> Int {
+        if let updateFailure { throw updateFailure }
+        lock.withLock {
+            lastTypeRemoval = removal
+            lastTypeFields = fields
+        }
+        record("updateTaskType:\(name)")
+        return 3
+    }
+
+    func deleteTaskType(project: UUID, item: SettingsTypeItem) async throws {
+        if let deleteFailure { throw deleteFailure }
+        record("deleteTaskType")
     }
 
     func createSeries(project: UUID, name: String, prefix: String) async throws { record("createSeries:\(prefix)") }
@@ -248,7 +306,7 @@ struct SettingsTests {
 
     @Test func fieldUsageListsTypesTasksAndBoards() async {
         var data = catalog()
-        data.types = [SettingsTypeItem(id: UUID(), name: "Баг", fieldIds: [fieldId])]
+        data.types = [SettingsTypeItem(id: UUID(), name: "Баг", fields: [SettingsTypeField(fieldId: fieldId, required: false)])]
         let source = StubSettingsSource(catalog: data)
         source.tasksByFilter["Level:set"] = SettingsTaskPage(
             total: 1, items: [SettingsTaskBrief(id: UUID(), title: "Сломано", numbers: [TaskSeriesRef(seriesId: seriesId, number: 7)], fields: [fieldId: ["x"]])])
@@ -308,6 +366,171 @@ struct SettingsTests {
         #expect(!source.calls.contains("removeMember"))
     }
 
+    private func workflow() -> (status: SettingsStatusItem, other: SettingsStatusItem, set: SettingsStatusSetItem, type: SettingsTypeItem, data: SettingsCatalog) {
+        let status = SettingsStatusItem(id: UUID(), name: "Новая", color: "#8993a4", description: "", icon: "", version: "s1")
+        let other = SettingsStatusItem(id: UUID(), name: "Готово", color: "#36b37e", description: "", icon: "flag", version: "s2")
+        let set = SettingsStatusSetItem(id: UUID(), name: "Основной", statusIds: [status.id, other.id], version: "ss1")
+        let type = SettingsTypeItem(
+            id: UUID(), name: "Баг", description: "", statusSetId: set.id,
+            fields: [SettingsTypeField(fieldId: fieldId, required: true)], version: "t1")
+        var data = catalog()
+        data.statuses = [status, other]
+        data.statusSets = [set]
+        data.types = [type]
+        data.boards = [SettingsBoardItem(
+            name: "Main", statusSetIds: [set.id], columns: [SettingsBoardColumnItem(name: "Todo", statusIds: [status.id], dropStatusIds: [])])]
+        return (status, other, set, type, data)
+    }
+
+    @Test func statusUsageNamesTasksSetsAndBoardColumns() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        source.tasksByStatus[flow.status.id] = SettingsTaskPage(
+            total: 2, items: [SettingsTaskBrief(id: UUID(), title: "A", numbers: [TaskSeriesRef(seriesId: seriesId, number: 3)], fields: [:])])
+        let value = model(source)
+        await value.reload()
+        let uses = await value.statusUsage(of: flow.status)
+        #expect(uses.contains { $0.kind == .tasks(2) && $0.name == "TSK-3" })
+        #expect(uses.contains { $0.kind == .statusSet && $0.name == "Основной" })
+        #expect(uses.contains { $0.kind == .board("Main") && $0.name == "Todo" })
+        #expect(await value.statusUsage(of: SettingsStatusItem(id: UUID(), name: "x", color: "#000000", description: "", icon: "", version: "v")).isEmpty)
+    }
+
+    @Test func statusInUseRefusalIsRecognisedAndNothingIsDeleted() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        source.deleteFailure = .conflict(Conflict(kind: .inUse, message: "Status 'Новая' is used by 4 task(s)"))
+        let value = model(source)
+        guard case .failure(let error) = await value.deleteStatus(flow.status) else {
+            Issue.record("deletion should be refused")
+            return
+        }
+        #expect(SettingsModel.isInUse(error)?.contains("4 task") == true)
+        #expect(!source.calls.contains("deleteStatus"))
+    }
+
+    @Test func statusIconAndColourAreSent() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        let value = model(source)
+        await value.reload()
+        #expect(await value.updateStatus(flow.status, name: "Новая", color: "#2684ff", description: "d", icon: "star") == nil)
+        #expect(source.lastStatusIcon == "star")
+        #expect(SettingsRules.validColor("#2684ff"))
+        #expect(!SettingsRules.validColor("2684ff"))
+        #expect(!SettingsRules.validColor("#26ff"))
+        #expect(!SettingsRules.validColor("#gggggg"))
+    }
+
+    @Test func chosenIconWinsOverPosition() {
+        let flow = workflow()
+        #expect(flow.data.glyph(of: flow.status) == .named(.dashed))
+        #expect(flow.data.glyph(of: flow.other) == .named(.flag))
+        var plain = flow.other
+        plain.icon = ""
+        #expect(flow.data.glyph(of: plain, in: flow.set) == .named(.done))
+        var vocabulary = TaskListVocabulary()
+        vocabulary.statuses = [TaskListVocabulary.Status(id: flow.status.id, name: "a", color: "#000000", icon: "star")]
+        #expect(vocabulary.glyph(status: flow.status.id) == .named(.star))
+    }
+
+    @Test func statusSetOrderIsKeptAndUsageListsTypesAndBoards() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        let value = model(source)
+        await value.reload()
+        #expect(await value.updateStatusSet(flow.set, name: "Основной", statusIds: [flow.other.id, flow.status.id]) == nil)
+        #expect(source.lastSetIds == [flow.other.id, flow.status.id])
+        let uses = value.statusSetUsage(of: flow.set)
+        #expect(uses.contains { $0.kind == .type && $0.name == "Баг" })
+        #expect(uses.contains { $0.kind == .boardName && $0.name == "Main" })
+    }
+
+    @Test func removalFromSetIsCheckedAgainstTheTypesOfThatSet() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        source.tasksByStatus[flow.status.id] = SettingsTaskPage(total: 2, items: [])
+        let value = model(source)
+        await value.reload()
+        #expect(await value.statusRemovalUsage(from: flow.set, lost: []).isEmpty)
+        let uses = await value.statusRemovalUsage(from: flow.set, lost: [flow.status.id])
+        #expect(uses.first?.kind == .tasks(2))
+        var noTypes = flow.data
+        noTypes.types = []
+        let bare = StubSettingsSource(catalog: noTypes)
+        bare.tasksByStatus[flow.status.id] = SettingsTaskPage(total: 2, items: [])
+        let other = model(bare)
+        await other.reload()
+        #expect(await other.statusRemovalUsage(from: flow.set, lost: [flow.status.id]).isEmpty)
+        #expect(SettingsRules.lostStatuses(old: [flow.status.id, flow.other.id], new: [flow.other.id]) == [flow.status.id])
+    }
+
+    @Test func statusSetRemovalRefusalKeepsServerText() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        source.updateFailure = .conflict(Conflict(kind: .inUse, message: "Status 'Новая' is used by 2 task(s) and cannot be removed"))
+        let value = model(source)
+        await value.reload()
+        let message = await value.updateStatusSet(flow.set, name: "Основной", statusIds: [flow.other.id])
+        #expect(message?.contains("2 task") == true)
+    }
+
+    @Test func removedTypeFieldsNeedChoiceOnlyWhenTasksHoldValues() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        let value = model(source)
+        await value.reload()
+        let removed = SettingsRules.removedFields(old: flow.type.fields, new: [])
+        #expect(removed == [fieldId])
+        #expect(await value.holdersOfRemovedFields(in: flow.type, fields: removed)?.tasks == 0)
+        source.tasksByType[flow.type.id.uuidString + "|Level:set"] = SettingsTaskPage(
+            total: 2, items: [SettingsTaskBrief(id: UUID(), title: "A", numbers: [], fields: [:]), SettingsTaskBrief(id: UUID(), title: "B", numbers: [], fields: [:])])
+        let holders = await value.holdersOfRemovedFields(in: flow.type, fields: removed)
+        #expect(holders?.tasks == 2)
+        #expect(holders?.names == ["Level"])
+    }
+
+    @Test func typeUpdateSendsBothRemovalChoices() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        let value = model(source)
+        await value.reload()
+        for choice in [RemovedFieldChoice.keep, .clear] {
+            #expect(await value.updateTaskType(flow.type, name: "Баг", description: "", statusSetId: flow.set.id, fields: [], removal: choice) == nil)
+            #expect(source.lastTypeRemoval == choice)
+        }
+        #expect(source.lastTypeFields.isEmpty)
+    }
+
+    @Test func typeUpdateConflictAndLockAreReported() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        source.updateFailure = .conflict(Conflict(kind: .modified, message: "changed"))
+        let value = model(source)
+        await value.reload()
+        let message = await value.updateTaskType(flow.type, name: "Баг", description: "", statusSetId: flow.set.id, fields: flow.type.fields, removal: nil)
+        #expect(message == ru.string(.settingsModified))
+        source.lockFailure = .conflict(Conflict(kind: .locked, message: "busy", heldBy: LockHolder(name: "Анна", expiresAt: nil)))
+        #expect(await value.hold(.taskType(flow.type.id))?.contains("Анна") == true)
+        #expect(await value.hold(.status(flow.status.id))?.contains("Анна") == true)
+        #expect(await value.hold(.statusSet(flow.set.id))?.contains("Анна") == true)
+    }
+
+    @Test func typeInUseRefusalListsTasks() async {
+        let flow = workflow()
+        let source = StubSettingsSource(catalog: flow.data)
+        source.tasksByType[flow.type.id.uuidString + "|"] = SettingsTaskPage(
+            total: 5, items: [SettingsTaskBrief(id: UUID(), title: "A", numbers: [TaskSeriesRef(seriesId: seriesId, number: 1)], fields: [:])])
+        let value = model(source)
+        await value.reload()
+        let uses = await value.taskTypeUsage(of: flow.type)
+        #expect(uses.first?.kind == .tasks(5))
+    }
+
+    @Test func newPagesComeFirstAndArePaletteReachable() {
+        #expect(Array(SettingsPage.pages(in: .local).prefix(3)) == [.statuses, .statusSets, .types])
+    }
+
     @Test func paletteOffersEverySettingsPage() {
         let l = Localizer(choice: .en)
         var context = PaletteContext(
@@ -338,6 +561,11 @@ struct SettingsStringsTests {
             #expect(!l.string(.settingsRemovalBody, "«a»", 2, "1").contains("%"))
             #expect(!l.string(.settingsChangeBody, 2, "TSK-1", "int", "string").contains("%"))
             #expect(!l.string(.settingsSeriesDeleteBody, "TSK", 4).contains("%"))
+            #expect(!l.string(.settingsTypeChanged, "3").contains("%"))
+            #expect(!l.string(.settingsTypeSummary, "Основной", "Level*").contains("%"))
+            #expect(!l.string(.settingsTypeRemovalBody, "Баг", "Level").contains("%"))
+            #expect(!l.string(.settingsStatusSetUsedBy, "x").contains("%"))
+            #expect(!l.string(.settingsStatusSetRemoveBody, "«a»").contains("%"))
         }
     }
 }

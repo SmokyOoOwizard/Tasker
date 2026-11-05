@@ -176,6 +176,7 @@ internal class AppDbContext(DbContextOptions options) : DbContext(options)
             x.HasKey(s => s.Id);
             x.Property(s => s.Name).HasMaxLength(100);
             x.Property(s => s.Color).HasMaxLength(7);
+            x.Property(s => s.Icon).HasMaxLength(16);
             BelongsToProject(x, s => s.ProjectId);
         });
 

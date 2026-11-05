@@ -4,10 +4,10 @@ using Tasker.Core.Tasks;
 
 namespace Tasker.Core.Statuses;
 
-public record CreateStatus(string Name, string Color, string? Description = null);
+public record CreateStatus(string Name, string Color, string? Description = null, string? Icon = null);
 
-/// <summary>Поля null — не меняются; Description: пустая строка — очистить. Version — версия, которую видел клиент (см. <see cref="Versioning"/>).</summary>
-public record UpdateStatus(string? Name, string? Color, string? Version, string? Description = null);
+/// <summary>Поля null — не меняются; Description: пустая строка — очистить; Icon: пустая строка — значок по умолчанию. Version — версия, которую видел клиент (см. <see cref="Versioning"/>).</summary>
+public record UpdateStatus(string? Name, string? Color, string? Version, string? Description = null, string? Icon = null);
 
 public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoardStorage boards, ITaskStorage tasks, Locks.EditLockService locks)
 {
@@ -20,6 +20,7 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
             Name = Validate.Name(command.Name, "Status name"),
             Color = Validate.Color(command.Color),
             Description = Validate.Description(command.Description) ?? "",
+            Icon = Validate.StatusIcon(command.Icon),
             Version = Versioning.New
         };
 
@@ -53,7 +54,8 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
         {
             Name = command.Name == null ? status.Name : Validate.Name(command.Name, "Status name"),
             Color = command.Color == null ? status.Color : Validate.Color(command.Color),
-            Description = command.Description == null ? status.Description : Validate.Description(command.Description) ?? ""
+            Description = command.Description == null ? status.Description : Validate.Description(command.Description) ?? "",
+            Icon = command.Icon == null ? status.Icon : Validate.StatusIcon(command.Icon)
         };
 
         var version = await statuses.Update(updated, expected, ct) ?? throw Versioning.Modified(Subject(status));

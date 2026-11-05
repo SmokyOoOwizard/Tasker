@@ -41,6 +41,15 @@ internal static partial class Validate
     public static string? Description(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value;
 
+    public static string StatusIcon(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "";
+        if (!Statuses.StatusIcons.All.Contains(value))
+            throw new TaskerValidationException($"Status icon must be one of: {string.Join(", ", Statuses.StatusIcons.All)}");
+        return value;
+    }
+
     public static string Color(string? value)
     {
         if (value == null || !ColorRegex().IsMatch(value))

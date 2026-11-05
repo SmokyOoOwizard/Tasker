@@ -307,6 +307,7 @@ type Status {
   name: String!
   color: String!
   description: String!
+  icon: String!
   version: String!
 }
 
@@ -316,6 +317,7 @@ type StatusListItem {
   name: String!
   color: String!
   description: String!
+  icon: String!
   version: String!
   descriptionTruncated: Boolean!
   descriptionLength: Int!

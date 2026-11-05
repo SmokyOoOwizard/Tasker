@@ -55,6 +55,7 @@ internal class DbInitializer(ILifetimeScope scope) : IHostedService, IStorageLif
         }
 
         await AddColumn(context, "Hierarchical", "0", "FALSE", ct);
+        await AddTextColumn(context, "statuses", "Icon", ct);
     }
 
     /// <returns>true — столбец был добавлен сейчас.</returns>
@@ -74,6 +75,22 @@ internal class DbInitializer(ILifetimeScope scope) : IHostedService, IStorageLif
             ? $"ALTER TABLE link_types ADD COLUMN \"{column}\" INTEGER NOT NULL DEFAULT {sqliteDefault}"
             : $"ALTER TABLE link_types ADD COLUMN IF NOT EXISTS \"{column}\" boolean NOT NULL DEFAULT {postgresDefault}", ct);
         return true;
+    }
+
+    private static async Task AddTextColumn(AppDbContext context, string table, string column, CancellationToken ct)
+    {
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync($"SELECT \"{column}\" FROM {table} WHERE 1 = 0", ct);
+            return;
+        }
+        catch (DbException)
+        {
+        }
+
+        await context.Database.ExecuteSqlRawAsync(context.Database.IsSqlite()
+            ? $"ALTER TABLE {table} ADD COLUMN \"{column}\" TEXT NULL"
+            : $"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS \"{column}\" character varying(16) NULL", ct);
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

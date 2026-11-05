@@ -9,6 +9,7 @@ Arguments:
 
 Options:
   --color <color>              Color in #RRGGBB format [default: #808080]
+  --icon <icon>                Icon: dashed, empty, quarter, half, three, review, pause, blocked, done, cancel, flag, star (default - by position in the set)
   -d, --description            What the status means and when to use it (free text, may have line breaks)
   -?, -h, --help               Show help and usage information
   -w, --workspace <workspace>  Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder

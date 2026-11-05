@@ -40,6 +40,7 @@ internal class StatusStorage(AppDbContext context) : IStatusStorage
             Name = status.Name,
             Color = status.Color,
             Description = DbDescription.ToColumn(status.Description),
+            Icon = DbDescription.ToColumn(status.Icon),
             Version = DbVersion.Initial
         });
         await context.SaveChangesAsync(ct);
@@ -57,6 +58,7 @@ internal class StatusStorage(AppDbContext context) : IStatusStorage
                 .SetProperty(x => x.Name, status.Name)
                 .SetProperty(x => x.Color, status.Color)
                 .SetProperty(x => x.Description, DbDescription.ToColumn(status.Description))
+                .SetProperty(x => x.Icon, DbDescription.ToColumn(status.Icon))
                 .SetProperty(x => x.Version, expected + 1), ct);
 
         return updated == 0 ? null : DbVersion.ToText(expected + 1);
@@ -79,6 +81,7 @@ internal class StatusStorage(AppDbContext context) : IStatusStorage
         Name = model.Name,
         Color = model.Color,
         Description = DbDescription.FromColumn(model.Description),
+        Icon = DbDescription.FromColumn(model.Icon),
         Version = DbVersion.ToText(model.Version)
     };
 }

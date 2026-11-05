@@ -8104,6 +8104,10 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -9118,6 +9122,7 @@
           "name",
           "color",
           "description",
+          "icon",
           "version"
         ],
         "type": "object",
@@ -9137,6 +9142,9 @@
             "type": "string"
           },
           "description": {
+            "type": "string"
+          },
+          "icon": {
             "type": "string"
           },
           "version": {
@@ -9833,6 +9841,10 @@
             "nullable": true
           },
           "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "icon": {
             "type": "string",
             "nullable": true
           }

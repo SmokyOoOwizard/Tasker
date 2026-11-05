@@ -19,6 +19,7 @@ internal sealed class StatusType : ObjectType<Status>
         descriptor.Field(x => x.Name);
         descriptor.Field(x => x.Color);
         descriptor.Field(x => x.Description);
+        descriptor.Field(x => x.Icon);
         descriptor.Field(x => x.Version);
     }
 }

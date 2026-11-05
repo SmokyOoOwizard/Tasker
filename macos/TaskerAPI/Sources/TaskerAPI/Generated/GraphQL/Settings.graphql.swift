@@ -62,15 +62,41 @@ public struct SettingsCatalogQuery: GraphQLQuery {
             version
           }
         }
-        taskTypes(limit: 200, descriptionLength: 0) {
+        statuses(limit: 200) {
           __typename
           data {
             __typename
             id
             name
+            color
+            description
+            icon
+            version
+          }
+        }
+        statusSets(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            statusIds
+            version
+          }
+        }
+        taskTypes(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+            description
+            statusSetId
+            version
             fields {
               __typename
               fieldId
+              required
             }
           }
         }
@@ -80,10 +106,17 @@ public struct SettingsCatalogQuery: GraphQLQuery {
             __typename
             id
             name
+            statusSetIds
             columns {
               __typename
               id
               name
+              statusIds
+              dropStatuses {
+                __typename
+                statusSetId
+                statusId
+              }
               fieldConditions {
                 __typename
                 fieldId
@@ -169,15 +202,41 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                     GraphQLField("version")
                 ])
             ]),
-            GraphQLField("taskTypes", arguments: ["limit": .value(.int(200)), "descriptionLength": .value(.int(0))], selections: [
+            GraphQLField("statuses", arguments: ["limit": .value(.int(200))], selections: [
                 GraphQLField("__typename"),
                 GraphQLField("data", selections: [
                     GraphQLField("__typename"),
                     GraphQLField("id"),
                     GraphQLField("name"),
+                    GraphQLField("color"),
+                    GraphQLField("description"),
+                    GraphQLField("icon"),
+                    GraphQLField("version")
+                ])
+            ]),
+            GraphQLField("statusSets", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("statusIds"),
+                    GraphQLField("version")
+                ])
+            ]),
+            GraphQLField("taskTypes", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("description"),
+                    GraphQLField("statusSetId"),
+                    GraphQLField("version"),
                     GraphQLField("fields", selections: [
                         GraphQLField("__typename"),
-                        GraphQLField("fieldId")
+                        GraphQLField("fieldId"),
+                        GraphQLField("required")
                     ])
                 ])
             ]),
@@ -187,10 +246,17 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                     GraphQLField("__typename"),
                     GraphQLField("id"),
                     GraphQLField("name"),
+                    GraphQLField("statusSetIds"),
                     GraphQLField("columns", selections: [
                         GraphQLField("__typename"),
                         GraphQLField("id"),
                         GraphQLField("name"),
+                        GraphQLField("statusIds"),
+                        GraphQLField("dropStatuses", selections: [
+                            GraphQLField("__typename"),
+                            GraphQLField("statusSetId"),
+                            GraphQLField("statusId")
+                        ]),
                         GraphQLField("fieldConditions", selections: [
                             GraphQLField("__typename"),
                             GraphQLField("fieldId"),
@@ -247,11 +313,13 @@ public struct SettingsCatalogQuery: GraphQLQuery {
             public var enums: Enums
             public var linkTypes: LinkTypes
             public var seriesList: SeriesList
+            public var statuses: Statuses
+            public var statusSets: StatusSets
             public var taskTypes: TaskTypes
             public var boards: Boards
             public var seriesHealth: SeriesHealth
 
-            public init(id: UUID, name: String, createdAt: Date, version: String, fields: Fields, enums: Enums, linkTypes: LinkTypes, seriesList: SeriesList, taskTypes: TaskTypes, boards: Boards, seriesHealth: SeriesHealth) {
+            public init(id: UUID, name: String, createdAt: Date, version: String, fields: Fields, enums: Enums, linkTypes: LinkTypes, seriesList: SeriesList, statuses: Statuses, statusSets: StatusSets, taskTypes: TaskTypes, boards: Boards, seriesHealth: SeriesHealth) {
                 self.id = id
                 self.name = name
                 self.createdAt = createdAt
@@ -260,6 +328,8 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                 self.enums = enums
                 self.linkTypes = linkTypes
                 self.seriesList = seriesList
+                self.statuses = statuses
+                self.statusSets = statusSets
                 self.taskTypes = taskTypes
                 self.boards = boards
                 self.seriesHealth = seriesHealth
@@ -375,6 +445,54 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                 }
             }
 
+            public struct Statuses: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var color: String
+                    public var description: String
+                    public var icon: String
+                    public var version: String
+
+                    public init(id: UUID, name: String, color: String, description: String, icon: String, version: String) {
+                        self.id = id
+                        self.name = name
+                        self.color = color
+                        self.description = description
+                        self.icon = icon
+                        self.version = version
+                    }
+                }
+            }
+
+            public struct StatusSets: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var statusIds: [UUID]
+                    public var version: String
+
+                    public init(id: UUID, name: String, statusIds: [UUID], version: String) {
+                        self.id = id
+                        self.name = name
+                        self.statusIds = statusIds
+                        self.version = version
+                    }
+                }
+            }
+
             public struct TaskTypes: Hashable, Sendable, Decodable {
                 public var data: [DataItem]
 
@@ -385,19 +503,27 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                 public struct DataItem: Hashable, Sendable, Decodable {
                     public var id: UUID
                     public var name: String
+                    public var description: String
+                    public var statusSetId: UUID
+                    public var version: String
                     public var fields: [Fields]
 
-                    public init(id: UUID, name: String, fields: [Fields]) {
+                    public init(id: UUID, name: String, description: String, statusSetId: UUID, version: String, fields: [Fields]) {
                         self.id = id
                         self.name = name
+                        self.description = description
+                        self.statusSetId = statusSetId
+                        self.version = version
                         self.fields = fields
                     }
 
                     public struct Fields: Hashable, Sendable, Decodable {
                         public var fieldId: UUID
+                        public var required: Bool
 
-                        public init(fieldId: UUID) {
+                        public init(fieldId: UUID, required: Bool) {
                             self.fieldId = fieldId
+                            self.required = required
                         }
                     }
                 }
@@ -413,23 +539,39 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                 public struct DataItem: Hashable, Sendable, Decodable {
                     public var id: UUID
                     public var name: String
+                    public var statusSetIds: [UUID]
                     public var columns: [Columns]
 
-                    public init(id: UUID, name: String, columns: [Columns]) {
+                    public init(id: UUID, name: String, statusSetIds: [UUID], columns: [Columns]) {
                         self.id = id
                         self.name = name
+                        self.statusSetIds = statusSetIds
                         self.columns = columns
                     }
 
                     public struct Columns: Hashable, Sendable, Decodable {
                         public var id: UUID
                         public var name: String
+                        public var statusIds: [UUID]
+                        public var dropStatuses: [DropStatuses]
                         public var fieldConditions: [FieldConditions]
 
-                        public init(id: UUID, name: String, fieldConditions: [FieldConditions]) {
+                        public init(id: UUID, name: String, statusIds: [UUID], dropStatuses: [DropStatuses], fieldConditions: [FieldConditions]) {
                             self.id = id
                             self.name = name
+                            self.statusIds = statusIds
+                            self.dropStatuses = dropStatuses
                             self.fieldConditions = fieldConditions
+                        }
+
+                        public struct DropStatuses: Hashable, Sendable, Decodable {
+                            public var statusSetId: UUID
+                            public var statusId: UUID
+
+                            public init(statusSetId: UUID, statusId: UUID) {
+                                self.statusSetId = statusSetId
+                                self.statusId = statusId
+                            }
                         }
 
                         public struct FieldConditions: Hashable, Sendable, Decodable {
@@ -489,11 +631,11 @@ public struct SettingsCatalogQuery: GraphQLQuery {
 public struct SettingsTasksQuery: GraphQLQuery {
     public static let operationName = "SettingsTasks"
     public static let document = """
-    query SettingsTasks($projectId: UUID!, $field: [String!], $offset: Int, $limit: Int) {
+    query SettingsTasks($projectId: UUID!, $field: [String!], $statusIds: [UUID!], $typeIds: [UUID!], $offset: Int, $limit: Int) {
       project(id: $projectId) {
         __typename
         id
-        tasks(field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
+        tasks(statusIds: $statusIds, typeIds: $typeIds, field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
           __typename
           totalCount
           data {
@@ -519,7 +661,7 @@ public struct SettingsTasksQuery: GraphQLQuery {
         GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
             GraphQLField("__typename"),
             GraphQLField("id"),
-            GraphQLField("tasks", arguments: ["field": .variable("field"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+            GraphQLField("tasks", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "field": .variable("field"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
                 GraphQLField("__typename"),
                 GraphQLField("totalCount"),
                 GraphQLField("data", selections: [
@@ -543,12 +685,16 @@ public struct SettingsTasksQuery: GraphQLQuery {
 
     public var projectId: UUID
     public var field: [String]?
+    public var statusIds: [UUID]?
+    public var typeIds: [UUID]?
     public var offset: Int?
     public var limit: Int?
 
-    public init(projectId: UUID, field: [String]? = nil, offset: Int? = nil, limit: Int? = nil) {
+    public init(projectId: UUID, field: [String]? = nil, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, offset: Int? = nil, limit: Int? = nil) {
         self.projectId = projectId
         self.field = field
+        self.statusIds = statusIds
+        self.typeIds = typeIds
         self.offset = offset
         self.limit = limit
     }
@@ -557,6 +703,8 @@ public struct SettingsTasksQuery: GraphQLQuery {
         var result: [String: JSONValue] = [:]
         result["projectId"] = projectId.graphQLValue
         if let field { result["field"] = field.graphQLValue }
+        if let statusIds { result["statusIds"] = statusIds.graphQLValue }
+        if let typeIds { result["typeIds"] = typeIds.graphQLValue }
         if let offset { result["offset"] = offset.graphQLValue }
         if let limit { result["limit"] = limit.graphQLValue }
         return result
