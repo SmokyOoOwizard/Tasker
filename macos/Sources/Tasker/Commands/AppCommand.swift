@@ -35,6 +35,7 @@ struct CommandState: Equatable, Sendable {
     var hasTab = false
     var hasProject = false
     var hasTask = false
+    var hasBoard = false
     var tabCount = 0
     var otherWindows = 0
     var listMode: TaskListMode?
@@ -45,6 +46,7 @@ struct CommandState: Equatable, Sendable {
 enum AppCommand: Hashable, Sendable {
     case newTask
     case newBoard
+    case editBoard
     case newTab
     case newWindow
     case openFolder
@@ -71,7 +73,7 @@ enum AppCommand: Hashable, Sendable {
     static let themes: [AppCommand] = AppTheme.allCases.map(AppCommand.theme)
 
     static let shortcutBearing: [AppCommand] = [
-        .newTask, .newBoard, .newTab, .newWindow, .openFolder, .closeTab, .closeWindow, .palette, .toggleSidebar,
+        .newTask, .newBoard, .editBoard, .newTab, .newWindow, .openFolder, .closeTab, .closeWindow, .palette, .toggleSidebar,
         .taskStatus, .taskLink, .taskParent, .taskCopyKey, .nextTab, .previousTab, .shortcuts, .help
     ] + sectionCommands + listModes
 
@@ -79,6 +81,7 @@ enum AppCommand: Hashable, Sendable {
         switch self {
         case .newTask: "newTask"
         case .newBoard: "newBoard"
+        case .editBoard: "editBoard"
         case .newTab: "newTab"
         case .newWindow: "newWindow"
         case .openFolder: "openFolder"
@@ -106,6 +109,7 @@ enum AppCommand: Hashable, Sendable {
         switch self {
         case .newTask: .taskCreateAction
         case .newBoard: .paletteNewBoard
+        case .editBoard: .boardTitleEdit
         case .newTab: .tabNew
         case .newWindow: .windowNew
         case .openFolder: .workspaceOpen
@@ -133,6 +137,7 @@ enum AppCommand: Hashable, Sendable {
         switch self {
         case .newTask: CommandShortcut("n")
         case .newBoard: CommandShortcut("n", [.command, .option])
+        case .editBoard: CommandShortcut("e", [.command, .option])
         case .newTab: CommandShortcut("t")
         case .newWindow: CommandShortcut("n", [.command, .shift])
         case .openFolder: CommandShortcut("o")
@@ -162,6 +167,7 @@ enum AppCommand: Hashable, Sendable {
     func isEnabled(_ state: CommandState) -> Bool {
         switch self {
         case .newTask, .newBoard: state.hasProject
+        case .editBoard: state.hasBoard
         case .newTab, .moveTabToNewWindow: state.hasTab
         case .palette, .toggleSidebar: state.hasWindow
         case .go: state.hasTab

@@ -15,8 +15,11 @@ struct TaskStatusChoices {
 
 extension WorkspaceTabSession {
     var commandTask: UUID? {
-        guard section == .tasks else { return nil }
-        return navigator.card ?? navigator.peek ?? listSelection
+        switch section {
+        case .tasks: return navigator.card ?? navigator.peek ?? listSelection
+        case .boards: return navigator.card ?? navigator.peek
+        default: return nil
+        }
     }
 
     var visibleDetail: TaskDetailModel? {

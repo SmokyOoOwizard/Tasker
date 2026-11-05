@@ -77,6 +77,11 @@
           "title": "taskList.view.tree",
           "keys": "⌥ ⌘ 3",
           "command": "listMode.tree"
+        },
+        {
+          "title": "board.titleEdit",
+          "keys": "⌥ ⌘ E",
+          "command": "editBoard"
         }
       ]
     },

@@ -19,6 +19,8 @@ final class WorkspaceTabSession: Identifiable {
     private(set) var seriesPage: UUID?
     var seriesPrefix: String?
     private(set) var boardEditor: BoardEditorModel?
+    private(set) var boardModel: BoardViewModel?
+    private(set) var boardId: UUID?
     var settingsPage = SettingsPage.statuses
     var taskRequest: TaskRequest?
     private(set) var listSelection: UUID?
@@ -35,6 +37,8 @@ final class WorkspaceTabSession: Identifiable {
     @ObservationIgnored private var listClient: TaskerAPIClient?
     @ObservationIgnored private var listOwner: UUID?
     @ObservationIgnored private var pendingFilter: TaskListFilter?
+    @ObservationIgnored private var boardClient: TaskerAPIClient?
+    @ObservationIgnored private var boardOwner: UUID?
     @ObservationIgnored private var settingsStore: SettingsModel?
     @ObservationIgnored private var settingsClient: TaskerAPIClient?
 
@@ -91,6 +95,8 @@ final class WorkspaceTabSession: Identifiable {
             seriesPage = nil
             seriesPrefix = nil
             closeBoardEditor()
+            closeBoard()
+            boardId = nil
             closeSettings()
         }
         lastProject = project
@@ -145,6 +151,45 @@ final class WorkspaceTabSession: Identifiable {
         seriesPage = nil
         seriesPrefix = nil
         apply(.none)
+    }
+
+    var currentBoard: UUID? { boardModel?.board?.id ?? boardId }
+
+    func showBoard(_ id: UUID) {
+        boardId = id
+        setSection(.boards)
+    }
+
+    func attachBoard(owner: UUID, project: UUID, client: TaskerAPIClient, localizer: Localizer) -> BoardViewModel {
+        if let boardModel, boardModel.project == project, boardModel.requested == boardId, boardClient === client {
+            boardOwner = owner
+            boardModel.localizer = localizer
+            boardModel.resume()
+            return boardModel
+        }
+        boardModel?.stop()
+        let model = BoardViewModel(project: project, board: boardId, source: GraphQLBoardViewSource(client: client))
+        model.localizer = localizer
+        model.onNotice = { [weak self] text in self?.notice(text) }
+        model.onFailure = { [weak self] text in self?.failure(text) }
+        boardModel = model
+        boardClient = client
+        boardOwner = owner
+        model.start()
+        return model
+    }
+
+    func detachBoard(owner: UUID) {
+        guard boardOwner == owner else { return }
+        boardOwner = nil
+        boardModel?.stop()
+    }
+
+    private func closeBoard() {
+        boardModel?.stop()
+        boardModel = nil
+        boardClient = nil
+        boardOwner = nil
     }
 
     @discardableResult
@@ -238,6 +283,7 @@ final class WorkspaceTabSession: Identifiable {
 
     func discard() {
         closeBoardEditor()
+        closeBoard()
         closeSettings()
         listModel?.stop()
         listModel = nil
