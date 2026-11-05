@@ -31,6 +31,7 @@ PATH="/usr/bin:$PATH" dotnet publish "$root/dotnet/src/Tasker.Daemon.Host" -c Re
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EmbedFrontend=false \
   -p:TaskerVersion="$TASKER_VERSION" -o "$derived/daemon" --nologo -v quiet
 chmod +x "$derived/cli/tasker" "$derived/daemon/tasker-mcpd"
+/usr/bin/codesign --force --sign - "$derived/cli/tasker" "$derived/daemon/tasker-mcpd"
 
 xcodegen generate --quiet
 
