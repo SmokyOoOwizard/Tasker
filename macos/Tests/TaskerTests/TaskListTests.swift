@@ -380,7 +380,7 @@ final class StubTaskListSource: TaskListSource, @unchecked Sendable {
         model.update { $0.mode = .flat }
         model.localizer = ru
         var notices: [String] = []
-        model.onNotice = { notices.append($0) }
+        model.onFailure = { notices.append($0) }
         model.start()
         await until { model.phase == .ready }
 

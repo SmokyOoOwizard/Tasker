@@ -85,6 +85,7 @@ final class TaskListModel {
     @ObservationIgnored var localizer = Localizer(choice: .system)
     @ObservationIgnored var onChange: ((TaskListChange) -> Void)?
     @ObservationIgnored var onNotice: ((String) -> Void)?
+    @ObservationIgnored var onFailure: ((String) -> Void)?
     @ObservationIgnored var onOpen: ((TaskRow) -> Void)?
     @ObservationIgnored var onPeek: ((TaskRow) -> Void)?
     @ObservationIgnored var onSelect: ((TaskRow) -> Void)?
@@ -251,7 +252,7 @@ final class TaskListModel {
             if mode == .tree { expandRemembered(Array(roots[before...])) }
         } catch {
             guard current == generation else { return }
-            onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
+            onFailure?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
         }
     }
 
@@ -329,7 +330,7 @@ final class TaskListModel {
                 onChange?(.inserted(parent: node, indexes: IndexSet(loaded..<(loaded + fresh.count))))
             } catch {
                 guard current == generation else { return }
-                onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
+                onFailure?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
             }
         }
     }
@@ -383,7 +384,7 @@ final class TaskListModel {
                 expandRemembered(node.children ?? [])
             } catch {
                 guard current == generation else { return }
-                onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
+                onFailure?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
             }
         }
     }
@@ -488,7 +489,7 @@ final class TaskListModel {
         } catch is CancellationError {
         } catch {
             guard current == generation else { return }
-            onNotice?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
+            onFailure?(localizer.string(.taskListLoadFailed, localizer.message(for: error)))
         }
     }
 
@@ -658,7 +659,7 @@ final class TaskListModel {
                     target.row?.statusId = original.statusId
                 }
                 onChange?(.rows(nodes(task: original.id)))
-                onNotice?(TaskListModel.statusFailure(error, reference: reference, l: localizer))
+                onFailure?(TaskListModel.statusFailure(error, reference: reference, l: localizer))
                 scheduleRefresh()
             }
         }

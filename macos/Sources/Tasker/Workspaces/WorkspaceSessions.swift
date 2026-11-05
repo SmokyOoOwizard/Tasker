@@ -65,6 +65,10 @@ final class WorkspaceTabSession: Identifiable {
         toasts.show(.notice(text))
     }
 
+    func failure(_ text: String) {
+        toasts.show(.failure(text))
+    }
+
     func noteProject(_ project: UUID?) {
         guard let project else { return }
         if let lastProject, lastProject != project {
@@ -98,6 +102,7 @@ final class WorkspaceTabSession: Identifiable {
         model.selectedRow = restored.selectedRow
         model.scrollY = restored.scrollY
         model.onNotice = { [weak self] text in self?.notice(text) }
+        model.onFailure = { [weak self] text in self?.failure(text) }
         model.onOpen = { [navigator] row in navigator.open(row.id) }
         model.onPeek = { [navigator] row in navigator.togglePeek(row.id) }
         model.onSelect = { [navigator] row in if navigator.peek != nil { navigator.showPeek(row.id) } }
@@ -166,6 +171,7 @@ final class WorkspaceTabSession: Identifiable {
         let model = SettingsModel(project: project, source: GraphQLSettingsSource(client: client))
         model.localizer = localizer
         model.onNotice = { [weak self] text in self?.notice(text) }
+        model.onFailure = { [weak self] text in self?.failure(text) }
         model.onProjectDeleted = { [weak self] in self?.projectDeleted(client: client) }
         settingsStore = model
         settingsClient = client

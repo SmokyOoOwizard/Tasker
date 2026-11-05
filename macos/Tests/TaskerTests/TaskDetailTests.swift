@@ -160,7 +160,7 @@ struct TaskDetailTests {
         let source = StubDetailSource(detail: detail(), vocabulary: vocabulary)
         let model = await ready(source)
         var notices: [String] = []
-        model.onNotice = { notices.append($0) }
+        model.onFailure = { notices.append($0) }
         source.failNext(TaskerAPIError.locked(by: "Anna"))
         await model.run(.status(doing))
         #expect(notices.count == 1)

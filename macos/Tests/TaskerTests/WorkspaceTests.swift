@@ -699,5 +699,8 @@ private func isolatedDefaults() -> UserDefaults {
         #expect(OnboardingNames(ru).doing == "В работе")
         #expect(OnboardingNames(en).board == "Main")
         #expect(LiveToastMessage.notice("Готово").text(ru) == "Готово")
+        #expect(!LiveToastMessage.notice("Готово").isFailure)
+        #expect(LiveToastMessage.failure("Отказ").text(ru) == "Отказ")
+        #expect(LiveToastMessage.failure("Отказ").isFailure)
     }
 }

@@ -28,6 +28,7 @@ struct TaskDetailHost<Chrome: View>: View {
             let value = TaskDetailModel(project: project, task: task, source: GraphQLTaskDetailSource(client: client))
             value.localizer = l
             value.onNotice = { [session] text in session.notice(text) }
+            value.onFailure = { [session] text in session.failure(text) }
             value.onDeleted = deleted
             value.drafts = session.drafts
             model = value

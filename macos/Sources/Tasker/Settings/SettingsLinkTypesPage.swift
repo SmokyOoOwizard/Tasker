@@ -64,7 +64,7 @@ struct LinkTypesSettingsPage: View {
                 if let detail = SettingsModel.inUseRefusal(error) {
                     refusal = SettingsRefusal(refusal: detail)
                 } else {
-                    model.onNotice?(model.message(error))
+                    model.onFailure?(model.message(error))
                 }
             }
         }

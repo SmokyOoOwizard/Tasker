@@ -79,6 +79,7 @@ final class TaskDetailModel {
 
     @ObservationIgnored var localizer = Localizer(choice: .system)
     @ObservationIgnored var onNotice: ((String) -> Void)?
+    @ObservationIgnored var onFailure: ((String) -> Void)?
     @ObservationIgnored var onDeleted: (() -> Void)?
     @ObservationIgnored var onChanged: (() -> Void)?
     @ObservationIgnored var drafts: TaskDrafts?
@@ -227,7 +228,7 @@ final class TaskDetailModel {
             await fail(error, edit: edit)
         } catch is CancellationError {
         } catch {
-            onNotice?(localizer.string(.taskDetailFailed, localizer.message(for: error)))
+            onFailure?(localizer.string(.taskDetailFailed, localizer.message(for: error)))
         }
     }
 
@@ -239,20 +240,20 @@ final class TaskDetailModel {
                 await fetch(initial: false)
                 self.conflict = TaskEditConflict(edit: edit, message: localizer.refusal(conflict.refusal))
             case .locked:
-                onNotice?(localizer.refusal(conflict.refusal))
+                onFailure?(localizer.refusal(conflict.refusal))
             default:
-                onNotice?(localizer.string(.taskDetailFailed, localizer.refusal(conflict.refusal)))
+                onFailure?(localizer.string(.taskDetailFailed, localizer.refusal(conflict.refusal)))
             }
         case .notFound:
             phase = .missing
             detail = nil
-            onNotice?(localizer.string(.taskDetailDeleted, reference))
+            onFailure?(localizer.string(.taskDetailDeleted, reference))
         case .forbidden(let refusal):
-            onNotice?(localizer.string(.taskDetailForbidden, localizer.refusal(refusal)))
+            onFailure?(localizer.string(.taskDetailForbidden, localizer.refusal(refusal)))
         case .timedOut, .network:
-            onNotice?(localizer.string(.taskDetailOffline))
+            onFailure?(localizer.string(.taskDetailOffline))
         default:
-            onNotice?(localizer.string(.taskDetailFailed, localizer.message(for: error)))
+            onFailure?(localizer.string(.taskDetailFailed, localizer.message(for: error)))
         }
         if case .conflict = error {} else { await fetch(initial: false) }
     }

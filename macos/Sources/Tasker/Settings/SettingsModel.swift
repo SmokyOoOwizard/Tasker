@@ -39,6 +39,7 @@ final class SettingsModel {
 
     @ObservationIgnored var localizer = Localizer(choice: .system)
     @ObservationIgnored var onNotice: ((String) -> Void)?
+    @ObservationIgnored var onFailure: ((String) -> Void)?
     @ObservationIgnored var onProjectDeleted: (() -> Void)?
     @ObservationIgnored private let source: any SettingsSource
     @ObservationIgnored private let heartbeat: Duration

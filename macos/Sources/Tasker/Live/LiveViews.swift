@@ -11,8 +11,8 @@ struct LiveToastStack: View {
         VStack(spacing: DesignSpacing.gap8) {
             ForEach(live.toasts + session.toasts.toasts) { toast in
                 HStack(spacing: DesignSpacing.gap8) {
-                    MockupIconView(icon: .check)
-                        .foregroundStyle(DesignColor.green.color)
+                    MockupIconView(icon: toast.message.isFailure ? .warn : .check)
+                        .foregroundStyle(toast.message.isFailure ? DesignColor.red.color : DesignColor.green.color)
                     Text(toast.message.text(l))
                         .lineLimit(2)
                 }
