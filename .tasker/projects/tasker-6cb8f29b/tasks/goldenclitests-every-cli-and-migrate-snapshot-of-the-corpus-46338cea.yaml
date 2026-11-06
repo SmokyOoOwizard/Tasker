@@ -1,0 +1,11 @@
+formatVersion: 11
+id: 46338cea-ce94-4f09-9ea6-be2650e66462
+title: GoldenCliTests.Every_cli_and_migrate_snapshot_of_the_corpus_matches нестабилен на macOS
+typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+createdAt: 2026-11-05T22:43:25.3717050+00:00
+updatedAt: 2026-11-05T23:20:45.5744910+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 232
+description: 'Падает в CI на macOS: на main (прогон 42118969825) и в PR #67. 1 из 257 снимков не совпал: cli/224-help-mcp-restart (код 0, ожидаемый вывод справки отличается). Причина не установлена; на ветке TSK-215 тот же тест проходил. Готово, когда тест стабильно проходит на трёх системах.'

@@ -143,6 +143,7 @@ public static class TaskerProcess
         if (workingDirectory != null)
             info.WorkingDirectory = workingDirectory;
         Tasker.Global.AppEnvironment.Apply(info);
+        info.Environment.TryAdd("TASKER_COMPLETION_TIMEOUT_MS", "60000");
         foreach (var arg in command.Arguments)
             info.ArgumentList.Add(arg);
         foreach (var arg in args)

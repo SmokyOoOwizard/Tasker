@@ -16,7 +16,7 @@ Options:
   --expected-version <expected-version>  Fail if the entity was changed after this version (as shown by get). Default: the current version
   -?, -h, --help                         Show help and usage information
   -w, --workspace <workspace>            Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
-  -p, --project <Tasker>                 Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
+  -p, --project <project>                Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace
   --json                                 Print the result as JSON
   -q, --quiet                            Print less: lists skip the first line with the number of found items ('Found N'), sync prints nothing unless something needs attention
   --no-wrap, --truncate                  Cut long lines of list output to the window width with an ellipsis instead of wrapping (default: on in a terminal and under watch - COLUMNS and LINES both set; off when redirected)

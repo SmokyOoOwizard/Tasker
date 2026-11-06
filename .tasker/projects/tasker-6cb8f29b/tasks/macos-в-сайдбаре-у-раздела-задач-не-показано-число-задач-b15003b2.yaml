@@ -2,9 +2,9 @@ formatVersion: 11
 id: b15003b2-7a6f-4aa1-ac50-95daf9a70bdb
 title: 'macOS: в сайдбаре у раздела задач не показано число задач'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-05T10:12:08.8503260+00:00
-updatedAt: 2026-11-05T10:21:45.0855830+00:00
+updatedAt: 2026-11-05T23:22:23.1199640+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 222

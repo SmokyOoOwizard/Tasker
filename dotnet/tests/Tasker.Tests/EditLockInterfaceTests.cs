@@ -204,8 +204,8 @@ public class EditLockInterfaceTests
         using var events = await Events.Subscribe(api);
         var id = (await NewTask(api))["id"]!.GetValue<string>();
 
-        // Создание задачи ещё отдаёт свой unknown (с задержкой склейки событий): дожидаемся его и забываем.
         await events.Next(x => x["entity"]!.GetValue<string>() == "unknown");
+        await events.Collect(TimeSpan.FromMilliseconds(800));
 
         await api.Post(api.P($"/tasks/{id}/lock"));
         await api.Delete(api.P($"/tasks/{id}/lock"));

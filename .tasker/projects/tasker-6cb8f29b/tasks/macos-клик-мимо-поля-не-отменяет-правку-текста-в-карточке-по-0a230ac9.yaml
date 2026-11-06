@@ -2,9 +2,9 @@ formatVersion: 11
 id: 0a230ac9-5c26-4649-8f62-191cfa78901e
 title: 'macOS: клик мимо поля не отменяет правку текста в карточке, пока в поле нет курсора'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-05T10:09:21.0107630+00:00
-updatedAt: 2026-11-05T10:21:45.0577810+00:00
+updatedAt: 2026-11-05T23:52:20.5688380+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 221
