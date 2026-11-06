@@ -153,7 +153,8 @@ struct FieldRowView: View {
                         .onExitCommand(perform: cancelSingle)
                         .onChange(of: focused) { if !focused { commitSingle() } }
                         .onChange(of: draft) { invalid = false }
-                        .onAppear { focused = true }
+                        .endsOnClickAway(active: editing, perform: commitSingle)
+                        .onAppear { DispatchQueue.main.async { focused = true } }
                 } else {
                     Button {
                         draft = singleText
@@ -258,6 +259,10 @@ struct FieldRowView: View {
 
     private func commitSingle() {
         guard editing else { return }
+        if draft.trimmingCharacters(in: .whitespacesAndNewlines) == singleText {
+            cancelSingle()
+            return
+        }
         guard let value = FieldValueCodec.normalize(draft, type: field.type) else {
             invalid = true
             focused = true

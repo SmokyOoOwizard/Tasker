@@ -132,6 +132,7 @@ public sealed class SettingsStore(string? directory = null)
         private readonly Action<GlobalSettings> _onChanged;
         private readonly FileSystemWatcher _watcher;
         private readonly Timer _timer;
+        private static readonly string EmptyFingerprint = Convert.ToHexString(SHA256.HashData([]));
         private string? _last;
 
         public Watcher(SettingsStore store, Action<GlobalSettings> onChanged)
@@ -157,7 +158,7 @@ public sealed class SettingsStore(string? directory = null)
             {
                 // Тот же файл (временная запись, повторное событие) — не изменение.
                 var now = Fingerprint();
-                if (now == _last)
+                if (now == _last || now == EmptyFingerprint)
                     return;
 
                 var settings = _store.Load();

@@ -99,6 +99,7 @@ private struct SidebarRow: View {
                     .frame(width: DesignLayout.iconColumn)
                 Text(l.string(section.titleKey))
                 Spacer(minLength: 0)
+                if section == .tasks { SidebarTaskCount() }
             }
             .foregroundStyle(selected ? DesignColor.tx.color : DesignColor.mut.color)
             .padding(.horizontal, DesignSpacing.rowPadX)
