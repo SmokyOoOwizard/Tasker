@@ -35,11 +35,20 @@ internal sealed class CompleteDirective : Directive
                 var hidden = (typed.CommandResult.Command as WorkspaceFreeCommand)?.HiddenNames ?? [];
                 if (typed.CommandResult.Command is not RootCommand)
                     hidden = [.. hidden, "--interactive", "-i"];
-                var all = typed.GetCompletions(line.Length)
-                    .Select(x => x.InsertText ?? x.Label)
-                    .Where(x => x.Length > 0 && !IsNoise(x) && !hidden.Contains(x))
-                    .Distinct()
-                    .ToArray();
+                Completer.Suggesting = true;
+                string[] all;
+                try
+                {
+                    all = typed.GetCompletions(line.Length)
+                        .Select(x => x.InsertText ?? x.Label)
+                        .Where(x => x.Length > 0 && !IsNoise(x) && !hidden.Contains(x))
+                        .Distinct()
+                        .ToArray();
+                }
+                finally
+                {
+                    Completer.Suggesting = false;
+                }
 
                 // Параметры предлагаются, когда слово начато с «-» (или предлагать больше нечего): иначе список значений тонет в --json, -w...
                 var options = all.Where(x => x.StartsWith('-')).ToArray();

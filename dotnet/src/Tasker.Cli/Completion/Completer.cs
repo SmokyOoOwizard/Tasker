@@ -51,6 +51,9 @@ internal static class Completer
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(1.5);
 
+    [ThreadStatic]
+    internal static bool Suggesting;
+
     /// <summary>Значения аргумента подсказывает <paramref name="source"/>.</summary>
     public static Argument<T> Suggests<T>(this Argument<T> argument, GlobalOptions g, ValueSource source)
     {
@@ -79,6 +82,8 @@ internal static class Completer
     public static Option<T> Suggests<T>(this Option<T> option, GlobalOptions g, ValueSource source)
     {
         option.CompletionSources.Add(context => Complete(g, context, source, null));
+        if (source.NeedsWorkspace)
+            option.HelpName ??= option.Name.TrimStart('-');
         return option;
     }
 
@@ -99,6 +104,9 @@ internal static class Completer
     {
         try
         {
+            if (source.NeedsWorkspace && !Suggesting)
+                return [];
+
             var (preceding, word) = Split(context);
             var parse = context.ParseResult;
             if (argument != null && !IsCurrent(parse, preceding, argument))
