@@ -71,6 +71,7 @@ public static class McpDaemon
             builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
             var state = new DaemonRuntimeState(port, port);
+            builder.Services.AddSingleton<IDaemonMcp>(new HostDaemonMcp(state, port));
             var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
             var app = builder.Build();

@@ -74,6 +74,9 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /api/projects/{projectId}/boards/{id}/lock`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/boards/{id}/lock/delete(releaseBoardLock)`.
     func releaseBoardLock(_ input: Operations.ReleaseBoardLock.Input) async throws -> Operations.ReleaseBoardLock.Output
+    /// - Remark: HTTP `POST /api/projects/{projectId}/cleanup`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/cleanup/post(cleanupProject)`.
+    func cleanupProject(_ input: Operations.CleanupProject.Input) async throws -> Operations.CleanupProject.Output
     /// - Remark: HTTP `POST /api/projects/{projectId}/enums`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/enums/post(createFieldEnum)`.
     func createFieldEnum(_ input: Operations.CreateFieldEnum.Input) async throws -> Operations.CreateFieldEnum.Output
@@ -472,6 +475,17 @@ extension APIProtocol {
         headers: Operations.ReleaseBoardLock.Input.Headers = .init()
     ) async throws -> Operations.ReleaseBoardLock.Output {
         try await releaseBoardLock(Operations.ReleaseBoardLock.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `POST /api/projects/{projectId}/cleanup`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/cleanup/post(cleanupProject)`.
+    public func cleanupProject(
+        path: Operations.CleanupProject.Input.Path,
+        headers: Operations.CleanupProject.Input.Headers = .init()
+    ) async throws -> Operations.CleanupProject.Output {
+        try await cleanupProject(Operations.CleanupProject.Input(
             path: path,
             headers: headers
         ))

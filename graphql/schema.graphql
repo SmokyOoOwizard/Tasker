@@ -131,11 +131,30 @@ type FieldEnumValue {
   name: String!
 }
 
+type LinkCycle {
+  typeId: UUID!
+  typeName: String!
+  path: [LinkCycleTask!]!
+}
+
+type LinkCycleTask {
+  id: UUID!
+  title: String!
+  seriesNumbers: [TaskSeriesNumber!]!
+}
+
 type LinkedTask {
   id: UUID!
   title: String!
   statusId: UUID!
   seriesNumbers: [TaskSeriesNumber!]!
+}
+
+type LinkHealth {
+  tasksWithInvalidLinks: Int!
+  unreadableFiles: Int!
+  cycles: [LinkCycle!]!
+  needsAttention: Boolean!
 }
 
 type LinkType {
@@ -240,6 +259,7 @@ type Project {
   seriesList(offset: Int, limit: Int): SeriesPage!
   series(id: UUID!): Series
   seriesHealth: SeriesHealth!
+  linkHealth: LinkHealth!
   seriesConflictPlan(seriesId: UUID!): ConflictPlan
   boards(offset: Int, limit: Int): BoardPage!
   board(id: UUID!): Board

@@ -217,6 +217,11 @@ internal static class TaskerApi
                 Results.Ok(await service.Apply(projectId, id, command.Token, ct)))
             .RespondsOk<ConflictPlan>("resolveSeriesConflicts");
 
+        // Чистка после слияния веток git: недействительные ссылки на серии и связи на несуществующее. Номера и циклы не трогает.
+        project.MapPost("/cleanup", async (CleanupService service, Guid projectId, CancellationToken ct) =>
+            Results.Ok(await service.Run(projectId, new CleanupOptions(), ct)))
+            .RespondsOk<CleanupReport>("cleanupProject");
+
         // Серию с задачами удалять можно: ссылки на неё из задач убираются в той же операции.
         project.MapDelete("/series/{id:guid}", async (SeriesService service, Guid projectId, Guid id, string? version, CancellationToken ct) =>
             NoContentOrNotFound(await service.Delete(projectId, id, version, ct)))

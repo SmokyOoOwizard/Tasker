@@ -1,0 +1,72 @@
+query AdminAgents {
+  agents(limit: 200) {
+    totalCount
+    data {
+      id
+      username
+      createdAt
+      version
+    }
+  }
+}
+
+query AdminMcp {
+  workspaceMcp {
+    daemon
+    port
+    url
+    workspace
+    workspaceState
+    error
+    agentHeader
+  }
+}
+
+query AdminProblems {
+  workspaceProblems(limit: 200) {
+    totalCount
+    data {
+      path
+      error
+    }
+  }
+  projects(limit: 200) {
+    data {
+      id
+      name
+      seriesList(limit: 200) {
+        data {
+          id
+          prefix
+        }
+      }
+      seriesHealth {
+        numberConflicts {
+          seriesId
+          number
+          taskIds
+        }
+        prefixConflicts {
+          prefix
+        }
+        tasksWithInvalidSeries
+        unreadableSeriesFiles
+      }
+      linkHealth {
+        tasksWithInvalidLinks
+        unreadableFiles
+        cycles {
+          typeName
+          path {
+            id
+            title
+            seriesNumbers {
+              seriesId
+              number
+            }
+          }
+        }
+      }
+    }
+  }
+}
