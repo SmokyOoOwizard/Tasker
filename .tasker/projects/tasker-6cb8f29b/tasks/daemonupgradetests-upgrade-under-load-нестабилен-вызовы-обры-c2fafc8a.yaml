@@ -2,9 +2,9 @@ formatVersion: 11
 id: c2fafc8a-c103-4fe4-9968-cdf1cbabd5c4
 title: 'DaemonUpgradeTests.Upgrade_under_load нестабилен: вызовы обрываются при замене демона'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 4d53dac5-0d44-44d0-adcc-135d1d5acb26
 createdAt: 2026-11-06T00:52:42.3520410+00:00
-updatedAt: 2026-11-06T01:10:30.1423600+00:00
+updatedAt: 2026-11-06T18:12:11.8625660+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 234

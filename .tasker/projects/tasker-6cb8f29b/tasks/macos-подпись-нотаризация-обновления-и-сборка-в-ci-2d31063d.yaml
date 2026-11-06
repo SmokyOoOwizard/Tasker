@@ -4,7 +4,7 @@ title: 'macOS: подпись, нотаризация, обновления и �
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-11-03T21:33:21.1303150+00:00
-updatedAt: 2026-11-06T16:08:01.3546990+00:00
+updatedAt: 2026-11-06T18:12:32.5000470+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 204
@@ -12,7 +12,7 @@ description: |-
   Эпик TSK-178.
 
   Что сделать
-  - Подпись Developer ID, hardened runtime, нотаризация, DMG; демон внутри пакета тоже подписан.
+  - Подпись Developer ID, hardened runtime, нотаризация, DMG; консоль и демон внутри пакета тоже подписаны.
   - Автообновление (Sparkle или аналог) с лентой обновлений в релизах GitHub.
   - Сборка, тесты и выпуск в CI (macOS-раннер) вместе с релизом консоли и демона, версия из VERSION (уже сделано: job macos-app собирает zip с Tasker.app, консоль и демон внутри Tasker.app, версия из VERSION).
 
