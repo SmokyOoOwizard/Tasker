@@ -170,6 +170,23 @@ struct BoardViewTests {
         #expect(model.columns[0].rows.count == 261)
     }
 
+    @Test func leavingTheBoardCollapsesExpandedColumns() async {
+        let stub = source((1...260).map { row($0, status: todo) })
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        let collapsed = model.columns[0].rows.count
+        model.showAll(todoColumn)
+        await until { model.columns[0].rows.count == 260 }
+        model.stop()
+        #expect(model.columns[0].expanded == false)
+        #expect(model.columns[0].rows.count == collapsed)
+        model.resume()
+        await until { model.phase == .ready }
+        #expect(model.columns[0].rows.count == collapsed)
+        #expect(model.columns[0].hidden > 0)
+    }
+
     @Test func movingACardAsksTheServerAndRelocatesIt() async {
         let first = row(1, status: todo)
         let stub = source([first])

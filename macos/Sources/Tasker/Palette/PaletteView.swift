@@ -73,7 +73,11 @@ struct PaletteView: View {
         .font(.design(DesignTypography.baseSize))
         .foregroundStyle(DesignColor.tx.color)
         .tint(DesignColor.acc.color)
-        .onAppear { focused = true }
+        .task {
+            focused = true
+            try? await Task.sleep(for: .milliseconds(80))
+            focused = true
+        }
     }
 }
 
