@@ -1,0 +1,25 @@
+name: t234 probe
+on:
+  push:
+    branches: ['task/tsk-234']
+    paths: ['.github/workflows/t234-probe.yml']
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        n: [1, 2, 3, 4]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build dotnet/tests/Tasker.Tests -p:EmbedFrontend=false -v q
+      - name: repeat
+        shell: bash
+        run: |
+          mkdir -p out
+          loop() { for i in $(seq 1 25); do dotnet test dotnet/tests/Tasker.Tests --no-build -p:EmbedFrontend=false --filter "FullyQualifiedName~DaemonUpgradeTests.Upgrade_under_load" -v q > "out/$1-$i.log" 2>&1 || { echo "FAILED $1-$i"; cat "out/$1-$i.log"; }; done; }
+          loop a & loop b & loop c & wait
