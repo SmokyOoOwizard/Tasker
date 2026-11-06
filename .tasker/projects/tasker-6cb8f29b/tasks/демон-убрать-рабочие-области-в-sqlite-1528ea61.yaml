@@ -1,0 +1,40 @@
+formatVersion: 11
+id: 1528ea61-dc42-4b0a-b239-d1bff936acb9
+title: 'Демон: убрать рабочие области в SQLite'
+typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
+statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+createdAt: 2026-11-06T18:14:44.6873370+00:00
+updatedAt: 2026-11-06T18:14:44.6873370+00:00
+series:
+- seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
+  number: 236
+description: |-
+  Проблема
+  Демон и консоль умеют регистрировать рабочую область из файла SQLite (`tasker mcp workspace add <файл>`). Основной способ хранения — папка `.tasker` под git, а у областей в SQLite поведение хуже: нет наблюдателя за файлом, поэтому изменения снаружи не видны (TSK-34 и TSK-53 отменены). Десктоп и консольный `--sqlite`, ради которых это делалось, уже удалены. Демон должен работать только с папками.
+
+  Где
+  - dotnet/src/Tasker.Cli/Commands/McpCommands.cs — `Locate`, `mcp workspace add` и `remove`, описания команд
+  - dotnet/src/Tasker.Daemon.Host/McpDaemon.cs — выбор `WorkspaceLocation.Sqlite` в запросе синхронизации
+  - dotnet/src/Tasker.Global/GlobalSettings.cs — `WorkspaceEntry`, вид области в настройках
+  - dotnet/src/Tasker.Storage.Files/Workspaces/WorkspaceLocation.cs — `WorkspaceKind.Sqlite`
+  - dotnet/src/Tasker.Web/Workspaces/WorkspaceRegistry.cs — открытие области через `DbStorageModule`
+  - dotnet/src/Tasker.Web/Workspaces/WorkspaceEvents.cs, dotnet/src/Tasker.Web/TaskerWebExtensions.cs — `UseSqliteChangeEvents`
+  - dotnet/src/Tasker.Mcp/McpWorkspaces.cs — описание пути области
+  - dotnet/src/Tasker.Cli/Completion/ (`Completer.cs`, `WorkspaceFreeCommand.cs`, `Shells/tasker.bash`, `Shells/tasker.zsh`), dotnet/src/Tasker.Cli/Commands/Kit.cs, dotnet/src/Tasker.Cli/Commands/ManualCommands.cs — упоминания `--sqlite`
+  - dotnet/src/Tasker.Cli/Manual/ru/ (`01-first-project.md`, `09-migrate.md`, `13-windows.md`), docs/wiki/, docs/api/openapi.json
+  - dotnet/tests/Tasker.Tests/ — например `GoldenMcpTests.Sqlite_mcp_answers_match_the_snapshots`, `SeriesApiTests`, `SettingsTests`, `WorkspaceTests`, корпус `tests/golden`
+
+  Что нужно сделать
+  - `tasker mcp workspace add` принимает только папку; путь к файлу даёт понятную ошибку.
+  - Убрать области в SQLite из демона, настроек, реестра областей и событий.
+  - Решить и реализовать поведение для уже записанной в `settings.json` области в SQLite: демон запускается, остальные области работают, про эту запись есть понятное сообщение, а `tasker mcp workspace remove` может её удалить.
+  - Убрать из консоли, справочника и вики упоминания областей в SQLite и `--sqlite`, которые относятся к консоли и демону.
+  - Перевести или убрать тесты, которые проверяют области в SQLite через демон.
+  - Проверить, можно ли после этого убрать сборочные настройки SQLite из `Tasker.Cli.csproj`. Индексу папки SQLite по-прежнему нужен, поэтому убирать их можно, только если консоль собирается и работает без них.
+
+  Что не меняется
+  - Индекс папки `.tasker/.cache/index.db` (`dotnet/src/Tasker.Storage.Files/Index/WorkspaceIndex.cs`) остаётся на SQLite.
+  - Сервер и его хранилище `dotnet/src/Tasker.Storage.Db` (Postgres, файл SQLite, SQLite в памяти) остаются; на SQLite в памяти опираются тесты серверного режима.
+
+  Готово, когда
+  `tasker mcp workspace add <файл>` отказывает с понятным сообщением, области-папки работают как раньше, старая запись об области в SQLite не мешает запуску демона, сервер и индекс папки не затронуты, тесты проходят на трёх системах.
