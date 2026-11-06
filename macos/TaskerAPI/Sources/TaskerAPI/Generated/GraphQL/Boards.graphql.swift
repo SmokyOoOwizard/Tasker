@@ -618,3 +618,85 @@ public struct BoardColumnTasksQuery: GraphQLQuery {
         }
     }
 }
+
+public struct SidebarBoardsQuery: GraphQLQuery {
+    public static let operationName = "SidebarBoards"
+    public static let document = """
+    query SidebarBoards($projectId: UUID!) {
+      project(id: $projectId) {
+        __typename
+        id
+        boards(limit: 200) {
+          __typename
+          data {
+            __typename
+            id
+            name
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("boards", arguments: ["limit": .value(.int(200))], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("data", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name")
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+
+    public init(projectId: UUID) {
+        self.projectId = projectId
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var boards: Boards
+
+            public init(id: UUID, boards: Boards) {
+                self.id = id
+                self.boards = boards
+            }
+
+            public struct Boards: Hashable, Sendable, Decodable {
+                public var data: [DataItem]
+
+                public init(data: [DataItem]) {
+                    self.data = data
+                }
+
+                public struct DataItem: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+
+                    public init(id: UUID, name: String) {
+                        self.id = id
+                        self.name = name
+                    }
+                }
+            }
+        }
+    }
+}

@@ -87,3 +87,15 @@ query BoardColumnTasks($projectId: UUID!, $boardId: UUID!, $columnId: UUID!, $fi
     }
   }
 }
+
+query SidebarBoards($projectId: UUID!) {
+  project(id: $projectId) {
+    id
+    boards(limit: 200) {
+      data {
+        id
+        name
+      }
+    }
+  }
+}
