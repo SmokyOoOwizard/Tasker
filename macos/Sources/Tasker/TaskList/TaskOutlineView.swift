@@ -89,7 +89,7 @@ final class TaskOutlineView: NSOutlineView {
     override func keyDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection([.command, .control, .option])
         guard modifiers.isEmpty else { return super.keyDown(with: event) }
-        switch event.charactersIgnoringModifiers {
+        switch LatinKeys.character(for: event) {
         case "j":
             move(by: 1)
         case "k":

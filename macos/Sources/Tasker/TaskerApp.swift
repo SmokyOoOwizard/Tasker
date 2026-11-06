@@ -54,6 +54,7 @@ struct TaskerApp: App {
                     appDelegate.openLinks = { [opener] urls in opener.open(urls) }
                     Task { await notifier.prepare() }
                     appDelegate.layout = workspaces.layout
+                    LatinKeys.dispatch = { [runner] command, window in runner.perform(command, window: window) }
                     appDelegate.releaseLocks = { [sessions] in sessions.releaseEditorLocks() }
                 }
         }

@@ -20,6 +20,14 @@ enum WorkspaceWindowRegistry {
         table.setObject(window, forKey: id as NSUUID)
     }
 
+    static func id(of window: NSWindow?) -> UUID? {
+        guard let window else { return nil }
+        for key in table.keyEnumerator().allObjects {
+            if let key = key as? NSUUID, table.object(forKey: key) === window { return key as UUID }
+        }
+        return nil
+    }
+
     static func front(_ id: UUID) {
         guard let window = table.object(forKey: id as NSUUID) else { return }
         if window.isMiniaturized { window.deminiaturize(nil) }
