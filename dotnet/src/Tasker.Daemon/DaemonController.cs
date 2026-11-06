@@ -11,25 +11,23 @@ public sealed record AutostartInfo(string Manager, bool Enabled, bool Loaded);
 
 public sealed record ControllerStatus(DaemonStatus? Daemon, AutostartInfo Autostart);
 
-/// <summary>Замена на лету не удалась: старый процесс продолжает работать, сообщение объясняет почему.</summary>
+/// <summary>Новая сборка не прошла проверку: работающий демон не тронут, сообщение объясняет почему.</summary>
 public class DaemonUpgradeException(string message) : Exception(message);
 
 public enum UpgradeKind
 {
-    /// <summary>Демон не работает: заменять нечего.</summary>
+    /// <summary>Демон не работает: обновлять нечего.</summary>
     NotRunning,
 
-    /// <summary>Рабочий процесс заменён на лету, вызовы не прерывались.</summary>
-    Replaced,
-
-    /// <summary>Демон перезапущен (запрошено <c>--restart</c> или он запущен по-старому, одним процессом).</summary>
+    /// <summary>Демон перезапущен на новой сборке.</summary>
     Restarted
 }
 
 /// <param name="Daemon">Свою программу демона вместо соседней с <c>tasker</c> (тесты, нестандартная установка): файл и начальные аргументы.</param>
-public sealed record UpgradeOptions(bool Restart = false, int TimeoutSeconds = DaemonController.DefaultUpgradeTimeoutSeconds, (string File, string[] Arguments)? Daemon = null);
+public sealed record UpgradeOptions(int TimeoutSeconds = DaemonController.DefaultUpgradeTimeoutSeconds, (string File, string[] Arguments)? Daemon = null);
 
-public sealed record UpgradeOutcome(UpgradeKind Kind, string Message, DaemonStatus? Status, UpgradeResult? Result = null);
+/// <param name="Problems">Что после перезапуска не так: область больше не открывается или служба запустила другую сборку.</param>
+public sealed record UpgradeOutcome(UpgradeKind Kind, string Message, DaemonStatus? Status, string[] Problems);
 
 /// <summary>
 /// Управление демоном для <c>tasker mcp start | stop | restart | status | autostart</c>.
@@ -45,7 +43,7 @@ public sealed class DaemonController(
     private readonly TimeSpan _readyTimeout = readyTimeout ?? TimeSpan.FromSeconds(30);
     private readonly TimeSpan _stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(15);
 
-    /// <summary>Сколько ждать, пока новый рабочий процесс откроет области и станет готов, по умолчанию.</summary>
+    /// <summary>Сколько ждать проверки новой сборки и открытия областей после перезапуска, по умолчанию.</summary>
     public const int DefaultUpgradeTimeoutSeconds = 60;
 
     public IServiceManager Service => service;
@@ -73,7 +71,7 @@ public sealed class DaemonController(
             process = (spawn ?? Launcher.SpawnDaemon)();
         }
 
-        return (await WaitReady(process, ct), false);
+        return (await WaitReady(process, _readyTimeout, ct), false);
     }
 
     /// <returns>false — демон не работал.</returns>
@@ -97,46 +95,41 @@ public sealed class DaemonController(
     }
 
     /// <summary>
-    /// Заменяет работающий демон на новую сборку без простоя: рядом поднимается новый рабочий процесс, он принимает вызовы,
-    /// когда открыл все области, а старый заканчивает начатые. Демон, запущенный по-старому (одним процессом), заменить так нельзя —
-    /// он перезапускается. Не получилось (новый процесс не поднялся) — <see cref="DaemonUpgradeException"/>, старый продолжает работать.
+    /// Переводит работающий демон на новую сборку: сначала проверяет её пробным запуском (не прошла — <see cref="DaemonUpgradeException"/>,
+    /// демон не тронут), потом перезапускает демон и ждёт, пока он откроет области. На время перезапуска порт закрыт, начатые вызовы обрываются.
     /// </summary>
     public async Task<UpgradeOutcome> Upgrade(UpgradeOptions options, CancellationToken ct = default)
     {
         if (!DaemonFiles.IsRunning())
-            return new UpgradeOutcome(UpgradeKind.NotRunning, "The MCP server is not running: nothing to upgrade (start it with 'tasker mcp start')", null);
+            return new UpgradeOutcome(UpgradeKind.NotRunning, "The MCP server is not running: nothing to upgrade (start it with 'tasker mcp start')", null, []);
 
-        if (options.Restart)
-            return new UpgradeOutcome(UpgradeKind.Restarted, "Restarted as requested", await Restart(ct));
+        var timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        var program = options.Daemon ?? Launcher.DaemonCommand();
+        var target = await Launcher.ReadBuild(program, timeout, ct);
+        var before = await DaemonClient.GetStatus(ct);
 
-        var status = await DaemonClient.GetStatus(ct)
-            ?? throw new DaemonUpgradeException("The MCP server does not answer: wait for it to start, or restart it with 'tasker mcp upgrade --restart'");
-        if (!status.Supervised)
-        {
-            return new UpgradeOutcome(UpgradeKind.Restarted,
-                "The running MCP server was started by an earlier build as one process and cannot be replaced on the fly: restarted it (the next upgrade will be seamless)",
-                await Restart(ct));
-        }
+        await Stop(ct);
+        Process? process = null;
+        if (service.IsEnabled)
+            await service.Start();
+        else
+            process = spawn?.Invoke() ?? Launcher.SpawnDaemon(program);
+        var status = await WaitReady(process, timeout, ct);
 
-        var (file, arguments) = options.Daemon ?? Launcher.DaemonCommand();
-        var result = await DaemonClient.Upgrade(new UpgradeRequest(file, arguments, options.TimeoutSeconds), ct)
-            ?? throw new DaemonUpgradeException("The MCP server stopped while it was being upgraded");
-        if (!result.Ok)
-            throw new DaemonUpgradeException(result.Message);
+        var problems = (before?.Workspaces ?? [])
+            .Where(x => x.State == WorkspaceState.Open)
+            .Select(x => (x.Path, Now: status.Workspaces.FirstOrDefault(w => w.Path == x.Path)))
+            .Where(x => x.Now is not { State: WorkspaceState.Open })
+            .Select(x => $"the workspace {x.Path} was open and is not now: {x.Now?.Error ?? "not served"}")
+            .ToList();
+        if (status.Build != target.Build)
+            problems.Add($"the MCP server came back on build {DescribeBuild(status.Build)}, expected {target.Build}: the service starts another program");
 
-        // Старый процесс заканчивает начатые вызовы: ждём, пока он уйдёт (но не дольше срока), чтобы статус показал одну сборку.
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(options.TimeoutSeconds);
-        var latest = await DaemonClient.GetStatus(ct);
-        while (latest is { } current && current.Workers.Any(x => x.Role != WorkerRole.Active) && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(100, ct);
-            if (await DaemonClient.GetStatus(ct) is not { } next)
-                break;
-            latest = next;
-        }
-
-        return new UpgradeOutcome(UpgradeKind.Replaced, result.Message, latest, result);
+        var old = DescribeBuild(before?.Build);
+        return new UpgradeOutcome(UpgradeKind.Restarted, $"The MCP server is restarted: build {old} -> {DescribeBuild(status.Build)}", status, [.. problems]);
     }
+
+    private static string DescribeBuild(string? build) => build is { Length: > 0 } ? build : "?";
 
     /// <summary>Включает автозапуск: служба запускает демон сейчас и при каждом входе в систему, перезапускает при падении.</summary>
     public async Task<DaemonStatus> EnableAutostart(CancellationToken ct = default)
@@ -147,7 +140,7 @@ public sealed class DaemonController(
         // Демон, запущенный не службой, держит порт и блокировку — освобождаем их для службы.
         await Stop(ct);
         await service.Enable();
-        return await WaitReady(null, ct);
+        return await WaitReady(null, _readyTimeout, ct);
     }
 
     /// <summary>Выключает автозапуск. Работавший демон продолжает работать — уже без службы, до остановки или выхода из системы.</summary>
@@ -164,9 +157,9 @@ public sealed class DaemonController(
         new(service.Name, service.IsEnabled, service.IsEnabled && await service.IsLoaded());
 
     // Готов, когда отвечает и все области из настроек уже открыты (или не открылись).
-    private async Task<DaemonStatus> WaitReady(Process? process, CancellationToken ct)
+    private static async Task<DaemonStatus> WaitReady(Process? process, TimeSpan timeout, CancellationToken ct)
     {
-        var deadline = DateTime.UtcNow + _readyTimeout;
+        var deadline = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < deadline)
         {
             ct.ThrowIfCancellationRequested();
@@ -179,7 +172,7 @@ public sealed class DaemonController(
             await Task.Delay(150, ct);
         }
 
-        throw new DaemonStartException(LogTail() ?? $"The MCP server did not answer in {_readyTimeout.TotalSeconds:0} s: see the log in {AppDirectories.Logs}");
+        throw new DaemonStartException(LogTail() ?? $"The MCP server did not answer in {timeout.TotalSeconds:0} s: see the log in {AppDirectories.Logs}");
     }
 
     private async Task WaitStopped(CancellationToken ct)

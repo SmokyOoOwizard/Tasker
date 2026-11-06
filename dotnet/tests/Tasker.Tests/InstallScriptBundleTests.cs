@@ -4,7 +4,7 @@ namespace Tasker.Tests;
 
 /// <summary>
 /// <c>scripts/install.sh</c> с готовой сборкой: каталог, архив, адрес. Вместо настоящей сборки — подставные программы, которые пишут
-/// свои вызовы в файл: так проверяются порядок и условия вызовов (автозапуск, <c>mcp upgrade</c>, отказ от молчаливого перезапуска),
+/// свои вызовы в файл: так проверяются порядок и условия вызовов (автозапуск, <c>mcp upgrade</c>, вывод при отказе),
 /// на которые настоящий демон тестов не нужен и которые не должны трогать настоящую службу автозапуска.
 /// </summary>
 public partial class InstallScriptTests
@@ -135,34 +135,22 @@ public partial class InstallScriptTests
     }
 
     [UnixFact]
-    public async Task A_running_daemon_is_switched_with_upgrade_and_never_restarted_silently()
+    public async Task A_running_daemon_is_moved_to_the_new_build_with_upgrade_and_a_failure_is_only_reported()
     {
         var home = Home();
 
-        // Автозапуск уже включён, демон работает: замена на лету, без перезапуска.
         var ok = await Run(["--prefix", Prefix, "--from", Bundle()], home, environment: StubEnvironment(("STUB_RUNNING_EXIT", "0"), ("STUB_AUTOSTART", "true")));
         Assert.True(ok.Code == 0, ok.Out + ok.Err);
         Assert.Contains("mcp upgrade", StubCalls());
-        Assert.DoesNotContain("mcp upgrade --restart", StubCalls());
         Assert.DoesNotContain("mcp autostart enable", StubCalls());
-        Assert.Contains("without downtime", ok.Out);
+        Assert.Contains("restarting it", ok.Out);
 
-        // Замена не удалась: установка осталась, перезапуска нет, причина и подсказка напечатаны.
         File.Delete(StubLog);
         var failed = await Run(["--prefix", Prefix, "--from", Bundle("again"), "--no-autostart"], home,
             environment: StubEnvironment(("STUB_RUNNING_EXIT", "0"), ("STUB_UPGRADE_EXIT", "1")));
         Assert.Equal(0, failed.Code);
-        Assert.DoesNotContain("mcp upgrade --restart", StubCalls());
         Assert.Contains("upgrade failed: new build did not start", failed.Err);
-        Assert.Contains("it keeps running with the previous build", failed.Err);
-        Assert.Contains("tasker mcp upgrade --restart", failed.Err);
-
-        // --restart: перезапуск по просьбе.
-        File.Delete(StubLog);
-        var restart = await Run(["--prefix", Prefix, "--from", Bundle("third"), "--no-autostart", "--restart"], home,
-            environment: StubEnvironment(("STUB_RUNNING_EXIT", "0")));
-        Assert.True(restart.Code == 0, restart.Out + restart.Err);
-        Assert.Contains("mcp upgrade --restart", StubCalls());
+        Assert.Contains("the MCP server was not moved to the new build", failed.Err);
     }
 
     [UnixFact]

@@ -19,7 +19,7 @@ Commands:
   start        Starts the MCP server in the background
   stop         Stops the MCP server
   restart      Restarts the MCP server (applies a changed port)
-  upgrade      Switches the running MCP server to the installed build without downtime (--restart: restart instead)
+  upgrade      Checks the installed build and restarts the running MCP server on it (calls in progress are cut off)
   status       Shows whether the MCP server is running (exit code 3 if not)
   autostart    Runs the MCP server at login and keeps it running (launchd on macOS, systemd on Linux, Task Scheduler on Windows)
   workspace    Workspaces available through MCP

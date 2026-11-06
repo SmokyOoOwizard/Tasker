@@ -4,7 +4,7 @@ namespace Tasker.Stress;
 public sealed class StressOptions
 {
     public static readonly string[] AllScenarios =
-        ["create", "edit-same", "edit-fields", "edit-different", "locks", "cascade-wait", "mass", "fields", "links", "delete-while-edit", "delete-project", "kill", "multiws", "scale", "upgrade"];
+        ["create", "edit-same", "edit-fields", "edit-different", "locks", "cascade-wait", "mass", "fields", "links", "delete-while-edit", "delete-project", "kill", "multiws", "scale"];
 
     /// <summary>Сколько одновременных клиентов («агентов»).</summary>
     public int Clients { get; set; } = 10;
@@ -83,7 +83,7 @@ public sealed class StressOptions
           --ops M            operations per client in a scenario (default 5)
           --client cli|mcp|mix   console processes, HTTP /mcp of an own daemon, or half and half (default cli)
           --storage files (default files)
-          --scenarios a,b,c  create, edit-same, edit-fields, edit-different, locks, cascade-wait, mass, fields, links, delete-while-edit, delete-project, kill, multiws, scale, upgrade (daemon replaced on the fly under load) (default: all)
+          --scenarios a,b,c  create, edit-same, edit-fields, edit-different, locks, cascade-wait, mass, fields, links, delete-while-edit, delete-project, kill, multiws, scale (daemon replaced on the fly under load) (default: all)
           --scale 1,2,5,10   client counts of the scale scenario
           --long             also real lock expiry (2 min) and cascade wait until refusal (30 s)
           --keep             keep the temporary folder; --dir <path> puts it elsewhere

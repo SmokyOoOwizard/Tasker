@@ -61,7 +61,7 @@ internal static class ApiSchemaGenerator
         AddOpenApi(builder.Services, _ => true);
 
         await using var app = builder.Build();
-        McpDaemon.MapControl(app, new DaemonRuntimeState(5719, 5719), null!, "token", null!, new McpDaemon.ControlHooks());
+        McpDaemon.MapControl(app, new DaemonRuntimeState(5719, 5719), null!, "token", null!);
         app.MapOpenApi();
         return await Read(app, "/");
     }

@@ -382,7 +382,7 @@ private func isolatedDefaults() -> UserDefaults {
 
 @MainActor
 @Suite struct WorkspaceSessionTests {
-    private let status = DaemonStatus(pid: 1, port: 5719, workers: [], workspaces: [
+    private let status = DaemonStatus(pid: 1, port: 5719, workspaces: [
         DaemonWorkspace(path: "/w/a", state: "open", key: "a", error: nil),
         DaemonWorkspace(path: "/w/b", state: "open", key: "b", error: nil)
     ])
@@ -574,7 +574,7 @@ private func isolatedDefaults() -> UserDefaults {
         layout.open("/a", in: window)
         layout.open("/b", in: window)
         layout.close(layout.window(window)!.tabs.first { $0.path == "/a" }!.id)
-        let status = DaemonStatus(pid: 1, port: 1, workers: [], workspaces: [
+        let status = DaemonStatus(pid: 1, port: 1, workspaces: [
             DaemonWorkspace(path: "/a", state: "open", key: "a", error: nil),
             DaemonWorkspace(path: "/b", state: "open", key: "b", error: nil),
             DaemonWorkspace(path: "/c", state: "open", key: "c", error: nil)
@@ -632,7 +632,7 @@ private func isolatedDefaults() -> UserDefaults {
 }
 
 @Suite struct WorkspaceStatusTests {
-    private let status = DaemonStatus(pid: 1, port: 5719, workers: [], workspaces: [
+    private let status = DaemonStatus(pid: 1, port: 5719, workspaces: [
         DaemonWorkspace(path: "/w/open", state: "open", key: "open-1", error: nil),
         DaemonWorkspace(path: "/w/opening", state: "opening", key: nil, error: nil),
         DaemonWorkspace(path: "/w/failed", state: "failed", key: nil, error: "нет диска")

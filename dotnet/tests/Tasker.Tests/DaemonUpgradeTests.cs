@@ -12,29 +12,15 @@ using Xunit;
 namespace Tasker.Tests;
 
 /// <summary>
-/// Бесшовная замена демона (TSK-103, <c>tasker mcp upgrade</c>): настоящие процессы на своём порту и своём TASKER_HOME.
-/// Новый рабочий процесс поднимается рядом со старым и принимает вызовы, когда открыл области; старый заканчивает начатое.
+/// Обновление демона (<c>tasker mcp upgrade</c>): настоящие процессы на своём порту и своём TASKER_HOME.
+/// Новая сборка проверяется пробным запуском, затем демон перезапускается на ней.
 /// Настоящий демон (порт 5719) и настоящая служба launchd тестам не нужны и не затрагиваются.
 /// </summary>
 public class DaemonUpgradeTests : IDisposable
 {
     private readonly DaemonFixture _daemon = new();
-    private readonly List<IDisposable> _env = [];
 
-    public DaemonUpgradeTests()
-    {
-        // Старый процесс ждёт тишины недолго: тесты не должны ждать по две секунды на каждую замену.
-        _env.Add(AppEnvironment.Override("TASKER_MCP_DRAIN_QUIET_MS", "300"));
-        // На Windows супервизор по умолчанию выключен (страница вики «Windows»): тесты включают его, как это сделает пользователь. На Unix он и так включён.
-        _env.Add(AppEnvironment.Override("TASKER_MCP_SUPERVISOR", "1"));
-    }
-
-    public void Dispose()
-    {
-        _daemon.Dispose();
-        foreach (var x in _env)
-            x.Dispose();
-    }
+    public void Dispose() => _daemon.Dispose();
 
     private sealed record Area(string Folder, string Key, Guid ProjectId, Guid TypeId);
 
@@ -125,7 +111,6 @@ public class DaemonUpgradeTests : IDisposable
 
         public ConcurrentBag<string> Acknowledged { get; } = [];
         public ConcurrentBag<string> Failures { get; } = [];
-        public ConcurrentDictionary<int, int> ServedBy { get; } = [];
 
         public void Start(int clients)
         {
@@ -134,7 +119,6 @@ public class DaemonUpgradeTests : IDisposable
                 var index = i;
                 _workers.Add(Task.Run(() => Write(index)));
             }
-            _workers.Add(Task.Run(Probe));
         }
 
         public async Task Stop()
@@ -180,23 +164,6 @@ public class DaemonUpgradeTests : IDisposable
             }
         }
 
-        // Кто отвечает: pid рабочего процесса из /health (по тому же общему соединению, что и вызовы).
-        private async Task Probe()
-        {
-            while (!_stop.IsCancellationRequested)
-            {
-                try
-                {
-                    var pid = JsonNode.Parse(await _http.GetStringAsync($"http://127.0.0.1:{daemon.Port}/health"))!["pid"]!.GetValue<int>();
-                    ServedBy.AddOrUpdate(pid, 1, (_, count) => count + 1);
-                }
-                catch (Exception e)
-                {
-                    Failures.Add($"health: {e.GetType().Name} {e.Message}");
-                }
-                await Task.Delay(20);
-            }
-        }
     }
 
     private async Task<string[]> TaskTitles(Area area)
@@ -206,152 +173,97 @@ public class DaemonUpgradeTests : IDisposable
         return list.Json["data"]!.AsArray().Select(x => x!["title"]!.GetValue<string>()).ToArray();
     }
 
-    [SkipOnWindowsFact("TSK-165: on Windows calls during the upgrade fail with HttpRequestException (connections drop while the socket is handed over)")]
-    public async Task Upgrade_under_load_loses_no_call_and_no_write_and_duplicates_none()
+    [Fact]
+    public async Task Upgrade_restarts_the_whole_daemon_and_the_status_shows_its_build()
     {
         var area = await Prepare();
         var before = await StatusOf();
-        var oldWorker = before.Workers.Single();
-        Assert.Equal(WorkerRole.Active, oldWorker.Role);
+        var (file, arguments) = TaskerProcess.DaemonCommand();
 
-        var load = new Load(_daemon, area);
-        load.Start(clients: 6);
-        await Task.Delay(1500);
+        var result = await _daemon.Mcp("upgrade");
 
-        // Две замены подряд, обе под нагрузкой.
-        var first = await _daemon.Mcp("upgrade");
-        Assert.True(first.Code == 0, first.Err + first.Out);
-        Assert.Contains("replaced without downtime", first.Out);
-        await Task.Delay(500);
-        var second = await _daemon.Mcp("upgrade");
-        Assert.True(second.Code == 0, second.Err + second.Out);
-        await Task.Delay(1500);
-        await load.Stop();
-
-        // Ни одного отказа: ни обрыва соединения, ни 5xx, ни «unavailable» — без единого повтора на стороне клиента.
-        Assert.True(load.Failures.IsEmpty, string.Join("\n", load.Failures.Take(10)));
-
-        // Каждая подтверждённая запись есть ровно один раз; лишних (повторов) нет.
-        var titles = await TaskTitles(area);
-        Assert.Equal(load.Acknowledged.Count, titles.Length);
-        Assert.Equal(titles.Length, titles.Distinct().Count());
-        Assert.Empty(load.Acknowledged.Except(titles));
-        Assert.True(titles.Length > 50, $"too little load to prove anything: {titles.Length}");
-
-        // Сначала отвечал старый процесс, потом два новых; демон и порт те же, рабочий процесс один и новый.
-        Assert.True(load.ServedBy.Count >= 3, "served by: " + string.Join(", ", load.ServedBy));
-        Assert.True(load.ServedBy.ContainsKey(oldWorker.Pid));
+        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
+        Assert.Contains("restarted", result.Out);
         var after = await StatusOf();
-        Assert.Equal(before.Pid, after.Pid);
+        Assert.NotEqual(before.Pid, after.Pid);
         Assert.Equal(before.Port, after.Port);
-        var worker = after.Workers.Single();
-        Assert.NotEqual(oldWorker.Pid, worker.Pid);
-        Assert.Equal(WorkerRole.Active, worker.Role);
-        await Eventually(() => Task.FromResult(!IsAlive(oldWorker.Pid)));
-        Assert.True(DaemonFiles.IsRunning());
+        await Eventually(() => Task.FromResult(!IsAlive(before.Pid)));
+        Assert.NotEmpty(after.Build);
+        Assert.Contains($"build {after.Build}", (await _daemon.Mcp("status")).Out);
+        Assert.Equal(["Demo"], DaemonFixture.ProjectNames(await _daemon.CallTool(area.Key, "list_projects")));
+
+        var info = await Launcher.ReadBuild((file, arguments), TimeSpan.FromSeconds(30));
+        Assert.Equal(info.Build, after.Build);
+        Assert.Equal(info.Version, after.Version);
     }
 
     [Fact]
-    public async Task A_call_in_progress_is_finished_by_the_old_process_and_both_are_shown_in_the_status()
+    public async Task Calls_refused_during_the_upgrade_are_the_only_loss_and_acknowledged_writes_survive()
     {
         var area = await Prepare();
-        var oldWorker = (await StatusOf()).Workers.Single();
+        var load = new Load(_daemon, area);
+        load.Start(clients: 4);
+        await Task.Delay(1000);
 
-        // Вызов «в работе»: заголовки и половина тела отправлены, остальное придёт позже — обработчик ждёт его в старом процессе.
-        var body = new JsonObject
-        {
-            ["jsonrpc"] = "2.0",
-            ["id"] = 1,
-            ["method"] = "tools/call",
-            ["params"] = new JsonObject { ["name"] = "list_projects", ["arguments"] = new JsonObject { ["workspace"] = area.Key } }
-        }.ToJsonString();
-        var bytes = Encoding.UTF8.GetBytes(body);
-        using var client = new TcpClient();
-        await client.ConnectAsync(IPAddress.Loopback, _daemon.Port);
-        var stream = client.GetStream();
-        var head = $"POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:{_daemon.Port}\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: {bytes.Length}\r\nConnection: close\r\n\r\n";
-        await stream.WriteAsync(Encoding.ASCII.GetBytes(head));
-        await stream.WriteAsync(bytes.AsMemory(0, 10));
-        await stream.FlushAsync();
-        await Task.Delay(300);
-
-        var upgrade = _daemon.Mcp("upgrade");
-        var both = await WaitStatus(x => x.Workers.Length == 2 && x.Workers.Any(w => w.Role == WorkerRole.Draining));
-        Assert.Equal(WorkerRole.Draining, both.Workers.Single(x => x.Pid == oldWorker.Pid).Role);
-        Assert.Equal(WorkerRole.Active, both.Workers.Single(x => x.Pid != oldWorker.Pid).Role);
-        Assert.Contains("finishing its calls", (await _daemon.Mcp("status")).Out);
-
-        // Тишины (300 мс) давно хватило бы — но вызов не закончен, и старый процесс его ждёт.
-        await Task.Delay(1500);
-        Assert.True(IsAlive(oldWorker.Pid));
-        Assert.False(upgrade.IsCompleted);
-
-        // Дослали остаток: вызов доделан старым процессом и получил свой ответ, потом старый процесс ушёл.
-        await stream.WriteAsync(bytes.AsMemory(10));
-        await stream.FlushAsync();
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        var response = await reader.ReadToEndAsync().WaitAsync(TimeSpan.FromSeconds(20));
-        Assert.StartsWith("HTTP/1.1 200", response);
-        Assert.Contains("Demo", response);
-
-        var result = await upgrade;
+        var result = await _daemon.Mcp("upgrade");
         Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
-        await Eventually(() => Task.FromResult(!IsAlive(oldWorker.Pid)));
-        Assert.Single((await StatusOf()).Workers);
-    }
+        var acknowledgedAtRestart = load.Acknowledged.Count;
+        await Eventually(() => Task.FromResult(load.Acknowledged.Count > acknowledgedAtRestart));
+        await load.Stop();
 
-    private async Task<DaemonStatus> WaitStatus(Func<DaemonStatus, bool> condition)
-    {
-        DaemonStatus? last = null;
-        try
-        {
-            await Eventually(async () => (last = await _daemon.Status()) is { } s && condition(s));
-        }
-        catch (TimeoutException) when (last == null)
-        {
-            throw new TimeoutException("tasker mcp status has no daemon: " + await Diagnose());
-        }
-        return last!;
+        var titles = await TaskTitles(area);
+        Assert.Empty(load.Acknowledged.Except(titles));
+        Assert.Equal(titles.Length, titles.Distinct().Count());
     }
 
     [UnixFact]
-    public async Task A_new_process_that_dies_at_the_start_leaves_the_old_one_serving()
+    public async Task A_new_program_that_fails_the_check_leaves_the_daemon_running()
     {
         var area = await Prepare();
         var before = await StatusOf();
-        var broken = Script("broken-daemon", "exit 3");
 
-        var result = await _daemon.Mcp("upgrade", "--daemon", broken);
+        var result = await _daemon.Mcp("upgrade", "--daemon", Script("broken-daemon", "echo boom >&2\nexit 3"));
 
         Assert.NotEqual(0, result.Code);
-        Assert.Contains("exited with code 3 before it was ready", result.Err);
+        Assert.Contains("exited with code 3", result.Err);
+        Assert.Contains("boom", result.Err);
         Assert.Contains("untouched", result.Err);
-        var after = await StatusOf();
-        Assert.Equal(before.Workers.Single().Pid, after.Workers.Single().Pid);
-        Assert.Equal(WorkerRole.Active, after.Workers.Single().Role);
+        Assert.Equal(before.Pid, (await StatusOf()).Pid);
         Assert.Equal(["Demo"], DaemonFixture.ProjectNames(await _daemon.CallTool(area.Key, "list_projects")));
     }
 
     [UnixFact]
-    public async Task A_new_process_that_never_gets_ready_is_removed_after_the_timeout()
+    public async Task A_new_program_that_never_answers_is_removed_after_the_timeout()
     {
         var area = await Prepare();
         var before = await StatusOf();
         var pidFile = Path.Combine(_daemon.Root, "stuck.pid");
-        var stuck = Script("stuck-daemon", $"echo $$ > '{pidFile}'\nexec sleep 60");
 
-        var result = await _daemon.Mcp("upgrade", "--daemon", stuck, "--timeout", "2");
+        var result = await _daemon.Mcp("upgrade", "--daemon", Script("stuck-daemon", $"echo $$ > '{pidFile}'\nexec sleep 60"), "--timeout", "2");
 
         Assert.NotEqual(0, result.Code);
-        Assert.Contains("not ready in 2 s", result.Err);
+        Assert.Contains("did not answer in 2 s", result.Err);
         var stuckPid = int.Parse((await File.ReadAllTextAsync(pidFile)).Trim());
         await Eventually(() => Task.FromResult(!IsAlive(stuckPid)));
-        Assert.Equal(before.Workers.Single().Pid, (await StatusOf()).Workers.Single().Pid);
+        Assert.Equal(before.Pid, (await StatusOf()).Pid);
         Assert.Equal(["Demo"], DaemonFixture.ProjectNames(await _daemon.CallTool(area.Key, "list_projects")));
     }
 
+    [UnixFact]
+    public async Task A_new_program_that_reports_no_build_leaves_the_daemon_running()
+    {
+        await Prepare();
+        var before = await StatusOf();
+
+        var result = await _daemon.Mcp("upgrade", "--daemon", Script("silent-daemon", "echo not json"));
+
+        Assert.NotEqual(0, result.Code);
+        Assert.Contains("did not report its build", result.Err);
+        Assert.Equal(before.Pid, (await StatusOf()).Pid);
+    }
+
     [Fact]
-    public async Task A_missing_program_of_the_new_process_is_refused_and_the_old_one_keeps_working()
+    public async Task A_missing_new_program_is_refused_and_the_daemon_keeps_working()
     {
         var area = await Prepare();
 
@@ -363,19 +275,18 @@ public class DaemonUpgradeTests : IDisposable
     }
 
     [UnixFact]
-    public async Task A_new_process_that_cannot_open_a_workspace_open_in_the_old_one_is_rolled_back()
+    public async Task A_workspace_that_stops_opening_after_the_restart_is_reported_with_a_failing_exit_code()
     {
         var area = await Prepare();
-        var before = await StatusOf();
         var tasker = Path.Combine(area.Folder, ".tasker");
         File.SetUnixFileMode(tasker, UnixFileMode.None);
         try
         {
             var result = await _daemon.Mcp("upgrade");
 
-            Assert.NotEqual(0, result.Code);
-            Assert.Contains("cannot open workspaces that are open now", result.Err);
-            Assert.Equal(before.Workers.Single().Pid, (await StatusOf()).Workers.Single().Pid);
+            Assert.Equal(1, result.Code);
+            Assert.Contains("was open and is not now", result.Out);
+            Assert.True(DaemonFiles.IsRunning());
         }
         finally
         {
@@ -392,58 +303,12 @@ public class DaemonUpgradeTests : IDisposable
     }
 
     [Fact]
-    public async Task A_server_started_as_one_process_is_restarted_by_upgrade_and_is_seamless_afterwards()
-    {
-        await _daemon.Workspace("ws", "Demo");
-        var (file, arguments) = TaskerProcess.DaemonCommand();
-        var info = new ProcessStartInfo(file) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
-        AppEnvironment.Apply(info);
-        foreach (var argument in arguments)
-            info.ArgumentList.Add(argument);
-        info.ArgumentList.Add("--single");
-        info.ArgumentList.Add("--detached");
-        using var single = Process.Start(info)!;
-        var started = await WaitStatus(x => x.Workspaces.All(w => w.State == WorkspaceState.Open) && x.Workspaces.Length == 1);
-        Assert.Empty(started.Workers);
-        Assert.Equal(single.Id, started.Pid);
-
-        var result = await _daemon.Mcp("upgrade");
-
-        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
-        Assert.Contains("earlier build", result.Out);
-        await single.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(20));
-        var now = await StatusOf();
-        Assert.NotEqual(single.Id, now.Pid);
-        var worker = Assert.Single(now.Workers);
-
-        var again = await _daemon.Mcp("upgrade");
-        Assert.True(again.Code == 0, $"exit {again.Code}: {again.Err}");
-        Assert.Contains("replaced without downtime", again.Out);
-        Assert.NotEqual(worker.Pid, (await StatusOf()).Workers.Single().Pid);
-    }
-
-    [Fact]
     public async Task Upgrade_of_a_stopped_server_says_so_and_exits_with_3()
     {
         var result = await _daemon.Mcp("upgrade");
 
         Assert.Equal(3, result.Code);
         Assert.Contains("not running", result.Out);
-    }
-
-    [Fact]
-    public async Task Upgrade_restart_is_the_hard_path_with_a_new_server_process()
-    {
-        await Prepare();
-        var before = await StatusOf();
-
-        var result = await _daemon.Mcp("upgrade", "--restart");
-
-        Assert.True(result.Code == 0, $"exit {result.Code}: {result.Err}");
-        var after = await StatusOf();
-        Assert.NotEqual(before.Pid, after.Pid);
-        Assert.NotEqual(before.Workers.Single().Pid, after.Workers.Single().Pid);
-        await Eventually(() => Task.FromResult(!IsAlive(before.Pid)));
     }
 
     [Fact]
@@ -461,32 +326,20 @@ public class DaemonUpgradeTests : IDisposable
     }
 
     [Fact]
-    public async Task A_worker_that_crashes_is_started_again_by_the_supervisor()
-    {
-        var area = await Prepare();
-        var before = await StatusOf();
-
-        Process.GetProcessById(before.Workers.Single().Pid).Kill();
-
-        var after = await WaitStatus(x => x.Workers.Length == 1 && x.Workers[0].Pid != before.Workers[0].Pid && x.Workspaces.All(w => w.State == WorkspaceState.Open));
-        Assert.Equal(before.Pid, after.Pid);
-        Assert.Equal(["Demo"], DaemonFixture.ProjectNames(await _daemon.CallTool(area.Key, "list_projects")));
-    }
-
-    [Fact]
-    public async Task When_the_supervisor_is_killed_its_worker_leaves_and_the_port_is_free()
+    public async Task When_the_daemon_is_killed_the_port_and_the_lock_are_free()
     {
         await Prepare();
         var before = await StatusOf();
 
         Process.GetProcessById(before.Pid).Kill();
 
-        await Eventually(() => Task.FromResult(!IsAlive(before.Workers.Single().Pid)));
         await Eventually(() =>
         {
             try
             {
-                new TcpListener(IPAddress.Loopback, _daemon.Port).Start();
+                var listener = new TcpListener(IPAddress.Loopback, _daemon.Port);
+                listener.Start();
+                listener.Stop();
                 return Task.FromResult(true);
             }
             catch (SocketException)
@@ -498,7 +351,7 @@ public class DaemonUpgradeTests : IDisposable
     }
 
     [Fact]
-    public async Task Stop_ends_the_supervisor_and_the_worker()
+    public async Task Stop_ends_the_daemon()
     {
         await Prepare();
         var before = await StatusOf();
@@ -506,41 +359,47 @@ public class DaemonUpgradeTests : IDisposable
         var stopped = await _daemon.Mcp("stop");
 
         Assert.True(stopped.Code == 0, $"exit {stopped.Code}: {stopped.Err}");
-        await Eventually(() => Task.FromResult(!IsAlive(before.Pid) && !IsAlive(before.Workers.Single().Pid)));
+        await Eventually(() => Task.FromResult(!IsAlive(before.Pid)));
         Assert.False(File.Exists(DaemonFiles.InfoFile));
     }
 
+    [UnixFact]
+    public async Task Sigterm_from_a_service_stops_the_daemon_in_order()
+    {
+        await Prepare();
+        var before = await StatusOf();
+
+        using (var kill = Process.Start("kill", ["-TERM", before.Pid.ToString()]))
+            await kill.WaitForExitAsync();
+
+        await Eventually(() => Task.FromResult(!IsAlive(before.Pid)));
+        Assert.False(File.Exists(DaemonFiles.InfoFile));
+        Assert.False(DaemonFiles.IsRunning());
+    }
+
     [Fact]
-    public async Task Status_json_lists_the_worker_with_its_build()
+    public async Task The_status_json_has_the_build_and_the_daemon_is_one_process()
     {
         await Prepare();
 
         var status = (await _daemon.Mcp("status", "--json")).Json["daemon"]!;
 
-        var worker = status["workers"]!.AsArray().Single()!;
-        Assert.Equal("active", worker["role"]!.GetValue<string>());
-        Assert.NotEmpty(worker["build"]!.GetValue<string>());
-        Assert.NotEqual(status["pid"]!.GetValue<int>(), worker["pid"]!.GetValue<int>());
+        Assert.NotEmpty(status["build"]!.GetValue<string>());
+        Assert.NotEmpty(status["version"]!.GetValue<string>());
+        Assert.Null(status["workers"]);
     }
 
     [Fact]
-    public async Task A_request_that_lost_its_connection_is_repeated_once()
+    public void The_status_of_a_daemon_of_an_earlier_build_is_read_without_a_build()
     {
-        var calls = 0;
-        var result = await DaemonClient.Retrying(() =>
-        {
-            calls++;
-            return calls == 1 ? throw new HttpRequestException("connection reset") : Task.FromResult("answer");
-        });
-        Assert.Equal("answer", result);
-        Assert.Equal(2, calls);
+        const string json = """
+            {"pid":10,"port":5719,"settingsPort":5719,"startedAt":"2026-11-03T22:26:50+00:00","workspaces":[],
+             "workers":[{"pid":11,"version":"0.1.0","build":"ab12","role":"active","startedAt":"2026-11-03T22:26:50+00:00"}]}
+            """;
 
-        calls = 0;
-        await Assert.ThrowsAsync<HttpRequestException>(() => DaemonClient.Retrying<string>(() =>
-        {
-            calls++;
-            throw new HttpRequestException("still down");
-        }));
-        Assert.Equal(2, calls);
+        var status = System.Text.Json.JsonSerializer.Deserialize<DaemonStatus>(json, Tasker.Core.TaskerJson.Options)!;
+
+        Assert.Equal(10, status.Pid);
+        Assert.Equal("", status.Build);
     }
 }

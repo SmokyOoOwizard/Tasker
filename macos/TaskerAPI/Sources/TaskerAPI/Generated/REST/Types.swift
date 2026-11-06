@@ -245,9 +245,6 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /daemon/sync`.
     /// - Remark: Generated from `#/paths//daemon/sync/post(syncDaemonWorkspace)`.
     func syncDaemonWorkspace(_ input: Operations.SyncDaemonWorkspace.Input) async throws -> Operations.SyncDaemonWorkspace.Output
-    /// - Remark: HTTP `POST /daemon/upgrade`.
-    /// - Remark: Generated from `#/paths//daemon/upgrade/post(upgradeDaemon)`.
-    func upgradeDaemon(_ input: Operations.UpgradeDaemon.Input) async throws -> Operations.UpgradeDaemon.Output
     /// - Remark: HTTP `GET /health`.
     /// - Remark: Generated from `#/paths//health/get(getDaemonHealth)`.
     func getDaemonHealth(_ input: Operations.GetDaemonHealth.Input) async throws -> Operations.GetDaemonHealth.Output
@@ -1158,17 +1155,6 @@ extension APIProtocol {
         body: Operations.SyncDaemonWorkspace.Input.Body? = nil
     ) async throws -> Operations.SyncDaemonWorkspace.Output {
         try await syncDaemonWorkspace(Operations.SyncDaemonWorkspace.Input(
-            headers: headers,
-            body: body
-        ))
-    }
-    /// - Remark: HTTP `POST /daemon/upgrade`.
-    /// - Remark: Generated from `#/paths//daemon/upgrade/post(upgradeDaemon)`.
-    public func upgradeDaemon(
-        headers: Operations.UpgradeDaemon.Input.Headers = .init(),
-        body: Operations.UpgradeDaemon.Input.Body? = nil
-    ) async throws -> Operations.UpgradeDaemon.Output {
-        try await upgradeDaemon(Operations.UpgradeDaemon.Input(
             headers: headers,
             body: body
         ))

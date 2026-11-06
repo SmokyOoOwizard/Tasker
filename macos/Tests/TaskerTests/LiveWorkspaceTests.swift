@@ -93,7 +93,7 @@ import TaskerAPI
 
     @Test func followsTheFirstOpenWorkspaceOfARunningDaemon() {
         let live = workspace()
-        let status = DaemonStatus(pid: 1, port: 5719, workers: [], workspaces: [
+        let status = DaemonStatus(pid: 1, port: 5719, workspaces: [
             DaemonWorkspace(path: "/a/opening", state: "opening", error: nil),
             DaemonWorkspace(path: "/b/Tasker", state: "open", key: "tasker-1", error: nil)
         ])
@@ -105,7 +105,7 @@ import TaskerAPI
         live.follow(.stopped(.notResponding))
         live.follow(.running(status))
         #expect(live.client === client)
-        live.follow(.running(DaemonStatus(pid: 1, port: 5719, workers: [], workspaces: [])))
+        live.follow(.running(DaemonStatus(pid: 1, port: 5719, workspaces: [])))
         #expect(live.address == nil)
         #expect(live.client == nil)
         live.stop()

@@ -23,6 +23,9 @@ final class DaemonConnection {
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
     @ObservationIgnored private let prepare: @MainActor () async -> Void
     @ObservationIgnored private let allowsAutomaticUpdate: @MainActor () -> Bool
+    @ObservationIgnored private let readHelperBuild: @Sendable (String) async -> String?
+    @ObservationIgnored private var helperBuild: String?
+    @ObservationIgnored private var helperBuildRead = false
     @ObservationIgnored private var automaticUpdateTried = false
     @ObservationIgnored private var mismatchConfirmed = false
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -39,7 +42,8 @@ final class DaemonConnection {
         timings: DaemonTimings = DaemonTimings(),
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
         prepare: @escaping @MainActor () async -> Void = {},
-        allowsAutomaticUpdate: @escaping @MainActor () -> Bool = { false }
+        allowsAutomaticUpdate: @escaping @MainActor () -> Bool = { false },
+        readHelperBuild: @escaping @Sendable (String) async -> String? = { _ in "b" }
     ) {
         self.files = files
         self.transport = transport
@@ -50,6 +54,7 @@ final class DaemonConnection {
         self.sleep = sleep
         self.prepare = prepare
         self.allowsAutomaticUpdate = allowsAutomaticUpdate
+        self.readHelperBuild = readHelperBuild
     }
 
     static func live(integration: AppIntegrationController) -> DaemonConnection {
@@ -67,7 +72,8 @@ final class DaemonConnection {
                 await integration.reconcile()
                 Task { await integration.presentNotices() }
             },
-            allowsAutomaticUpdate: { integration.allowsAutomaticDaemonUpdate }
+            allowsAutomaticUpdate: { integration.allowsAutomaticDaemonUpdate },
+            readHelperBuild: { await DaemonBuildInfo.read(program: $0, runner: SystemCommandRunner())?.build }
         )
     }
 
@@ -89,16 +95,16 @@ final class DaemonConnection {
     }
 
     func updateDaemon() async {
-        guard case .versionMismatch(_, _, let status) = state, let helperProgram else { return }
+        guard case .versionMismatch = state, let helperProgram else { return }
         updateError = nil
         state = .starting
         updating = true
         defer { updating = false }
         do {
-            if status.isSupervised, let info = files.readInfo() {
-                let result = try await transport.upgrade(info: info, program: helperProgram, timeoutSeconds: 60)
-                if !result.ok { throw DaemonServiceError(message: result.message) }
-            } else if let info = files.readInfo() {
+            guard await readHelperBuild(helperProgram) != nil else {
+                throw DaemonServiceError(message: "the MCP server program in the application does not start: \(helperProgram)")
+            }
+            if let info = files.readInfo() {
                 try await transport.stop(info: info)
                 await waitUntilStopped()
             }
@@ -118,6 +124,10 @@ final class DaemonConnection {
 
     func step() async -> Duration {
         if updating { return timings.pollWhileStarting }
+        if !helperBuildRead, let helperProgram {
+            helperBuild = await readHelperBuild(helperProgram)
+            helperBuildRead = true
+        }
         if let status = await currentStatus() {
             failures = 0
             apply(status)
@@ -174,12 +184,14 @@ final class DaemonConnection {
     }
 
     private func apply(_ status: DaemonStatus) {
-        guard let version = status.activeVersion else {
-            state = status.isSupervised ? .starting : .versionMismatch(daemon: nil, app: appVersion, status: status)
+        guard let version = status.version, !version.isEmpty else {
+            state = .versionMismatch(daemon: nil, app: appVersion, status: status)
             return
         }
         if version != appVersion {
             state = .versionMismatch(daemon: version, app: appVersion, status: status)
+        } else if let helperBuild, status.build != helperBuild, allowsAutomaticUpdate() {
+            state = .versionMismatch(daemon: "\(version) (\(status.build ?? "?"))", app: "\(appVersion) (\(helperBuild))", status: status)
         } else if status.isSettled {
             updateError = nil
             state = .running(status)

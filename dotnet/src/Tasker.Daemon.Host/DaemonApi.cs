@@ -9,7 +9,7 @@ public sealed record StopResponse(bool Stopping);
 
 public sealed record ReadyResponse(bool Ready, int Pid);
 
-public sealed record NotReadyResponse(bool Ready, int Opening, bool Draining);
+public sealed record NotReadyResponse(bool Ready, int Opening);
 
 public sealed record DaemonHealth(string Status, string Mode, int Pid);
 

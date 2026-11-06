@@ -6,15 +6,6 @@ struct DaemonInfo: Codable, Equatable, Sendable {
     var token: String
 }
 
-struct DaemonWorker: Decodable, Equatable, Sendable {
-    var pid: Int
-    var version: String
-    var build: String
-    var role: String
-
-    var isActive: Bool { role == "active" }
-}
-
 struct DaemonWorkspace: Decodable, Equatable, Sendable {
     var path: String
     var state: String
@@ -25,23 +16,13 @@ struct DaemonWorkspace: Decodable, Equatable, Sendable {
 struct DaemonStatus: Decodable, Equatable, Sendable {
     var pid: Int
     var port: Int
-    var workers: [DaemonWorker]
+    var version: String?
+    var build: String?
     var workspaces: [DaemonWorkspace]
-
-    var activeVersion: String? {
-        workers.first(where: \.isActive).flatMap { $0.version.isEmpty ? nil : $0.version }
-    }
 
     var isSettled: Bool {
         !workspaces.contains { $0.state == "opening" }
     }
-
-    var isSupervised: Bool { !workers.isEmpty }
-}
-
-struct DaemonUpgradeResult: Decodable, Equatable, Sendable {
-    var ok: Bool
-    var message: String
 }
 
 enum DaemonFailure: Equatable, Sendable {
