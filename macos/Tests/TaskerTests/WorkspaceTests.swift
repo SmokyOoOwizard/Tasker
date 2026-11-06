@@ -441,6 +441,52 @@ private func isolatedDefaults() -> UserDefaults {
         #expect(session.navigator.card == card)
     }
 
+    @Test func switchingSectionClosesOpenTask() {
+        let (layout, sessions, window, _) = fixture()
+        layout.open("/w/a", in: window)
+        let session = sessions.session(for: layout.window(window)!.selectedTab!)
+        session.setSection(.boards)
+        let card = UUID()
+        session.navigator.open(card)
+        session.setSection(.boards)
+        #expect(session.navigator.card == card)
+        session.setSection(.tasks)
+        #expect(session.navigator.card == nil)
+        #expect(session.navigator.history.isEmpty)
+        session.navigator.open(card)
+        session.setSection(.settings)
+        #expect(session.navigator.card == nil)
+    }
+
+    @Test func switchingBoardClosesOpenTask() {
+        let (layout, sessions, window, _) = fixture()
+        layout.open("/w/a", in: window)
+        let session = sessions.session(for: layout.window(window)!.selectedTab!)
+        let board = UUID()
+        session.showBoard(board)
+        let card = UUID()
+        session.navigator.open(card)
+        session.showBoard(board)
+        #expect(session.navigator.card == card)
+        session.showBoard(UUID())
+        #expect(session.navigator.card == nil)
+    }
+
+    @Test func switchingSectionInOneTabKeepsOtherTabTask() {
+        let (layout, sessions, window, _) = fixture()
+        layout.open("/w/a", in: window)
+        layout.newTab("/w/a", in: window)
+        let tabs = layout.window(window)!.tabs
+        let first = sessions.session(for: tabs[0])
+        let second = sessions.session(for: tabs[1])
+        let card = UUID()
+        first.navigator.open(card)
+        second.navigator.open(card)
+        first.setSection(.boards)
+        #expect(first.navigator.card == nil)
+        #expect(second.navigator.card == card)
+    }
+
     @Test func viewStateSurvivesRestart() {
         let (layout, sessions, window, defaults) = fixture()
         layout.open("/w/a", in: window)

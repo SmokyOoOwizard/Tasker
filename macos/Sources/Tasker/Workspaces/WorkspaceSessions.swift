@@ -64,6 +64,7 @@ final class WorkspaceTabSession: Identifiable {
     }
 
     func setSection(_ section: AppSection) {
+        if section != self.section { navigator.reset() }
         if path == nil {
             idleSection = section
         } else {
@@ -156,6 +157,7 @@ final class WorkspaceTabSession: Identifiable {
     var currentBoard: UUID? { boardModel?.board?.id ?? boardId }
 
     func showBoard(_ id: UUID) {
+        if id != currentBoard { navigator.reset() }
         boardId = id
         setSection(.boards)
     }
