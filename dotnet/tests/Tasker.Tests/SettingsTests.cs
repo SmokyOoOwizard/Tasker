@@ -166,6 +166,10 @@ public class SettingsTests : IDisposable
         await Task.Delay(800);
         Assert.Equal(0, calls);
 
+        await File.WriteAllTextAsync(_home.SettingsFile, "");
+        await Task.Delay(800);
+        Assert.Equal(0, calls);
+
         await File.WriteAllTextAsync(_home.SettingsFile, "{ broken");
         await Task.Delay(800);
         Assert.Equal(0, calls);
