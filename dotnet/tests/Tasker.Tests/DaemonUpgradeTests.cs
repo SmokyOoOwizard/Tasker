@@ -175,9 +175,17 @@ public class DaemonUpgradeTests : IDisposable
                 }
                 catch (Exception e)
                 {
-                    Failures.Add($"{title}: {e.GetType().Name} {e.Message}");
+                    Failures.Add($"{title}: {Chain(e)}");
                 }
             }
+        }
+
+        private string Chain(Exception e)
+        {
+            var parts = new List<string>();
+            for (var x = e; x != null; x = x.InnerException)
+                parts.Add($"{x.GetType().Name}: {x.Message}");
+            return $"[{DateTime.Now:HH:mm:ss.fff}] " + string.Join(" <- ", parts);
         }
 
         // Кто отвечает: pid рабочего процесса из /health (по тому же общему соединению, что и вызовы).
@@ -192,11 +200,23 @@ public class DaemonUpgradeTests : IDisposable
                 }
                 catch (Exception e)
                 {
-                    Failures.Add($"health: {e.GetType().Name} {e.Message}");
+                    Failures.Add($"health: {Chain(e)}");
                 }
                 await Task.Delay(20);
             }
         }
+    }
+
+    private static string DaemonLog()
+    {
+        var lines = Directory.Exists(AppDirectories.Logs)
+            ? Directory.GetFiles(AppDirectories.Logs).SelectMany(x =>
+            {
+                using var reader = new StreamReader(new FileStream(x, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete));
+                return reader.ReadToEnd().Split('\n');
+            })
+            : [];
+        return string.Join("\n", lines.TakeLast(60));
     }
 
     private async Task<string[]> TaskTitles(Area area)
@@ -229,7 +249,7 @@ public class DaemonUpgradeTests : IDisposable
         await load.Stop();
 
         // Ни одного отказа: ни обрыва соединения, ни 5xx, ни «unavailable» — без единого повтора на стороне клиента.
-        Assert.True(load.Failures.IsEmpty, string.Join("\n", load.Failures.Take(10)));
+        Assert.True(load.Failures.IsEmpty, string.Join("\n", load.Failures.Take(10)) + "\n" + DaemonLog());
 
         // Каждая подтверждённая запись есть ровно один раз; лишних (повторов) нет.
         var titles = await TaskTitles(area);
