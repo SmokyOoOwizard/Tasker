@@ -38,11 +38,22 @@ public sealed record McpSettings
     public IReadOnlyList<WorkspaceEntry> Workspaces { get; init; } = [];
 }
 
-/// <summary>Рабочая область в настройках: папка (данные в <c>.tasker</c>) или файл SQLite.</summary>
+public enum WorkspaceKind
+{
+    Files,
+    Sqlite
+}
+
+/// <summary>Рабочая область в настройках: папка (данные в <c>.tasker</c>) или старая запись о файле SQLite, которую демон не открывает.</summary>
 public sealed record WorkspaceEntry(WorkspaceKind Kind, string Path)
 {
     [JsonIgnore]
-    public WorkspaceLocation Location => Kind == WorkspaceKind.Files ? WorkspaceLocation.Files(Path) : WorkspaceLocation.Sqlite(Path);
+    public WorkspaceLocation Location => WorkspaceLocation.Files(Path);
 
-    public static WorkspaceEntry Of(WorkspaceLocation location) => new(location.Kind, location.Path);
+    [JsonIgnore]
+    public string? Unsupported => Kind == WorkspaceKind.Files
+        ? null
+        : $"SQLite workspaces are no longer supported; the file is not touched, remove this entry with: tasker mcp workspace remove \"{Path}\"";
+
+    public static WorkspaceEntry Of(WorkspaceLocation location) => new(WorkspaceKind.Files, location.Path);
 }

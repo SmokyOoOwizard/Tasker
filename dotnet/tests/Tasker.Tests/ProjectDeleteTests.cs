@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Tasker.Tests;
 
-/// <summary>Статистика проекта и подтверждение удаления: консоль и REST, папка и SQLite.</summary>
+/// <summary>Статистика проекта и подтверждение удаления: консоль и REST, папка.</summary>
 public class ProjectDeleteTests
 {
     private static async Task<CliResult> Ok(Task<CliResult> run)
@@ -53,7 +53,7 @@ public class ProjectDeleteTests
     [Theory]
     [InlineData("files", "yes")]
     [InlineData("files", "Y")]
-    [InlineData("sqlite", " YES ")]
+    [InlineData("files", " YES ")]
     public async Task Yes_in_any_case_deletes(string storage, string answer)
     {
         if (OperatingSystem.IsWindows())

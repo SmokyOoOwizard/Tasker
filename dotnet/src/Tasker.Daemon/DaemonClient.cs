@@ -72,7 +72,7 @@ public static class DaemonClient
         {
             using var http = Create(info);
             http.Timeout = TimeSpan.FromMinutes(5);
-            using var response = await http.PostAsJsonAsync("/daemon/sync", new SyncRequest(location.Kind, location.Path), TaskerJson.Options, ct);
+            using var response = await http.PostAsJsonAsync("/daemon/sync", new SyncRequest(location.Path), TaskerJson.Options, ct);
             return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<SyncResult>(TaskerJson.Options, ct) : null;
         }
         catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException or JsonException)

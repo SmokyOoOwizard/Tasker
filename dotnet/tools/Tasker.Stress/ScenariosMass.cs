@@ -435,11 +435,8 @@ public static partial class Scenarios
         var projects = await ctx.Stand.Must(ctx.Stand.Main, false, "project", "list", "--json");
         var stillListed = projects.Json["data"]!.AsArray().Any(x => x!["id"]!.GetValue<string>() == area.ProjectId.ToString());
         r.Check(!stillListed, "the deleted project is not listed", stillListed ? "still listed" : "gone");
-        if (!area.IsSqlite)
-        {
-            var left = area.ProjectDirs.SelectMany(folder => Directory.GetFiles(folder, "*", SearchOption.AllDirectories)).Select(Path.GetFileName).ToArray();
-            r.Check(left.Length == 0, "no file of the deleted project is left on disk (a late writer does not resurrect it)", left.Length == 0 ? "gone" : $"{left.Length} files: {string.Join(", ", left.Take(5))}");
-        }
+        var left = area.ProjectDirs.SelectMany(folder => Directory.GetFiles(folder, "*", SearchOption.AllDirectories)).Select(Path.GetFileName).ToArray();
+        r.Check(left.Length == 0, "no file of the deleted project is left on disk (a late writer does not resurrect it)", left.Length == 0 ? "gone" : $"{left.Length} files: {string.Join(", ", left.Take(5))}");
 
         var sync = await ctx.Stand.Cli(ctx.Stand.Main, false, "sync", "-q");
         r.Check(sync.Ok && sync.Out.Trim().Length == 0, "sync is clean afterwards", sync.Ok ? "clean" : sync.Text);
@@ -538,22 +535,19 @@ public static partial class Scenarios
         }
 
         // Kill между записью временного файла и переименованием оставляет рядом с файлом обрезанный «.tmp»: он не должен мешать.
-        if (!area.IsSqlite)
-        {
-            var file = Directory.GetFiles(area.TasksDir, "*.yaml").First();
-            await File.WriteAllTextAsync(file + ".tmp", "formatVersion: 6\nid: trunc");
-            var ghost = Path.Combine(area.TasksDir, "ghost-deadbeef.yaml.tmp");
-            await File.WriteAllTextAsync(ghost, "formatVersion: 6\nid: deadbeef-0000-0000-0000-000000000000\ntitle: ghost");
-            var sync = await ctx.Stand.Cli(area, true, "sync", "-q");
-            var listed = JsonCount(await ctx.Stand.Must(area, true, "task", "list", "--all", "--json"));
-            var before = Directory.GetFiles(area.TasksDir, "*.yaml").Length;
-            r.Check(sync.Ok && sync.Out.Trim().Length == 0 && listed == before, "a truncated .tmp left by a killed writer is ignored: sync is clean, the listing equals the files",
-                $"sync exit {sync.Code}, {listed} listed, {before} files");
-            var fileId = System.Text.RegularExpressions.Regex.Match(await File.ReadAllTextAsync(file), @"^id: (\S+)", System.Text.RegularExpressions.RegexOptions.Multiline).Groups[1].Value;
-            var updated = await ctx.Stand.Cli(area, true, "task", "update", fileId, "-d", "after the stale tmp");
-            r.Check(updated.Ok && !File.Exists(file + ".tmp"), "the next write to that file succeeds and replaces the stale .tmp", updated.Ok ? "ok" : updated.Text);
-            File.Delete(ghost);
-        }
+        var file = Directory.GetFiles(area.TasksDir, "*.yaml").First();
+        await File.WriteAllTextAsync(file + ".tmp", "formatVersion: 6\nid: trunc");
+        var ghost = Path.Combine(area.TasksDir, "ghost-deadbeef.yaml.tmp");
+        await File.WriteAllTextAsync(ghost, "formatVersion: 6\nid: deadbeef-0000-0000-0000-000000000000\ntitle: ghost");
+        var sync = await ctx.Stand.Cli(area, true, "sync", "-q");
+        var listed = JsonCount(await ctx.Stand.Must(area, true, "task", "list", "--all", "--json"));
+        var before = Directory.GetFiles(area.TasksDir, "*.yaml").Length;
+        r.Check(sync.Ok && sync.Out.Trim().Length == 0 && listed == before, "a truncated .tmp left by a killed writer is ignored: sync is clean, the listing equals the files",
+            $"sync exit {sync.Code}, {listed} listed, {before} files");
+        var fileId = System.Text.RegularExpressions.Regex.Match(await File.ReadAllTextAsync(file), @"^id: (\S+)", System.Text.RegularExpressions.RegexOptions.Multiline).Groups[1].Value;
+        var updated = await ctx.Stand.Cli(area, true, "task", "update", fileId, "-d", "after the stale tmp");
+        r.Check(updated.Ok && !File.Exists(file + ".tmp"), "the next write to that file succeeds and replaces the stale .tmp", updated.Ok ? "ok" : updated.Text);
+        File.Delete(ghost);
 
         await Finish(ctx, r, area, new Expect());
         return r;

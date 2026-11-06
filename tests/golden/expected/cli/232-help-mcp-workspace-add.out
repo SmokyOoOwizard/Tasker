@@ -1,11 +1,11 @@
 Description:
-  Allows a workspace (folder or existing SQLite file) in MCP
+  Allows a workspace folder in MCP
 
 Usage:
   tasker mcp workspace add [<path>] [options]
 
 Arguments:
-  <path>  Workspace folder or SQLite file. Default: the current folder
+  <path>  Workspace folder. Default: the current folder
 
 Options:
   -?, -h, --help               Show help and usage information

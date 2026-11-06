@@ -179,7 +179,7 @@ public class ConcurrencyTests : IDisposable
         await ws.Run("project", "create", "First");
 
         // Первый процесс (как десктоп или демон) держит папку открытой: индекс и наблюдатель за файлами.
-        await using var opened = await Session.Open(new WorkspaceSettings(ws.Root, null), CancellationToken.None, watch: true);
+        await using var opened = await Session.Open(new WorkspaceSettings(ws.Root), CancellationToken.None, watch: true);
         var changes = new List<string>();
         opened.Get<IWorkspaceIndex>().Changed += paths =>
         {
@@ -215,7 +215,7 @@ public class ConcurrencyTests : IDisposable
         await ws.Run("task-type", "create", "Task", "--status-set", "Main");
         var task = (await ws.Run("task", "create", "Login", "--type", "Task")).Id;
 
-        await using var opened = await Session.Open(new WorkspaceSettings(ws.Root, null), CancellationToken.None, watch: true);
+        await using var opened = await Session.Open(new WorkspaceSettings(ws.Root), CancellationToken.None, watch: true);
         var ids = new List<Guid?>();
         opened.Get<IWorkspaceIndex>().Changed += files =>
         {

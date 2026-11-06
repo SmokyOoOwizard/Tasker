@@ -23,11 +23,10 @@ public class WorkspaceTests : IDisposable
     }
 
     [Fact]
-    public void Location_differs_by_kind_and_path()
+    public void Location_differs_by_path()
     {
         var a = WorkspaceLocation.Files(Path.Combine(_root, "a"));
         Assert.NotEqual(a.Id, WorkspaceLocation.Files(Path.Combine(_root, "b")).Id);
-        Assert.NotEqual(a.Id, WorkspaceLocation.Sqlite(Path.Combine(_root, "a")).Id);
     }
 
     [Fact]

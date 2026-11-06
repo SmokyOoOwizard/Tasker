@@ -159,7 +159,7 @@ public static partial class Scenarios
         r.Check(acked.Count == tokens.Length && acked.ToHashSet().SetEquals(tokens),
             "no silently lost update: the final description holds exactly the tokens whose update returned success",
             $"{acked.Count} acknowledged, {tokens.Length} in the task, {tokens.Distinct().Count()} distinct");
-        if (!area.IsSqlite && final != null)
+        if (final != null)
         {
             var file = Directory.GetFiles(area.TasksDir, "*.yaml").Single();
             r.Check(Invariants.FileVersion(file) == final.Version, "version = hash of the file (final consistency)", $"file {Invariants.FileVersion(file)}, reported {final.Version}");

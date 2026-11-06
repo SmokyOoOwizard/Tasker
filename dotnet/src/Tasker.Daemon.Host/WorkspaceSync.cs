@@ -25,6 +25,7 @@ internal sealed class WorkspaceSync(WorkspaceRegistry registry, DaemonRuntimeSta
     private readonly Dictionary<string, string> _failed = new();
     // Последнее сообщенное состояние серий по областям: в лог пишем, только когда оно изменилось.
     private readonly Dictionary<string, string> _reported = new();
+    private readonly HashSet<string> _unsupportedReported = new();
     private IReadOnlyList<WorkspaceEntry> _desired = [];
     private bool _disposed;
 
@@ -171,7 +172,10 @@ internal sealed class WorkspaceSync(WorkspaceRegistry registry, DaemonRuntimeSta
 
     private async Task Reconcile()
     {
-        var wanted = _desired.Select(x => (Entry: x, Location: x.Location)).DistinctBy(x => x.Location.Id).ToArray();
+        foreach (var entry in _desired.Where(x => x.Unsupported != null && _unsupportedReported.Add(x.Path)))
+            Log.Warning("Workspace {Path} is not opened: {Reason}", entry.Path, entry.Unsupported);
+
+        var wanted = _desired.Where(x => x.Unsupported == null).Select(x => (Entry: x, Location: x.Location)).DistinctBy(x => x.Location.Id).ToArray();
         var ids = wanted.Select(x => x.Location.Id).ToHashSet();
 
         foreach (var id in _open.Keys.Where(x => !ids.Contains(x)).ToArray())
@@ -193,7 +197,7 @@ internal sealed class WorkspaceSync(WorkspaceRegistry registry, DaemonRuntimeSta
             try
             {
                 // Не создаём .tasker в папке, которой уже нет: открытие делает недостающие каталоги.
-                if (location.Kind == WorkspaceKind.Files ? !Directory.Exists(location.Path) : !File.Exists(location.Path))
+                if (!Directory.Exists(location.Path))
                     throw new DirectoryNotFoundException($"{location.Path} does not exist");
 
                 // Тестовый крючок: искусственно медленное открытие области (проверка ожидания открытия в вызове MCP).
@@ -235,7 +239,9 @@ internal sealed class WorkspaceSync(WorkspaceRegistry registry, DaemonRuntimeSta
         state.SetWorkspaces(_desired
             .Select(x => (Entry: x, Id: x.Location.Id))
             .DistinctBy(x => x.Id)
-            .Select(x => _open.TryGetValue(x.Id, out var open)
+            .Select(x => x.Entry.Unsupported is { } unsupported
+                ? new WorkspaceStatus(x.Entry.Kind, x.Entry.Path, WorkspaceState.Failed, null, unsupported)
+                : _open.TryGetValue(x.Id, out var open)
                 ? new WorkspaceStatus(x.Entry.Kind, x.Entry.Path, WorkspaceState.Open, open.Lease.Key, null)
                 : _failed.TryGetValue(x.Id, out var error)
                     ? new WorkspaceStatus(x.Entry.Kind, x.Entry.Path, WorkspaceState.Failed, null, error)

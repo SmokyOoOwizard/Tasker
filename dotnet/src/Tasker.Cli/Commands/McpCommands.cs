@@ -163,18 +163,18 @@ internal static class McpCommands
     {
         var path = new Argument<string?>("path")
         {
-            Description = "Workspace folder or SQLite file. Default: the current folder",
+            Description = "Workspace folder. Default: the current folder",
             Arity = ArgumentArity.ZeroOrOne
         }.NoSuggestions(); // путь: оболочка предлагает файлы сама
         // Убрать можно только то, что в списке: пути подсказываются из настроек (у «add» — файловое дополнение оболочки).
         var removePath = new Argument<string?>("path")
         {
-            Description = "Workspace folder or SQLite file. Default: the current folder",
+            Description = "Workspace folder. Default: the current folder",
             Arity = ArgumentArity.ZeroOrOne
         }.Suggests(g, Sources.McpWorkspaces);
 
         return Kit.Group("workspace", "Workspaces available through MCP",
-            Kit.Plain(g, "add", "Allows a workspace (folder or existing SQLite file) in MCP", c => c.Arguments.Add(path), async (parse, ctx) =>
+            Kit.Plain(g, "add", "Allows a workspace folder in MCP", c => c.Arguments.Add(path), async (parse, ctx) =>
             {
                 var location = Locate(parse.GetValue(path));
                 var (entry, added) = await settings.AddWorkspace(location, ctx.Ct);
@@ -183,27 +183,19 @@ internal static class McpCommands
             }),
             Kit.Plain(g, "remove", "Removes a workspace from MCP", c => c.Arguments.Add(removePath), async (parse, ctx) =>
             {
-                // Папку могли уже удалить с диска — тогда ищем в списке по пути, любого вида.
-                var full = Path.GetFullPath(UserPath.Expand(parse.GetValue(removePath)) ?? Directory.GetCurrentDirectory());
-                var candidates = File.Exists(full) || Directory.Exists(full)
-                    ? [Locate(full)]
-                    : new[] { WorkspaceLocation.Files(full), WorkspaceLocation.Sqlite(full) };
+                // Папку могли уже удалить с диска, а в списке может быть старая запись о файле SQLite: ищем в списке по пути.
+                var location = WorkspaceLocation.Files(Path.GetFullPath(UserPath.Expand(parse.GetValue(removePath)) ?? Directory.GetCurrentDirectory()));
+                if (!await settings.RemoveWorkspace(location, ctx.Ct))
+                    throw new CliException($"Not in the list: {location.Path}");
 
-                foreach (var location in candidates)
-                {
-                    if (await settings.RemoveWorkspace(location, ctx.Ct))
-                    {
-                        ctx.Print(new { removed = location.Path }, $"Removed {location.Path}");
-                        return;
-                    }
-                }
-
-                throw new CliException($"Not in the list: {candidates[0].Path}");
+                ctx.Print(new { removed = location.Path }, $"Removed {location.Path}");
             }),
             Kit.Plain(g, "list", "Lists workspaces available through MCP", _ => { }, (_, ctx) =>
             {
                 var entries = settings.Load().Mcp.Workspaces;
-                ctx.PrintAll(entries, entries, x => [x.Kind.ToString().ToLowerInvariant(), x.Path]);
+                ctx.PrintAll(entries, entries, x => x.Unsupported is { } unsupported
+                    ? [x.Kind.ToString().ToLowerInvariant(), x.Path, unsupported]
+                    : [x.Kind.ToString().ToLowerInvariant(), x.Path]);
                 return Task.CompletedTask;
             }));
     }
@@ -234,12 +226,12 @@ internal static class McpCommands
         });
     }
 
-    /// <summary>Существующая папка или файл SQLite; без пути — текущая папка.</summary>
+    /// <summary>Существующая папка; без пути — текущая папка.</summary>
     private static WorkspaceLocation Locate(string? path)
     {
         var full = Path.GetFullPath(UserPath.Expand(path) ?? Directory.GetCurrentDirectory());
         if (File.Exists(full))
-            return WorkspaceLocation.Sqlite(full);
+            throw new CliException($"{full} is a file: a workspace is a folder, SQLite files are no longer supported");
         if (Directory.Exists(full))
             return WorkspaceLocation.Files(full);
 

@@ -29,7 +29,6 @@ public static class TaskerWebExtensions
             app.UseWorkspaces();
             app.UseLocalHuman();
             app.UseChangeAuthors();
-            app.UseSqliteChangeEvents();
         }
 
         app.Use(TaskerApi.HandleErrors);
@@ -75,7 +74,6 @@ public static class TaskerWebExtensions
         app.UseWorkspaces();
         app.UseLocalHuman();
         app.UseChangeAuthors();
-        app.UseSqliteChangeEvents();
         app.Use(TaskerApi.HandleErrors);
         app.UseRouting();
 

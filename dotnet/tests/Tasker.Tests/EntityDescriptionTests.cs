@@ -23,7 +23,7 @@ public class EntityDescriptionTests : IDisposable
 
     private static string Str(JsonNode node, string name) => node[name]!.GetValue<string>();
 
-    // ---- REST (папка и SQLite) ----
+    // ---- REST ----
 
     [Theory, MemberData(nameof(Storages))]
     public async Task Rest_status_description_is_optional_unicode_multiline_and_can_be_changed_and_cleared(string storage)
@@ -225,7 +225,7 @@ public class EntityDescriptionTests : IDisposable
         Assert.Contains("Теперь с описанием", updated);
     }
 
-    // ---- консоль (папка и SQLite) ----
+    // ---- консоль ----
 
     private static async Task Seed(TestWorkspace ws)
     {

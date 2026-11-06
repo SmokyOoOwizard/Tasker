@@ -1,5 +1,4 @@
 using Tasker.Global;
-using Tasker.Storage.Files.Workspaces;
 
 namespace Tasker.Daemon;
 
@@ -14,7 +13,7 @@ public sealed record SyncResult(string Path, int ProblemCount, Tasker.Core.Works
 }
 
 /// <summary>Просьба сверить область: <c>POST /daemon/sync</c>.</summary>
-public sealed record SyncRequest(WorkspaceKind Kind, string Path);
+public sealed record SyncRequest(string Path);
 
 /// <summary>Что о себе сообщает программа демона по <c>--build-info</c>.</summary>
 public sealed record DaemonBuildInfo(string Version, string Build);

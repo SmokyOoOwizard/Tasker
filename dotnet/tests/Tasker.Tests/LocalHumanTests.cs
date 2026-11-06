@@ -175,7 +175,7 @@ public class LocalHumanIdentityTests
     };
 
     private static Task<Session> Open(string folder) =>
-        Session.Open(new WorkspaceSettings(folder, null), CancellationToken.None);
+        Session.Open(new WorkspaceSettings(folder), CancellationToken.None);
 
     private static string TempFolder() =>
         Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"))).FullName;

@@ -349,16 +349,12 @@ public class CompletionTests
         using var folder = TestWorkspace.Create("files");
         var missing = Path.Combine(folder.Root, "missing");
         var emptyFolder = Directory.CreateDirectory(Path.Combine(folder.Root, "empty")).FullName;
-        var sqlite = Path.Combine(folder.Root, "absent.db");
 
         Assert.Empty(await Values($"--workspace \"{missing}\" status get "));
         Assert.Empty(await Values($"--workspace \"{emptyFolder}\" status get "));
-        Assert.Empty(await Values($"--sqlite \"{sqlite}\" status get "));
-        Assert.Empty(await Values($"--sqlite \"{sqlite}\" --workspace \"{emptyFolder}\" status get "));
 
         Assert.False(Directory.Exists(missing));
         Assert.False(Directory.Exists(Path.Combine(emptyFolder, ".tasker")), "Tab must not create the workspace");
-        Assert.False(File.Exists(sqlite), "Tab must not create the SQLite file");
     }
 
     [Fact]
@@ -366,11 +362,10 @@ public class CompletionTests
     {
         using var ws = TestWorkspace.Create("files");
         await Ok(ws.Run("project", "create", "P"));
-        // Не SQLite и не рабочая папка: файл вместо базы.
+        // Не рабочая папка: файл вместо неё.
         var notDatabase = Path.Combine(ws.Root, "not-a-database.db");
-        await File.WriteAllTextAsync(notDatabase, "this is not a SQLite file at all, just text to break the reader");
+        await File.WriteAllTextAsync(notDatabase, "this is not a workspace at all, just text to break the reader");
 
-        Assert.Empty(await Values($"--sqlite \"{notDatabase}\" status get "));
         Assert.Empty(await Values($"--workspace \"{notDatabase}\" status get "));
     }
 

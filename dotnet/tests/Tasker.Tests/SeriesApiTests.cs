@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Tasker.Tests;
 
-/// <summary>Десктопный хост в процессе теста: HTTP API одной рабочей области (папка или SQLite) во временной папке.</summary>
+/// <summary>Десктопный хост в процессе теста: HTTP API одной рабочей области-папки во временной папке.</summary>
 internal sealed class ApiHost : IAsyncDisposable
 {
     private readonly WebApplication _app;
@@ -54,7 +54,7 @@ internal sealed class ApiHost : IAsyncDisposable
         app.MapTasker();
         await app.StartAsync();
 
-        var location = storage == "sqlite" ? WorkspaceLocation.Sqlite(Path.Combine(root, "tasker.db")) : WorkspaceLocation.Files(root);
+        var location = WorkspaceLocation.Files(root);
         var lease = await app.Services.GetRequiredService<WorkspaceRegistry>().Open(location);
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
 
@@ -142,7 +142,7 @@ internal sealed class ApiHost : IAsyncDisposable
     }
 }
 
-/// <summary>HTTP API серий и номеров задач: десктопный хост, папка и SQLite.</summary>
+/// <summary>HTTP API серий и номеров задач: десктопный хост, папка.</summary>
 public class SeriesApiTests
 {
     public static IEnumerable<object[]> Storages() => TestWorkspace.Storages();
@@ -567,18 +567,6 @@ public class SeriesApiTests
         // Правка серии (файл переименовывается по новому названию) — тоже событие этой серии.
         await api.Patch(api.P($"/series/{Id(series)}"), new { name = "Renamed", version = Version(series) });
         await events.Next(OfSeries);
-        events.Dispose();
-    }
-
-    [Fact]
-    public async Task Sqlite_workspace_publishes_an_unknown_event_after_a_series_change()
-    {
-        await using var api = await ApiHost.Start("sqlite");
-        var events = await Subscribe(api);
-
-        await api.NewSeries("TSK");
-
-        Assert.NotNull(await events.Next(x => x["entity"]!.GetValue<string>() == "unknown"));
         events.Dispose();
     }
 

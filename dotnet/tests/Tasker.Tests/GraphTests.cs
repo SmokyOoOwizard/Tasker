@@ -84,43 +84,6 @@ public class GraphTests
     }
 
     [Fact]
-    public async Task A_read_in_a_sqlite_workspace_publishes_no_change_and_a_write_does()
-    {
-        await using var api = await ApiHost.Start("sqlite");
-        using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        using var response = await GraphReads.Subscribe(http, api.BaseUrl);
-        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
-        Assert.StartsWith(": connected", await reader.ReadLineAsync());
-
-        var changes = System.Threading.Channels.Channel.CreateUnbounded<string>();
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                while (await reader.ReadLineAsync() is { } line)
-                    if (GraphReads.Change(line) is { } change)
-                        changes.Writer.TryWrite(change["entity"]!.GetValue<string>());
-            }
-            catch (Exception e) when (e is IOException or ObjectDisposedException)
-            {
-            }
-        });
-
-        await Task.Delay(TimeSpan.FromMilliseconds(500));
-        while (changes.Reader.TryRead(out _))
-        {
-        }
-
-        Assert.Equal(HttpStatusCode.OK, (await GraphReads.Get(http, api.BaseUrl, api.P("/statuses"))).Status);
-        await Task.Delay(TimeSpan.FromSeconds(1));
-        Assert.False(changes.Reader.TryRead(out var early), $"a read published {early}");
-
-        await api.Post(api.P("/statuses"), new { name = "Done", color = "#445566" });
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        Assert.Equal("unknown", await changes.Reader.ReadAsync(timeout.Token));
-    }
-
-    [Fact]
     public async Task Errors_carry_the_code_and_status_of_the_rest_api()
     {
         await using var api = await ApiHost.Start("files");

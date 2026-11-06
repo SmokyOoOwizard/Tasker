@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Text.Json.Nodes;
 using Tasker.Daemon;
+using Tasker.Global;
+using Tasker.Storage.Files.Workspaces;
 using Xunit;
 
 namespace Tasker.Tests;
@@ -30,6 +32,34 @@ public class DaemonTests : IDisposable
         Assert.All(status.Workspaces, x => Assert.Equal(WorkspaceState.Open, x.State));
         Assert.Equal(["Alpha"], DaemonFixture.ProjectNames(await _daemon.CallTool(KeyOf(status.Workspaces[0]), "list_projects")));
         Assert.Equal(["Beta"], DaemonFixture.ProjectNames(await _daemon.CallTool(KeyOf(status.Workspaces[1]), "list_projects")));
+    }
+
+    [Fact]
+    public async Task Old_sqlite_entry_does_not_stop_the_daemon_and_can_be_removed_on_the_fly()
+    {
+        var folder = await _daemon.Workspace("a", "Alpha");
+        var db = Path.Combine(_daemon.Root, "old.db");
+        await File.WriteAllBytesAsync(db, []);
+        var settings = _daemon.Store.Load();
+        var old = new WorkspaceEntry(WorkspaceKind.Sqlite, CanonicalPath.Of(db));
+        await _daemon.Store.Update(x => x with { Mcp = x.Mcp with { Workspaces = [old, .. settings.Mcp.Workspaces] } });
+
+        var status = await _daemon.Start();
+
+        var failed = status.Workspaces.Single(x => x.Kind == WorkspaceKind.Sqlite);
+        Assert.Equal(WorkspaceState.Failed, failed.State);
+        Assert.Contains("no longer supported", failed.Error);
+        Assert.Contains("tasker mcp workspace remove", failed.Error);
+        Assert.Equal(WorkspaceState.Open, status.Workspaces.Single(x => x.Kind == WorkspaceKind.Files).State);
+        Assert.Contains("no longer supported", (await _daemon.Mcp("status")).Out);
+
+        Assert.Equal(["Alpha"], DaemonFixture.ProjectNames(await _daemon.CallTool(null, "list_projects")));
+        Assert.DoesNotContain("old.db", await _daemon.CallTool(null, "list_workspaces"));
+        Assert.Equal(0, new FileInfo(db).Length);
+
+        Assert.Equal(0, (await _daemon.Mcp("workspace", "remove", old.Path)).Code);
+        await Eventually(async () => (await _daemon.Status())!.Workspaces.Length == 1);
+        Assert.Equal(CanonicalPath.Of(folder), (await _daemon.Status())!.Workspaces.Single().Path);
     }
 
     [Fact]

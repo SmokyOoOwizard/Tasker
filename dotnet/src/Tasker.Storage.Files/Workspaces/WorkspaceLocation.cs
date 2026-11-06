@@ -3,31 +3,19 @@ using System.Text;
 
 namespace Tasker.Storage.Files.Workspaces;
 
-public enum WorkspaceKind
-{
-    /// <summary>Папка: данные — YAML-файлы в &lt;папка&gt;/.tasker.</summary>
-    Files,
-
-    /// <summary>Файл SQLite (только из аргументов запуска: <c>--sqlite=...</c>).</summary>
-    Sqlite
-}
-
 /// <summary>
 /// Где лежат данные рабочей области (вкладки десктопа). Путь канонический (см. <see cref="CanonicalPath"/>):
 /// одна и та же папка, открытая через симлинк или в другом регистре, — одна рабочая область.
 /// </summary>
 public sealed record WorkspaceLocation
 {
-    private WorkspaceLocation(WorkspaceKind kind, string path)
+    private WorkspaceLocation(string path)
     {
-        Kind = kind;
         Path = path;
-        Id = CreateId(kind, path);
+        Id = CreateId(path);
     }
 
-    public WorkspaceKind Kind { get; }
-
-    /// <summary>Канонический путь: папка (<see cref="WorkspaceKind.Files"/>) или файл БД (<see cref="WorkspaceKind.Sqlite"/>).</summary>
+    /// <summary>Канонический путь папки.</summary>
     public string Path { get; }
 
     /// <summary>
@@ -36,7 +24,7 @@ public sealed record WorkspaceLocation
     /// </summary>
     public string Id { get; }
 
-    /// <summary>Название для вкладки: имя папки или файла БД.</summary>
+    /// <summary>Название для вкладки: имя папки.</summary>
     public string Name => System.IO.Path.GetFileName(Path) is { Length: > 0 } name ? name : Path;
 
     /// <summary>
@@ -50,16 +38,14 @@ public sealed record WorkspaceLocation
             && System.IO.Path.GetDirectoryName(path) is { } parent)
             path = parent;
 
-        return new WorkspaceLocation(WorkspaceKind.Files, path);
+        return new WorkspaceLocation(path);
     }
 
-    public static WorkspaceLocation Sqlite(string file) => new(WorkspaceKind.Sqlite, CanonicalPath.Of(file));
-
-    private static string CreateId(WorkspaceKind kind, string path)
+    private static string CreateId(string path)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{kind}:{path}"));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"Files:{path}"));
         return Convert.ToHexStringLower(bytes)[..12];
     }
 
-    public override string ToString() => $"{Kind} {Path}";
+    public override string ToString() => Path;
 }
