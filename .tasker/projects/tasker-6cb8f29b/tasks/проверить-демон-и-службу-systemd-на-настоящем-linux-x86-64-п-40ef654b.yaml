@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 40ef654b-2c0b-4c44-85f0-e6d164e58b5e
 title: Проверить демон и службу systemd на настоящем Linux (x86_64, перезагрузка, linger)
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-07T21:41:44.6133240+00:00
-updatedAt: 2026-10-14T11:17:17.3337950+00:00
+updatedAt: 2026-11-06T16:08:20.7218550+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 122
@@ -13,7 +13,7 @@ description: |-
   Автозапуск демона через `systemd --user` проверен только в контейнере Docker (arm64, systemd как PID 1). На настоящей машине или виртуалке Linux x86_64 не проверены: подъём демона после перезагрузки с linger и без, `tasker mcp autostart enable` без сеанса пользователя, поведение на дистрибутивах без systemd. Прогон под `--platform linux/amd64` на Apple Silicon не запускается.
 
   Где
-  - rust/crates/tasker-daemon/src/autostart/systemd.rs — служба `~/.config/systemd/user/tasker-mcp.service`, сообщение про отсутствующий сеанс
+  - dotnet/src/Tasker.Daemon/Services/SystemdService.cs — служба `~/.config/systemd/user/tasker-mcp.service`, сообщение про отсутствующий сеанс
   - scripts/test-linux-systemd.sh — чек-лист автозапуска в контейнере с systemd
   - scripts/test-linux.sh — тесты на Linux в контейнере (`--platform`)
   - docs/wiki/Платформы.md (раздел «Linux»), docs/wiki/Демон-MCP.md — описанное поведение
@@ -23,7 +23,7 @@ description: |-
   - Отчёта о проверке на настоящем x86_64 Linux нет.
 
   Что нужно сделать
-  - На машине или виртуалке Linux x86_64 с systemd установить tasker (`install.sh`) и пройти чек-лист `scripts/test-linux-systemd.sh` вне контейнера: enable/disable/status, замена на лету под службой, перезапуск после падения, `systemctl --user stop`.
+  - На машине или виртуалке Linux x86_64 с systemd установить tasker (`install.sh`) и пройти чек-лист `scripts/test-linux-systemd.sh` вне контейнера: enable/disable/status, перезапуск демона через `tasker mcp upgrade` под службой, перезапуск после падения, `systemctl --user stop`.
   - Перезагрузка: с `loginctl enable-linger` демон поднимается без входа; без linger — после входа пользователя.
   - `tasker mcp autostart enable` через `sudo -u` / `su` / ssh без сеанса logind — сообщение с подсказкой, файл службы не остаётся.
   - Дистрибутив без systemd: автозапуск сообщает, что недоступен, `tasker mcp start` работает.

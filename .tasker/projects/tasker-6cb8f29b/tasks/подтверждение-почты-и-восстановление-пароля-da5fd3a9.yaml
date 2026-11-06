@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: da5fd3a9-672c-48b7-9e90-46706bd1b63c
 title: Подтверждение почты и восстановление пароля
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:14.6645490+00:00
-updatedAt: 2026-10-14T11:17:22.0627380+00:00
+updatedAt: 2026-11-06T16:08:04.0816440+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 9
@@ -13,9 +13,9 @@ description: |-
   На сервере почта пользователя никак не подтверждается, а забытый пароль может сбросить только админ (`POST /api/users/{id}/password` без текущего пароля). Самостоятельного восстановления пароля по почте нет, отправки писем в сервере нет вообще.
 
   Где
-  - src/Tasker.Core/Users/UserService.cs — `Register`, `Create`, `ChangePassword`
-  - src/Tasker.Web/Auth/, src/Tasker.Web/TaskerApi.cs — маршруты `/api/auth/*`, `/api/users/{id}/password`
-  - src/Tasker.Core/Users/User.cs, src/Tasker.Storage.Db/Models/UserDbModel.cs — данные пользователя
+  - dotnet/src/Tasker.Core/Users/UserService.cs — `Register`, `Create`, `ChangePassword`
+  - dotnet/src/Tasker.Web/Auth/, dotnet/src/Tasker.Web/TaskerApi.cs — маршруты `/api/auth/*`, `/api/users/{id}/password`
+  - dotnet/src/Tasker.Core/Users/User.cs, dotnet/src/Tasker.Storage.Db/Models/UserDbModel.cs — данные пользователя
   - frontend/src/pages/LoginPage.tsx, frontend/src/pages/ProfilePage.tsx
   - docs/wiki/Настройка-и-сервер.md — раздел «Пользователи, вход и права»
 

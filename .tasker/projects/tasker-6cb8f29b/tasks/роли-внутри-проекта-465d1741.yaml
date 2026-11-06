@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 465d1741-c1ab-423a-a396-8bdfe7676c51
 title: Роли внутри проекта
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:14.9549970+00:00
-updatedAt: 2026-10-14T11:17:16.8779900+00:00
+updatedAt: 2026-11-06T16:08:08.0646730+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 10
@@ -13,11 +13,11 @@ description: |-
   На сервере у участников проекта нет ролей: любой участник-человек может добавить в проект любого пользователя и убрать любого другого участника (запрещено только убрать последнего человека). Так же без ограничений любой участник переименовывает и удаляет проект.
 
   Где
-  - src/Tasker.Core/Projects/ProjectMemberService.cs — `Add`, `Remove`
-  - src/Tasker.Core/Projects/MemberProjectAccess.cs — доступ к проекту: админ или участник
-  - src/Tasker.Core/Projects/ProjectService.cs — `Update`, `Delete`
-  - src/Tasker.Core/Projects/IProjectMemberStorage.cs, src/Tasker.Storage.Db/ (таблица `project_members`: только `ProjectId`, `UserId`)
-  - src/Tasker.Web/TaskerApi.cs — `/api/projects/{id}/members`
+  - dotnet/src/Tasker.Core/Projects/ProjectMemberService.cs — `Add`, `Remove`
+  - dotnet/src/Tasker.Core/Projects/MemberProjectAccess.cs — доступ к проекту: админ или участник
+  - dotnet/src/Tasker.Core/Projects/ProjectService.cs — `Update`, `Delete`
+  - dotnet/src/Tasker.Core/Projects/IProjectMemberStorage.cs, dotnet/src/Tasker.Storage.Db/ (таблица `project_members`: только `ProjectId`, `UserId`)
+  - dotnet/src/Tasker.Web/TaskerApi.cs — `/api/projects/{id}/members`
   - frontend/src/pages/settings/MembersSection.tsx
   - docs/wiki/Настройка-и-сервер.md — раздел «Пользователи, вход и права»
 

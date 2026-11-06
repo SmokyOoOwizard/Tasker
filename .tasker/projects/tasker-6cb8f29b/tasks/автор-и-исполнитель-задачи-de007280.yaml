@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: de007280-fc74-4a1d-a800-062be711fd77
 title: Автор и исполнитель задачи
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:15.2644560+00:00
-updatedAt: 2026-10-14T11:17:16.9941620+00:00
+updatedAt: 2026-11-06T16:08:12.2815240+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 11
@@ -13,21 +13,20 @@ description: |-
   У задачи нет автора и исполнителя: не хранится, кто её создал, и некому её назначить. Ни модель, ни файлы, ни БД, ни API, ни консоль, ни интерфейс таких полей не знают.
 
   Где
-  - src/Tasker.Core/Tasks/TaskItem.cs, src/Tasker.Core/Tasks/TaskService.cs, src/Tasker.Core/Tasks/TaskFilter.cs — модель и сервис задач (.NET)
-  - rust/crates/tasker-core/src/model/task.rs, rust/crates/tasker-services/src/task.rs — то же в Rust
-  - src/Tasker.Storage.Files/Storages/TaskFile.cs, rust/crates/tasker-files/src/files/task.rs — файл задачи
-  - src/Tasker.Storage.Db/Models/TaskDbModel.cs, rust/crates/tasker-services/src/db/tasks.rs, rust/crates/tasker-services/src/db/schema.sql — таблица задач
-  - src/Tasker.Web/TaskerApi.cs, src/Tasker.Mcp/Tools/, rust/crates/tasker-mcp/src/tools/task.rs, rust/crates/tasker-cli/src/commands/task.rs
+  - dotnet/src/Tasker.Core/Tasks/TaskItem.cs, dotnet/src/Tasker.Core/Tasks/TaskService.cs, dotnet/src/Tasker.Core/Tasks/TaskFilter.cs — модель и сервис задач
+  - dotnet/src/Tasker.Storage.Files/Storages/TaskFile.cs — файл задачи
+  - dotnet/src/Tasker.Storage.Db/Models/TaskDbModel.cs — таблица задач
+  - dotnet/src/Tasker.Web/TaskerApi.cs, dotnet/src/Tasker.Mcp/Tools/TaskTools.cs, dotnet/src/Tasker.Cli/Commands/TaskCommands.cs
   - frontend/src/pages/TasksPage.tsx, frontend/src/types.ts
 
   Как повторить
   - `tasker task create "Первая" --type Task`, затем `tasker task get <id>` или файл задачи в `.tasker/projects/*/tasks/` — полей автора и исполнителя нет; у `tasker task create/update` нет параметров исполнителя.
-  - `grep -rni "createdBy\|assignee" src rust/crates frontend/src` — ничего.
+  - `grep -rni "createdBy\|assignee" dotnet/src frontend/src macos/Sources` — ничего.
 
   Что нужно сделать
-  - Поле автора `createdBy`: заполняется при создании текущим пользователем (на сервере — вошедший, в MCP — агент, на десктопе и в консоли — локальный пользователь), не меняется.
+  - Поле автора `createdBy`: заполняется при создании текущим пользователем (на сервере — вошедший, в MCP — агент, в приложении macOS и в консоли — локальный пользователь), не меняется.
   - Поле исполнителя `assigneeId`: задаётся и снимается при создании и правке задачи.
   - Проверка, что пользователь существует и (на сервере) участвует в проекте; что делать с исполнителем при удалении пользователя или исключении из проекта.
-  - Хранение в файлах (.NET и Rust пишут одинаково) и в БД (с учётом отсутствия миграций схемы).
+  - Хранение в файлах и в БД (с учётом отсутствия миграций схемы).
   - REST, MCP (сервер и демон), консоль (`--assignee`, вывод в `task get/list`, фильтр по исполнителю), интерфейс (показ и выбор исполнителя); вики.
-  - Проверка: задача, созданная через консоль, REST и MCP, получает правильного автора; назначение несуществующего пользователя или не участника проекта отклоняется; файлы и БД читаются .NET и Rust одинаково.
+  - Проверка: задача, созданная через консоль, REST и MCP, получает правильного автора; назначение несуществующего пользователя или не участника проекта отклоняется; файлы и БД читаются одинаково.

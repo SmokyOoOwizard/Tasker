@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 2fb155ad-87a3-4283-8461-3b86681cd884
 title: 'Подагенты: агент создаёт дочернего агента для задачи, проверка «жив» (heartbeat) и автоудаление'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-02T11:37:41.1606030+00:00
-updatedAt: 2026-10-14T11:17:21.9627820+00:00
+updatedAt: 2026-11-06T16:08:00.7302420+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 79
@@ -13,15 +13,14 @@ description: |-
   Агент (пользователь kind=agent, работающий через MCP) не может создать дочернего агента для отдельной задачи. Нет ни подтверждения «жив» (heartbeat), ни автоматического удаления пропавших временных агентов, ни поля «исполнитель» у задачи.
 
   Где
-  - rust/crates/tasker-core/src/model/user.rs, rust/crates/tasker-services/src/users.rs — пользователи и агенты (консоль, демон)
-  - src/Tasker.Core/Agents/, src/Tasker.Core/Users/ — агенты на сервере и в десктопе
-  - rust/crates/tasker-mcpd/src/registry.rs — агент вызова по заголовку `X-Tasker-Agent`
-  - rust/crates/tasker-mcp/src/tools/, src/Tasker.Mcp/Tools/ — инструменты MCP
-  - rust/crates/tasker-services/src/locks.rs, src/Tasker.Core/Locks/ — блокировки правки
+  - dotnet/src/Tasker.Core/Agents/, dotnet/src/Tasker.Core/Users/ — пользователи и агенты (консоль, демон, сервер)
+  - dotnet/src/Tasker.Daemon/DaemonClient.cs, dotnet/src/Tasker.Mcp/LocalMcpAgent.cs, dotnet/src/Tasker.Mcp/AgentTokenAuthentication.cs — агент вызова по заголовку `X-Tasker-Agent`
+  - dotnet/src/Tasker.Mcp/Tools/ — инструменты MCP
+  - dotnet/src/Tasker.Core/Locks/ — блокировки правки
 
   Как повторить
   - `tasker agent --help` — только create, list, get, update, delete; родителя и последнего сигнала нет
-  - В списке инструментов MCP (rust/crates/tasker-mcp/src/tools.json) нет создания подагента и heartbeat
+  - В списке инструментов MCP (dotnet/src/Tasker.Mcp/Tools/) нет создания подагента и heartbeat
 
   Что нужно сделать
   - Перед реализацией согласовать открытые вопросы:

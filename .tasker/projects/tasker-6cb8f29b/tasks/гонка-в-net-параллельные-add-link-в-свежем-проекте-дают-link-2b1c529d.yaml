@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 2b1c529d-3e6c-42f1-8173-8dc20269bf3d
 title: 'Гонка в .NET: параллельные add link в свежем проекте дают «link type not found» для типа по умолчанию'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-10T20:40:22.6947670+00:00
-updatedAt: 2026-10-14T11:17:18.0852710+00:00
+updatedAt: 2026-11-06T16:08:46.4221180+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 158
@@ -13,16 +13,15 @@ links:
   taskId: db7f38ed-6331-467f-bc5f-289fa2468085
 description: |-
   Проблема
-  В .NET-движке при параллельном добавлении связей в проекте без сохранённых типов связей изредка падает «TypeId: link type not found in the project: <id>» для типа по умолчанию. `LinkTypeService.EnsureDefaults` читает набор типов и пишет недостающие по одному вне секции записи: если запрос A уже записал часть типов по умолчанию (например, Blocks и Cloners), запрос B видит непустой набор, решает «типы сохранены» и дописывает только «позже добавленные» (Parent/Child) — его тип (Duplicate, Relates…) ещё не записан, `GetById` возвращает null. `catch` в EnsureDefaults защищает только от одновременной записи одного и того же типа. Затрагивает десктоп и сервер (Tasker.Core).
+  В .NET-движке при параллельном добавлении связей в проекте без сохранённых типов связей изредка падает «TypeId: link type not found in the project: <id>» для типа по умолчанию. `LinkTypeService.EnsureDefaults` читает набор типов и пишет недостающие по одному вне секции записи: если запрос A уже записал часть типов по умолчанию (например, Blocks и Cloners), запрос B видит непустой набор, решает «типы сохранены» и дописывает только «позже добавленные» (Parent/Child) — его тип (Duplicate, Relates…) ещё не записан, `GetById` возвращает null. `catch` в EnsureDefaults защищает только от одновременной записи одного и того же типа. Затрагивает демон и сервер (Tasker.Core).
 
   Где
-  - src/Tasker.Core/Links/LinkTypeService.cs — EnsureDefaults (и вызовы из записи типов)
-  - src/Tasker.Core/Links/TaskLinkService.cs — Add: `types.EnsureDefaults`, затем `types.GetById(typeId) ?? throw`
-  - src/Tasker.Core/TaskSeries/IWriteScope.cs — секция записи проекта
-  - rust/crates/tasker-services/src/link_type.rs — `ensure_defaults` (там повторное чтение под `exclusive`)
+  - dotnet/src/Tasker.Core/Links/LinkTypeService.cs — EnsureDefaults (и вызовы из записи типов)
+  - dotnet/src/Tasker.Core/Links/TaskLinkService.cs — Add: `types.EnsureDefaults`, затем `types.GetById(typeId) ?? throw`
+  - dotnet/src/Tasker.Core/TaskSeries/IWriteScope.cs — секция записи проекта
 
   Как повторить
-  - Свежий проект без связей, несколько задач; 6–12 параллельных `POST /w/<папка>/api/projects/<id>/tasks/<A>/links` к десктопу (или к серверу) с типом Duplicate, либо в одном процессе `Task.WhenAll` над `TaskLinkService.Add` с типом, который в Defaults не первый. Часть запросов изредка падает с 400 «link type not found».
+  - Свежий проект без связей, несколько задач; 6–12 параллельных `POST /w/<папка>/api/projects/<id>/tasks/<A>/links` к демону (или к серверу) с типом Duplicate, либо в одном процессе `Task.WhenAll` над `TaskLinkService.Add` с типом, который в Defaults не первый. Часть запросов изредка падает с 400 «link type not found».
 
   Что нужно сделать
   - Дать LinkTypeService `IWriteScope` (как у FieldService/BoardService/TaskLinkService; регистрация в DI не меняется).

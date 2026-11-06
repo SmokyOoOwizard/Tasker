@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 5ad1fc32-42c7-4dff-bdaa-b8daa7cf1044
 title: Страховочная сверка кэша в демоне
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:26.2158880+00:00
-updatedAt: 2026-10-14T11:17:21.0790440+00:00
+updatedAt: 2026-11-06T16:08:28.1844170+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 48
@@ -13,11 +13,11 @@ description: |-
   Демон `tasker-mcpd` держит индекс открытых папок актуальным по событиям слежения за файлами, а полностью сверяет область только при открытии, при потере событий, которую заметил сам наблюдатель, и по `tasker sync`. События теряются и незаметно: сетевые диски (SMB, NFS), лимит inotify на Linux, сон и пробуждение, время, когда демон был остановлен. Тогда индекс молча отстаёт, пока его не сверит кто-то другой.
 
   Где
-  - rust/crates/tasker-mcpd/src/sync.rs — `WorkspaceSync` (открытие областей, `sync` по запросу)
-  - rust/crates/tasker-files/src/watch.rs — наблюдатель, `FullSync`
-  - rust/crates/tasker-files/src/index/mod.rs — сверка индекса под `index.lock`
-  - rust/crates/tasker-mcpd/src/state.rs — `WorkspaceStatus` для `tasker mcp status`
-  - rust/crates/tasker-core/src/settings/ — раздел `mcp` в `settings.json`
+  - dotnet/src/Tasker.Daemon.Host/WorkspaceSync.cs — `WorkspaceSync` (открытие областей, `sync` по запросу)
+  - dotnet/src/Tasker.Storage.Files/Index/WorkspaceWatcher.cs — наблюдатель, `RescanExternal`
+  - dotnet/src/Tasker.Storage.Files/Index/WorkspaceIndex.cs — сверка индекса под `index.lock`
+  - dotnet/src/Tasker.Daemon/DaemonStatus.cs — `WorkspaceStatus` для `tasker mcp status`
+  - dotnet/src/Tasker.Global/GlobalSettings.cs — `McpSettings`, раздел `mcp` в `settings.json`
 
   Как повторить
   - Запустить демон с областью (`tasker mcp workspace add`, `tasker mcp start`), остановить его, изменить файлы задач в `.tasker`, запустить снова — изменения подхватит только стартовая сверка; на сетевом диске правки с другой машины не видны, пока не вызвать `tasker sync`.

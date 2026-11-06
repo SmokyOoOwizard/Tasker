@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 1fdfe97a-7567-4652-ba3a-3e5c46311b2e
 title: Связи между задачами из разных проектов
 typeId: d4d2c639-a723-4157-92a4-e704ef534e1c
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T22:52:21.6123830+00:00
-updatedAt: 2026-10-14T11:17:21.7269850+00:00
+updatedAt: 2026-11-06T16:08:38.9649920+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 65
@@ -13,10 +13,10 @@ description: |-
   Связать задачи из разных проектов нельзя: связь хранится в файле задачи-источника, типы связей у каждого проекта свои, а цель ищется только в проекте источника. Для межпроектных связей не решено, где хранить связь и её тип, как показывать её на обеих сторонах и как учитывать права на сервере (участник одного проекта не видит другой).
 
   Где
-  - rust/crates/tasker-services/src/links.rs, rust/crates/tasker-services/src/link_type.rs, rust/crates/tasker-services/src/link_cycles.rs
-  - rust/crates/tasker-core/src/model/task.rs, rust/crates/tasker-core/src/model/link.rs
-  - src/Tasker.Core/Links/ — связи в .NET (десктоп, сервер)
-  - src/Tasker.Web/TaskerApi.cs, rust/crates/tasker-mcp/src/tools/link.rs, src/Tasker.Mcp/Tools/LinkTools.cs
+  - dotnet/src/Tasker.Core/Links/TaskLinkService.cs, dotnet/src/Tasker.Core/Links/LinkTypeService.cs, dotnet/src/Tasker.Core/Links/LinkCycles.cs
+  - dotnet/src/Tasker.Core/Tasks/TaskItem.cs, dotnet/src/Tasker.Core/Links/LinkType.cs
+  - dotnet/src/Tasker.Core/Links/ — связи (сервер)
+  - dotnet/src/Tasker.Web/TaskerApi.cs, dotnet/src/Tasker.Mcp/Tools/LinkTools.cs
 
   Как повторить
   - В одной области создать проекты A и B с задачами AA-1 и BB-1

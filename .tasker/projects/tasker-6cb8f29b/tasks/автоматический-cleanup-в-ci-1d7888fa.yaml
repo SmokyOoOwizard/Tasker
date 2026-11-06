@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: 1d7888fa-fa40-4e69-a14a-f6976f00cad3
 title: Автоматический `cleanup` в CI
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-01T15:51:25.0252600+00:00
-updatedAt: 2026-10-14T11:17:20.9018500+00:00
+updatedAt: 2026-11-06T16:08:23.7945260+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 44
@@ -13,8 +13,8 @@ description: |-
   `tasker cleanup --check` (код 2, если есть что чистить) и `tasker cleanup` есть, но нет готового CI-сценария, который после заливки в main сам запускает чистку и коммитит результат. Workflows репозитория чистку не запускают.
 
   Где
-  - rust/crates/tasker-cli/src/cleanup.rs — `cleanup`, `--check`, `--resolve-conflicts`
-  - .github/workflows/ — только dotnet-tests.yml и release-build.yml
+  - dotnet/src/Tasker.Cli/Commands/CleanupCommands.cs — `cleanup`, `--check`, `--resolve-conflicts`
+  - .github/workflows/ — design-strings.yml, design-tokens.yml, dotnet-tests.yml, macos-api-client.yml, pr-dependencies.yml и release-build.yml, чистки среди них нет
   - docs/wiki/Хранение-и-git.md — описание `cleanup` после слияний
 
   Как повторить

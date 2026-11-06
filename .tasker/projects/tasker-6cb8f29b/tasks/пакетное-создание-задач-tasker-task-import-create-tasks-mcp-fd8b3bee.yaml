@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: fd8b3bee-fbf3-42dc-8c69-8b0fe6bfbb11
 title: 'Пакетное создание задач: tasker task import / create_tasks (MCP) / POST /tasks/batch'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-02T16:14:34.7547210+00:00
-updatedAt: 2026-10-14T11:17:22.1251000+00:00
+updatedAt: 2026-11-06T16:08:05.4444130+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 93
@@ -13,14 +13,14 @@ description: |-
   Задачи создаются только по одной: каждая — отдельный вызов `tasker task create` (отдельный процесс), инструмента MCP `create_task` или запроса `POST /tasks`. Сотни задач агентом через MCP — сотни вызовов; пакетного пути с одной проверкой и одной записью нет.
 
   Где
-  - rust/crates/tasker-cli/src/commands/task.rs — `tasker task create`
-  - rust/crates/tasker-services/src/task.rs, rust/crates/tasker-services/src/series.rs — создание задач и номера серий (консоль, демон)
-  - rust/crates/tasker-mcp/src/tools/task.rs, rust/crates/tasker-mcp/src/tools.json — MCP демона
-  - src/Tasker.Core/Tasks/TaskService.cs, src/Tasker.Web/TaskerApi.cs, src/Tasker.Mcp/Tools/TaskTools.cs — сервер и десктоп
+  - dotnet/src/Tasker.Cli/Commands/TaskCommands.cs — `tasker task create`
+  - dotnet/src/Tasker.Core/Tasks/TaskService.cs, dotnet/src/Tasker.Core/TaskSeries/SeriesService.cs — создание задач и номера серий (консоль, демон, сервер)
+  - dotnet/src/Tasker.Mcp/Tools/TaskTools.cs — MCP демона
+  - dotnet/src/Tasker.Web/TaskerApi.cs — сервер
 
   Как повторить
   - `tasker task --help` — команды импорта нет
-  - В tools.json нет `create_tasks`; в TaskerApi.cs нет `POST /tasks/batch`
+  - В dotnet/src/Tasker.Mcp/Tools/TaskTools.cs нет `create_tasks`; в TaskerApi.cs нет `POST /tasks/batch`
 
   Что нужно сделать
   - Формат и режимы согласовать перед реализацией

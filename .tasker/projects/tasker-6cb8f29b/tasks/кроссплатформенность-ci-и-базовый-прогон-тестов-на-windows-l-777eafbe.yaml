@@ -1,23 +1,22 @@
-formatVersion: 10
+formatVersion: 11
 id: 777eafbe-c6af-42d5-a420-0057636ccc4b
 title: 'Кроссплатформенность: CI и базовый прогон тестов на Windows, Linux и macOS'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-10-07T18:51:17.9695460+00:00
-updatedAt: 2026-10-14T11:17:17.1412990+00:00
+updatedAt: 2026-11-06T16:08:16.2841370+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 115
 description: |-
   Проблема
-  CI есть: Rust-тесты (cargo nextest) и .NET-тесты (tests/Tasker.Tests) идут на ubuntu-latest, macos-latest и windows-latest. Но .NET-тесты на Windows на main падают, фронтенд в CI не собирается и не проверяется (`-p:EmbedFrontend=false`, Node.js не ставится), стенд tools/Tasker.Stress в CI не запускается, а в вики нет матрицы «платформа × что проверено».
+  CI есть: .NET-тесты (dotnet/tests/Tasker.Tests) идут на ubuntu-latest, macos-latest и windows-latest. Но .NET-тесты на Windows на main падают, фронтенд в CI не собирается и не проверяется (`-p:EmbedFrontend=false`, Node.js не ставится), стенд dotnet/tools/Tasker.Stress в CI не запускается, а в вики нет матрицы «платформа × что проверено».
 
   Где
   - .github/workflows/dotnet-tests.yml, .github/workflows/release-build.yml
-  - rust/.config/nextest.toml — профиль ci
-  - tests/Tasker.Tests/PlatformFactAttribute.cs, tests/Tasker.Tests/PlatformFacts.cs — пометки платформенных тестов
+  - dotnet/tests/Tasker.Tests/PlatformFactAttribute.cs, dotnet/tests/Tasker.Tests/PlatformFacts.cs — пометки платформенных тестов
   - frontend/package.json — `build` (tsc -b && vite build), `lint`
-  - tools/Tasker.Stress — стенд параллельной работы
+  - dotnet/tools/Tasker.Stress — стенд параллельной работы
   - docs/wiki/Платформы.md, docs/wiki/Разработка.md
 
   Как повторить
@@ -28,6 +27,6 @@ description: |-
   - Разобрать падения .NET-тестов на Windows по группам причин (пути, блокировки файлов, процессы, переводы строк, кодировка) и завести на каждую группу задачу-баг в эпике
   - Платформенные по природе тесты (launchd, systemd, Планировщик заданий) — с явным пропуском на других ОС
   - CI: сборка фронтенда (`npm ci`, `npm run build`, `npm run lint`) с кэшем npm
-  - CI: стенд tools/Tasker.Stress в малом объёме на трёх платформах
+  - CI: стенд dotnet/tools/Tasker.Stress в малом объёме на трёх платформах
   - docs/wiki/Платформы.md: матрица «платформа × что проверено в CI»
   - Проверка: оба workflow зелёные на main на трёх платформах; задание фронтенда и стенда проходят

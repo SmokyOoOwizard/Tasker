@@ -1,10 +1,10 @@
-formatVersion: 10
+formatVersion: 11
 id: e3ad610d-f573-40a5-874e-6d47c9fe1896
 title: Обновление супервизора демона без перезапуска службы
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 4d53dac5-0d44-44d0-adcc-135d1d5acb26
 createdAt: 2026-10-07T17:42:44.7712600+00:00
-updatedAt: 2026-10-14T11:17:17.0391500+00:00
+updatedAt: 2026-11-06T16:08:06.4929670+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 113
