@@ -1,5 +1,6 @@
 using Tasker.Daemon;
 using Tasker.Mcp;
+using Tasker.Global;
 using Tasker.Storage.Files.Workspaces;
 using Tasker.Web;
 
@@ -11,7 +12,7 @@ internal sealed class HostDaemonMcp(DaemonRuntimeState state, int port) : IDaemo
     public Task<WorkspaceMcp> Find(WorkspaceLocation location, CancellationToken ct = default)
     {
         var url = McpRegistration.LocalUrl(port);
-        var found = state.Snapshot().Workspaces.FirstOrDefault(x => x.Kind == location.Kind && string.Equals(x.Path, location.Path, StringComparison.Ordinal));
+        var found = state.Snapshot().Workspaces.FirstOrDefault(x => x.Kind == WorkspaceKind.Files && string.Equals(x.Path, location.Path, StringComparison.Ordinal));
         if (found == null)
             return Task.FromResult(new WorkspaceMcp(Tasker.Daemon.DaemonState.Running, port, url, null, null, null));
 

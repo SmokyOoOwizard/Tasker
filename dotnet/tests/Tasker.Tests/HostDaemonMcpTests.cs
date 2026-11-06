@@ -1,5 +1,6 @@
 using Tasker.Daemon;
 using Tasker.Daemon.Host;
+using Tasker.Global;
 using Tasker.Storage.Files.Workspaces;
 using Xunit;
 
