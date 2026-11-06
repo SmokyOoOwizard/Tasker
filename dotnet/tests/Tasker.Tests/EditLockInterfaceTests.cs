@@ -15,7 +15,7 @@ public class EditLockInterfaceTests
     private static IsolatedHome Home() => new();
 
     private static string[] Location(ApiHost api, string storage) =>
-        storage == "sqlite" ? ["--sqlite", Path.Combine(api.Root, "tasker.db")] : ["--workspace", api.Root];
+        ["--workspace", api.Root];
 
     private static Task<CliResult> Cli(ApiHost api, string storage, params string[] args) =>
         TestWorkspace.Invoke([.. args, "--project", api.ProjectId.ToString(), .. Location(api, storage)]);
@@ -195,26 +195,6 @@ public class EditLockInterfaceTests
         await api.Delete(api.P($"/tasks/{id}/lock"));
         var released = await events.Next(x => x["entity"]!.GetValue<string>() == "lock");
         Assert.Equal(id, released["id"]!.GetValue<string>());
-    }
-
-    [Fact]
-    public async Task Sqlite_lock_requests_do_not_trigger_the_catch_all_unknown_event()
-    {
-        await using var api = await ApiHost.Start("sqlite");
-        using var events = await Events.Subscribe(api);
-        var id = (await NewTask(api))["id"]!.GetValue<string>();
-
-        await events.Next(x => x["entity"]!.GetValue<string>() == "unknown");
-        await events.Collect(TimeSpan.FromMilliseconds(800));
-
-        await api.Post(api.P($"/tasks/{id}/lock"));
-        await api.Delete(api.P($"/tasks/{id}/lock"));
-        var seen = await events.Collect(TimeSpan.FromSeconds(1));
-        Assert.Equal(["lock"], seen.Select(x => x["entity"]!.GetValue<string>()).Distinct().ToArray());
-
-        // Правка данных, наоборот, по-прежнему даёт unknown.
-        await api.NewSeries("TSK");
-        Assert.Equal("unknown", (await events.Next(x => true))["entity"]!.GetValue<string>());
     }
 
     // ---- консоль ----

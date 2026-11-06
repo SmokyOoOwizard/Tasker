@@ -75,10 +75,7 @@ public static class Invariants
         }
 
         // 2. Файлы и индекс.
-        if (!area.IsSqlite)
-            await CheckFiles(ctx, area, ids, label, f);
-        else
-            await CheckSqlite(area, label, f);
+        await CheckFiles(ctx, area, ids, label, f);
 
         // 3. sync и cleanup --check чистые.
         var sync = await stand.Cli(area, true, "sync", "-q");
@@ -101,7 +98,7 @@ public static class Invariants
                 f.Violations.Add($"[{label}] cannot delete the probe task: {removed.Text}");
         }
 
-        if (expect.NoEditLocks && !area.IsSqlite)
+        if (expect.NoEditLocks)
         {
             var locksDir = Path.Combine(area.TaskerDir, ".cache", "edit-locks");
             var active = Directory.Exists(locksDir) ? Directory.GetFiles(locksDir).Where(IsActiveLock).ToArray() : [];
@@ -235,7 +232,7 @@ public static class Invariants
         CopyWithoutCache(area.Path, copy);
         try
         {
-            var fresh = new Area { Name = "copy", Path = copy, IsSqlite = false, ProjectId = area.ProjectId, Project = area.ProjectId.ToString() };
+            var fresh = new Area { Name = "copy", Path = copy, ProjectId = area.ProjectId, Project = area.ProjectId.ToString() };
             var rebuilt = await ctx.Stand.Cli(fresh, true, "task", "list", "--all", "--json");
             if (!rebuilt.Ok)
                 f.Violations.Add($"[{label}] a fresh index does not build: {rebuilt.Text}");
@@ -263,24 +260,6 @@ public static class Invariants
             var destination = Path.Combine(target, ".tasker", relative);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             File.Copy(file, destination);
-        }
-    }
-
-    private static async Task CheckSqlite(Area area, string label, Findings f)
-    {
-        // sqlite3 есть не везде (macOS и большинство Linux — да): без него целостность файла не проверяем.
-        try
-        {
-            var info = new ProcessStartInfo("sqlite3", [area.Path, "PRAGMA integrity_check;"]) { RedirectStandardOutput = true, RedirectStandardError = true };
-            using var process = Process.Start(info)!;
-            var output = (await process.StandardOutput.ReadToEndAsync()).Trim();
-            await process.WaitForExitAsync();
-            if (output != "ok")
-                f.Violations.Add($"[{label}] sqlite integrity_check: {output}");
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            f.Notes.Add($"[{label}] sqlite3 is not installed: integrity_check skipped");
         }
     }
 

@@ -183,7 +183,7 @@ internal static class Kit
 
     /// <summary>
     /// Команда, которой рабочая область не нужна (настройки, демон). <paramref name="usesWorkspace"/> = false — команда не читает и
-    /// <c>-w</c>/<c>--sqlite</c>/<c>-p</c>: автодополнение их у неё не предлагает (<see cref="WorkspaceFreeCommand"/>).
+    /// <c>-w</c>/<c>-p</c>: автодополнение их у неё не предлагает (<see cref="WorkspaceFreeCommand"/>).
     /// </summary>
     public static Command Plain(GlobalOptions g, string name, string description, Action<Command> configure, Func<ParseResult, Context, Task> action, bool usesWorkspace = true)
     {

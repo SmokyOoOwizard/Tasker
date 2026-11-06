@@ -31,8 +31,7 @@ internal static class StorageRegistration
 
     /// <summary>
     /// Сервер: только БД — пароли, участники проектов и сессии хранятся только там; хэши паролей в git-репозитории не нужны.
-    /// Десктоп: папки и файлы SQLite открываются вкладками (<c>--files</c> и <c>--sqlite</c> — вкладки при запуске,
-    /// можно оба сразу); Postgres — только на сервере.
+    /// Локальный режим: только папки (области демона); Postgres — только на сервере.
     /// </summary>
     public static void Validate(TaskerMode mode, FilesConfigs files, DbConfigs db)
     {
@@ -44,7 +43,7 @@ internal static class StorageRegistration
         }
 
         if (!string.IsNullOrWhiteSpace(db.PostgresConnectionString))
-            throw new InvalidOperationException("PostgreSQL is available only in Tasker.Server: the local mode works with folders (--files) and SQLite files (--sqlite)");
+            throw new InvalidOperationException("PostgreSQL is available only in Tasker.Server: the local mode works with folders");
     }
 
     // Остальной код видит только интерфейсы хранилищ — какая реализация за ними, решается здесь.

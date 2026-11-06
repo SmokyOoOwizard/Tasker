@@ -9220,14 +9220,10 @@
       },
       "SyncRequest": {
         "required": [
-          "kind",
           "path"
         ],
         "type": "object",
         "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/WorkspaceKind"
-          },
           "path": {
             "type": "string"
           }

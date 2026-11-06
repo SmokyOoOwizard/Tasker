@@ -83,7 +83,7 @@ public class ErrorFormatApiTests
         await using var api = await ApiHost.Start(storage);
         var task = await api.NewTask("Locked task");
         Assert.Equal(0, (await TestWorkspace.Invoke(["whoami", "Ivan"])).Code);
-        string[] location = storage == "sqlite" ? ["--sqlite", Path.Combine(api.Root, "tasker.db")] : ["--workspace", api.Root];
+        string[] location = ["--workspace", api.Root];
         var locked = await TestWorkspace.Invoke(["lock", "acquire", "task", Id(task), "--project", api.ProjectId.ToString(), .. location]);
         Assert.True(locked.Code == 0, locked.Err);
 

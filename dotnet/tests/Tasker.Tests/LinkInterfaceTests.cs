@@ -479,7 +479,7 @@ public class LinkInterfaceTests
         Assert.Equal("linkType.inUse", inUse.Body!["code"]!.GetValue<string>());
 
         // Консоль держит блокировку на задаче — связь через REST не добавить.
-        var cli = storage == "sqlite" ? new[] { "--sqlite", Path.Combine(api.Root, "tasker.db") } : ["--workspace", api.Root];
+        string[] cli = ["--workspace", api.Root];
         using var home = new IsolatedHome();
         var locked = await TestWorkspace.Invoke(["lock", "acquire", "task", bId, "--project", api.ProjectId.ToString(), .. cli]);
         Assert.Equal(0, locked.Code);
