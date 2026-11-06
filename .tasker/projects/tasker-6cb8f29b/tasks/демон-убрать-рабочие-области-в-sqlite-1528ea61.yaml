@@ -2,9 +2,9 @@ formatVersion: 11
 id: 1528ea61-dc42-4b0a-b239-d1bff936acb9
 title: 'Демон: убрать рабочие области в SQLite'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: e419107c-3971-482e-b68f-46860d54f4d2
 createdAt: 2026-11-06T18:14:44.6873370+00:00
-updatedAt: 2026-11-06T18:14:44.6873370+00:00
+updatedAt: 2026-11-06T18:15:04.5256370+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 236
