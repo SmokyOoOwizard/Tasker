@@ -22,8 +22,8 @@ public interface ILocalEditor
 }
 
 /// <summary>
-/// Пользователь запроса; без пользователя (REST десктопа, консоль) — <see cref="ILocalEditor"/>:
-/// на десктопе правит один человек, имя которому задают в настройках.
+/// Пользователь запроса. Человек там, где нет входа (локальный человек в REST демона, консоль), — <see cref="ILocalEditor"/>:
+/// правит один человек, имя которому задают в настройках.
 /// </summary>
 public class CurrentUserEditor(ICurrentUser currentUser, IUserStorage users, ILocalEditor? local = null) : IEditorIdentity
 {
@@ -36,6 +36,9 @@ public class CurrentUserEditor(ICurrentUser currentUser, IUserStorage users, ILo
             return new EditHolder(local?.Key ?? LocalKey, local?.Name ?? LocalName);
 
         var user = await users.GetById(id, ct);
+        if (local != null && user is { IsAgent: false })
+            return new EditHolder(local.Key, local.Name);
+
         return new EditHolder($"user:{id}", user?.Username ?? id.ToString());
     }
 }

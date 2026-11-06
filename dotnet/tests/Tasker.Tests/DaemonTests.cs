@@ -141,7 +141,10 @@ public class DaemonTests : IDisposable
         JsonNode? change = null;
         using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         while (change == null && await reader.ReadLineAsync(wait.Token) is { } line)
-            change = GraphReads.Change(line);
+        {
+            if (GraphReads.Change(line) is { } next && next["entity"]!.GetValue<string>() != "user")
+                change = next;
+        }
         Assert.Equal("project", change!["entity"]!.GetValue<string>());
         Assert.Equal(projectId, change["projectId"]!.GetValue<string>());
 

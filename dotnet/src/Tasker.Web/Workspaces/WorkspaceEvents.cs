@@ -183,6 +183,12 @@ internal sealed class WorkspaceLockNotifier(WorkspaceEvents events) : Tasker.Cor
 
 internal static class WorkspaceEventsEndpoint
 {
+    public static bool ChangesData(HttpRequest request) =>
+        !HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method)
+        // Блокировки правки данных не меняют и о себе сообщают отдельным событием lock.
+        && request.Path.Value?.EndsWith("/lock", StringComparison.Ordinal) != true
+        && request.Path.Value?.EndsWith(Graph.GraphSetup.Path, StringComparison.Ordinal) != true;
+
     public static void UseChangeAuthors(this IApplicationBuilder app) =>
         app.Use(async (context, next) =>
         {
@@ -209,10 +215,7 @@ internal static class WorkspaceEventsEndpoint
             await next(context);
 
             if (context.Features.Get<WorkspaceFeature>() is { Location.Kind: WorkspaceKind.Sqlite }
-                && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)
-                // Блокировки правки данных не меняют и о себе сообщают отдельным событием lock.
-                && context.Request.Path.Value?.EndsWith("/lock", StringComparison.Ordinal) != true
-                && context.Request.Path.Value?.EndsWith(Graph.GraphSetup.Path, StringComparison.Ordinal) != true
+                && ChangesData(context.Request)
                 && context.Response.StatusCode is >= 200 and < 300)
             {
                 context.RequestServices.GetRequiredService<WorkspaceEvents>().Publish(new WorkspaceChange("unknown", null, null));

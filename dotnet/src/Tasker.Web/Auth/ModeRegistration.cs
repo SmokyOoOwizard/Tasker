@@ -5,8 +5,10 @@ using Tasker.Core;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Tasker.Core.Auth;
+using Tasker.Core.Locks;
 using Tasker.Core.Projects;
 using Tasker.Core.Users;
+using Tasker.Global;
 using Tasker.Mcp;
 using Tasker.Web.Configs.Tasker;
 using Tasker.Web.Graph;
@@ -49,6 +51,9 @@ internal static class ModeRegistration
 
         if (mode == TaskerMode.Local)
         {
+            var settings = new SettingsStore();
+            builder.RegisterInstance(new SettingsLocalEditor(settings, CurrentUserEditor.LocalKey)).As<ILocalEditor>();
+            builder.RegisterInstance(new SettingsLocalPerson(settings, TimeProvider.System)).As<ILocalPerson>();
             builder.RegisterInstance(new UserOptions(RequireCredentials: false));
             builder.RegisterType<OpenProjectAccess>().As<IProjectAccess>().SingleInstance();
             builder.RegisterType<WorkspaceRegistry>().AsSelf().SingleInstance();

@@ -206,6 +206,7 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
             {
                 builder.RegisterInstance(location);
                 builder.RegisterType<LocalMcpAgent>().AsSelf().SingleInstance();
+                builder.RegisterType<Tasker.Core.Users.LocalHuman>().AsSelf().SingleInstance();
                 builder.RegisterType<WorkspaceEvents>().AsSelf().SingleInstance();
                 builder.RegisterType<WorkspaceLockNotifier>().As<Tasker.Core.Locks.ILockNotifier>().SingleInstance();
 

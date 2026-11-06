@@ -5,8 +5,8 @@ namespace Tasker.Web.Auth;
 
 /// <summary>
 /// Пользователь текущего запроса — claim <c>sub</c>:
-/// сервер — из JWT человека (REST) или токена агента (MCP); десктоп — локальный агент в MCP,
-/// а REST-запросы десктопа ни от чьего имени (входа нет).
+/// сервер — из JWT человека (REST) или токена агента (MCP); локальный режим — агент в MCP,
+/// локальный человек в REST демона (см. <see cref="LocalHumanRequests"/>).
 /// </summary>
 internal class HttpCurrentUser(IHttpContextAccessor http) : ICurrentUser
 {

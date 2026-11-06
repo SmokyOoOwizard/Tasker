@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 using Tasker.Mcp;
+using Tasker.Web.Auth;
 using Tasker.Web.Graph;
 using Tasker.Web.Workspaces;
 
@@ -26,6 +27,7 @@ public static class TaskerWebExtensions
         {
             app.UseLoopbackOnly();
             app.UseWorkspaces();
+            app.UseLocalHuman();
             app.UseChangeAuthors();
             app.UseSqliteChangeEvents();
         }
@@ -71,6 +73,7 @@ public static class TaskerWebExtensions
     {
         app.UseLoopbackOnly();
         app.UseWorkspaces();
+        app.UseLocalHuman();
         app.UseChangeAuthors();
         app.UseSqliteChangeEvents();
         app.Use(TaskerApi.HandleErrors);

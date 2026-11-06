@@ -20,11 +20,12 @@ internal sealed class ApiHost : IAsyncDisposable
 {
     private readonly WebApplication _app;
     private readonly WorkspaceLease _lease;
-    private readonly IsolatedHome _home = new();
+    private readonly IsolatedHome _home;
     private readonly HttpClient _http = new();
 
-    private ApiHost(WebApplication app, WorkspaceLease lease, string root, string baseUrl)
+    private ApiHost(WebApplication app, WorkspaceLease lease, string root, string baseUrl, IsolatedHome home)
     {
+        _home = home;
         _app = app;
         _lease = lease;
         Root = root;
@@ -46,6 +47,7 @@ internal sealed class ApiHost : IAsyncDisposable
     {
         var root = Path.Combine(Path.GetTempPath(), "tasker-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        var home = new IsolatedHome();
         var builder = TaskerWebApp.CreateBuilder<WebTestModule>([], TaskerMode.Local);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         var app = builder.Build();
@@ -56,7 +58,7 @@ internal sealed class ApiHost : IAsyncDisposable
         var lease = await app.Services.GetRequiredService<WorkspaceRegistry>().Open(location);
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
 
-        var host = new ApiHost(app, lease, root, $"{address}{lease.BasePath}/api");
+        var host = new ApiHost(app, lease, root, $"{address}{lease.BasePath}/api", home);
         await host.CreateProject();
         return host;
     }
