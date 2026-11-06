@@ -2,9 +2,9 @@ formatVersion: 11
 id: 46338cea-ce94-4f09-9ea6-be2650e66462
 title: GoldenCliTests.Every_cli_and_migrate_snapshot_of_the_corpus_matches нестабилен на macOS
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-05T22:43:25.3717050+00:00
-updatedAt: 2026-11-05T23:20:45.5744910+00:00
+updatedAt: 2026-11-06T01:38:06.6892840+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 232
