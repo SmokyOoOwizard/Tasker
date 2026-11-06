@@ -59,7 +59,7 @@ internal sealed class Session : IAsyncDisposable
     private static bool Exists(WorkspaceLocation location) => Directory.Exists(new TaskerDirectory(location.Path).Projects);
 
     /// <param name="forCompletion">
-    /// Открытие для автодополнения: только чтение существующей области — не создаёт ни папки <c>.tasker</c>, ни файла SQLite
+    /// Открытие для автодополнения: только чтение существующей области — не создаёт папку <c>.tasker</c>
     /// и не запускает слежение за папкой (команда живёт доли секунды). Нет области — <see cref="CliException"/>.
     /// </param>
     public static async Task<Session> Open(WorkspaceSettings settings, CancellationToken ct, bool forCompletion = false)

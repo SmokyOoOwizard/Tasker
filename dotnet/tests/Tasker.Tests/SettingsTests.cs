@@ -258,15 +258,67 @@ public class McpSettingsCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Sqlite_file_is_recognised_by_being_a_file()
+    public async Task Adding_a_file_is_refused()
     {
         var db = Path.Combine(_folder, "tasker.db");
         await File.WriteAllBytesAsync(db, []);
 
         var added = await Cli("mcp", "workspace", "add", db);
 
-        Assert.StartsWith("Added sqlite workspace", added.Out);
-        Assert.Equal(WorkspaceKind.Sqlite, Assert.Single(_home.Store.Load().Mcp.Workspaces).Kind);
+        Assert.NotEqual(0, added.Code);
+        Assert.Contains("is a file: a workspace is a folder, SQLite files are no longer supported", added.Err);
+        Assert.Empty(_home.Store.Load().Mcp.Workspaces);
+    }
+
+    private async Task<string> OldSqliteEntry(string name)
+    {
+        var db = Path.Combine(_folder, name);
+        await File.WriteAllBytesAsync(db, []);
+        var path = CanonicalPath.Of(db);
+        await File.WriteAllTextAsync(_home.Store.FilePath,
+            $"{{\"mcp\":{{\"workspaces\":[{{\"kind\":\"sqlite\",\"path\":{System.Text.Json.JsonSerializer.Serialize(path)}}}]}}}}");
+        return path;
+    }
+
+    [Fact]
+    public async Task Old_sqlite_entry_is_listed_with_a_hint_and_can_be_removed()
+    {
+        var db = await OldSqliteEntry("old.db");
+
+        var listed = await Cli("mcp", "workspace", "list");
+        Assert.Equal(0, listed.Code);
+        Assert.Contains(db, listed.Out);
+        Assert.Contains("no longer supported", listed.Out);
+        Assert.Contains("tasker mcp workspace remove", listed.Out);
+
+        var removed = await Cli("mcp", "workspace", "remove", db);
+        Assert.Equal(0, removed.Code);
+        Assert.Contains($"Removed {db}", removed.Out);
+        Assert.Empty(_home.Store.Load().Mcp.Workspaces);
+        Assert.True(File.Exists(db), "removing the entry must not touch the file");
+    }
+
+    [Fact]
+    public async Task Old_sqlite_entry_of_a_file_that_is_gone_can_be_removed()
+    {
+        var db = await OldSqliteEntry("gone.db");
+        File.Delete(db);
+
+        Assert.Equal(0, (await Cli("mcp", "workspace", "remove", db)).Code);
+        Assert.Empty(_home.Store.Load().Mcp.Workspaces);
+    }
+
+    [Fact]
+    public async Task Old_sqlite_entry_survives_other_changes_of_the_settings()
+    {
+        var db = await OldSqliteEntry("kept.db");
+        var folder = Folder("next");
+
+        Assert.Equal(0, (await Cli("mcp", "workspace", "add", folder)).Code);
+
+        var entries = _home.Store.Load().Mcp.Workspaces;
+        Assert.Equal(2, entries.Count);
+        Assert.Equal(WorkspaceKind.Sqlite, entries.Single(x => x.Path == db).Kind);
     }
 
     [Fact]

@@ -15,7 +15,7 @@ Options:
   --width                      Line width for --truncate in characters (minimum 20); 0 or 'auto' - the terminal width, 'off' - never cut. Default: the TASKER_WIDTH variable (off or 0 - never cut), else the terminal
 
 Commands:
-  add <path>     Allows a workspace (folder or existing SQLite file) in MCP
+  add <path>     Allows a workspace folder in MCP
   remove <path>  Removes a workspace from MCP
   list           Lists workspaces available through MCP
 

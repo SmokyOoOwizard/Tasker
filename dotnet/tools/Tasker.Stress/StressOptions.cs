@@ -15,7 +15,7 @@ public sealed class StressOptions
     /// <summary><c>cli</c> — процессы tasker; <c>mcp</c> — HTTP к демону; <c>mix</c> — поровну.</summary>
     public string Client { get; set; } = "cli";
 
-    /// <summary><c>files</c> — папка (YAML + индекс SQLite); <c>sqlite</c> — файл SQLite.</summary>
+    /// <summary><c>files</c> — папка (YAML + индекс SQLite).</summary>
     public string Storage { get; set; } = "files";
 
     public List<string> Scenarios { get; set; } = [.. AllScenarios];

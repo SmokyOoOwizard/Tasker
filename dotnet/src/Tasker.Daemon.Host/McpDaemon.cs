@@ -129,7 +129,7 @@ public static class McpDaemon
     /// <summary>Агент видит и области, которые разрешены, но ещё не открылись (list_workspaces), — их знает состояние демона.</summary>
     private static void ConfigureCatalog(WebApplication app, DaemonRuntimeState state) =>
         app.Services.GetRequiredService<McpWorkspaceCatalog>().Unavailable = () => state.Snapshot().Workspaces
-            .Where(x => x.State != WorkspaceState.Open)
+            .Where(x => x.State != WorkspaceState.Open && x.Kind == WorkspaceKind.Files)
             .Select(x => new McpWorkspace(
                 System.IO.Path.GetFileName(x.Path.TrimEnd('/', '\\')) is { Length: > 0 } name ? name : x.Path,
                 x.Path,
@@ -181,11 +181,9 @@ public static class McpDaemon
             if (!Authorized(context))
                 return Results.Unauthorized();
             if (request is not { Path.Length: > 0 })
-                return Results.BadRequest(new ControlError("Body {\"kind\", \"path\"} is required"));
+                return Results.BadRequest(new ControlError("Body {\"path\"} is required"));
 
-            var location = request.Kind == Tasker.Storage.Files.Workspaces.WorkspaceKind.Files
-                ? Tasker.Storage.Files.Workspaces.WorkspaceLocation.Files(request.Path)
-                : Tasker.Storage.Files.Workspaces.WorkspaceLocation.Sqlite(request.Path);
+            var location = Tasker.Storage.Files.Workspaces.WorkspaceLocation.Files(request.Path);
             return await sync.Sync(location, ct) is { } result
                 ? Results.Ok(result)
                 : Results.NotFound(new ControlError($"The daemon does not serve {location.Path}"));

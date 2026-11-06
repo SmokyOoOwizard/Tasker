@@ -21,11 +21,8 @@ public sealed record WorkspaceChange(string Entity, Guid? ProjectId, Guid? Id, T
 /// <summary>
 /// Уведомления вкладок об изменениях в рабочей области — чтобы две вкладки (и два окна) одной папки
 /// видели правки друг друга, а также правки агентов через MCP, руками и через git.
-/// <list type="bullet">
-/// <item>Папка: изменения индекса (<see cref="IWorkspaceIndex.Changed"/>) — он видит любые изменения файлов,
-/// откуда бы они ни пришли, а событие приходит, когда списки уже их показывают.</item>
-/// <item>SQLite: снаружи БД не следим — событие <c>unknown</c> после каждого успешного изменяющего запроса к области.</item>
-/// </list>
+/// Источник — изменения индекса (<see cref="IWorkspaceIndex.Changed"/>): он видит любые изменения файлов,
+/// откуда бы они ни пришли, а событие приходит, когда списки уже их показывают.
 /// Одинаковые события за <see cref="Debounce"/> склеиваются. Клиенты получают их подпиской GraphQL <c>workspaceChanges</c>: <c>POST /w/{key}/api/graphql</c>.
 /// </summary>
 public sealed class WorkspaceEvents : IDisposable
@@ -35,21 +32,18 @@ public sealed class WorkspaceEvents : IDisposable
     // Столько файлов сразу (checkout, полная сверка) — проще сказать «перечитайте всё».
     private const int ManyFiles = 200;
 
-    private readonly IWorkspaceIndex? _index;
+    private readonly IWorkspaceIndex _index;
     private readonly ConcurrentDictionary<Channel<WorkspaceChange>, byte> _subscribers = new();
     private readonly ConcurrentDictionary<WorkspaceChange, byte> _pending = new();
     private readonly Timer _flush;
 
-    /// <param name="index">Индекс папки; у рабочей области в SQLite его нет.</param>
-    public WorkspaceEvents(IWorkspaceIndex? index = null)
+    public WorkspaceEvents(IWorkspaceIndex index)
     {
         _index = index;
         _flush = new Timer(_ => Flush());
-        if (_index != null)
-            _index.Changed += OnIndexChanged;
+        _index.Changed += OnIndexChanged;
     }
 
-    /// <summary>Изменение, которое не видно в файлах (рабочая область в SQLite).</summary>
     public void Publish(WorkspaceChange change)
     {
         if (change.Author == null && Tasker.Core.Locks.ChangeAuthor.Current is { } author)
@@ -101,8 +95,7 @@ public sealed class WorkspaceEvents : IDisposable
 
     public void Dispose()
     {
-        if (_index != null)
-            _index.Changed -= OnIndexChanged;
+        _index.Changed -= OnIndexChanged;
         _flush.Dispose();
     }
 
@@ -197,25 +190,5 @@ internal static class WorkspaceEventsEndpoint
             var author = await context.RequestServices.GetRequiredService<Tasker.Core.Locks.IEditorIdentity>().Current(context.RequestAborted);
             using (Tasker.Core.Locks.ChangeAuthor.Begin(author))
                 await next(context);
-        });
-
-    /// <summary>
-    /// Рабочая область в SQLite: после успешного изменяющего запроса — событие <c>unknown</c>
-    /// (изменения в файлах ловит <see cref="FileSystemWatcher"/>, здесь их не дублируем).
-    /// </summary>
-    public static void UseSqliteChangeEvents(this IApplicationBuilder app) =>
-        app.Use(async (context, next) =>
-        {
-            await next(context);
-
-            if (context.Features.Get<WorkspaceFeature>() is { Location.Kind: WorkspaceKind.Sqlite }
-                && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)
-                // Блокировки правки данных не меняют и о себе сообщают отдельным событием lock.
-                && context.Request.Path.Value?.EndsWith("/lock", StringComparison.Ordinal) != true
-                && context.Request.Path.Value?.EndsWith(Graph.GraphSetup.Path, StringComparison.Ordinal) != true
-                && context.Response.StatusCode is >= 200 and < 300)
-            {
-                context.RequestServices.GetRequiredService<WorkspaceEvents>().Publish(new WorkspaceChange("unknown", null, null));
-            }
         });
 }

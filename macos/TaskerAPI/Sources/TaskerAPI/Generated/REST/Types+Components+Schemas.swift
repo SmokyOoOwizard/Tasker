@@ -2544,24 +2544,16 @@ extension Components {
         }
         /// - Remark: Generated from `#/components/schemas/SyncRequest`.
         public struct SyncRequest: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/SyncRequest/kind`.
-            public var kind: Components.Schemas.WorkspaceKind
             /// - Remark: Generated from `#/components/schemas/SyncRequest/path`.
             public var path: Swift.String
             /// Creates a new `SyncRequest`.
             ///
             /// - Parameters:
-            ///   - kind:
             ///   - path:
-            public init(
-                kind: Components.Schemas.WorkspaceKind,
-                path: Swift.String
-            ) {
-                self.kind = kind
+            public init(path: Swift.String) {
                 self.path = path
             }
             public enum CodingKeys: String, CodingKey {
-                case kind
                 case path
             }
         }

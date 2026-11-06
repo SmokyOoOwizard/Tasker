@@ -77,7 +77,7 @@ public class ParallelWorkTests
         var status = (await ws.Run("status", "list", "-p", "Doomed", "--json")).Json["data"]![0]!["id"]!.GetValue<string>();
 
         // Агент проверил проект и тип, его запись «зависла» — а проект удалили.
-        await using var session = await Session.Open(new WorkspaceSettings(ws.Root, null), CancellationToken.None);
+        await using var session = await Session.Open(new WorkspaceSettings(ws.Root), CancellationToken.None);
         var storage = session.Get<Tasker.Core.Tasks.ITaskStorage>();
         Assert.True((await ws.Run("project", "delete", "Doomed", "--yes")).Code == 0);
 
@@ -101,7 +101,7 @@ public class ParallelWorkTests
     {
         await using var api = await ApiHost.Start(storage);
         var series = await api.NewSeries("TSK");
-        var location = storage == "sqlite" ? new[] { "--sqlite", Path.Combine(api.Root, "tasker.db") } : ["--workspace", api.Root];
+        string[] location = ["--workspace", api.Root];
 
         var tabs = new[] { await EventTab.Open(api), await EventTab.Open(api) };
         try
@@ -115,8 +115,8 @@ public class ParallelWorkTests
                     created[(await api.NewTask($"rest {w}/{i}", series))["id"]!.GetValue<string>()] = started;
                 }
             }));
-            // Консоль пишет в ту же папку отдельными процессами; в SQLite снаружи за изменениями не следят (события — только за запросами REST).
-            var consoleWriters = storage == "sqlite" ? Enumerable.Empty<Task>() : Enumerable.Range(0, 3).Select(w => Task.Run(async () =>
+            // Консоль пишет в ту же папку отдельными процессами.
+            var consoleWriters = Enumerable.Range(0, 3).Select(w => Task.Run(async () =>
             {
                 for (var i = 0; i < 2; i++)
                 {
@@ -128,7 +128,7 @@ public class ParallelWorkTests
             }));
             await Task.WhenAll(restWriters.Concat(consoleWriters));
 
-            var expected = storage == "sqlite" ? 9 : 15;
+            const int expected = 15;
             Assert.Equal(expected, created.Count);
             foreach (var tab in tabs)
                 await tab.SeesAll(created);

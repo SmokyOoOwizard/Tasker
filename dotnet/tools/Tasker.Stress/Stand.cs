@@ -20,10 +20,7 @@ public sealed class Area
 {
     public required string Name { get; init; }
 
-    /// <summary>Папка (режим files) или файл SQLite.</summary>
     public required string Path { get; init; }
-
-    public required bool IsSqlite { get; init; }
 
     public string Project { get; init; } = "Demo";
 
@@ -42,9 +39,9 @@ public sealed class Area
     /// <summary>Имя области для аргумента <c>workspace</c> в MCP (ключ у демона).</summary>
     public string Key { get; set; } = "";
 
-    public string[] Location => IsSqlite ? ["--sqlite", Path] : ["--workspace", Path];
+    public string[] Location => ["--workspace", Path];
 
-    /// <summary>Папка <c>.tasker</c> (только files).</summary>
+    /// <summary>Папка <c>.tasker</c>.</summary>
     public string TaskerDir => System.IO.Path.Combine(Path, ".tasker");
 
     public string TasksDir => System.IO.Path.Combine(ProjectDir, "tasks");
@@ -73,7 +70,7 @@ public sealed class Area
 }
 
 /// <summary>
-/// Изолированный стенд: временная папка со своим <c>TASKER_HOME</c>, областью (папка или SQLite), агентами и своим демоном MCP
+/// Изолированный стенд: временная папка со своим <c>TASKER_HOME</c>, областью-папкой, агентами и своим демоном MCP
 /// на свободном порту. Настоящий демон (5719) и данные репозитория не затрагиваются: каждый процесс получает наши переменные окружения.
 /// </summary>
 public sealed class Stand : IAsyncDisposable
@@ -173,7 +170,7 @@ public sealed class Stand : IAsyncDisposable
         return new CliResult(process.ExitCode, await output, await error);
     }
 
-    /// <summary>Команда tasker: <paramref name="area"/> добавляет <c>-w</c>/<c>--sqlite</c> и (если <paramref name="project"/>) <c>-p</c>.</summary>
+    /// <summary>Команда tasker: <paramref name="area"/> добавляет <c>-w</c> и (если <paramref name="project"/>) <c>-p</c>.</summary>
     public Task<CliResult> Cli(Area? area, bool project, params string[] args) => RunAsync(Info(CliArgs(area, project, args)));
 
     public static string[] CliArgs(Area? area, bool project, string[] args) =>
@@ -187,13 +184,11 @@ public sealed class Stand : IAsyncDisposable
         return result;
     }
 
-    /// <summary>Новая рабочая область (папка или файл SQLite) с проектом «Demo».</summary>
+    /// <summary>Новая рабочая область-папка с проектом «Demo».</summary>
     public async Task<Area> CreateArea(string name)
     {
-        var path = _options.Storage == "sqlite"
-            ? System.IO.Path.Combine(Root, name + ".db")
-            : Directory.CreateDirectory(System.IO.Path.Combine(Root, name)).FullName;
-        var area = await NewProject(new Area { Name = name, Path = path, IsSqlite = _options.Storage == "sqlite" }, "Demo");
+        var path = Directory.CreateDirectory(System.IO.Path.Combine(Root, name)).FullName;
+        var area = await NewProject(new Area { Name = name, Path = path }, "Demo");
         Areas.Add(area);
         Main ??= area;
         return area;
@@ -202,7 +197,7 @@ public sealed class Stand : IAsyncDisposable
     /// <summary>Свежий проект в той же области (у каждого сценария свой — счёт задач и номеров начинается с нуля): статусы, набор, тип, серия TSK.</summary>
     public async Task<Area> NewProject(Area workspace, string project)
     {
-        var area = new Area { Name = workspace.Name, Path = workspace.Path, IsSqlite = workspace.IsSqlite, Project = project, Key = workspace.Key };
+        var area = new Area { Name = workspace.Name, Path = workspace.Path, Project = project, Key = workspace.Key };
 
         string Id(CliResult r) => r.Json["id"]!.GetValue<string>();
         area.ProjectId = Guid.Parse(Id(await Must(area, false, "project", "create", project, "--json")));

@@ -15,7 +15,7 @@ _tasker() {
   candidates=( ${(f)out} )
 
   if (( ${#candidates} == 0 )); then
-    # Nothing to suggest: the argument is a path (-w, --sqlite, mcp workspace add) or free text.
+    # Nothing to suggest: the argument is a path (-w, mcp workspace add) or free text.
     _files
     return
   fi

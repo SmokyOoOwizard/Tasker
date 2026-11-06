@@ -30,7 +30,7 @@ internal static class ManualCommands
         topic.Suggests(g, Sources.ManualTopics(catalog, lang));
         lang.Suggests(g, Sources.ManualLanguages(catalog));
 
-        // Область у справочника не нужна: -w/-p/--sqlite ему нечего делать, Tab их не предлагает.
+        // Область у справочника не нужна: -w/-p ему нечего делать, Tab их не предлагает.
         var command = Kit.Plain(g, "manual", "Short how-to recipes with ready commands: the list of topics, 'manual <topic>' for a recipe, 'manual <word>' to search", c =>
         {
             c.Arguments.Add(topic);

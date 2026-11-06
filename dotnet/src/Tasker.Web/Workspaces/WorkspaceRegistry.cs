@@ -6,8 +6,6 @@ using Tasker.Core;
 using Tasker.Core.Dto;
 using Tasker.Core.Workspace;
 using Tasker.Mcp;
-using Tasker.Storage.Db;
-using Tasker.Storage.Db.Configs.Tasker;
 using Tasker.Storage.Files;
 
 namespace Tasker.Web.Workspaces;
@@ -20,8 +18,8 @@ namespace Tasker.Web.Workspaces;
 /// а конфликт правок ловит проверка версий (409 <c>modified</c>). Закрылась последняя вкладка — область закрывается.
 /// </para>
 /// <para>
-/// У каждой области свой дочерний контейнер Autofac с модулем хранилища (<see cref="FileStorageModule"/>
-/// или <see cref="DbStorageModule"/> для SQLite); сервисы Core — общие регистрации корневого контейнера.
+/// У каждой области свой дочерний контейнер Autofac с модулем хранилища (<see cref="FileStorageModule"/>);
+/// сервисы Core — общие регистрации корневого контейнера.
 /// Запросы REST и интерфейса попадают в область по адресу <c>/w/{key}/…</c>, где key — имя папки (см. <see cref="WorkspaceRouting"/>).
 /// Десктоп своего MCP не поднимает: открытые папки он добавляет в области демона <c>tasker-mcpd</c>. У .NET-демона MCP — по одному
 /// адресу <c>/mcp</c>, область там — аргумент вызова: то же имя (см. <see cref="McpWorkspaceCatalog"/>).
@@ -91,7 +89,7 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
     }
 
     /// <summary>
-    /// Открытая область по имени (ключу) без учёта регистра или по каноническому пути папки (файла SQLite) — так её называет агент MCP.
+    /// Открытая область по имени (ключу) без учёта регистра или по каноническому пути папки — так её называет агент MCP.
     /// Относительный путь не принимается: «имя» без разделителей — только ключ.
     /// </summary>
     internal Workspace? FindByNameOrPath(string nameOrPath)
@@ -106,8 +104,7 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
 
             try
             {
-                return _open.GetValueOrDefault(WorkspaceLocation.Files(nameOrPath).Id)
-                    ?? _open.GetValueOrDefault(WorkspaceLocation.Sqlite(nameOrPath).Id);
+                return _open.GetValueOrDefault(WorkspaceLocation.Files(nameOrPath).Id);
             }
             catch (Exception e) when (e is ArgumentException or IOException or NotSupportedException or UnauthorizedAccessException)
             {
@@ -177,7 +174,7 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
     }
 
     /// <summary>
-    /// Ключ — имя папки (или файла БД): оно в адресе интерфейса и в аргументе <c>workspace</c> MCP, которое прописывают агенту,
+    /// Ключ — имя папки: оно в адресе интерфейса и в аргументе <c>workspace</c> MCP, которое прописывают агенту,
     /// и оно не меняется между запусками. У одновременно открытых папок с одинаковым именем — суффикс: «Tasker-2».
     /// Вызывается под блокировкой реестра.
     /// </summary>
@@ -209,10 +206,7 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
                 builder.RegisterType<WorkspaceEvents>().AsSelf().SingleInstance();
                 builder.RegisterType<WorkspaceLockNotifier>().As<Tasker.Core.Locks.ILockNotifier>().SingleInstance();
 
-                if (location.Kind == WorkspaceKind.Files)
-                    builder.RegisterModule(new FileStorageModule(location.Path));
-                else
-                    builder.RegisterModule(new DbStorageModule(new DbConfigs { SqliteFile = location.Path }));
+                builder.RegisterModule(new FileStorageModule(location.Path));
             });
 
             // События — до запуска хранилища: первая сверка индекса уже может что-то изменить.
@@ -255,7 +249,7 @@ public sealed class WorkspaceLease : IAsyncDisposable
     public string BasePath => WorkspaceRouting.BasePath(Key);
 
     /// <summary>
-    /// Сверяет индекс папки с файлами (есть только у папок). Десктоп вызывает при активации окна, как Unity
+    /// Сверяет индекс папки с файлами. Десктоп вызывает при активации окна, как Unity
     /// при возврате в редактор: пока окно было неактивно, папку могли поменять (git pull), а watcher — пропустить событие.
     /// </summary>
     public async Task Rescan(CancellationToken ct = default)
@@ -277,7 +271,7 @@ public sealed class WorkspaceLease : IAsyncDisposable
     /// Явная сверка по просьбе пользователя (<c>tasker sync</c>, git-хук): в отличие от <see cref="Rescan"/> не глотает ошибки
     /// и возвращает файлы, которые не удалось прочитать (например, конфликты слияния git) — их показывают сразу.
     /// </summary>
-    /// <returns>null — у области нет индекса (SQLite): сверять нечего.</returns>
+    /// <returns>null — область уже закрыта: сверять нечего.</returns>
     public async Task<ListDto<WorkspaceProblem>?> Sync(int problemsLimit, CancellationToken ct = default)
     {
         if (_disposed != 0 || _workspace.Scope.ResolveOptional<IWorkspaceIndex>() is not { } index)
