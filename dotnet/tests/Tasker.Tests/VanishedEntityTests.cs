@@ -33,7 +33,7 @@ public class VanishedEntityTests
         Guid.Parse((await Ok(ws.Run("project", "list", "--json"))).Json["data"]![0]!["id"]!.GetValue<string>());
 
     private static WorkspaceSettings Settings(TestWorkspace ws) =>
-        ws.Location[0] == "--sqlite" ? new WorkspaceSettings(null, ws.Location[1]) : new WorkspaceSettings(ws.Root, null);
+        new(ws.Root);
 
     /// <summary>Только папка: в SQLite внешний ключ не даёт убрать набор из-под типа — там проект исчезает целиком (см. следующий тест).</summary>
     [Fact]

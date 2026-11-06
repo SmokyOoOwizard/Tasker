@@ -82,5 +82,5 @@ _tasker() {
   return 0
 }
 
-# Nothing to suggest (a path after -w, --sqlite, free text): file names, as usual.
+# Nothing to suggest (a path after -w, free text): file names, as usual.
 complete -o default -F _tasker tasker

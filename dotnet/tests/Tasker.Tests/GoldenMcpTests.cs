@@ -6,7 +6,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using Microsoft.Data.Sqlite;
 using Tasker.Storage.Files.Workspaces;
 using Xunit;
 
@@ -17,7 +16,6 @@ public partial class GoldenMcpTests
     private const string GoldenProject = "11111111-1111-4111-8111-111111111111";
     private const string LegacyProject = "22222222-2222-4222-8222-222222222222";
     private const string BugId = "00000035-0000-4000-8000-000000000035";
-    private const string SqliteBugId = "00000073-0000-4000-8000-000000000073";
 
     private static readonly JsonSerializerOptions Compact = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private static readonly JsonSerializerOptions Indented = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, WriteIndented = true, IndentSize = 2 };
@@ -96,25 +94,6 @@ public partial class GoldenMcpTests
             prepare?.Invoke(Path.Combine(root, "golden"));
             var workspaces = new[] { Path.Combine(root, "golden"), Path.Combine(root, "broken") }.Select(x => (Kind: "files", Path: x));
             return await Launch(root, workspaces, beforeLaunch: null);
-        }
-
-        public static async Task<Fixture> StartSqlite()
-        {
-            var root = TempRoot();
-            var file = Path.Combine(root, "golden.db");
-            using (var connection = new SqliteConnection($"Data Source={file};Pooling=False"))
-            {
-                connection.Open();
-                using (var wal = connection.CreateCommand())
-                {
-                    wal.CommandText = "PRAGMA journal_mode = wal";
-                    wal.ExecuteScalar();
-                }
-                using var restore = connection.CreateCommand();
-                restore.CommandText = await File.ReadAllTextAsync(Path.Combine(Golden, "sqlite", "workspace.sql"));
-                restore.ExecuteNonQuery();
-            }
-            return await Launch(root, [(Kind: "sqlite", Path: file)], beforeLaunch: null);
         }
 
         public static async Task<Fixture> Launch(string root, IEnumerable<(string Kind, string Path)> workspaces, Func<Task>? beforeLaunch)
@@ -448,86 +427,6 @@ public partial class GoldenMcpTests
         if (Updating)
             File.WriteAllText(namesFile, names, Utf8);
         Assert.Equal(File.ReadAllText(namesFile, Utf8), names);
-
-        snapshots.AssertNone();
-    }
-
-    [Fact]
-    public async Task Sqlite_mcp_answers_match_the_snapshots()
-    {
-        using var f = await Fixture.StartSqlite();
-        var db = Path.Combine(f.Root, "golden.db");
-        var snapshots = new Snapshots(Path.Combine(Golden, "sqlite", "expected", "mcp"),
-        [
-            (f.Root, "<ROOT>"),
-            (WorkspaceLocation.Sqlite(db).Id, "<WSID:golden.db>")
-        ]);
-        var w = new JsonObject { ["workspace"] = "golden.db" };
-        JsonNode W() => w.DeepClone();
-        JsonNode G(params (string Key, JsonNode? Value)[] extra) => Args("golden.db", GoldenProject, extra);
-
-        var me = await f.ResultJson("whoami", W());
-        foreach (var (key, marker) in new[] { ("id", "<LOCAL-AGENT-ID>"), ("createdAt", "<LOCAL-AGENT-CREATED>") })
-            snapshots.Replacements.Add((me[key]!.GetValue<string>(), marker));
-
-        snapshots.Check("list_workspaces", await f.Call("list_workspaces", new JsonObject()));
-        snapshots.Check("whoami", await f.Call("whoami", W()));
-        snapshots.Check("list_projects", await f.Call("list_projects", W()));
-        snapshots.Check("list_tasks", await f.Call("list_tasks", G()));
-        snapshots.Check("list_tasks-filtered", await f.Call("list_tasks",
-            G(("statusIds", new JsonArray()), ("descriptionLength", 0), ("limit", 5), ("offset", 2))));
-        var bug = await f.Call("get_task", G(("taskId", SqliteBugId)));
-        snapshots.Check("get_task", bug);
-        var bugVersion = JsonNode.Parse(TextOf(bug))!["version"]!.GetValue<string>();
-        snapshots.Check("get_task-by-reference", await f.Call("get_task", G(("taskId", "GLD-1"))));
-        snapshots.Check("get_task_links", await f.Call("get_task_links", G(("taskId", SqliteBugId))));
-        snapshots.Check("find_tasks_by_reference", await f.Call("find_tasks_by_reference", G(("reference", "BUG-1"))));
-        snapshots.Check("list_fields", await f.Call("list_fields", G()));
-        snapshots.Check("list_enums", await f.Call("list_enums", G()));
-        var boards = await f.ResultJson("list_boards", G());
-        snapshots.Check("list_boards", await f.Call("list_boards", G()));
-        var mainBoard = boards["data"]!.AsArray().First(x => x!["name"]!.GetValue<string>() == "Main board")!["id"]!.GetValue<string>();
-        snapshots.Check("get_board", await f.Call("get_board", G(("boardId", mainBoard))));
-        snapshots.Check("list_link_types", await f.Call("list_link_types", G()));
-        snapshots.Check("list_series", await f.Call("list_series", G()));
-        snapshots.Check("series_health", await f.Call("series_health", G()));
-        var statuses = await f.ResultJson("list_statuses", G());
-        snapshots.Check("list_statuses", await f.Call("list_statuses", G()));
-        snapshots.Check("list_status_sets", await f.Call("list_status_sets", G()));
-        snapshots.Check("list_task_types", await f.Call("list_task_types", G()));
-        snapshots.Check("list_users", await f.Call("list_users", W()));
-        snapshots.Check("list_workspace_problems", await f.Call("list_workspace_problems", W()));
-        snapshots.Check("get_lock", await f.Call("get_lock", G(("entity", "task"), ("entityId", SqliteBugId))));
-
-        snapshots.Check("errors/not_found-task", await f.Call("get_task", G(("taskId", "GLD-999"))));
-        snapshots.Check("errors/modified", await f.Call("update_task", G(("taskId", SqliteBugId), ("title", "x"), ("version", "0000000000000000"))));
-        snapshots.Check("errors/modified-stale-counter", await f.Call("update_task", G(("taskId", SqliteBugId), ("title", "x"), ("version", "1"))));
-        var done = statuses["data"]!.AsArray().First(x => x!["name"]!.GetValue<string>() == "Done")!;
-        snapshots.Check("errors/in_use", await f.Call("delete_status", G(("statusId", done["id"]!.DeepClone()), ("version", done["version"]!.DeepClone()))));
-
-        using (var connection = new SqliteConnection($"Data Source={db};Pooling=False"))
-        {
-            connection.Open();
-            using var insert = connection.CreateCommand();
-            insert.CommandText = "INSERT INTO edit_locks (Entity, Id, HolderKey, HolderName, ProjectId, AcquiredAt, ExpiresAt) VALUES ('Task', $id, 'cli', 'golden-user (console)', $project, $now, $expires)";
-            insert.Parameters.AddWithValue("$id", SqliteBugId.ToUpperInvariant());
-            insert.Parameters.AddWithValue("$project", GoldenProject.ToUpperInvariant());
-            insert.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.FFFFFFF"));
-            insert.Parameters.AddWithValue("$expires", DateTime.UtcNow.AddMinutes(10).ToString("yyyy-MM-dd HH:mm:ss.FFFFFFF"));
-            insert.ExecuteNonQuery();
-        }
-        var locked = await f.Call("update_task", G(("taskId", SqliteBugId), ("title", "x"), ("version", bugVersion)));
-        snapshots.Check("errors/locked", ScrubTimes(locked));
-        using (var connection = new SqliteConnection($"Data Source={db};Pooling=False"))
-        {
-            connection.Open();
-            using var delete = connection.CreateCommand();
-            delete.CommandText = "DELETE FROM edit_locks";
-            delete.ExecuteNonQuery();
-        }
-
-        var updated = await f.Call("update_task", G(("taskId", SqliteBugId), ("description", "Changed over MCP"), ("version", bugVersion)));
-        snapshots.Check("update_task", ScrubTimes(updated));
 
         snapshots.AssertNone();
     }

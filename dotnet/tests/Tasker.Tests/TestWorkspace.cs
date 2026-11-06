@@ -17,7 +17,7 @@ public record CliResult(int Code, string Out, string Err)
 }
 
 /// <summary>
-/// Временная рабочая область для CLI: папка с файлами или файл SQLite. Команды выполняются отдельным процессом консоли
+/// Временная рабочая область для CLI: папка с файлами. Команды выполняются отдельным процессом консоли
 /// <c>tasker</c> (<see cref="TaskerProcess"/>).
 /// </summary>
 public sealed class TestWorkspace : IDisposable

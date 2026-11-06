@@ -39,7 +39,7 @@ tasker task list --field "Estimate>=3" --field "Priority!=Low"
 
 ### Пути
 
-- `-w`, `--sqlite`, `mcp workspace add|remove` принимают `C:\work\project`, `D:/work/project`, пути с пробелами и кириллицей (в кавычках) и `~`: PowerShell и cmd.exe её сами не раскрывают, `tasker` раскрывает сам (`~`, `~\work`, `~/work` — в папке профиля пользователя).
+- `-w`, `mcp workspace add|remove` принимают `C:\work\project`, `D:/work/project`, пути с пробелами и кириллицей (в кавычках) и `~`: PowerShell и cmd.exe её сами не раскрывают, `tasker` раскрывает сам (`~`, `~\work`, `~/work` — в папке профиля пользователя).
 - Каталог данных Tasker (настройки, состояние демона, журналы) — `%LOCALAPPDATA%\Tasker`; `TASKER_HOME` переопределяет его: `$env:TASKER_HOME = 'D:\tasker-data'` (cmd.exe: `set TASKER_HOME=D:\tasker-data`).
 - Имя в блокировках (`tasker whoami`) — имя пользователя Windows без домена: `CORP\ivan` и `ivan@corp.local` превращаются в `ivan`. Сменить: `tasker whoami "Иван Петров"`.
 

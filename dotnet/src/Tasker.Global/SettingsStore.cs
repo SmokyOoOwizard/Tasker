@@ -73,11 +73,11 @@ public sealed class SettingsStore(string? directory = null)
         var added = false;
         await Update(settings =>
         {
-            if (settings.Mcp.Workspaces.Any(x => x.Location.Id == location.Id))
+            if (settings.Mcp.Workspaces.Any(x => x.Unsupported == null && x.Location.Id == location.Id))
                 return settings;
 
             added = true;
-            return settings with { Mcp = settings.Mcp with { Workspaces = [.. settings.Mcp.Workspaces, entry] } };
+            return settings with { Mcp = settings.Mcp with { Workspaces = [.. settings.Mcp.Workspaces.Where(x => x.Location.Id != location.Id), entry] } };
         }, ct);
         return (entry, added);
     }

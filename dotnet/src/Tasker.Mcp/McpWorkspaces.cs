@@ -11,7 +11,7 @@ public enum McpWorkspaceStatus
 
 /// <summary>Рабочая область, разрешённая агентам.</summary>
 /// <param name="Name">Имя, которым агент выбирает область (аргумент <c>workspace</c>): имя папки, у одинаковых — с суффиксом (<c>Tasker-2</c>).</param>
-/// <param name="Path">Канонический путь папки (или файла SQLite).</param>
+/// <param name="Path">Канонический путь папки.</param>
 /// <param name="Projects">Сколько проектов в области; заполняет <c>list_workspaces</c>, у неоткрытой области его нет.</param>
 public sealed record McpWorkspace(string Name, string Path, McpWorkspaceStatus Status, int? Projects = null, string? Error = null);
 

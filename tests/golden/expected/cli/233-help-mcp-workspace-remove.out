@@ -5,7 +5,7 @@ Usage:
   tasker mcp workspace remove [<path>] [options]
 
 Arguments:
-  <path>  Workspace folder or SQLite file. Default: the current folder
+  <path>  Workspace folder. Default: the current folder
 
 Options:
   -?, -h, --help               Show help and usage information

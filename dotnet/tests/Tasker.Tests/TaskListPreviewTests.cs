@@ -71,7 +71,7 @@ public class TaskListPreviewTests : IDisposable
         Assert.Throws<Tasker.Core.TaskerValidationException>(() => DescriptionPreview.Check(-2));
     }
 
-    // ---- REST (папка и SQLite) ----
+    // ---- REST ----
 
     private static string Long(int length) => string.Concat(Enumerable.Range(0, length).Select(i => (char)('a' + i % 26)));
 
@@ -181,7 +181,7 @@ public class TaskListPreviewTests : IDisposable
         Assert.Equal(300, cutItem["descriptionLength"]!.GetValue<int>());
     }
 
-    // ---- консоль (папка и SQLite) ----
+    // ---- консоль ----
 
     private static async Task<CliResult> Ok(Task<CliResult> run)
     {

@@ -6,15 +6,12 @@ using Tasker.Core.Locks;
 using Tasker.Core.Projects;
 using Tasker.Core.Users;
 using Tasker.Global;
-using Tasker.Storage.Db;
-using Tasker.Storage.Db.Configs.Tasker;
 using Tasker.Storage.Files;
 using Tasker.Storage.Files.Workspaces;
 
 namespace Tasker.Tests;
 
-/// <summary>Папка (<paramref name="Folder"/>) или файл SQLite (<paramref name="SqliteFile"/>) рабочей области.</summary>
-internal record WorkspaceSettings(string? Folder, string? SqliteFile);
+internal record WorkspaceSettings(string Folder);
 
 /// <summary>
 /// Рабочая область, открытая общим .NET-кодом хранилищ (тем же, что у десктопа и сервера) внутри процесса тестов: тест работает
@@ -44,9 +41,7 @@ internal sealed class Session : IAsyncDisposable
     /// <param name="watch">Следить за файлами папки, пока область открыта (<c>IWorkspaceIndex.Changed</c>).</param>
     public static async Task<Session> Open(WorkspaceSettings settings, CancellationToken ct, bool watch = false)
     {
-        var location = settings.SqliteFile != null
-            ? WorkspaceLocation.Sqlite(settings.SqliteFile)
-            : WorkspaceLocation.Files(settings.Folder ?? throw new ArgumentException("No folder and no SQLite file", nameof(settings)));
+        var location = WorkspaceLocation.Files(settings.Folder);
 
         IContainer? container = null;
         IStorageLifecycle? lifecycle = null;
@@ -60,10 +55,7 @@ internal sealed class Session : IAsyncDisposable
             builder.RegisterType<NoCurrentUser>().As<ICurrentUser>().SingleInstance();
             builder.RegisterInstance(new SettingsLocalEditor(new SettingsStore(), "cli", " (console)")).As<ILocalEditor>();
 
-            if (location.Kind == WorkspaceKind.Files)
-                builder.RegisterModule(new FileStorageModule(location.Path, watchFiles: watch, lazy: true));
-            else
-                builder.RegisterModule(new DbStorageModule(new DbConfigs { SqliteFile = location.Path }));
+            builder.RegisterModule(new FileStorageModule(location.Path, watchFiles: watch, lazy: true));
 
             container = builder.Build();
             lifecycle = container.ResolveOptional<IStorageLifecycle>();
