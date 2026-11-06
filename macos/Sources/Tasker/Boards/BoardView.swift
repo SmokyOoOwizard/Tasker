@@ -205,6 +205,12 @@ private struct BoardCanvas: View {
     }
 }
 
+private struct BoardIncomingCard: Identifiable {
+    let row: TaskRow
+
+    var id: String { "incoming-" + row.id.uuidString }
+}
+
 private struct BoardColumnView: View {
     let model: BoardViewModel
     let navigator: TaskNavigator
@@ -217,9 +223,10 @@ private struct BoardColumnView: View {
 
     private var over: Bool { target == column.id }
 
-    private var incoming: [TaskRow] {
+    private var incoming: [BoardIncomingCard] {
         model.moving.compactMap { task, destination in
-            destination == column.id ? model.location(of: task)?.row : nil
+            guard destination == column.id, let place = model.location(of: task), place.column.id != destination else { return nil }
+            return BoardIncomingCard(row: place.row)
         }
     }
 
@@ -246,8 +253,8 @@ private struct BoardColumnView: View {
                 .padding(.bottom, 8)
             }
             LazyVStack(spacing: 8) {
-                ForEach(incoming, id: \.id) { row in
-                    BoardCardBody(model: model, row: row, selected: false, pending: true)
+                ForEach(incoming) { card in
+                    BoardCardBody(model: model, row: card.row, selected: false, pending: true)
                         .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 }
                 ForEach(column.rows, id: \.id) { row in

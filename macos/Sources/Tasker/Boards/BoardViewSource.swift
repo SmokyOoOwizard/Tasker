@@ -20,12 +20,17 @@ struct BoardRowPage: Hashable, Sendable {
     var total: Int
 }
 
+struct BoardMoved: Hashable, Sendable {
+    var statusId: UUID
+    var version: String
+}
+
 protocol BoardViewSource: Sendable {
     func vocabulary(project: UUID) async throws -> TaskListVocabulary
     func board(project: UUID, id: UUID) async throws -> BoardInfo?
     func columnPage(project: UUID, board: UUID, column: UUID, field: [String], offset: Int, limit: Int) async throws -> BoardRowPage
     func taskPage(project: UUID, typeIds: [UUID], offset: Int, limit: Int) async throws -> BoardRowPage
-    func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> UUID
+    func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> BoardMoved
 }
 
 struct GraphQLBoardViewSource: BoardViewSource {
@@ -59,13 +64,13 @@ struct GraphQLBoardViewSource: BoardViewSource {
         return BoardRowPage(rows: page.data.map(TaskRow.init), total: page.totalCount)
     }
 
-    func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> UUID {
+    func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> BoardMoved {
         let item = try await client.rest.perform {
             try await $0.moveTaskToBoardColumn(
                 path: .init(projectId: project.uuidString.lowercased(), id: board.uuidString.lowercased(), columnId: column.uuidString.lowercased()),
                 body: .json(.init(taskId: task.uuidString.lowercased(), version: version))
             ).ok.body.json
         }
-        return UUID(uuidString: item.statusId) ?? UUID()
+        return BoardMoved(statusId: UUID(uuidString: item.statusId) ?? UUID(), version: item.version)
     }
 }

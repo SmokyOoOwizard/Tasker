@@ -5,6 +5,8 @@ import TaskerAPI
 
 final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
     private let lock = NSLock()
+    private var _heldPages: [CheckedContinuation<Void, Never>] = []
+    private var _holdPages = false
     private var _rows: [TaskRow]
     private var _failure: TaskerAPIError?
     private var _moves: [String] = []
@@ -31,6 +33,22 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
     }
 
     var moves: [String] { lock.withLock { _moves } }
+
+    var holdPages: Bool {
+        get { lock.withLock { _holdPages } }
+        set { lock.withLock { _holdPages = newValue } }
+    }
+
+    var heldPages: Int { lock.withLock { _heldPages.count } }
+
+    func releasePages() {
+        let held = lock.withLock {
+            _holdPages = false
+            defer { _heldPages = [] }
+            return _heldPages
+        }
+        held.forEach { $0.resume() }
+    }
     var fields: [[String]] { lock.withLock { _fields } }
 
     func vocabulary(project: UUID) async throws -> TaskListVocabulary { vocabularyValue }
@@ -41,6 +59,11 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
         lock.withLock { _fields.append(field) }
         let statuses = info.columns.first { $0.id == column }?.statusIds ?? []
         let all = rows.filter { statuses.contains($0.statusId) }
+        if holdPages {
+            await withCheckedContinuation { continuation in
+                lock.withLock { _heldPages.append(continuation) }
+            }
+        }
         return BoardRowPage(rows: Array(all.dropFirst(offset).prefix(limit)), total: all.count)
     }
 
@@ -49,7 +72,7 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
         return BoardRowPage(rows: Array(all.dropFirst(offset).prefix(limit)), total: all.count)
     }
 
-    func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> UUID {
+    func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> BoardMoved {
         lock.withLock { _moves.append("\(task.uuidString.prefix(4)) \(version)") }
         if let failure { throw failure }
         guard let status = info.columns.first(where: { $0.id == column })?.statusIds.first else { throw TaskerAPIError.notFound(Refusal(message: "")) }
@@ -60,7 +83,7 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
             changed.version = version + "+"
             return changed
         }
-        return status
+        return BoardMoved(statusId: status, version: version + "+")
     }
 }
 
@@ -202,6 +225,46 @@ struct BoardViewTests {
         #expect(model.columns.map(\.rows.count) == [0, 1])
         #expect(model.moving.isEmpty)
         #expect(notices == ["TSK-1 → «В работе»"])
+    }
+
+    @Test func theCardStandsInItsNewColumnBeforeTheBoardReloads() async {
+        let first = row(1, status: todo)
+        let second = row(2, status: doing)
+        let stub = source([first, second])
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        stub.holdPages = true
+        model.move(task: first.id, to: doingColumn)
+        await until { stub.heldPages > 0 }
+        #expect(model.moving.isEmpty)
+        #expect(model.columns[0].rows.isEmpty)
+        #expect(model.columns[1].rows.map(\.id).contains(first.id))
+        #expect(model.columns.map(\.total) == [0, 2])
+        #expect(model.location(of: first.id)?.row.version == "v1+")
+        #expect(model.location(of: first.id)?.row.statusId == doing)
+        #expect(model.canDrop(task: first.id, on: todoColumn))
+        stub.releasePages()
+    }
+
+    @Test func aRefreshStartedBeforeTheResponseDoesNotBringTheCardBack() async {
+        let first = row(1, status: todo)
+        let stub = source([first])
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        stub.holdPages = true
+        model.scheduleRefresh()
+        await until { stub.heldPages > 0 }
+        let stale = stub.heldPages
+        model.move(task: first.id, to: doingColumn)
+        await until { stub.moves.count == 1 && model.moving.isEmpty && stub.heldPages > stale }
+        #expect(model.columns.map(\.rows.count) == [0, 1])
+        stub.releasePages()
+        await until { model.columns[1].rows.first?.version == "v1+" }
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(model.columns.map(\.rows.count) == [0, 1])
+        #expect(model.moving.isEmpty)
     }
 
     @Test func aCardCannotBeDroppedOnItsOwnColumnOrWhileMoving() async {

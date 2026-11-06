@@ -267,12 +267,16 @@ final class BoardViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                let status = try await self.source.move(project: self.project, board: board.id, column: column, task: task, version: place.row.version)
-                self.moving[task] = nil
-                let name = self.vocabulary.status(status)?.name ?? ""
+                let moved = try await self.source.move(project: self.project, board: board.id, column: column, task: task, version: place.row.version)
+                withAnimation(.easeInOut(duration: 0.24)) {
+                    self.moving[task] = nil
+                    self.relocate(task: task, to: column, moved: moved)
+                }
+                let name = self.vocabulary.status(moved.statusId)?.name ?? ""
                 self.onNotice?(self.localizer.string(.boardMoved, reference, name))
                 guard current == self.generation else { return }
-                await self.fetch(generation: current, initial: false)
+                self.generation += 1
+                await self.fetch(generation: self.generation, initial: false)
             } catch {
                 withAnimation(.easeInOut(duration: 0.2)) { self.moving[task] = nil }
                 self.refusal = BoardRefusal(column: column, tick: (self.refusal?.tick ?? 0) + 1)
@@ -280,6 +284,19 @@ final class BoardViewModel {
                 if case TaskerAPIError.conflict = error { self.scheduleRefresh() }
             }
         }
+    }
+
+    private func relocate(task: UUID, to column: UUID, moved: BoardMoved) {
+        guard let target = columns.firstIndex(where: { $0.id == column }), var row = location(of: task)?.row else { return }
+        for index in columns.indices where columns[index].rows.contains(where: { $0.id == task }) {
+            columns[index].rows.removeAll { $0.id == task }
+            columns[index].total = max(0, columns[index].total - 1)
+        }
+        row.statusId = moved.statusId
+        row.version = moved.version
+        let position = columns[target].rows.firstIndex { $0.createdAt > row.createdAt } ?? columns[target].rows.endIndex
+        columns[target].rows.insert(row, at: position)
+        columns[target].total += 1
     }
 
     static func failureText(_ error: any Error, reference: String, l: Localizer) -> String {
