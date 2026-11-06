@@ -4,10 +4,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,11 +22,7 @@ namespace Tasker.Daemon.Host;
 /// Демон MCP: процесс, который держит MCP-сервер для рабочих областей из глобальных настроек.
 /// Адрес один — <c>/mcp</c>; область агент указывает аргументом вызова.
 /// Запускается командой <c>tasker mcp run</c> (её же выполняют launchd и systemd при автозапуске).
-/// <para>
-/// Два режима. <see cref="Supervisor"/> (по умолчанию, Unix) — процесс, которым владеют служба и <c>daemon.lock</c>: он держит слушающий сокет
-/// и запускает <em>рабочие процессы</em> (<see cref="RunWorker"/>), которые сервер и составляют; так процесс сервера можно заменить на лету
-/// (<c>tasker mcp upgrade</c>). <see cref="Run"/> (<c>--single</c>, Windows) — всё в одном процессе, как раньше: его заменяет только перезапуск.
-/// </para>
+/// Новую сборку демон получает перезапуском (<c>tasker mcp upgrade</c>).
 /// <list type="bullet">
 /// <item>Один экземпляр на пользователя: <c>daemon.lock</c> держится, пока процесс жив.</item>
 /// <item>Список областей и порт берёт из <see cref="SettingsStore"/>; изменение списка применяет на лету,
@@ -83,7 +76,7 @@ public static class McpDaemon
             var app = builder.Build();
             ConfigureCatalog(app, state);
             await using var sync = new WorkspaceSync(app.Services.GetRequiredService<WorkspaceRegistry>(), state, port);
-            app.MapTaskerMcpHost(routes => MapControl(routes, state, store, token, sync, new ControlHooks()));
+            app.MapTaskerMcpHost(routes => MapControl(routes, state, store, token, sync));
             sync.Prepare(settings.Mcp.Workspaces);
             await app.StartAsync(ct);
 
@@ -103,6 +96,7 @@ public static class McpDaemon
                 _ = sync.Apply(changed.Mcp.Workspaces);
             });
             using var retry = new Timer(_ => _ = sync.Retry(), null, RetryEvery, RetryEvery);
+            using var programWatch = WatchProgram(app.Lifetime);
             await sync.Apply(settings.Mcp.Workspaces);
 
             try
@@ -132,7 +126,7 @@ public static class McpDaemon
     }
 
     /// <summary>Агент видит и области, которые разрешены, но ещё не открылись (list_workspaces), — их знает состояние демона.</summary>
-    internal static void ConfigureCatalog(WebApplication app, DaemonRuntimeState state) =>
+    private static void ConfigureCatalog(WebApplication app, DaemonRuntimeState state) =>
         app.Services.GetRequiredService<McpWorkspaceCatalog>().Unavailable = () => state.Snapshot().Workspaces
             .Where(x => x.State != WorkspaceState.Open)
             .Select(x => new McpWorkspace(
@@ -142,19 +136,21 @@ public static class McpDaemon
                 Error: x.Error))
             .ToArray();
 
-    /// <summary>Что управление демоном делает иначе у рабочего процесса под супервизором: замена на лету и остановка через него.</summary>
-    internal sealed class ControlHooks
+    private static Timer WatchProgram(IHostApplicationLifetime lifetime)
     {
-        /// <summary>null — демон в одном процессе: заменить на лету его нельзя.</summary>
-        public Func<UpgradeRequest, CancellationToken, Task<UpgradeResult>>? Upgrade { get; init; }
+        var watch = new ProgramWatch();
+        var program = Launcher.Command().File;
+        return new Timer(_ =>
+        {
+            if (!watch.IsGone(program, DateTime.UtcNow))
+                return;
 
-        /// <summary>null — остановить свой процесс (<see cref="IHostApplicationLifetime.StopApplication"/>).</summary>
-        public Action? Stop { get; init; }
-
-        public DrainState? Drain { get; init; }
+            Log.Information("Stopping the MCP server: the program {Program} is removed", program);
+            lifetime.StopApplication();
+        }, null, ProgramWatch.Poll, ProgramWatch.Poll);
     }
 
-    internal static void MapControl(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, DaemonRuntimeState state, SettingsStore store, string token, WorkspaceSync sync, ControlHooks hooks)
+    internal static void MapControl(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, DaemonRuntimeState state, SettingsStore store, string token, WorkspaceSync sync)
     {
         bool Authorized(HttpContext context) =>
             context.Request.Headers[DaemonClient.ControlHeader].ToString() is { Length: > 0 } given
@@ -201,39 +197,19 @@ public static class McpDaemon
                 return Results.Unauthorized();
 
             Log.Information("Stop requested");
-            if (hooks.Stop != null)
-                hooks.Stop();
-            else
-                lifetime.StopApplication();
+            lifetime.StopApplication();
             return Results.Ok(new StopResponse(true));
         })
             .RespondsControl<StopResponse>("stopDaemon");
 
-        // Заменить рабочий процесс на лету: новый поднимается рядом, старый заканчивает начатое. Решает супервизор.
-        routes.MapPost("/daemon/upgrade", async (HttpContext context, UpgradeRequest? request, CancellationToken ct) =>
-        {
-            if (!Authorized(context))
-                return Results.Unauthorized();
-            if (hooks.Upgrade == null)
-                return Results.Conflict(new ControlError("The MCP server runs as a single process and cannot be replaced on the fly: restart it"));
-            if (request is not { File.Length: > 0 })
-                return Results.BadRequest(new ControlError("Body {\"file\", \"arguments\", \"timeoutSeconds\"} is required"));
-            if (!File.Exists(request.File))
-                return Results.Ok(new UpgradeResult(false, $"The program of the new server process is not found: {request.File}"));
-
-            Log.Information("Upgrade requested: {File} {Arguments}", request.File, string.Join(' ', request.Arguments));
-            return Results.Ok(await hooks.Upgrade(request, ct));
-        })
-            .RespondsControl<UpgradeResult>("upgradeDaemon", StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
-
-        // Готов принимать вызовы: все области открыты (или не открылись) и процесс не закрывается. Иначе 503 с Retry-After.
+        // Готов принимать вызовы: все области открыты (или не открылись). Иначе 503.
         routes.MapGet("/ready", () =>
         {
             var workspaces = state.Snapshot().Workspaces;
-            var ready = workspaces.All(x => x.State != WorkspaceState.Opening) && hooks.Drain is not { Draining: true };
-            return ready
+            var opening = workspaces.Count(x => x.State == WorkspaceState.Opening);
+            return opening == 0
                 ? Results.Ok(new ReadyResponse(true, Environment.ProcessId))
-                : Results.Json(new NotReadyResponse(false, workspaces.Count(x => x.State == WorkspaceState.Opening), hooks.Drain?.Draining ?? false),
+                : Results.Json(new NotReadyResponse(false, opening),
                     statusCode: StatusCodes.Status503ServiceUnavailable);
         })
             .WithName("getDaemonReady")
@@ -245,21 +221,19 @@ public static class McpDaemon
             .RespondsOk<DaemonHealth>("getDaemonHealth");
     }
 
-    // Файл журнала общий для супервизора и рабочих процессов (на время замены их два): shared — без исключительной блокировки.
-    // Консоль — stderr: в stdout рабочего процесса идёт обмен с супервизором.
-    internal static void ConfigureLogging(bool detached, bool toStandardError = false)
+    private static void ConfigureLogging(bool detached)
     {
         var configuration = new LoggerConfiguration()
             .MinimumLevel.Information()
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .WriteTo.File(Path.Combine(AppDirectories.Logs, "mcp-.log"), rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7, shared: true);
         if (!detached)
-            configuration = toStandardError ? configuration.WriteTo.Console(standardErrorFromLevel: LogEventLevel.Verbose) : configuration.WriteTo.Console();
+            configuration = configuration.WriteTo.Console();
         Log.Logger = configuration.CreateLogger();
     }
 
     /// <summary>Порт свободен сейчас или освободится за <see cref="PortWait"/> (десктоп уступает его демону на лету).</summary>
-    internal static async Task<bool> WaitForPort(int port, CancellationToken ct)
+    private static async Task<bool> WaitForPort(int port, CancellationToken ct)
     {
         var deadline = DateTime.UtcNow + PortWait;
         var announced = false;
@@ -293,7 +267,7 @@ public static class McpDaemon
     }
 
     // Новый сеанс: закрытие терминала (SIGHUP) не убьёт фоновый демон.
-    internal static void Detach()
+    private static void Detach()
     {
         if (OperatingSystem.IsWindows())
             return;

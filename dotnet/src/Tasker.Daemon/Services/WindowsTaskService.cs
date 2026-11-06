@@ -8,7 +8,7 @@ namespace Tasker.Daemon.Services;
 /// Триггер — вход пользователя, перезапуск при падении, одна копия, без окна (<see cref="WindowsTaskDefinition"/>). Управление —
 /// <c>schtasks.exe</c> с XML-определением (UTF-16). Определение лежит в <c>%LOCALAPPDATA%\Tasker\service\&lt;имя&gt;.xml</c>: оно же
 /// признак «автозапуск включён». <c>TASKER_SERVICE_DIR</c> и <c>TASKER_SERVICE_LABEL</c> переопределяют каталог и имя задачи.
-/// Задача держит <c>tasker-mcpd</c> (супервизор); <c>schtasks /end</c> останавливает его, и Планировщик его не поднимает снова:
+/// Задача держит <c>tasker-mcpd</c>; <c>schtasks /end</c> останавливает его, и Планировщик его не поднимает снова:
 /// завершение по запросу — не падение.
 /// </summary>
 public sealed class WindowsTaskService(IProcessRunner runner, string? directory = null, string? taskName = null, string? userId = null) : IServiceManager

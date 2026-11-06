@@ -99,10 +99,6 @@ public sealed class Stand : IAsyncDisposable
         _env["TASKER_SERVICE_DIR"] = service;
         _env["TASKER_SERVICE_LABEL"] = "com.tasker.stress-" + Guid.NewGuid().ToString("N")[..8];
 
-        // Windows: супервизор демона по умолчанию выключен, а сценарий upgrade (бесшовная замена, TSK-103/TSK-117) нужен именно ему.
-        // Запускать на Windows: tasker-stress --scenarios upgrade (чек-лист «ПРОВЕРИТЬ НА WINDOWS» в описании задачи TSK-117 и на странице вики «Windows»).
-        if (OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("TASKER_MCP_SUPERVISOR") == null)
-            _env["TASKER_MCP_SUPERVISOR"] = "1";
     }
 
     public string Root { get; }
@@ -222,7 +218,7 @@ public sealed class Stand : IAsyncDisposable
     public async Task Setup()
     {
         var main = await CreateArea("ws");
-        if (_options.UsesMcp || _options.Scenarios.Contains("locks") || _options.Scenarios.Contains("multiws") || _options.Scenarios.Contains("upgrade"))
+        if (_options.UsesMcp || _options.Scenarios.Contains("locks") || _options.Scenarios.Contains("multiws"))
         {
             await CreateAgents(main);
             await StartDaemon();

@@ -1,12 +1,11 @@
 Description:
-  Switches the running MCP server to the installed build without downtime (--restart: restart instead)
+  Checks the installed build and restarts the running MCP server on it (calls in progress are cut off)
 
 Usage:
   tasker mcp upgrade [options]
 
 Options:
-  --restart                    Hard path: stop the MCP server and start it again (calls in progress are cut off)
-  --timeout <timeout>          Seconds to wait for the new server process to open the workspaces and be ready (default 60) [default: 60]
+  --timeout <timeout>          Seconds to wait for the check of the new build and for the workspaces to open after the restart (default 60) [default: 60]
   -?, -h, --help               Show help and usage information
   -w, --workspace <workspace>  Folder with the workspace (data lives in <folder>/.tasker). Default: the current folder
   -p, --project <project>      Project (id or name) for commands inside a project. Default: the TASKER_PROJECT variable, or the only project of the workspace

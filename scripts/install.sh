@@ -8,7 +8,7 @@
 #   install.sh --url АДРЕС.tar.gz               скачать архив релиза (рядом должен лежать АДРЕС.tar.gz.sha256)
 #   install.sh --from-source                    собрать из исходников репозитория (нужен .NET SDK 10), для разработчиков
 #   install.sh --uninstall                      удалить
-#   прочее: [--prefix DIR] [--no-completion] [--no-autostart] [--add-to-path] [--restart] [--no-verify]
+#   прочее: [--prefix DIR] [--no-completion] [--no-autostart] [--add-to-path] [--no-verify]
 #           [--no-daemon]   (только с --from-source)
 #
 # Раскладка (по умолчанию --prefix ~/.local):
@@ -16,9 +16,8 @@
 #   <prefix>/bin/tasker          ссылка на <prefix>/share/tasker/app/tasker (демон tasker запускает из своего каталога)
 #   <prefix>/share/tasker/completions/   скрипты автодополнения по Tab (zsh: _tasker, bash: tasker.bash), см. ниже
 # Автозапуск: `tasker mcp autostart enable` (launchd на macOS, служба systemd пользователя на Linux); --no-autostart его не включает.
-# Работавший демон MCP переходит на новую сборку без простоя (`tasker mcp upgrade`: новый процесс поднимается рядом, старый заканчивает
-# начатые вызовы); --restart вместо этого перезапускает его (вызовы в работе обрываются). Не получилось заменить — старый продолжает
-# работать, перезапуск молча НЕ делается: скрипт печатает причину и подсказку `tasker mcp upgrade --restart`.
+# Работавший демон MCP переходит на новую сборку через `tasker mcp upgrade`: команда проверяет сборку и перезапускает демон
+# (вызовы в работе обрываются). Сборка не прошла проверку — старый демон продолжает работать, скрипт печатает причину.
 # Данные Tasker (настройки, журналы демона) лежат отдельно (macOS: ~/Library/Application Support/Tasker, Linux: ~/.local/share/Tasker)
 # и установкой, обновлением и удалением не затрагиваются.
 #
@@ -49,8 +48,6 @@ Options:
                           by default one marked block is added to ~/.zshrc (zsh) or the bash startup file (bash)
   --add-to-path           add DIR/bin to PATH in your shell profile (~/.zprofile for zsh, ~/.profile or the bash login file)
                           if it is not there yet
-  --restart               restart a running MCP server after the installation (calls in progress are cut off);
-                          by default it is switched to the new build without downtime ('tasker mcp upgrade')
   --no-verify             with --url: install even if the .sha256 file cannot be downloaded
   --no-daemon             with --from-source: only the command line tool (no MCP server: 'tasker mcp start' will not work)
   --uninstall             remove the tool (stops the MCP server and disables its autostart first)
@@ -83,7 +80,6 @@ WITH_AUTOSTART=true
 UNINSTALL=false
 WITH_DAEMON=true
 DAEMON_FLAG_GIVEN=false
-RESTART_DAEMON=false
 VERIFY=true
 
 while [ $# -gt 0 ]; do
@@ -105,7 +101,6 @@ while [ $# -gt 0 ]; do
       ;;
     --from-source) FROM_SOURCE=true; shift ;;
     --no-daemon) WITH_DAEMON=false; DAEMON_FLAG_GIVEN=true; shift ;;
-    --restart) RESTART_DAEMON=true; shift ;;
     --add-to-path) ADD_TO_PATH=true; shift ;;
     --no-completion) WITH_COMPLETION=false; shift ;;
     --no-autostart) WITH_AUTOSTART=false; shift ;;
@@ -657,20 +652,13 @@ fi
 
 # ---- демон MCP: автозапуск и переход на новую сборку ----
 
-# Работавший демон MCP: переводим на новую сборку на лету (новый процесс рядом, старый доделывает начатые вызовы), без простоя.
-# Демон, запущенный по-старому (одним процессом), `tasker mcp upgrade` сам перезапускает. Не вышло — старый остаётся работать:
-# перезапуск здесь не делаем (новая сборка могла не подняться, а перезапуск остановил бы и рабочий сервер).
+# Работавший демон MCP: команда проверяет новую сборку и перезапускает его на ней.
 upgrade_daemon() {
   echo
-  if [ "$RESTART_DAEMON" = true ]; then
-    echo "The MCP server is running with the previous build: restarting it (--restart)..."
-    "$LINK" mcp upgrade --restart || echo "Warning: the restart failed: see 'tasker mcp status'" >&2
-  else
-    echo "The MCP server is running with the previous build: switching it to the new one without downtime..."
-    if ! "$LINK" mcp upgrade; then
-      echo "Warning: the MCP server was not switched: it keeps running with the previous build." >&2
-      echo "Fix the reason above and run 'tasker mcp upgrade', or 'tasker mcp upgrade --restart' to restart it (calls in progress are cut off)." >&2
-    fi
+  echo "The MCP server is running with the previous build: restarting it on the new one..."
+  if ! "$LINK" mcp upgrade; then
+    echo "Warning: the MCP server was not moved to the new build: see the reason above and 'tasker mcp status'." >&2
+    echo "Fix the reason and run 'tasker mcp upgrade'." >&2
   fi
 }
 
@@ -686,7 +674,7 @@ if [ -f "$APP_DIR/tasker-mcpd" ] && [ "$WITH_AUTOSTART" = true ]; then
   fi
 
   if [ "$AUTOSTART_ENABLED" = true ]; then
-    # Служба запускает tasker-mcpd по прежнему пути — он тот же: достаточно перевести работающий демон на новую сборку.
+    # Служба запускает tasker-mcpd по прежнему пути — он тот же: достаточно перезапустить демон.
     echo
     echo "MCP server autostart: already enabled, left as it is"
     [ "$DAEMON_RUNNING" = false ] || upgrade_daemon

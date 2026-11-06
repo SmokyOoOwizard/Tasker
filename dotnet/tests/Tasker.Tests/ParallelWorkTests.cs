@@ -29,10 +29,6 @@ public class ParallelWorkTests
     public Task Killed_processes_leave_no_broken_files_and_no_stuck_locks() =>
         Run("mix", "files", 3, 2, "kill");
 
-    [Fact]
-    public Task The_daemon_replaced_on_the_fly_under_load_loses_no_call_and_no_write() =>
-        Run("mcp", "files", 3, 2, "upgrade");
-
     /// <summary>Большой прогон стенда: 10 клиентов, все сценарии; только с TASKER_STRESS=1 (долго, грузит машину).</summary>
     [Theory]
     [InlineData("cli", "files")]

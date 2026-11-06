@@ -8,7 +8,7 @@
 #   scripts/test-linux.sh --platform linux/amd64     # другая архитектура (под эмуляцией; может падать)
 #   scripts/test-linux.sh --log out.log              # журнал прогона (по умолчанию test-linux.log в текущем каталоге)
 #   scripts/test-linux.sh --shell                    # интерактивная оболочка в той же среде (исходники в /work)
-#   scripts/test-linux.sh --stress "upgrade"         # вместо тестов — стенд dotnet/tools/Tasker.Stress с этими аргументами
+#   scripts/test-linux.sh --stress "--scenarios create" # вместо тестов — стенд dotnet/tools/Tasker.Stress с этими аргументами
 # Остальные аргументы после `--` передаются в `dotnet test`.
 set -euo pipefail
 

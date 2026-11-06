@@ -7380,82 +7380,6 @@
         }
       ]
     },
-    "/daemon/upgrade": {
-      "post": {
-        "tags": [
-          "daemon"
-        ],
-        "operationId": "upgradeDaemon",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/UpgradeRequest"
-                  }
-                ],
-                "nullable": true
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpgradeResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ControlError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ControlError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "daemonControl": []
-          }
-        ],
-        "x-tasker-modes": [
-          "daemon"
-        ]
-      },
-      "servers": [
-        {
-          "url": "http://127.0.0.1:{port}",
-          "description": "Tasker daemon (control interface, no workspace prefix)",
-          "variables": {
-            "port": {
-              "default": "5719"
-            }
-          }
-        }
-      ]
-    },
     "/health": {
       "get": {
         "tags": [
@@ -8331,8 +8255,8 @@
           "settingsPort",
           "startedAt",
           "workspaces",
-          "workers",
-          "supervised",
+          "version",
+          "build",
           "settled"
         ],
         "type": "object",
@@ -8359,14 +8283,11 @@
               "$ref": "#/components/schemas/WorkspaceStatus"
             }
           },
-          "workers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WorkerStatus"
-            }
+          "version": {
+            "type": "string"
           },
-          "supervised": {
-            "type": "boolean"
+          "build": {
+            "type": "string"
           },
           "mcpUrl": {
             "type": "string",
@@ -8890,8 +8811,7 @@
       "NotReadyResponse": {
         "required": [
           "ready",
-          "opening",
-          "draining"
+          "opening"
         ],
         "type": "object",
         "properties": {
@@ -8901,9 +8821,6 @@
           "opening": {
             "type": "integer",
             "format": "int32"
-          },
-          "draining": {
-            "type": "boolean"
           }
         }
       },
@@ -10069,62 +9986,6 @@
           }
         }
       },
-      "UpgradeRequest": {
-        "required": [
-          "file",
-          "arguments",
-          "timeoutSeconds"
-        ],
-        "type": "object",
-        "properties": {
-          "file": {
-            "type": "string"
-          },
-          "arguments": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "timeoutSeconds": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "UpgradeResult": {
-        "required": [
-          "ok",
-          "message"
-        ],
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "message": {
-            "type": "string"
-          },
-          "oldPid": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "newPid": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "oldBuild": {
-            "type": "string",
-            "nullable": true
-          },
-          "newBuild": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
       "User": {
         "required": [
           "id",
@@ -10177,43 +10038,6 @@
           "human",
           "agent"
         ]
-      },
-      "WorkerRole": {
-        "type": "string",
-        "enum": [
-          "starting",
-          "active",
-          "draining"
-        ]
-      },
-      "WorkerStatus": {
-        "required": [
-          "pid",
-          "version",
-          "build",
-          "role",
-          "startedAt"
-        ],
-        "type": "object",
-        "properties": {
-          "pid": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "version": {
-            "type": "string"
-          },
-          "build": {
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/components/schemas/WorkerRole"
-          },
-          "startedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
       },
       "WorkspaceKind": {
         "type": "string",

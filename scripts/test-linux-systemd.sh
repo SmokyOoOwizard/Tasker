@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Проверка автозапуска демона через НАСТОЯЩИЙ systemd --user (TSK-111) в привилегированном контейнере Docker (с macOS и т. п.).
 # Поднимает образ с systemd (PID 1), пользователя tester с включённым linger (чтобы был сеанс `systemctl --user`), ставит tasker и
-# tasker-mcpd и проходит по чек-листу: включить/выключить автозапуск, статус, замена на лету под службой, перезапуск после убийства
-# супервизора (Restart=always), остановка `systemctl stop` (SIGTERM всему cgroup), запуск и остановка командами tasker. Печатает
+# tasker-mcpd и проходит по чек-листу: включить/выключить автозапуск, статус, обновление под службой, перезапуск после убийства
+# службы (Restart=always), остановка `systemctl stop` (SIGTERM всему cgroup), запуск и остановка командами tasker. Печатает
 # «ok»/«FAIL» по каждому пункту; код выхода 1, если что-то не прошло. Настоящая служба хоста не задета.
 #
 #   scripts/test-linux-systemd.sh [--platform linux/amd64] [--keep]    # собрать tasker и tasker-mcpd из репозитория (dotnet в контейнере);
@@ -99,8 +99,8 @@ check() { # check "описание" команда...
 active() { as_tester systemctl --user is-active --quiet tasker-mcp.service; }
 inactive() { ! active; }
 eventually() { for _ in $(seq 1 "${2:-20}"); do "$1" && return 0; sleep 1; done; return 1; }
-has_worker() { as_tester tasker mcp status 2>&1 | grep -q 'worker pid'; }
-worker_pid() { as_tester tasker mcp status 2>/dev/null | sed -n 's/^worker pid \([0-9]*\).*/\1/p' | head -n 1; }
+has_daemon() { as_tester tasker mcp status 2>&1 | grep -q '^pid '; }
+daemon_pid() { as_tester tasker mcp status 2>/dev/null | sed -n 's/^pid \([0-9]*\).*/\1/p' | head -n 1; }
 
 if [ -n "$archive" ]; then
   echo ">> установка релизного архива $(basename "$archive"): install.sh в ~/.local"
@@ -117,18 +117,18 @@ check "autostart enable создаёт и запускает службу" as_te
 check "служба active" eventually active
 check "unit-файл на месте" as_tester test -f /home/tester/.config/systemd/user/tasker-mcp.service
 check "unit: Restart=always" as_tester grep -q '^Restart=always' /home/tester/.config/systemd/user/tasker-mcp.service
-check "tasker mcp status видит демона и рабочий процесс" eventually has_worker
+check "tasker mcp status видит демона" eventually has_daemon
 check "autostart status: enabled (systemd)" bash -c "docker exec -u tester -e HOME=/home/tester $name tasker mcp autostart status | grep -q 'enabled (systemd)'"
-before="$(worker_pid)"
-check "tasker mcp upgrade под службой заменяет рабочий процесс на лету" as_tester tasker mcp upgrade
-after="$(worker_pid)"
-check "pid рабочего процесса сменился ($before -> $after)" test -n "$before" -a -n "$after" -a "$before" != "$after"
-check "служба active после замены" active
+before="$(daemon_pid)"
+check "tasker mcp upgrade под службой перезапускает демон" as_tester tasker mcp upgrade
+after="$(daemon_pid)"
+check "pid демона сменился ($before -> $after)" test -n "$before" -a -n "$after" -a "$before" != "$after"
+check "служба active после обновления" active
 as_tester pkill -KILL -f 'tasker-mcpd --detached'
-check "после убийства супервизора systemd поднимает службу заново (Restart=always, RestartSec=5)" eventually active 20
-check "демон снова отвечает" eventually has_worker 20
-check "systemctl stop завершает супервизор и рабочие процессы" bash -c "docker exec -u tester -e XDG_RUNTIME_DIR=/run/user/1500 $name systemctl --user stop tasker-mcp.service && ! docker exec $name pgrep -f tasker-mcpd"
-check "журнал: остановка по SIGTERM штатная" as_tester bash -c 'grep -q "Stopping the MCP server: SIGTERM" /home/tester/.local/share/Tasker/logs/mcp-*.log'
+check "после убийства демона systemd поднимает службу заново (Restart=always, RestartSec=5)" eventually active 20
+check "демон снова отвечает" eventually has_daemon 20
+check "systemctl stop завершает демон" bash -c "docker exec -u tester -e XDG_RUNTIME_DIR=/run/user/1500 $name systemctl --user stop tasker-mcp.service && ! docker exec $name pgrep -f tasker-mcpd"
+check "журнал: остановка по SIGTERM штатная" as_tester bash -c 'grep -q "Stopping the MCP server" /home/tester/.local/share/Tasker/logs/mcp-*.log'
 check "tasker mcp start запускает службу" as_tester tasker mcp start
 check "служба active после tasker mcp start" eventually active
 check "tasker mcp stop останавливает" as_tester tasker mcp stop

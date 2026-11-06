@@ -41,6 +41,17 @@ struct DaemonServiceError: Error, Equatable {
     var message: String
 }
 
+struct DaemonBuildInfo: Decodable, Equatable, Sendable {
+    var version: String
+    var build: String
+
+    static func read(program: String, runner: any CommandRunning) async -> DaemonBuildInfo? {
+        let result = await runner.run(program, ["--build-info"])
+        guard result.succeeded else { return nil }
+        return try? JSONDecoder().decode(DaemonBuildInfo.self, from: Data(result.output.utf8))
+    }
+}
+
 struct DaemonLaunchAgent: DaemonService {
     var paths: DaemonPaths
     var runner: any CommandRunning

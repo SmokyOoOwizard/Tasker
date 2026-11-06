@@ -61,18 +61,16 @@ internal static class McpCommands
 
     private static Command Upgrade(GlobalOptions g, DaemonController daemon)
     {
-        var restart = new Option<bool>("--restart") { Description = "Hard path: stop the MCP server and start it again (calls in progress are cut off)" };
         var timeout = new Option<int>("--timeout")
         {
-            Description = $"Seconds to wait for the new server process to open the workspaces and be ready (default {DaemonController.DefaultUpgradeTimeoutSeconds})",
+            Description = $"Seconds to wait for the check of the new build and for the workspaces to open after the restart (default {DaemonController.DefaultUpgradeTimeoutSeconds})",
             DefaultValueFactory = _ => DaemonController.DefaultUpgradeTimeoutSeconds
         };
         var program = new Option<string?>("--daemon") { Description = "Path of the tasker-mcpd program of the new build (default: the one next to this tasker)", Hidden = true };
 
-        return Kit.Plain(g, "upgrade", "Switches the running MCP server to the installed build without downtime (--restart: restart instead)",
+        return Kit.Plain(g, "upgrade", "Checks the installed build and restarts the running MCP server on it (calls in progress are cut off)",
             c =>
             {
-                c.Options.Add(restart);
                 c.Options.Add(timeout);
                 c.Options.Add(program);
             },
@@ -81,7 +79,7 @@ internal static class McpCommands
                 (string, string[])? daemonProgram = parse.GetValue(program) is { Length: > 0 } path
                     ? (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? Environment.ProcessPath! : path, path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? [path] : [])
                     : null;
-                var options = new UpgradeOptions(parse.GetValue(restart), Math.Max(1, parse.GetValue(timeout)), daemonProgram);
+                var options = new UpgradeOptions(Math.Max(1, parse.GetValue(timeout)), daemonProgram);
 
                 UpgradeOutcome outcome;
                 try
@@ -90,13 +88,15 @@ internal static class McpCommands
                 }
                 catch (DaemonUpgradeException e)
                 {
-                    throw new CliException(e.Message + "\nThe running MCP server is not changed. Look at the log or restart it with 'tasker mcp upgrade --restart'.");
+                    throw new CliException(e.Message);
                 }
 
-                ctx.Print(new { upgraded = outcome.Kind, outcome.Message, status = outcome.Status },
-                    outcome.Message + (outcome.Status == null ? "" : "\n" + Describe(outcome.Status)));
+                ctx.Print(new { upgraded = outcome.Kind, outcome.Message, status = outcome.Status, problems = outcome.Problems },
+                    outcome.Message + string.Concat(outcome.Problems.Select(x => "\nWarning: " + x)) + (outcome.Status == null ? "" : "\n" + Describe(outcome.Status)));
                 if (outcome.Kind == UpgradeKind.NotRunning)
                     ctx.ExitCode = 3;
+                else if (outcome.Problems.Length > 0)
+                    ctx.ExitCode = 1;
             });
     }
 
@@ -134,20 +134,9 @@ internal static class McpCommands
     {
         var lines = new List<string>
         {
-            $"pid {status.Pid}, port {status.Port}, up {Uptime(DateTimeOffset.UtcNow - status.StartedAt)}",
+            $"pid {status.Pid}, port {status.Port}, build {(status.Build.Length == 0 ? "?" : status.Build)}{(status.Version.Length == 0 ? "" : " (" + status.Version + ")")}, up {Uptime(DateTimeOffset.UtcNow - status.StartedAt)}",
             $"address {status.McpUrl} (the workspace is the 'workspace' argument of a tool)"
         };
-        // Рабочие процессы: обычно один; на время замены на лету — два (новый и старый, заканчивающий начатое).
-        foreach (var worker in status.Workers)
-        {
-            var role = worker.Role switch
-            {
-                WorkerRole.Starting => ", starting",
-                WorkerRole.Draining => ", finishing its calls and leaving",
-                _ => status.Workers.Length > 1 ? ", accepting calls" : ""
-            };
-            lines.Add($"worker pid {worker.Pid}, build {(worker.Build.Length == 0 ? "?" : worker.Build)}{(worker.Version.Length == 0 ? "" : " (" + worker.Version + ")")}, up {Uptime(DateTimeOffset.UtcNow - worker.StartedAt)}{role}");
-        }
         if (status.SettingsPort != status.Port)
             lines.Add($"the port in the settings is {status.SettingsPort}: 'tasker mcp restart' applies it");
 

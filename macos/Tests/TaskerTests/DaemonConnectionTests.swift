@@ -5,13 +5,14 @@ import Testing
 private final class FakeDaemon: DaemonTransport, DaemonService, @unchecked Sendable {
     var version = "0.1.0"
     var settled = true
-    var supervised = true
+    var build: String? = "b"
     var reachable = false
     var startCalls = 0
     var startError: String?
-    var upgradeCalls = 0
     var stopCalls = 0
-    var upgradeOk = true
+    var stopError: Error?
+    var onStop: @Sendable () -> Void = {}
+    var onStarted: @Sendable () -> Void = {}
     let onStart: @Sendable () -> Void
 
     init(onStart: @escaping @Sendable () -> Void = {}) {
@@ -22,7 +23,8 @@ private final class FakeDaemon: DaemonTransport, DaemonService, @unchecked Senda
         DaemonStatus(
             pid: 1,
             port: 5719,
-            workers: supervised ? [DaemonWorker(pid: 2, version: version, build: "b", role: "active")] : [],
+            version: version,
+            build: build,
             workspaces: [DaemonWorkspace(path: "/x", state: settled ? "open" : "opening", error: nil)]
         )
     }
@@ -32,22 +34,21 @@ private final class FakeDaemon: DaemonTransport, DaemonService, @unchecked Senda
         return status
     }
 
-    func upgrade(info: DaemonInfo, program: String, timeoutSeconds: Int) async throws -> DaemonUpgradeResult {
-        upgradeCalls += 1
-        if upgradeOk { version = "0.1.0" }
-        return DaemonUpgradeResult(ok: upgradeOk, message: upgradeOk ? "ok" : "refused")
-    }
-
     func stop(info: DaemonInfo) async throws {
         stopCalls += 1
+        if let stopError { throw stopError }
         reachable = false
+        onStop()
     }
 
     func start(program: String) async throws {
         startCalls += 1
         if let startError { throw DaemonServiceError(message: startError) }
         reachable = true
+        version = "0.1.0"
+        build = "b"
         onStart()
+        onStarted()
     }
 }
 
@@ -115,7 +116,7 @@ struct DaemonConnectionTests {
             Issue.record("состояние \(model.state)")
             return
         }
-        #expect(status.activeVersion == "0.1.0")
+        #expect(status.version == "0.1.0")
         lock.release()
     }
 
@@ -150,26 +151,32 @@ struct DaemonConnectionTests {
         #expect(app == "0.1.0")
     }
 
-    @Test func updateReplacesWorkerAndUnblocks() async throws {
+    @Test func updateRestartsTheDaemonAndUnblocks() async throws {
         let paths = try makeDirectory()
         try writeInfo(paths)
-        let descriptor = hold(paths)
-        defer { close(descriptor) }
-        let fake = FakeDaemon()
+        let lock = LockBox()
+        lock.acquire(paths)
+        defer { lock.release() }
+        let fake = FakeDaemon {
+            try? writeInfo(paths)
+            lock.acquire(paths)
+        }
+        fake.onStop = { lock.release() }
         fake.reachable = true
         fake.version = "0.0.9"
         let model = connection(fake, paths: paths)
         _ = await model.step()
         await model.updateDaemon()
+        #expect(fake.stopCalls == 1)
         _ = await model.step()
-        #expect(fake.upgradeCalls == 1)
+        #expect(fake.startCalls == 1)
         guard case .running = model.state else {
             Issue.record("состояние \(model.state)")
             return
         }
     }
 
-    @Test func failedUpdateKeepsMismatchAndShowsError() async throws {
+    @Test func failedStopKeepsMismatchAndShowsError() async throws {
         let paths = try makeDirectory()
         try writeInfo(paths)
         let descriptor = hold(paths)
@@ -177,7 +184,7 @@ struct DaemonConnectionTests {
         let fake = FakeDaemon()
         fake.reachable = true
         fake.version = "0.0.9"
-        fake.upgradeOk = false
+        fake.stopError = DaemonServiceError(message: "refused")
         let model = connection(fake, paths: paths)
         _ = await model.step()
         await model.updateDaemon()
@@ -189,13 +196,30 @@ struct DaemonConnectionTests {
         }
     }
 
-    @Test func unsupervisedDaemonIsStoppedForUpdate() async throws {
+    @Test func aBrokenHelperIsNeverUsedToStopTheDaemon() async throws {
+        let paths = try makeDirectory()
+        try writeInfo(paths)
+        let descriptor = hold(paths)
+        defer { close(descriptor) }
+        let fake = FakeDaemon()
+        fake.reachable = true
+        fake.version = "0.0.9"
+        let model = DaemonConnection(
+            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
+            sleep: { _ in }, readHelperBuild: { _ in nil })
+        _ = await model.step()
+        await model.updateDaemon()
+        #expect(fake.stopCalls == 0)
+        #expect(model.updateError != nil)
+    }
+
+    @Test func aDaemonOfAnEarlierBuildWithoutAVersionIsStoppedForUpdate() async throws {
         let paths = try makeDirectory()
         try writeInfo(paths)
         let descriptor = hold(paths)
         let fake = FakeDaemon()
         fake.reachable = true
-        fake.supervised = false
+        fake.version = ""
         let model = connection(fake, paths: paths)
         _ = await model.step()
         guard case .versionMismatch(let daemon, _, _) = model.state else {
@@ -285,40 +309,74 @@ struct DaemonConnectionTests {
 
 @MainActor
 struct DaemonUpdateTests {
+    private func installed(_ fake: FakeDaemon, paths: DaemonPaths, allows: Bool = true) -> DaemonConnection {
+        DaemonConnection(
+            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
+            sleep: { _ in }, allowsAutomaticUpdate: { allows })
+    }
+
+    private func restarting(_ fake: FakeDaemon, paths: DaemonPaths) throws -> LockBox {
+        try writeInfo(paths)
+        let lock = LockBox()
+        lock.acquire(paths)
+        fake.onStop = { lock.release() }
+        fake.onStarted = {
+            try? writeInfo(paths)
+            lock.acquire(paths)
+        }
+        fake.reachable = true
+        return lock
+    }
+
     @Test func installedAppUpdatesAnOlderDaemonOnItsOwn() async throws {
         let paths = try makeDirectory()
-        try writeInfo(paths)
-        let descriptor = hold(paths)
-        defer { close(descriptor) }
         let fake = FakeDaemon()
-        fake.reachable = true
+        let lock = try restarting(fake, paths: paths)
+        defer { lock.release() }
         fake.version = "0.0.9"
-        let model = DaemonConnection(
-            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
-            sleep: { _ in }, allowsAutomaticUpdate: { true })
+        let model = installed(fake, paths: paths)
         _ = await model.step()
-        #expect(fake.upgradeCalls == 0)
+        #expect(fake.stopCalls == 0)
         _ = await model.step()
-        #expect(fake.upgradeCalls == 1)
+        #expect(fake.stopCalls == 1)
+        _ = await model.step()
+        #expect(fake.startCalls == 1)
+        #expect(model.state == .running(fake.status))
+    }
+
+    @Test func installedAppUpdatesADaemonOfTheSameVersionAndAnotherBuild() async throws {
+        let paths = try makeDirectory()
+        let fake = FakeDaemon()
+        let lock = try restarting(fake, paths: paths)
+        defer { lock.release() }
+        fake.build = "old"
+        let model = installed(fake, paths: paths)
+        _ = await model.step()
+        guard case .versionMismatch(let daemon, let app, _) = model.state else {
+            Issue.record("состояние \(model.state)")
+            return
+        }
+        #expect(daemon == "0.1.0 (old)")
+        #expect(app == "0.1.0 (b)")
+        _ = await model.step()
+        #expect(fake.stopCalls == 1)
         _ = await model.step()
         #expect(model.state == .running(fake.status))
     }
 
-    @Test func workerThatHasNotReportedItsVersionIsStillStarting() async throws {
+    @Test func developmentBuildIsNotBlockedByAnotherBuildOfTheSameVersion() async throws {
         let paths = try makeDirectory()
         try writeInfo(paths)
         let descriptor = hold(paths)
         defer { close(descriptor) }
         let fake = FakeDaemon()
         fake.reachable = true
-        fake.version = ""
-        let model = DaemonConnection(
-            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
-            sleep: { _ in }, allowsAutomaticUpdate: { true })
+        fake.build = "other"
+        let model = installed(fake, paths: paths, allows: false)
         _ = await model.step()
         _ = await model.step()
-        #expect(model.state == .starting)
-        #expect(fake.upgradeCalls == 0)
+        #expect(fake.stopCalls == 0)
+        #expect(model.state == .running(fake.status))
     }
 
     @Test func failedAutomaticUpdateIsNotRepeatedAndLeavesTheButton() async throws {
@@ -329,12 +387,10 @@ struct DaemonUpdateTests {
         let fake = FakeDaemon()
         fake.reachable = true
         fake.version = "0.0.9"
-        fake.upgradeOk = false
-        let model = DaemonConnection(
-            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
-            sleep: { _ in }, allowsAutomaticUpdate: { true })
+        fake.stopError = DaemonServiceError(message: "refused")
+        let model = installed(fake, paths: paths)
         for _ in 0..<4 { _ = await model.step() }
-        #expect(fake.upgradeCalls == 1)
+        #expect(fake.stopCalls == 1)
         #expect(model.updateError == "refused")
         if case .versionMismatch = model.state {} else { Issue.record("expected the mismatch screen") }
     }
@@ -347,11 +403,10 @@ struct DaemonUpdateTests {
         let fake = FakeDaemon()
         fake.reachable = true
         fake.version = "0.0.9"
-        let model = DaemonConnection(
-            files: DaemonFiles(paths: paths), transport: fake, service: fake, helperProgram: "/x/tasker-mcpd", appVersion: "0.1.0",
-            sleep: { _ in })
+        let model = installed(fake, paths: paths, allows: false)
         _ = await model.step()
-        #expect(fake.upgradeCalls == 0)
+        _ = await model.step()
+        #expect(fake.stopCalls == 0)
     }
 }
 
@@ -372,14 +427,13 @@ struct DaemonPlatformTests {
     @Test func decodesDaemonStatusFromTheDaemon() throws {
         let json = """
         {"pid":10,"port":5719,"settingsPort":5719,"startedAt":"2026-11-03T22:26:50+00:00",
-         "workspaces":[{"kind":"files","path":"/p","state":"open","key":"p","error":null}],
-         "workers":[{"pid":11,"version":"0.1.0","build":"ab12","role":"active","startedAt":"2026-11-03T22:26:50+00:00"},
-                    {"pid":12,"version":"0.0.9","build":"cd34","role":"draining","startedAt":"2026-11-03T22:00:00+00:00"}]}
+         "version":"0.1.0","build":"ab12",
+         "workspaces":[{"kind":"files","path":"/p","state":"open","key":"p","error":null}]}
         """
         let status = try JSONDecoder().decode(DaemonStatus.self, from: Data(json.utf8))
-        #expect(status.activeVersion == "0.1.0")
+        #expect(status.version == "0.1.0")
+        #expect(status.build == "ab12")
         #expect(status.isSettled)
-        #expect(status.isSupervised)
     }
 
     @Test func plistRunsTheBundledDaemonAndKeepsItAlive() {

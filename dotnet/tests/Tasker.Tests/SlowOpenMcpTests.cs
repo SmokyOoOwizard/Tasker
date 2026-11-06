@@ -49,7 +49,6 @@ public class SlowOpenMcpTests : IDisposable
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
             {
-                // Порт уже слушает супервизор: пока рабочий процесс не принял соединение, оно ждёт в очереди (таймаут), а не отклоняется.
             }
             if (_process.HasExited)
                 throw new InvalidOperationException($"The daemon did not start: exit {_process.ExitCode}: {await error}");

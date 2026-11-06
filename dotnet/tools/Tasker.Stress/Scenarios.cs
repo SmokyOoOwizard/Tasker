@@ -29,7 +29,6 @@ public static partial class Scenarios
             "kill" => await Kill(ctx),
             "multiws" => await MultiWorkspace(ctx),
             "scale" => await Scale(ctx),
-            "upgrade" => await UpgradeUnderLoad(ctx),
             _ => throw new ArgumentException("Unknown scenario " + name)
         };
     }

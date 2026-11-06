@@ -1091,10 +1091,10 @@ extension Components {
             public var startedAt: Foundation.Date
             /// - Remark: Generated from `#/components/schemas/DaemonStatus/workspaces`.
             public var workspaces: [Components.Schemas.WorkspaceStatus]
-            /// - Remark: Generated from `#/components/schemas/DaemonStatus/workers`.
-            public var workers: [Components.Schemas.WorkerStatus]
-            /// - Remark: Generated from `#/components/schemas/DaemonStatus/supervised`.
-            public var supervised: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/DaemonStatus/version`.
+            public var version: Swift.String
+            /// - Remark: Generated from `#/components/schemas/DaemonStatus/build`.
+            public var build: Swift.String
             /// - Remark: Generated from `#/components/schemas/DaemonStatus/mcpUrl`.
             public var mcpUrl: Swift.String?
             /// - Remark: Generated from `#/components/schemas/DaemonStatus/settled`.
@@ -1107,8 +1107,8 @@ extension Components {
             ///   - settingsPort:
             ///   - startedAt:
             ///   - workspaces:
-            ///   - workers:
-            ///   - supervised:
+            ///   - version:
+            ///   - build:
             ///   - mcpUrl:
             ///   - settled:
             public init(
@@ -1117,8 +1117,8 @@ extension Components {
                 settingsPort: Swift.Int32,
                 startedAt: Foundation.Date,
                 workspaces: [Components.Schemas.WorkspaceStatus],
-                workers: [Components.Schemas.WorkerStatus],
-                supervised: Swift.Bool,
+                version: Swift.String,
+                build: Swift.String,
                 mcpUrl: Swift.String? = nil,
                 settled: Swift.Bool
             ) {
@@ -1127,8 +1127,8 @@ extension Components {
                 self.settingsPort = settingsPort
                 self.startedAt = startedAt
                 self.workspaces = workspaces
-                self.workers = workers
-                self.supervised = supervised
+                self.version = version
+                self.build = build
                 self.mcpUrl = mcpUrl
                 self.settled = settled
             }
@@ -1138,8 +1138,8 @@ extension Components {
                 case settingsPort
                 case startedAt
                 case workspaces
-                case workers
-                case supervised
+                case version
+                case build
                 case mcpUrl
                 case settled
             }
@@ -1763,27 +1763,21 @@ extension Components {
             public var ready: Swift.Bool
             /// - Remark: Generated from `#/components/schemas/NotReadyResponse/opening`.
             public var opening: Swift.Int32
-            /// - Remark: Generated from `#/components/schemas/NotReadyResponse/draining`.
-            public var draining: Swift.Bool
             /// Creates a new `NotReadyResponse`.
             ///
             /// - Parameters:
             ///   - ready:
             ///   - opening:
-            ///   - draining:
             public init(
                 ready: Swift.Bool,
-                opening: Swift.Int32,
-                draining: Swift.Bool
+                opening: Swift.Int32
             ) {
                 self.ready = ready
                 self.opening = opening
-                self.draining = draining
             }
             public enum CodingKeys: String, CodingKey {
                 case ready
                 case opening
-                case draining
             }
         }
         /// - Remark: Generated from `#/components/schemas/OwnField`.
@@ -3423,82 +3417,6 @@ extension Components {
                 case version
             }
         }
-        /// - Remark: Generated from `#/components/schemas/UpgradeRequest`.
-        public struct UpgradeRequest: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/UpgradeRequest/file`.
-            public var file: Swift.String
-            /// - Remark: Generated from `#/components/schemas/UpgradeRequest/arguments`.
-            public var arguments: [Swift.String]
-            /// - Remark: Generated from `#/components/schemas/UpgradeRequest/timeoutSeconds`.
-            public var timeoutSeconds: Swift.Int32
-            /// Creates a new `UpgradeRequest`.
-            ///
-            /// - Parameters:
-            ///   - file:
-            ///   - arguments:
-            ///   - timeoutSeconds:
-            public init(
-                file: Swift.String,
-                arguments: [Swift.String],
-                timeoutSeconds: Swift.Int32
-            ) {
-                self.file = file
-                self.arguments = arguments
-                self.timeoutSeconds = timeoutSeconds
-            }
-            public enum CodingKeys: String, CodingKey {
-                case file
-                case arguments
-                case timeoutSeconds
-            }
-        }
-        /// - Remark: Generated from `#/components/schemas/UpgradeResult`.
-        public struct UpgradeResult: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/UpgradeResult/ok`.
-            public var ok: Swift.Bool
-            /// - Remark: Generated from `#/components/schemas/UpgradeResult/message`.
-            public var message: Swift.String
-            /// - Remark: Generated from `#/components/schemas/UpgradeResult/oldPid`.
-            public var oldPid: Swift.Int32?
-            /// - Remark: Generated from `#/components/schemas/UpgradeResult/newPid`.
-            public var newPid: Swift.Int32?
-            /// - Remark: Generated from `#/components/schemas/UpgradeResult/oldBuild`.
-            public var oldBuild: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/UpgradeResult/newBuild`.
-            public var newBuild: Swift.String?
-            /// Creates a new `UpgradeResult`.
-            ///
-            /// - Parameters:
-            ///   - ok:
-            ///   - message:
-            ///   - oldPid:
-            ///   - newPid:
-            ///   - oldBuild:
-            ///   - newBuild:
-            public init(
-                ok: Swift.Bool,
-                message: Swift.String,
-                oldPid: Swift.Int32? = nil,
-                newPid: Swift.Int32? = nil,
-                oldBuild: Swift.String? = nil,
-                newBuild: Swift.String? = nil
-            ) {
-                self.ok = ok
-                self.message = message
-                self.oldPid = oldPid
-                self.newPid = newPid
-                self.oldBuild = oldBuild
-                self.newBuild = newBuild
-            }
-            public enum CodingKeys: String, CodingKey {
-                case ok
-                case message
-                case oldPid
-                case newPid
-                case oldBuild
-                case newBuild
-            }
-        }
         /// - Remark: Generated from `#/components/schemas/User`.
         public struct User: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/User/id`.
@@ -3568,53 +3486,6 @@ extension Components {
         @frozen public enum UserKind: String, Codable, Hashable, Sendable, CaseIterable {
             case human = "human"
             case agent = "agent"
-        }
-        /// - Remark: Generated from `#/components/schemas/WorkerRole`.
-        @frozen public enum WorkerRole: String, Codable, Hashable, Sendable, CaseIterable {
-            case starting = "starting"
-            case active = "active"
-            case draining = "draining"
-        }
-        /// - Remark: Generated from `#/components/schemas/WorkerStatus`.
-        public struct WorkerStatus: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/WorkerStatus/pid`.
-            public var pid: Swift.Int32
-            /// - Remark: Generated from `#/components/schemas/WorkerStatus/version`.
-            public var version: Swift.String
-            /// - Remark: Generated from `#/components/schemas/WorkerStatus/build`.
-            public var build: Swift.String
-            /// - Remark: Generated from `#/components/schemas/WorkerStatus/role`.
-            public var role: Components.Schemas.WorkerRole
-            /// - Remark: Generated from `#/components/schemas/WorkerStatus/startedAt`.
-            public var startedAt: Foundation.Date
-            /// Creates a new `WorkerStatus`.
-            ///
-            /// - Parameters:
-            ///   - pid:
-            ///   - version:
-            ///   - build:
-            ///   - role:
-            ///   - startedAt:
-            public init(
-                pid: Swift.Int32,
-                version: Swift.String,
-                build: Swift.String,
-                role: Components.Schemas.WorkerRole,
-                startedAt: Foundation.Date
-            ) {
-                self.pid = pid
-                self.version = version
-                self.build = build
-                self.role = role
-                self.startedAt = startedAt
-            }
-            public enum CodingKeys: String, CodingKey {
-                case pid
-                case version
-                case build
-                case role
-                case startedAt
-            }
         }
         /// - Remark: Generated from `#/components/schemas/WorkspaceKind`.
         @frozen public enum WorkspaceKind: String, Codable, Hashable, Sendable, CaseIterable {

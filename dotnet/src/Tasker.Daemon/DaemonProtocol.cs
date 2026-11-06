@@ -16,10 +16,5 @@ public sealed record SyncResult(string Path, int ProblemCount, Tasker.Core.Works
 /// <summary>Просьба сверить область: <c>POST /daemon/sync</c>.</summary>
 public sealed record SyncRequest(WorkspaceKind Kind, string Path);
 
-/// <summary>Просьба заменить рабочий процесс демона на лету: <c>POST /daemon/upgrade</c>.</summary>
-/// <param name="File">Программа нового рабочего процесса (<c>tasker-mcpd</c> новой сборки) и её начальные аргументы.</param>
-/// <param name="TimeoutSeconds">Сколько ждать, пока новый процесс откроет области и будет готов.</param>
-public sealed record UpgradeRequest(string File, string[] Arguments, int TimeoutSeconds);
-
-/// <summary>Итог замены. <c>Ok = false</c> — старый процесс продолжает работать, <c>Message</c> объясняет почему.</summary>
-public sealed record UpgradeResult(bool Ok, string Message, int? OldPid = null, int? NewPid = null, string? OldBuild = null, string? NewBuild = null);
+/// <summary>Что о себе сообщает программа демона по <c>--build-info</c>.</summary>
+public sealed record DaemonBuildInfo(string Version, string Build);

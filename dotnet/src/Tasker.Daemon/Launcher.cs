@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Text.Json;
+using Tasker.Core;
 using Tasker.Global;
 
 namespace Tasker.Daemon;
@@ -46,6 +48,68 @@ public static class Launcher
     /// <summary>Имя программы демона (<c>tasker-mcpd</c>) — она лежит рядом с <c>tasker</c>.</summary>
     public const string DaemonName = "tasker-mcpd";
 
+    /// <summary>Аргумент программы демона: напечатать версию и сборку и выйти.</summary>
+    public const string BuildInfoArgument = "--build-info";
+
+    /// <summary>
+    /// Пробный запуск программы демона: запускается ли она и какая это сборка. Работающий демон при этом не затрагивается.
+    /// </summary>
+    /// <exception cref="DaemonUpgradeException">Программы нет, она не отвечает, вышла с ошибкой или её ответ не понять.</exception>
+    public static async Task<DaemonBuildInfo> ReadBuild((string File, string[] Arguments) command, TimeSpan timeout, CancellationToken ct = default)
+    {
+        var (file, arguments) = command;
+        if (!File.Exists(file))
+            throw new DaemonUpgradeException($"The program of the new MCP server is not found: {file}: the running server is untouched");
+
+        var info = new ProcessStartInfo(file) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+        AppEnvironment.Apply(info);
+        foreach (var argument in arguments)
+            info.ArgumentList.Add(argument);
+        info.ArgumentList.Add(BuildInfoArgument);
+
+        Process process;
+        try
+        {
+            process = Process.Start(info) ?? throw new InvalidOperationException($"Cannot start {file}");
+        }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            throw new DaemonUpgradeException($"Cannot start the new MCP server program ({file}): {e.Message}: the running server is untouched");
+        }
+
+        using (process)
+        {
+            var output = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+            var error = process.StandardError.ReadToEndAsync(CancellationToken.None);
+            using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            limit.CancelAfter(timeout);
+            try
+            {
+                await process.WaitForExitAsync(limit.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill(entireProcessTree: true);
+                ct.ThrowIfCancellationRequested();
+                throw new DaemonUpgradeException($"The new MCP server program did not answer in {timeout.TotalSeconds:0} s: the running server is untouched");
+            }
+
+            if (process.ExitCode != 0)
+                throw new DaemonUpgradeException($"The new MCP server program exited with code {process.ExitCode} when it was checked: the running server is untouched. {(await error).Trim()}".TrimEnd());
+
+            try
+            {
+                if (JsonSerializer.Deserialize<DaemonBuildInfo>(await output, TaskerJson.Options) is { Build.Length: > 0 } build)
+                    return build;
+            }
+            catch (JsonException)
+            {
+            }
+
+            throw new DaemonUpgradeException("The new MCP server program did not report its build: the running server is untouched");
+        }
+    }
+
     /// <summary>
     /// Команда запуска демона: программа <c>tasker-mcpd</c> из того же каталога, что и текущая (для <c>dotnet tasker.dll</c> —
     /// <c>tasker-mcpd.dll</c> рядом с dll). Ссылка (<c>~/.local/bin/tasker</c>) раскрывается до настоящего пути.
@@ -88,9 +152,11 @@ public static class Launcher
     /// а новый сеанс он создаёт сам (<c>tasker-mcpd --detached</c>). На Windows — без окна, в своей группе процессов
     /// и без унаследованных дескрипторов (<see cref="WindowsDetachedProcess"/>).
     /// </summary>
-    public static Process SpawnDaemon()
+    public static Process SpawnDaemon() => SpawnDaemon(DaemonCommand());
+
+    public static Process SpawnDaemon((string File, string[] Arguments) command)
     {
-        var (file, arguments) = DaemonCommand();
+        var (file, arguments) = command;
         if (OperatingSystem.IsWindows())
             return WindowsDetachedProcess.Start(file, [.. arguments, "--detached"]);
 

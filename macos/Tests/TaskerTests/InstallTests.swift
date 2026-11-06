@@ -54,11 +54,7 @@ private final class FakeLaunchd: CommandRunning, DaemonTransport, @unchecked Sen
 
     func status(of info: DaemonInfo) async throws -> DaemonStatus {
         guard answers else { throw URLError(.cannotConnectToHost) }
-        return DaemonStatus(pid: 1, port: 1, workers: [], workspaces: [])
-    }
-
-    func upgrade(info: DaemonInfo, program: String, timeoutSeconds: Int) async throws -> DaemonUpgradeResult {
-        DaemonUpgradeResult(ok: true, message: "ok")
+        return DaemonStatus(pid: 1, port: 1, version: "0.1.0", build: "b", workspaces: [])
     }
 
     func stop(info: DaemonInfo) async throws {

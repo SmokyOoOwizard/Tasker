@@ -82,7 +82,7 @@ public partial class InstallScriptTests : IDisposable
         var result = await Run(["--help"]);
 
         Assert.Equal(0, result.Code);
-        foreach (var option in new[] { "--prefix", "--from", "--url", "--from-source", "--no-autostart", "--no-completion", "--no-daemon", "--add-to-path", "--restart", "--uninstall" })
+        foreach (var option in new[] { "--prefix", "--from", "--url", "--from-source", "--no-autostart", "--no-completion", "--no-daemon", "--add-to-path", "--uninstall" })
             Assert.Contains(option, result.Out);
     }
 
