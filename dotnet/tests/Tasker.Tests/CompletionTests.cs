@@ -244,7 +244,7 @@ public class CompletionTests
     }
 
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]
-    public async Task Column_specs_and_column_conditions_are_suggested_for_board_options(string storage)
+    public async Task Column_specs_and_column_queries_are_suggested_for_board_options(string storage)
     {
         using var ws = TestWorkspace.Create(storage);
         await Seed(ws);
@@ -253,18 +253,11 @@ public class CompletionTests
         Assert.Empty(await Values(ws, "board create X --status-set Основной --column Вс"));
         Assert.Equal(["Все=В работе", "Все=Готово", "Все=Лишний"], await Values(ws, "board create X --status-set Основной --column Все="));
         Assert.Equal(["Все=В работе,Готово"], await Values(ws, "board create X --status-set Основной --column \"Все=В работе,Го"));
-        // --column-filter: до «:» — названия уже набранных колонок, дальше — условие, как у --field.
-        Assert.Equal(["Все:", "Готово:"], await Values(ws, "board create X --status-set Основной --column Все=Готово --column Готово=Лишний --column-filter "));
-        Assert.Equal(["Все:Приоритет="], await Values(ws, "board create X --status-set Основной --column Все=Готово --column-filter Все:Пр"));
-        Assert.Equal(["Все:Приоритет=Высокий", "Все:Приоритет=Низкий", "Все:Приоритет=Очень срочно"],
-            await Values(ws, "board create X --status-set Основной --column Все=Готово --column-filter Все:Приоритет="));
-        Assert.Equal(["Все:Приоритет:attached", "Все:Приоритет:detached", "Все:Приоритет:set", "Все:Приоритет:unset"],
-            await Values(ws, "board create X --status-set Основной --column Все=Готово --column-filter Все:Приоритет:"));
-        Assert.Equal(["Все:Готово=false", "Все:Готово=true"], await Values(ws, "board create X --status-set Основной --column Все=Готово --column-filter Все:Готово="));
-        Assert.Empty(await Values(ws, "board create X --status-set Основной --column Все=Готово --column-filter Все:StoryPoints>="));
-        // У update без --column — колонки самой доски.
-        Assert.Equal(["Все:", "Сделано:"], await Values(ws, "board update Основная\\ доска --column-filter "));
-        Assert.Equal(["Сделано:Приоритет="], await Values(ws, "board update Основная\\ доска --column-filter Сделано:Пр"));
+        Assert.Equal(["Все:", "Готово:"], await Values(ws, "board create X --status-set Основной --column Все=Готово --column Готово=Лишний --column-query "));
+        Assert.Contains("Все:.Field.", await Values(ws, "board create X --status-set Основной --column Все=Готово --column-query Все:"));
+        Assert.Contains(await Values(ws, "board create X --status-set Основной --column Все=Готово --column-query Все:.Field.Пр"),
+            x => x.StartsWith("Все:.Field.Приоритет", StringComparison.Ordinal));
+        Assert.Equal(["Все:", "Сделано:"], await Values(ws, "board update Основная\\ доска --column-query "));
     }
 
     [Theory, MemberData(nameof(TestWorkspace.Storages), MemberType = typeof(TestWorkspace))]

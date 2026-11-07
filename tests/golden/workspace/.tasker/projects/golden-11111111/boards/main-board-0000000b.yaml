@@ -1,4 +1,4 @@
-formatVersion: 12
+formatVersion: 13
 id: 0000000b-0000-4000-8000-00000000000b
 name: Main board
 statusSets:
@@ -10,22 +10,14 @@ columns:
   - 00000005-0000-4000-8000-000000000005
   onDrop:
     00000002-0000-4000-8000-000000000002: 00000005-0000-4000-8000-000000000005
-  fieldFilters:
-  - field: 0000000d-0000-4000-8000-00000000000d
-    op: equal
-    value: 0000000e-0000-4000-8000-00000000000e
-  - field: 0000000f-0000-4000-8000-00000000000f
-    op: set
+  query: .Field.Priority == "High" && .Field.Tags.IsSet() | sort -.Updated
 - id: 00000010-0000-4000-8000-000000000010
   name: Doing
   statuses:
   - 00000006-0000-4000-8000-000000000006
   onDrop:
     00000002-0000-4000-8000-000000000002: 00000006-0000-4000-8000-000000000006
-  fieldFilters:
-  - field: 00000011-0000-4000-8000-000000000011
-    op: greaterOrEqual
-    value: "3"
+  query: .Field.Estimate >= 3
 - id: 00000012-0000-4000-8000-000000000012
   name: Done
   statuses:

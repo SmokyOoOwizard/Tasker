@@ -55,8 +55,8 @@ public abstract class FieldCatalogContract : IAsyncLifetime
         var types = scope.Resolve<ITaskTypeStorage>();
         var tasks = scope.Resolve<ITaskStorage>();
         return action(new Services(
-            new FieldService(fields, enums, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
-            new FieldEnumService(enums, fields, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks), locks, entityLocks));
+            new FieldService(fields, enums, types, tasks, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
+            new FieldEnumService(enums, fields, types, tasks, writes, TimeProvider.System, locks), locks, entityLocks));
     });
 
     private Task<FieldEnum> NewEnum(Guid project, string name = "Priority", params string[] values) =>
@@ -511,7 +511,7 @@ public sealed class FilesFieldCatalogTests : FieldCatalogContract
 
         var report = await _container.Resolve<Tasker.Core.Workspace.IFileMigration>().Run(new Tasker.Core.Workspace.MigrationOptions());
 
-        Assert.Equal(12, report.CurrentFormat);
+        Assert.Equal(13, report.CurrentFormat);
         Assert.Equal(2, report.Migrated.Length);
         Assert.Single(report.Newer);
         Assert.Contains($"formatVersion: {Tasker.Storage.Files.Storages.FormatVersions.Current}", await File.ReadAllTextAsync(FileFinder.In(Folder(project, "fields"), field)));

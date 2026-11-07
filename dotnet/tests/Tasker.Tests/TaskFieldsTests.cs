@@ -65,8 +65,8 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         return action(new Svc(
             new TaskService(tasks, types, sets, TimeProvider.System, scope.Resolve<ISeriesStorage>(), writes, locks, fields, enums, links, scope.Resolve<IStatusStorage>()),
             new TaskTypeService(types, sets, tasks, fields, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
-            new FieldService(fields, enums, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
-            new FieldEnumService(enums, fields, types, tasks, scope.Resolve<IBoardStorage>(), writes, TimeProvider.System, locks),
+            new FieldService(fields, enums, types, tasks, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
+            new FieldEnumService(enums, fields, types, tasks, writes, TimeProvider.System, locks),
             tasks, types));
     });
 

@@ -54,10 +54,6 @@ struct BoardEditorTests {
     let set = UUID()
     let otherSet = UUID()
     let otherStatus = UUID()
-    let priority = UUID()
-    let high = UUID()
-    let low = UUID()
-    let estimate = UUID()
     let l = Localizer(language: .en)
 
     var catalog: BoardCatalog {
@@ -67,11 +63,6 @@ struct BoardEditorTests {
             .init(id: done, name: "Done", color: "#36b37e"), .init(id: otherStatus, name: "Backlog", color: "#8993a4")
         ]
         value.sets = [.init(id: set, name: "Main", statusIds: [todo, doing, done]), .init(id: otherSet, name: "Other", statusIds: [otherStatus, done])]
-        value.fields = [
-            .init(id: priority, name: "Priority", type: .enum, multiple: false, enumId: UUID(uuidString: "00000000-0000-0000-0000-0000000000aa")),
-            .init(id: estimate, name: "Estimate", type: .int, multiple: false, enumId: nil)
-        ]
-        value.enums = [UUID(uuidString: "00000000-0000-0000-0000-0000000000aa")!: [.init(id: high, name: "High"), .init(id: low, name: "Low")]]
         return value
     }
 
@@ -88,8 +79,11 @@ struct BoardEditorTests {
         }
     }
 
-    func editor(_ source: StubBoardSource, board: UUID?, heartbeat: Duration = .seconds(60)) -> BoardEditorModel {
-        let model = BoardEditorModel(target: BoardEditorTarget(project: project, board: board), source: source, heartbeat: heartbeat)
+    func editor(
+        _ source: StubBoardSource, board: UUID?, heartbeat: Duration = .seconds(60), queries: StubTaskQuerySource? = nil
+    ) -> BoardEditorModel {
+        let model = BoardEditorModel(
+            target: BoardEditorTarget(project: project, board: board), source: source, querySource: queries, heartbeat: heartbeat)
         model.localizer = l
         return model
     }
@@ -274,40 +268,53 @@ struct BoardEditorTests {
         #expect(draft.columns.map(\.name) == ["B", "A", "C"])
     }
 
-    @Test func conditionsFollowFieldTypes() {
+    @Test func unchangedQueryIsSentAsNilAndChangedOneAsText() {
         let catalog = catalog
-        let enumField = catalog.field(priority)!
-        let numberField = catalog.field(estimate)!
-        #expect(!catalog.operators(for: enumField).contains(.greater))
-        #expect(catalog.operators(for: numberField).contains(.greaterOrEqual))
-        var condition = catalog.newCondition()!
-        #expect(condition.fieldId == priority)
-        #expect(condition.value == high.uuidString.lowercased())
-        BoardEditing.changeOperator(&condition, to: .set, field: enumField, catalog: catalog)
-        #expect(condition.value.isEmpty)
-        #expect(BoardEditing.filterText(condition, catalog: catalog) == "Priority:set")
-        BoardEditing.changeField(&condition, to: numberField, catalog: catalog)
-        #expect(condition.op == .set)
-        condition.op = .greaterOrEqual
-        condition.value = "3"
-        #expect(BoardEditing.filterText(condition, catalog: catalog) == "Estimate>=3")
-    }
-
-    @Test func unchangedConditionsAreSentAsNilAndChangedOnesAsText() {
-        let catalog = catalog
-        let condition = BoardCondition(fieldId: estimate, op: .greaterOrEqual, value: "3")
-        let original = BoardColumnDraft(serverId: UUID(), name: "A", statusIds: [todo], conditions: [condition])
-        #expect(GraphQLBoardEditorSource.input(original, original: original, catalog: catalog).fieldFilters == nil)
+        let original = BoardColumnDraft(serverId: UUID(), name: "A", statusIds: [todo], query: ".Field.Estimate >= 3")
+        #expect(GraphQLBoardEditorSource.input(original, original: original, catalog: catalog).query == nil)
+        var spaced = original
+        spaced.query = "  .Field.Estimate >= 3 "
+        #expect(spaced == original)
+        #expect(GraphQLBoardEditorSource.input(spaced, original: original, catalog: catalog).query == nil)
         var changed = original
-        changed.conditions[0].value = "5"
-        #expect(GraphQLBoardEditorSource.input(changed, original: original, catalog: catalog).fieldFilters == ["Estimate>=5"])
-        #expect(GraphQLBoardEditorSource.input(BoardColumnDraft(name: "N", statusIds: []), original: nil, catalog: catalog).fieldFilters == [])
+        changed.query = ".Field.Estimate >= 5 | sort -.Updated"
+        #expect(GraphQLBoardEditorSource.input(changed, original: original, catalog: catalog).query == ".Field.Estimate >= 5 | sort -.Updated")
+        var cleared = original
+        cleared.query = " "
+        #expect(GraphQLBoardEditorSource.input(cleared, original: original, catalog: catalog).query == "")
+        #expect(GraphQLBoardEditorSource.input(BoardColumnDraft(name: "N", statusIds: []), original: nil, catalog: catalog).query == nil)
+        #expect(GraphQLBoardEditorSource.input(BoardColumnDraft(name: "N", statusIds: [], query: ".Type == \"Bug\""), original: nil, catalog: catalog).query
+            == ".Type == \"Bug\"")
     }
 
-    @Test func emptyConditionValueIsRejectedBeforeSending() {
-        let condition = BoardCondition(fieldId: estimate, op: .equal, value: " ")
-        let draft = BoardDraft(name: "B", setIds: [set], columns: [BoardColumnDraft(name: "A", conditions: [condition])])
-        let issues = BoardValidation.check(draft, catalog: catalog, l: l)
-        #expect(issues.conditions[condition.id] == l.string(.boardConditionValueRequired))
+    @Test func typingAQueryEditsTheDraftAndABrokenOneIsNotSent() async {
+        let source = StubBoardSource()
+        await source.setCatalog(catalog)
+        let record = existing()
+        await source.setStored(BoardRecord(id: record.id, version: record.version, draft: BoardDraft(
+            name: "Main", setIds: [set],
+            columns: [BoardColumnDraft(serverId: record.draft.columns[0].serverId, name: "Open", statusIds: [todo, doing], drop: [set: todo], query: ".Field.Gone == 1")])))
+        let queries = StubTaskQuerySource()
+        let broken = TaskQueryIssue(code: "query.unknownField", message: "No field 'Gone'", params: ["name": "Gone"], start: 7, end: 11)
+        queries.set(".Field.Gone == 1", TaskQueryReport(valid: false, hasSort: false, errors: [broken], hints: []))
+        let model = editor(source, board: record.id, queries: queries)
+        model.load()
+        await settle(model) { model.phase == .ready }
+        let column = model.draft.columns[0]
+        let query = try! #require(model.queryModel(for: column))
+        #expect(query.text == ".Field.Gone == 1")
+        await settle(model) { !query.errors.isEmpty }
+        #expect(query.error?.code == "query.unknownField")
+
+        #expect(await model.save() == false)
+        #expect(model.issues.columns[column.id] == [l.refusal(broken.refusal)])
+        #expect(await source.updated.isEmpty)
+
+        query.edited(".Status == \"Todo\" | sort .Title", cursor: 5)
+        #expect(model.draft.columns[0].query == ".Status == \"Todo\" | sort .Title")
+        #expect(model.isDirty)
+        await settle(model) { query.errors.isEmpty }
+        #expect(await model.save())
+        #expect(await source.updated.last?.columns[0].query == ".Status == \"Todo\" | sort .Title")
     }
 }

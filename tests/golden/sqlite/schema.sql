@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS "board_columns" (
     "BoardId" TEXT NOT NULL,
     "Name" TEXT NOT NULL,
     "Position" INTEGER NOT NULL,
+    "Query" TEXT NULL,
     CONSTRAINT "FK_board_columns_boards_BoardId" FOREIGN KEY ("BoardId") REFERENCES "boards" ("Id") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "field_enum_values" (
@@ -177,16 +178,6 @@ CREATE TABLE IF NOT EXISTS "board_column_statuses" (
     CONSTRAINT "PK_board_column_statuses" PRIMARY KEY ("ColumnId", "StatusId"),
     CONSTRAINT "FK_board_column_statuses_board_columns_ColumnId" FOREIGN KEY ("ColumnId") REFERENCES "board_columns" ("Id") ON DELETE CASCADE,
     CONSTRAINT "FK_board_column_statuses_statuses_StatusId" FOREIGN KEY ("StatusId") REFERENCES "statuses" ("Id")
-);
-CREATE TABLE IF NOT EXISTS "board_column_field_filters" (
-    "ColumnId" TEXT NOT NULL,
-    "Position" INTEGER NOT NULL,
-    "FieldId" TEXT NOT NULL,
-    "Operator" TEXT NOT NULL,
-    "Value" TEXT NULL,
-    CONSTRAINT "PK_board_column_field_filters" PRIMARY KEY ("ColumnId", "Position"),
-    CONSTRAINT "FK_board_column_field_filters_board_columns_ColumnId" FOREIGN KEY ("ColumnId") REFERENCES "board_columns" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_board_column_field_filters_fields_FieldId" FOREIGN KEY ("FieldId") REFERENCES "fields" ("Id")
 );
 CREATE TABLE IF NOT EXISTS "task_type_fields" (
     "TypeId" TEXT NOT NULL,
@@ -271,7 +262,6 @@ CREATE INDEX "IX_agent_tokens_AgentId" ON "agent_tokens" ("AgentId");
 CREATE UNIQUE INDEX "IX_agent_tokens_TokenHash" ON "agent_tokens" ("TokenHash");
 CREATE INDEX "IX_board_column_drop_statuses_StatusId" ON "board_column_drop_statuses" ("StatusId");
 CREATE INDEX "IX_board_column_drop_statuses_StatusSetId" ON "board_column_drop_statuses" ("StatusSetId");
-CREATE INDEX "IX_board_column_field_filters_FieldId" ON "board_column_field_filters" ("FieldId");
 CREATE INDEX "IX_board_column_statuses_StatusId" ON "board_column_statuses" ("StatusId");
 CREATE INDEX "IX_board_columns_BoardId" ON "board_columns" ("BoardId");
 CREATE INDEX "IX_board_status_sets_StatusSetId" ON "board_status_sets" ("StatusSetId");

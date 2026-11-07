@@ -1,7 +1,7 @@
 id:           0000002a-0000-4000-8000-00000000002a
 name:         Bug
 status set:   Main (00000002-0000-4000-8000-000000000002)
-version:      cda6d0fa9871ab30
+version:      20d4e9f39e7453f0
 fields:
   Priority (enum Priority, required)
   Estimate (int)

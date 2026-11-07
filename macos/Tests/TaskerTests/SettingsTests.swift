@@ -153,7 +153,6 @@ struct SettingsTests {
         catalog.enums = [SettingsEnumItem(
             id: enumId, name: "Levels", values: [SettingsEnumValue(id: valueA, name: "low"), SettingsEnumValue(id: valueB, name: "high")], version: "e1")]
         catalog.series = [SettingsSeriesItem(id: seriesId, name: "Основная", prefix: "TSK", version: "s1")]
-        catalog.conditions = [SettingsBoardCondition(board: "Main", column: "Hot", fieldId: fieldId, value: valueB.uuidString.lowercased())]
         return catalog
     }
 
@@ -282,7 +281,7 @@ struct SettingsTests {
         #expect(failure == ru.string(.settingsModified))
     }
 
-    @Test func enumUsageCountsValuesAndBoardConditions() async {
+    @Test func enumUsageCountsValues() async {
         let source = StubSettingsSource(catalog: catalog())
         let task = { (values: [UUID]) in
             SettingsTaskBrief(id: UUID(), title: "t", numbers: [], fields: [self.fieldId: values.map { $0.uuidString.lowercased() }])
@@ -293,7 +292,6 @@ struct SettingsTests {
         let usage = await value.enumUsage(catalog().enums[0])
         #expect(usage.count(valueA) == 2)
         #expect(usage.count(valueB) == 2)
-        #expect(usage.columns[valueB] == 1)
         #expect(usage.complete)
     }
 

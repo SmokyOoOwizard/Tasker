@@ -1,5 +1,4 @@
 using Tasker.Core.Boards;
-using Tasker.Core.Tasks;
 using Tasker.Core.Workspace;
 
 namespace Tasker.Storage.Files.Storages;
@@ -7,9 +6,7 @@ namespace Tasker.Storage.Files.Storages;
 /// <summary>
 /// Формат файла доски <c>boards/&lt;id&gt;.yaml</c>. Колонки — в порядке слева направо;
 /// <c>onDrop</c> — какой статус получает задача набора (ключ), перетянутая в колонку;
-/// <c>fieldFilters</c> (с формата 6, только у колонок с условиями) — условия по полям каталога, по И со статусами: <c>field</c> — id поля, <c>op</c> —
-/// оператор словом (equal, notEqual, greater, greaterOrEqual, less, lessOrEqual, set, unset, attached, detached), <c>value</c> — значение в
-/// каноническом виде (у enum — id значения; у set, unset, attached и detached его нет):
+/// <c>query</c> (с формата 13, только у колонок с запросом) — строка запроса колонки. Прежний список <c>fieldFilters</c> при чтении пропускается:
 /// <code>
 /// id: 3f2e1d0c-9b8a-4c7d-8e6f-5a4b3c2d1e0f
 /// name: Разработка
@@ -22,16 +19,13 @@ namespace Tasker.Storage.Files.Storages;
 ///   - 5d2c1a3b-7e4f-4a6b-8c9d-0e1f2a3b4c5d
 ///   onDrop:
 ///     7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c5d: 5d2c1a3b-7e4f-4a6b-8c9d-0e1f2a3b4c5d
-///   fieldFilters:
-///   - field: 9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
-///     op: greaterOrEqual
-///     value: "3"
+///   query: .Field.Estimate >= 3 | sort .Field.Estimate desc
 /// </code>
 /// </summary>
 internal static class BoardFile
 {
     public static async Task<Board?> Read(Guid projectId, string path, CancellationToken ct) =>
-        await YamlFile.Read<BoardFileModel>(path, ct) is { } file ? Map(projectId, file, path) : null;
+        await YamlFile.Read<BoardFileModel>(path, ct) is { } file ? Map(projectId, file) : null;
 
     public static Task<string> Write(string path, Board board, CancellationToken ct) =>
         YamlFile.Write(path, ToFile(board), ct);
@@ -52,16 +46,12 @@ internal static class BoardFile
                 Name = c.Name,
                 Statuses = c.StatusIds.ToList(),
                 OnDrop = c.DropStatuses.ToDictionary(),
-                FieldFilters = c.FieldConditions.Length == 0
-                    ? null
-                    : c.FieldConditions.Select(f => new FilterFileModel { Field = f.FieldId, Op = OperatorWord(f.Operator), Value = f.Value }).ToList()
+                Query = c.Query
             })
             .ToList()
     };
 
-    private static string OperatorWord(FieldOperator op) => char.ToLowerInvariant(op.ToString()[0]) + op.ToString()[1..];
-
-    private static Board Map(Guid projectId, Versioned<BoardFileModel> file, string path) => new()
+    private static Board Map(Guid projectId, Versioned<BoardFileModel> file) => new()
     {
         Id = file.Model.Id,
         ProjectId = projectId,
@@ -74,14 +64,7 @@ internal static class BoardFile
                 Name = c.Name ?? "",
                 StatusIds = c.Statuses?.ToArray() ?? [],
                 DropStatuses = c.OnDrop ?? new Dictionary<Guid, Guid>(),
-                FieldConditions = c.FieldFilters?
-                    .Select(f => new ColumnFieldFilter(
-                        f.Field,
-                        Enum.TryParse<FieldOperator>(f.Op, ignoreCase: true, out var op) && Enum.IsDefined(op)
-                            ? op
-                            : throw Tasker.Core.TaskerErrors.UnsupportedFormat(Path.GetFileName(path), $"{Path.GetFileName(path)}: unknown field filter operator '{f.Op}': update Tasker"),
-                        f.Value))
-                    .ToArray() ?? []
+                Query = string.IsNullOrWhiteSpace(c.Query) ? null : c.Query
             })
             .ToArray() ?? [],
         Version = file.Version
@@ -101,13 +84,6 @@ internal static class BoardFile
         public string? Name { get; set; }
         public List<Guid>? Statuses { get; set; }
         public Dictionary<Guid, Guid>? OnDrop { get; set; }
-        public List<FilterFileModel>? FieldFilters { get; set; }
-    }
-
-    private class FilterFileModel
-    {
-        public Guid Field { get; set; }
-        public string? Op { get; set; }
-        public string? Value { get; set; }
+        public string? Query { get; set; }
     }
 }

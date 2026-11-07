@@ -252,10 +252,18 @@ private struct BoardColumnView: View {
             let chips = conditionChips
             if !chips.isEmpty {
                 BoardFlow(spacing: 4) {
-                    ForEach(chips, id: \.text) { chip in BoardChip(text: chip.text, accent: chip.accent) }
+                    ForEach(chips, id: \.text) { chip in BoardChip(text: chip.text, accent: chip.accent, mono: chip.mono) }
                 }
                 .padding(.horizontal, 8)
                 .padding(.bottom, 8)
+            }
+            if let error = column.error {
+                Text(l.refusal(error))
+                    .font(.design(DesignTypography.smallSize))
+                    .foregroundStyle(DesignColor.red.color)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
             }
             LazyVStack(spacing: 8) {
                 ForEach(incoming) { card in
@@ -304,11 +312,13 @@ private struct BoardColumnView: View {
     private struct Chip {
         var text: String
         var accent: Bool
+        var mono = false
     }
 
     private var conditionChips: [Chip] {
-        var result = column.info.conditions.map { Chip(text: model.conditionText($0), accent: true) }
-        if column.info.statusIds.count > 1 || !column.info.conditions.isEmpty {
+        var result: [Chip] = []
+        if let query = column.info.query { result.append(Chip(text: query, accent: column.error == nil, mono: true)) }
+        if column.info.statusIds.count > 1 || column.info.query != nil {
             let names = column.info.statusIds.map { model.vocabulary.status($0)?.name ?? "" }.joined(separator: " · ")
             result.append(Chip(text: names, accent: false))
         }
@@ -319,10 +329,13 @@ private struct BoardColumnView: View {
 private struct BoardChip: View {
     let text: String
     let accent: Bool
+    var mono = false
 
     var body: some View {
         Text(text)
-            .font(.design(11.5))
+            .font(.design(11.5, mono: mono))
+            .truncationMode(.middle)
+            .help(text)
             .foregroundStyle(accent ? DesignColor.acc.color : DesignColor.mut.color)
             .lineLimit(1)
             .padding(.horizontal, 6)

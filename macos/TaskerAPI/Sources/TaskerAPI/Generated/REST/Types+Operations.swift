@@ -7530,23 +7530,15 @@ public enum Operations {
                         public struct Value2Payload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/PATCH/responses/200/content/json/value2/affectedTasks`.
                             public var affectedTasks: Swift.Int32
-                            /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/PATCH/responses/200/content/json/value2/affectedColumns`.
-                            public var affectedColumns: Swift.Int32?
                             /// Creates a new `Value2Payload`.
                             ///
                             /// - Parameters:
                             ///   - affectedTasks:
-                            ///   - affectedColumns:
-                            public init(
-                                affectedTasks: Swift.Int32,
-                                affectedColumns: Swift.Int32? = nil
-                            ) {
+                            public init(affectedTasks: Swift.Int32) {
                                 self.affectedTasks = affectedTasks
-                                self.affectedColumns = affectedColumns
                             }
                             public enum CodingKeys: String, CodingKey {
                                 case affectedTasks
-                                case affectedColumns
                             }
                         }
                         /// - Remark: Generated from `#/paths/api/projects/{projectId}/enums/{id}/PATCH/responses/200/content/json/value2`.
@@ -21095,23 +21087,15 @@ public enum Operations {
                         public struct Value2Payload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/PATCH/responses/200/content/json/value2/affectedTasks`.
                             public var affectedTasks: Swift.Int32
-                            /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/PATCH/responses/200/content/json/value2/affectedColumns`.
-                            public var affectedColumns: Swift.Int32?
                             /// Creates a new `Value2Payload`.
                             ///
                             /// - Parameters:
                             ///   - affectedTasks:
-                            ///   - affectedColumns:
-                            public init(
-                                affectedTasks: Swift.Int32,
-                                affectedColumns: Swift.Int32? = nil
-                            ) {
+                            public init(affectedTasks: Swift.Int32) {
                                 self.affectedTasks = affectedTasks
-                                self.affectedColumns = affectedColumns
                             }
                             public enum CodingKeys: String, CodingKey {
                                 case affectedTasks
-                                case affectedColumns
                             }
                         }
                         /// - Remark: Generated from `#/paths/api/projects/{projectId}/task-types/{id}/PATCH/responses/200/content/json/value2`.

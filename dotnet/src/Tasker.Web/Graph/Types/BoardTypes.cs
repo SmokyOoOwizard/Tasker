@@ -29,7 +29,7 @@ internal sealed class BoardColumnType : ObjectType<BoardColumn>
         descriptor.Field(x => x.Id);
         descriptor.Field(x => x.Name);
         descriptor.Field(x => x.StatusIds);
-        descriptor.Field(x => x.FieldConditions);
+        descriptor.Field(x => x.Query);
         descriptor.Field(x => x.DropStatuses)
             .Type<NonNullType<ListType<NonNullType<DropStatusType>>>>()
             .Resolve(x => x.Parent<BoardColumn>().DropStatuses.Select(drop => new DropStatus(drop.Key, drop.Value)).ToArray());
@@ -44,17 +44,5 @@ internal sealed class DropStatusType : ObjectType<DropStatus>
         descriptor.BindFieldsExplicitly();
         descriptor.Field(x => x.StatusSetId);
         descriptor.Field(x => x.StatusId);
-    }
-}
-
-internal sealed class ColumnFieldFilterType : ObjectType<ColumnFieldFilter>
-{
-    protected override void Configure(IObjectTypeDescriptor<ColumnFieldFilter> descriptor)
-    {
-        descriptor.Name("ColumnFieldFilter");
-        descriptor.BindFieldsExplicitly();
-        descriptor.Field(x => x.FieldId);
-        descriptor.Field(x => x.Operator);
-        descriptor.Field(x => x.Value);
     }
 }

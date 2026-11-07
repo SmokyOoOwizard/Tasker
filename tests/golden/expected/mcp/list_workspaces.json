@@ -1,13 +1,12 @@
 {
-  "jsonrpc": "2.0",
-  "id": 1,
   "result": {
     "content": [
       {
         "type": "text",
         "text": "{\"workspaces\":[{\"name\":\"broken\",\"path\":\"<ROOT>/broken\",\"status\":\"failed\",\"projects\":null,\"error\":\"<ROOT>/broken does not exist\"},{\"name\":\"golden\",\"path\":\"<ROOT>/golden\",\"status\":\"open\",\"projects\":2,\"error\":null}]}"
       }
-    ],
-    "isError": false
-  }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
 }

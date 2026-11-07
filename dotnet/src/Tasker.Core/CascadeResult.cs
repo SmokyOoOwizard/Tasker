@@ -13,11 +13,7 @@ namespace Tasker.Core;
 /// значения остались и поле стало дополнительным (сами задачи не переписываются).
 /// </param>
 [JsonConverter(typeof(CascadeResultConverterFactory))]
-/// <param name="AffectedColumns">
-/// Сколько колонок досок затронуто (условие на удалённое значение перечисления убрано или заменено, см. <see cref="Fields.RemovedEnumValues"/>).
-/// В JSON <c>affectedColumns</c> появляется, только когда оно не 0.
-/// </param>
-public record CascadeResult<T>(T Value, int AffectedTasks, int AffectedColumns = 0) : ICascadeResult
+public record CascadeResult<T>(T Value, int AffectedTasks) : ICascadeResult
 {
     object? ICascadeResult.Value => Value;
     Type ICascadeResult.ValueType => typeof(T);
@@ -28,7 +24,6 @@ public interface ICascadeResult
     object? Value { get; }
     Type ValueType { get; }
     int AffectedTasks { get; }
-    int AffectedColumns { get; }
 }
 
 /// <summary>Пишет сущность плоско, с добавленным полем <c>affectedTasks</c> (имя — по политике имён настроек сериализации).</summary>
@@ -47,15 +42,12 @@ internal sealed class CascadeResultConverterFactory : JsonConverterFactory
             using var document = JsonDocument.ParseValue(ref reader);
             var root = document.RootElement;
             var count = 0;
-            var columns = 0;
             foreach (var property in root.EnumerateObject())
             {
                 if (string.Equals(property.Name, Name(options, "AffectedTasks"), StringComparison.OrdinalIgnoreCase))
                     count = property.Value.GetInt32();
-                else if (string.Equals(property.Name, Name(options, "AffectedColumns"), StringComparison.OrdinalIgnoreCase))
-                    columns = property.Value.GetInt32();
             }
-            return new CascadeResult<T>(root.Deserialize<T>(options)!, count, columns);
+            return new CascadeResult<T>(root.Deserialize<T>(options)!, count);
         }
 
         public override void Write(Utf8JsonWriter writer, CascadeResult<T> value, JsonSerializerOptions options)
@@ -67,8 +59,6 @@ internal sealed class CascadeResultConverterFactory : JsonConverterFactory
                     property.WriteTo(writer);
             }
             writer.WriteNumber(Name(options, "AffectedTasks"), value.AffectedTasks);
-            if (value.AffectedColumns > 0)
-                writer.WriteNumber(Name(options, "AffectedColumns"), value.AffectedColumns);
             writer.WriteEndObject();
         }
 

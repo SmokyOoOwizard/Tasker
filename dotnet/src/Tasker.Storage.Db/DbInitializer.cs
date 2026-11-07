@@ -57,6 +57,8 @@ internal class DbInitializer(ILifetimeScope scope) : IHostedService, IStorageLif
 
         await AddColumn(context, "Hierarchical", "0", "FALSE", ct);
         await AddTextColumn(context, "statuses", "Icon", ct);
+        await AddTextColumn(context, "board_columns", "Query", ct, "text");
+        await context.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS board_column_field_filters", ct);
     }
 
     private static async Task AddMissingTable(AppDbContext context, string table, CancellationToken ct)
@@ -96,7 +98,7 @@ internal class DbInitializer(ILifetimeScope scope) : IHostedService, IStorageLif
         return true;
     }
 
-    private static async Task AddTextColumn(AppDbContext context, string table, string column, CancellationToken ct)
+    private static async Task AddTextColumn(AppDbContext context, string table, string column, CancellationToken ct, string postgresType = "character varying(16)")
     {
         try
         {
@@ -109,7 +111,7 @@ internal class DbInitializer(ILifetimeScope scope) : IHostedService, IStorageLif
 
         await context.Database.ExecuteSqlRawAsync(context.Database.IsSqlite()
             ? $"ALTER TABLE {table} ADD COLUMN \"{column}\" TEXT NULL"
-            : $"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS \"{column}\" character varying(16) NULL", ct);
+            : $"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS \"{column}\" {postgresType} NULL", ct);
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

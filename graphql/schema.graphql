@@ -52,7 +52,7 @@ type BoardColumn {
   id: UUID!
   name: String!
   statusIds: [UUID!]!
-  fieldConditions: [ColumnFieldFilter!]!
+  query: String
   dropStatuses: [DropStatus!]!
 }
 
@@ -66,12 +66,6 @@ type BoardPage {
 type ChangeAuthor {
   key: String!
   name: String!
-}
-
-type ColumnFieldFilter {
-  fieldId: UUID!
-  operator: FieldOperator!
-  value: String
 }
 
 type CommentAuthor {
@@ -668,19 +662,6 @@ enum DaemonState {
   starting
   running
   failed
-}
-
-enum FieldOperator {
-  equal
-  notEqual
-  greater
-  greaterOrEqual
-  less
-  lessOrEqual
-  set
-  unset
-  attached
-  detached
 }
 
 enum FieldType {

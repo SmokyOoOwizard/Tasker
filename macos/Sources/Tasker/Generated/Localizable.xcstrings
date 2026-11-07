@@ -1098,23 +1098,6 @@
         }
       }
     },
-    "board.addCondition" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condition"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Условие"
-          }
-        }
-      }
-    },
     "board.cards" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1264,57 +1247,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Статусы колонки"
-          }
-        }
-      }
-    },
-    "board.conditionRemove" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove condition"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Убрать условие"
-          }
-        }
-      }
-    },
-    "board.conditionValueRequired" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter the condition value"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Укажите значение условия"
-          }
-        }
-      }
-    },
-    "board.conditions" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Field conditions (AND)"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Условия по полям (И)"
           }
         }
       }
@@ -1693,23 +1625,6 @@
         }
       }
     },
-    "board.noFields" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The project has no fields for conditions"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "В проекте нет полей для условий"
-          }
-        }
-      }
-    },
     "board.noSets" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1740,74 +1655,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выберите набор статусов"
-          }
-        }
-      }
-    },
-    "board.opAttached" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "attached"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "привязано"
-          }
-        }
-      }
-    },
-    "board.opDetached" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "not attached"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "не привязано"
-          }
-        }
-      }
-    },
-    "board.opSet" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "set"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "задано"
-          }
-        }
-      }
-    },
-    "board.opUnset" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "not set"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "не задано"
           }
         }
       }
@@ -1865,13 +1712,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The status of these tasks is in no column, or the column conditions are not met."
+            "value" : "The status of these tasks is in no column, or the tasks do not match the column queries."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Статус этих задач не входит ни в одну колонку или условия колонок не выполнены."
+            "value" : "Статус этих задач не входит ни в одну колонку или задачи не подходят под запросы колонок."
           }
         }
       }
@@ -1923,6 +1770,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выбрать доску"
+          }
+        }
+      }
+    },
+    "board.query" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Column query (AND with statuses)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запрос колонки (И со статусами)"
+          }
+        }
+      }
+    },
+    "board.queryHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The same language as the query bar over lists. A sort in the query orders the cards unless the bar over the board sets its own."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тот же язык, что в строке над списком. Сортировка из запроса задаёт порядок карточек, пока строка над доской её не переопределит."
           }
         }
       }
@@ -2059,23 +1940,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Новая доска"
-          }
-        }
-      }
-    },
-    "board.valuePlaceholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Value"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Значение"
           }
         }
       }
@@ -2541,64 +2405,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Status “%1$@” is already in column “%2$@”, and the field conditions of these columns do not exclude each other."
+            "value" : "Status “%1$@” is already in column “%2$@”, and the queries of these columns do not exclude each other."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Статус «%1$@» уже есть в колонке «%2$@», а условия этих колонок по полям не исключают друг друга."
+            "value" : "Статус «%1$@» уже есть в колонке «%2$@», а запросы этих колонок не исключают друг друга."
           }
         }
       }
     },
-    "error.board.conditionNoValue" : {
+    "error.board.columnQueryInvalid" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Condition “%2$@” on field “%1$@” takes no value."
+            "value" : "The query of column “%@” no longer parses. Fix it in the board settings."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Условию «%2$@» по полю «%1$@» значение не нужно."
-          }
-        }
-      }
-    },
-    "error.board.conditionNotApplicable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condition “%2$@” does not apply to field “%1$@” of type “%3$@”."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Условие «%2$@» нельзя применить к полю «%1$@» типа «%3$@»."
-          }
-        }
-      }
-    },
-    "error.board.conditionValueRequired" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condition “%2$@” on field “%1$@” needs a value."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Условию «%2$@» по полю «%1$@» нужно значение."
+            "value" : "Запрос колонки «%@» больше не разбирается. Исправьте его в настройках доски."
           }
         }
       }
@@ -2711,13 +2541,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Task “%1$@” does not match the conditions of column “%2$@”: %3$@. Change its fields first."
+            "value" : "Task “%1$@” does not match the query of column “%2$@”: %3$@. A move changes only the status, change the task first."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Задача «%1$@» не подходит под условия колонки «%2$@»: %3$@. Сначала измените её поля."
+            "value" : "Задача «%1$@» не подходит под запрос колонки «%2$@»: %3$@. Перенос меняет только статус, сначала измените задачу."
           }
         }
       }
@@ -2841,23 +2671,6 @@
         }
       }
     },
-    "error.enum.columnsCollide" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On board “%1$@”, columns “%2$@” and “%3$@” would show the same tasks after the change."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "На доске «%1$@» колонки «%2$@» и «%3$@» после изменения показывали бы одни и те же задачи."
-          }
-        }
-      }
-    },
     "error.enum.inUse" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2939,23 +2752,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Значения перечисления «%1$@» используются и не могут быть удалены: %2$@."
-          }
-        }
-      }
-    },
-    "error.field.changeBlockedByColumns" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Field “%@” is used in column conditions. Remove those conditions first."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Поле «%@» используется в условиях колонок. Сначала уберите эти условия."
           }
         }
       }
@@ -9885,13 +9681,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%1$@ — set on %2$lld task and in board column conditions: %3$@. What should happen to them?"
+                  "value" : "%1$@ — set on %2$lld task. What should happen to them?"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%1$@ — set on %2$lld tasks and in board column conditions: %3$@. What should happen to them?"
+                  "value" : "%1$@ — set on %2$lld tasks. What should happen to them?"
                 }
               }
             }
@@ -9903,19 +9699,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%1$@ — стоят у %2$lld задач и в условиях колонок досок: %3$@. Что с ними сделать?"
+                  "value" : "%1$@ — стоят у %2$lld задач. Что с ними сделать?"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%1$@ — стоят у %2$lld задачи и в условиях колонок досок: %3$@. Что с ними сделать?"
+                  "value" : "%1$@ — стоят у %2$lld задачи. Что с ними сделать?"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%1$@ — стоят у %2$lld задач и в условиях колонок досок: %3$@. Что с ними сделать?"
+                  "value" : "%1$@ — стоят у %2$lld задач. Что с ними сделать?"
                 }
               }
             }

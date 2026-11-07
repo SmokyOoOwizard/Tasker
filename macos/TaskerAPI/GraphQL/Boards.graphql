@@ -15,25 +15,6 @@ query BoardEditorCatalog($projectId: UUID!) {
         statusIds
       }
     }
-    fields(limit: 200) {
-      data {
-        id
-        name
-        type
-        multiple
-        enumId
-      }
-    }
-    enums(limit: 200) {
-      data {
-        id
-        name
-        values {
-          id
-          name
-        }
-      }
-    }
   }
 }
 
@@ -49,11 +30,7 @@ query BoardEditorBoard($projectId: UUID!, $id: UUID!) {
         id
         name
         statusIds
-        fieldConditions {
-          fieldId
-          operator
-          value
-        }
+        query
         dropStatuses {
           statusSetId
           statusId

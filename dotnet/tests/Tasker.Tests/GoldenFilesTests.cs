@@ -233,7 +233,7 @@ public class GoldenFilesTests
                 if (relative.EndsWith("from-the-future-ffffffff.yaml", StringComparison.Ordinal))
                 {
                     var error = await Assert.ThrowsAsync<UnsupportedFormatException>(() => RoundTrip(kind, project, file, scratch));
-                    Assert.Equal("from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (12): update Tasker", error.Message);
+                    Assert.Equal("from-the-future-ffffffff.yaml: format version 99 is newer than this Tasker supports (13): update Tasker", error.Message);
                     continue;
                 }
 
@@ -398,8 +398,7 @@ public class GoldenFilesTests
             var board = Path.Combine(scratch, "b.yaml");
             await File.WriteAllTextAsync(board,
                 "formatVersion: 9\nid: 00000001-0000-4000-8000-000000000001\nname: B\ncolumns:\n- id: 00000002-0000-4000-8000-000000000002\n  name: C\n  fieldFilters:\n  - field: 00000003-0000-4000-8000-000000000003\n    op: between\n");
-            var boardError = await Assert.ThrowsAsync<UnsupportedFormatException>(() => BoardFile.Read(golden, board, CancellationToken.None));
-            Assert.Equal("b.yaml: unknown field filter operator 'between': update Tasker", boardError.Message);
+            Assert.Null((await BoardFile.Read(golden, board, CancellationToken.None))!.Columns.Single().Query);
 
             var intField = Path.Combine(scratch, "f2.yaml");
             await File.WriteAllTextAsync(intField, "formatVersion: 9\nid: 00000001-0000-4000-8000-000000000001\nname: F\ntype: Int\n");

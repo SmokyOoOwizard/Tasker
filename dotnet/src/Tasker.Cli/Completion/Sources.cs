@@ -262,23 +262,24 @@ internal static class Sources
     });
 
     /// <summary>
-    /// <c>--column-filter "Колонка:условие"</c>: до «:» — названия колонок (из набранных <paramref name="columns"/> и, если есть, колонок доски
-    /// <paramref name="board"/>); после — условие по полю, как у <c>--field</c> (<see cref="FieldValues"/>).
+    /// <c>--column-query "Колонка:запрос"</c>: до «:» — названия колонок (из набранных <paramref name="columns"/> и, если есть, колонок доски
+    /// <paramref name="board"/>); после — подсказки строки запроса.
     /// </summary>
-    public static ValueSource ColumnFilters(Option<string[]> columns, Argument<string>? board = null) => InProject(async (x, project) =>
+    public static ValueSource ColumnQueries(Option<string[]> columns, Argument<string>? board = null) => InProject(async (x, project) =>
     {
         var names = (Completer.Safe(() => x.Parse.GetValue(columns)) ?? [])
             .Select(c => c.IndexOf('=') is var eq and > 0 ? c[..eq].Trim() : c.Trim()).ToList();
         if (names.Count == 0 && board != null && x.Value(board) is { } reference)
             names.AddRange(Refs.FindItem(await x.Get<IBoardStorage>().GetAll(project, x.Ct), reference, b => b.Id, b => b.Name, "board").Columns.Select(c => c.Name));
 
-        // Названия колонок могут содержать «:»: условие начинается после самого длинного названия, за которым стоит «:».
         var column = names.Where(n => x.Word.StartsWith(n + ":", StringComparison.OrdinalIgnoreCase)).OrderByDescending(n => n.Length).FirstOrDefault();
         if (column == null)
             return names.Select(n => n + ":");
 
         var head = x.Word[..(column.Length + 1)];
-        return (await FieldCondition(x, project, x.Word[head.Length..])).Select(v => head + v);
+        var text = x.Word[head.Length..];
+        var analysis = await x.Get<TaskService>().AnalyzeQuery(project, text, text.Length, x.Ct);
+        return analysis.Suggestions.Select(v => head + text[..v.Start] + v.Insert + text[v.End..]);
     });
 
     /// <summary>

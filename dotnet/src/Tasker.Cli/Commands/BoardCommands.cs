@@ -13,10 +13,10 @@ internal static class BoardCommands
         "Column, left to right: \"Name=status,status\" (statuses by id or name). " +
         "A task moved into the column gets the first of its statuses that belongs to the task type's status set";
 
-    private const string FilterHelp =
-        "Field condition of a column, in addition to its statuses (AND): \"Column:Field=value\", \"Column:Field>=3\", \"Column:Field:set\" and so on - " +
-        "the same conditions as 'task list --field' (=, !=, >, >=, <, <=, :set, :unset, :attached, :detached), by the field's name in the catalog " +
-        "(stored by id). Repeat for several conditions; the column is named as in --column. A task is in the column only if its status and all conditions fit";
+    private const string QueryHelp =
+        "Query of a column, in addition to its statuses (AND): \"Column:query\", the same language as the query bar over task lists, for example " +
+        "\"Review:.Field.Component == \\\"API\\\" | sort -.Field.Estimate\". Once per column; the column is named as in --column. " +
+        "A task is in the column only if its status fits and it matches the query; a | sort in it orders the column";
 
     private static async Task<Board> Find(Context ctx, Guid projectId, string reference) =>
         Refs.FindItem(await ctx.Get<IBoardStorage>().GetAll(projectId, ctx.Ct), reference, x => x.Id, x => x.Name, "board");
@@ -43,13 +43,13 @@ internal static class BoardCommands
         var showAll = new Option<bool>("--all") { Description = "Show all tasks of every column (cannot be combined with --limit)" };
         var sets = Kit.Many("--status-set", "Status sets whose tasks are on the board (id or name)", required: true);
         var columns = Kit.Many("--column", ColumnHelp, required: true);
-        var columnFilters = Kit.Many("--column-filter", FilterHelp);
+        var columnQueries = Kit.Many("--column-query", QueryHelp);
         var reference = Kit.Ref("Board");
         var newName = new Option<string?>("--name") { Description = "New name" };
         var newSets = Kit.Many("--status-set", "New status sets of the board (id or name); replaces the current ones");
-        var newColumns = Kit.Many("--column", ColumnHelp + ". Replaces all columns; a column with the name of an existing one stays the same column and keeps its field conditions");
-        var newColumnFilters = Kit.Many("--column-filter", FilterHelp +
-            ". Replaces the conditions of the named column (without --column - of that column of the current board; other columns keep theirs); \"Column:\" removes them");
+        var newColumns = Kit.Many("--column", ColumnHelp + ". Replaces all columns; a column with the name of an existing one stays the same column and keeps its query");
+        var newColumnQueries = Kit.Many("--column-query", QueryHelp +
+            ". Replaces the query of the named column (without --column - of that column of the current board; other columns keep theirs); \"Column:\" removes it");
         var descriptionLength = Kit.DescriptionLength();
         var expected = Kit.ExpectedVersion();
 
@@ -59,8 +59,8 @@ internal static class BoardCommands
         newSets.Suggests(g, Sources.StatusSets);
         columns.Suggests(g, Sources.ColumnSpec);
         newColumns.Suggests(g, Sources.ColumnSpec);
-        columnFilters.Suggests(g, Sources.ColumnFilters(columns));
-        newColumnFilters.Suggests(g, Sources.ColumnFilters(newColumns, reference));
+        columnQueries.Suggests(g, Sources.ColumnQueries(columns));
+        newColumnQueries.Suggests(g, Sources.ColumnQueries(newColumns, reference));
         viewFields.Suggests(g, Sources.FieldValues);
         sort.Suggests(g, Sources.SortKeys);
         
@@ -70,7 +70,7 @@ internal static class BoardCommands
                 c.Arguments.Add(name);
                 c.Options.Add(sets);
                 c.Options.Add(columns);
-                c.Options.Add(columnFilters);
+                c.Options.Add(columnQueries);
             }, async (parse, ctx) =>
             {
                 var projectId = await ctx.ProjectId();
@@ -79,8 +79,8 @@ internal static class BoardCommands
 
                 var setIds = Refs.FindAll(allSets, parse.GetRequiredValue(sets), x => x.Id, x => x.Name, "status set");
                 var specs = parse.GetRequiredValue(columns);
-                var filters = AssignFilters(Kit.Values(parse, columnFilters), specs.Select(ColumnName).ToArray());
-                var inputs = specs.Select((x, i) => ParseColumn(x, allSets, allStatuses, setIds, [], filters[i])).ToArray();
+                var queries = AssignQueries(Kit.Values(parse, columnQueries), specs.Select(ColumnName).ToArray());
+                var inputs = specs.Select((x, i) => ParseColumn(x, allSets, allStatuses, setIds, [], queries[i])).ToArray();
 
                 var board = await ctx.Get<BoardService>().Create(projectId, new CreateBoard(parse.GetRequiredValue(name), setIds, inputs), ctx.Ct);
                 ctx.Print(board, $"Created board '{board.Name}' {board.Id}");
@@ -95,14 +95,9 @@ internal static class BoardCommands
                 var allSets = await ctx.Get<IStatusSetStorage>().GetAll(projectId, ctx.Ct);
                 var allStatuses = await ctx.Get<IStatusStorage>().GetAll(projectId, ctx.Ct);
 
-                var service = ctx.Get<BoardService>();
-                var columnLines = new List<string>();
-                foreach (var c in board.Columns)
-                {
-                    var where = await service.DescribeFilters(projectId, c, ctx.Ct);
-                    columnLines.Add($"  {c.Name}: {string.Join(", ", c.StatusIds.Select(s => Kit.Named(allStatuses, s, x => x.Id, x => x.Name)))}" +
-                        (where.Length > 0 ? $"; where {string.Join(" and ", where)}" : ""));
-                }
+                var columnLines = board.Columns.Select(c =>
+                    $"  {c.Name}: {string.Join(", ", c.StatusIds.Select(s => Kit.Named(allStatuses, s, x => x.Id, x => x.Name)))}" +
+                    (c.Query != null ? $"; query {c.Query}" : "")).ToList();
 
                 var text = Kit.Fields(("id", board.Id), ("name", board.Name), ("version", board.Version))
                     + "\nstatus sets:\n" + string.Join("\n", board.StatusSetIds.Select(x => "  " + Kit.Named(allSets, x, s => s.Id, s => s.Name)))
@@ -143,28 +138,36 @@ internal static class BoardCommands
                 var board = await Find(ctx, projectId, parse.GetRequiredValue(reference));
                 var line = await TaskCommands.LineFormat(ctx, projectId);
 
-                var shown = new List<(BoardColumn Column, ListDto<TaskListItem> Tasks, string[] Where)>();
+                var shown = new List<(BoardColumn Column, ListDto<TaskListItem> Tasks, string? Error)>();
                 foreach (var item in board.Columns)
                 {
-                    // С --all читаем колонку целиком (страницами по 200), иначе — первые --limit задач.
-                    var tasks = all
-                        ? await ReadAll(page => ColumnTasks(ctx, projectId, board, item, page, parse.GetValue(viewFields), parse.GetValue(descriptionLength), parse.GetValue(sort)))
-                        : await ColumnTasks(ctx, projectId, board, item, Page.Of(0, parse.GetValue(showLimit)), parse.GetValue(viewFields), parse.GetValue(descriptionLength), parse.GetValue(sort));
-                    shown.Add((item, tasks, await ctx.Get<BoardService>().DescribeFilters(projectId, item, ctx.Ct)));
+                    try
+                    {
+                        var tasks = all
+                            ? await ReadAll(page => ColumnTasks(ctx, projectId, board, item, page, parse.GetValue(viewFields), parse.GetValue(descriptionLength), parse.GetValue(sort)))
+                            : await ColumnTasks(ctx, projectId, board, item, Page.Of(0, parse.GetValue(showLimit)), parse.GetValue(viewFields), parse.GetValue(descriptionLength), parse.GetValue(sort));
+                        shown.Add((item, tasks, null));
+                    }
+                    catch (Tasker.Core.TaskerValidationException e) when (e.Error.Code == BoardService.ColumnQueryInvalidCode)
+                    {
+                        shown.Add((item, new ListDto<TaskListItem> { TotalCount = 0, Offset = 0, Limit = 0, Data = [] }, e.Message));
+                    }
                 }
 
                 // Колонки таблицы общие на всю доску: ссылки, статусы и типы выровнены и между колонками доски.
                 var rows = ctx.Table(shown.SelectMany(x => x.Tasks.Data).Select(line).ToArray(), "  ");
                 var next = 0;
                 var lines = new List<string>();
-                foreach (var (item, tasks, where) in shown)
+                foreach (var (item, tasks, error) in shown)
                 {
                     if (lines.Count > 0)
                         lines.Add("");
-                    lines.Add($"{item.Name}{(where.Length > 0 ? $" [{string.Join(" and ", where)}]" : "")} ({tasks.TotalCount})");
+                    lines.Add($"{item.Name}{(item.Query != null ? $" [{item.Query}]" : "")}{(error == null ? $" ({tasks.TotalCount})" : "")}");
                     lines.AddRange(rows[next..(next + tasks.Data.Length)]);
                     next += tasks.Data.Length;
-                    if (tasks.Data.Length == 0)
+                    if (error != null)
+                        lines.Add($"  error: {error}");
+                    else if (tasks.Data.Length == 0)
                         lines.Add("  (no tasks)");
                     else if (tasks.Data.Length < tasks.TotalCount)
                         lines.Add($"  ... and {tasks.TotalCount - tasks.Data.Length} more (use --all, or 'board tasks {board.Name} \"{item.Name}\"')");
@@ -173,7 +176,11 @@ internal static class BoardCommands
                 ctx.Print(new
                 {
                     board = new { board.Id, board.Name },
-                    columns = shown.Select(x => new { x.Column.Id, x.Column.Name, fieldFilters = x.Where, totalCount = x.Tasks.TotalCount, tasks = x.Tasks.Data })
+                    columns = shown.Select(x => new
+                    {
+                        x.Column.Id, x.Column.Name, query = x.Column.Query, error = x.Error,
+                        totalCount = x.Error == null ? x.Tasks.TotalCount : (int?)null, tasks = x.Error == null ? x.Tasks.Data : null
+                    })
                 }, string.Join('\n', lines));
             }),
             Kit.Leaf(g, "update", "Changes a board", c =>
@@ -182,11 +189,11 @@ internal static class BoardCommands
                 c.Options.Add(newName);
                 c.Options.Add(newSets);
                 c.Options.Add(newColumns);
-                c.Options.Add(newColumnFilters);
+                c.Options.Add(newColumnQueries);
                 c.Options.Add(expected);
             }, async (parse, ctx) =>
             {
-                Kit.RequireChange(parse, newName, newSets, newColumns, newColumnFilters);
+                Kit.RequireChange(parse, newName, newSets, newColumns, newColumnQueries);
                 var projectId = await ctx.ProjectId();
                 var board = await Find(ctx, projectId, parse.GetRequiredValue(reference));
                 var allSets = await ctx.Get<IStatusSetStorage>().GetAll(projectId, ctx.Ct);
@@ -196,19 +203,18 @@ internal static class BoardCommands
                     ? Refs.FindAll(allSets, setRefs, x => x.Id, x => x.Name, "status set")
                     : null;
                 var specs = Kit.Values(parse, newColumns);
-                var filterSpecs = Kit.Values(parse, newColumnFilters);
+                var querySpecs = Kit.Values(parse, newColumnQueries);
                 BoardColumnInput[]? inputs = null;
                 if (specs != null)
                 {
-                    var filters = AssignFilters(filterSpecs, specs.Select(ColumnName).ToArray());
-                    inputs = specs.Select((x, i) => ParseColumn(x, allSets, allStatuses, setIds ?? board.StatusSetIds, board.Columns, filters[i])).ToArray();
+                    var queries = AssignQueries(querySpecs, specs.Select(ColumnName).ToArray());
+                    inputs = specs.Select((x, i) => ParseColumn(x, allSets, allStatuses, setIds ?? board.StatusSetIds, board.Columns, queries[i])).ToArray();
                 }
-                else if (filterSpecs != null)
+                else if (querySpecs != null)
                 {
-                    // Только условия: колонки остаются как есть, условия меняются у названных.
-                    var filters = AssignFilters(filterSpecs, board.Columns.Select(x => x.Name).ToArray());
+                    var queries = AssignQueries(querySpecs, board.Columns.Select(x => x.Name).ToArray());
                     inputs = board.Columns
-                        .Select((x, i) => new BoardColumnInput(x.Id, x.Name, x.StatusIds, x.DropStatuses.ToDictionary(), filters[i]))
+                        .Select((x, i) => new BoardColumnInput(x.Id, x.Name, x.StatusIds, x.DropStatuses.ToDictionary(), queries[i]))
                         .ToArray();
                 }
 
@@ -252,13 +258,9 @@ internal static class BoardCommands
         return separator <= 0 ? spec.Trim() : spec[..separator].Trim();
     }
 
-    /// <summary>
-    /// Раскладывает <c>--column-filter "Колонка:условие"</c> по колонкам: название колонки — самое длинное из названий, за которым стоит «:»
-    /// (в названии колонки двоеточие допустимо). Пустое условие («Колонка:») — убрать условия колонки. null у колонки — для неё ничего не задано.
-    /// </summary>
-    private static string[]?[] AssignFilters(string[]? specs, IReadOnlyList<string> names)
+    private static string?[] AssignQueries(string[]? specs, IReadOnlyList<string> names)
     {
-        var result = new List<string>?[names.Count];
+        var result = new string?[names.Count];
         foreach (var spec in specs ?? [])
         {
             var text = spec.TrimStart();
@@ -269,18 +271,16 @@ internal static class BoardCommands
                     index = i;
             }
             if (index < 0)
-                throw new CliException($"--column-filter '{spec}': expected \"Column:condition\" with the name of one of the columns ({string.Join(", ", names)})");
-
-            var condition = text[(names[index].Length + 1)..].Trim();
-            result[index] ??= [];
-            if (condition.Length > 0)
-                result[index]!.Add(condition);
+                throw new CliException($"--column-query '{spec}': expected \"Column:query\" with the name of one of the columns ({string.Join(", ", names)})");
+            if (result[index] != null)
+                throw new CliException($"--column-query: column '{names[index]}' is given twice, a column has one query");
+            result[index] = text[(names[index].Length + 1)..].Trim();
         }
-        return result.Select(x => x?.ToArray()).ToArray();
+        return result;
     }
 
     private static BoardColumnInput ParseColumn(
-        string spec, StatusSet[] sets, Status[] statuses, Guid[] boardSetIds, IEnumerable<BoardColumn> existing, string[]? filters)
+        string spec, StatusSet[] sets, Status[] statuses, Guid[] boardSetIds, IEnumerable<BoardColumn> existing, string? query)
     {
         var separator = spec.IndexOf('=');
         if (separator <= 0)
@@ -302,6 +302,6 @@ internal static class BoardCommands
         // Колонка с именем существующей остаётся той же колонкой, а не удаляется и создаётся заново.
         var name = spec[..separator].Trim();
         var same = existing.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
-        return new BoardColumnInput(same?.Id, name, statusIds, drop, filters);
+        return new BoardColumnInput(same?.Id, name, statusIds, drop, query);
     }
 }

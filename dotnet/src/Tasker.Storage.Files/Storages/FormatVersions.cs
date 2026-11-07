@@ -64,7 +64,7 @@ internal abstract class FileModel
 /// </summary>
 internal static partial class FormatVersions
 {
-    public const int Current = 12;
+    public const int Current = 13;
 
     /// <summary>
     /// Шаги миграции: <c>To</c> — версия, в которую шаг приводит файл; <c>Apply</c> — преобразование текста YAML (и выставление версии).
@@ -93,7 +93,8 @@ internal static partial class FormatVersions
         // 9 → 10: содержимое то же (меняется имя папки проекта — это делает tasker migrate, а не текстовый шаг).
         (10, text => SetVersion(text, 10)),
         (11, text => SetVersion(text, 11)),
-        (12, text => SetVersion(text, 12))
+        (12, text => SetVersion(text, 12)),
+        (13, text => SetVersion(text, 13))
     ];
 
     // \r?: у файлов с окончаниями строк Windows (autocrlf) перед концом строки стоит \r, а $ в .NET срабатывает только перед \n.

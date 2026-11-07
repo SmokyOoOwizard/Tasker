@@ -384,11 +384,6 @@ internal class AppDbContext(DbContextOptions options) : DbContext(options)
                 .WithOne()
                 .HasForeignKey(d => d.ColumnId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            x.HasMany(c => c.FieldFilters)
-                .WithOne()
-                .HasForeignKey(f => f.ColumnId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BoardColumnStatusDbModel>(x =>
@@ -396,14 +391,6 @@ internal class AppDbContext(DbContextOptions options) : DbContext(options)
             x.ToTable("board_column_statuses");
             x.HasKey(s => new { s.ColumnId, s.StatusId });
             References<BoardColumnStatusDbModel, StatusDbModel>(x, s => s.StatusId);
-        });
-
-        modelBuilder.Entity<BoardColumnFieldFilterDbModel>(x =>
-        {
-            x.ToTable("board_column_field_filters");
-            x.HasKey(f => new { f.ColumnId, f.Position });
-            x.Property(f => f.Operator).HasMaxLength(20);
-            References<BoardColumnFieldFilterDbModel, FieldDbModel>(x, f => f.FieldId);
         });
 
         modelBuilder.Entity<BoardColumnDropStatusDbModel>(x =>

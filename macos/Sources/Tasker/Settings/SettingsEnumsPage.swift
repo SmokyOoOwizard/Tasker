@@ -88,7 +88,6 @@ struct EnumsSettingsPage: View {
 private struct PendingRemoval {
     var gone: [SettingsEnumValue]
     var tasks: Int
-    var columns: Int
 }
 
 private struct EnumEditSheet: View {
@@ -269,10 +268,10 @@ private struct EnumEditSheet: View {
         }
         let kept = Set(cleaned.compactMap(\.serverId))
         let gone = original.values.filter { !kept.contains($0.id) }
-        let used = gone.filter { usage.count($0.id) > 0 || usage.columns[$0.id, default: 0] > 0 }
+        let used = gone.filter { usage.count($0.id) > 0 }
         if !gone.isEmpty, !used.isEmpty || !usage.complete {
             let pending = PendingRemoval(
-                gone: used.isEmpty ? gone : used, tasks: used.reduce(0) { $0 + usage.count($1.id) }, columns: used.reduce(0) { $0 + usage.columns[$1.id, default: 0] })
+                gone: used.isEmpty ? gone : used, tasks: used.reduce(0) { $0 + usage.count($1.id) })
             replacement = cleaned.first(where: { $0.serverId != nil })?.serverId
             removalMode = .clear
             removal = pending
@@ -306,7 +305,7 @@ private struct EnumEditSheet: View {
                     values.map { EnumValueDraft(key: $0.key, serverId: $0.serverId, name: $0.name.trimmingCharacters(in: .whitespaces)) }, choice)
             }
         ) {
-            Text(l.string(.settingsRemovalBody, pending.gone.map { "«\($0.name)»" }.joined(separator: ", "), pending.tasks, String(pending.columns)))
+            Text(l.string(.settingsRemovalBody, pending.gone.map { "«\($0.name)»" }.joined(separator: ", "), pending.tasks))
                 .fixedSize(horizontal: false, vertical: true)
             Picker(selection: $removalMode) {
                 Text(l.string(.settingsRemovalClear)).tag(RemovalMode.clear)

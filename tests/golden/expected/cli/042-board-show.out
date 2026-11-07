@@ -1,7 +1,7 @@
-Todo [Priority=High and Tags:set] (0)
+Todo [.Field.Priority == "High" && .Field.Tags.IsSet() | sort -.Updated] (0)
   (no tasks)
 
-Doing [Estimate>=3] (1)
+Doing [.Field.Estimate >= 3] (1)
   BUG-1  In Progress  Bug     Bug with all fields (renamed)
 
 Done (2)

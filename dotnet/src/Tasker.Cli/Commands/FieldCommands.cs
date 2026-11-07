@@ -280,9 +280,7 @@ internal static class FieldCommands
                     if (removing && choice != null)
                     {
                         var names = string.Join(", ", current.Values.Where(x => updated.Values.All(y => y.Id != x.Id)).Select(x => $"'{x.Name}'"));
-                        // Условия колонок досок на убираемое значение тоже переписаны (убраны или заменены): их число — после задач, если они были.
-                        var tasks = Kit.Tasks(result.AffectedTasks) +
-                            (result.AffectedColumns > 0 ? $" and {result.AffectedColumns} board column condition(s)" : "");
+                        var tasks = Kit.Tasks(result.AffectedTasks);
                         text += "\n" + (choice.ReassignTo is { } to
                             ? $"Reassigned {names} → '{updated.Values.First(x => x.Id == to).Name}' in {tasks}"
                             : $"Removed {names} from {tasks}");
