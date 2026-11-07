@@ -700,3 +700,100 @@ public struct SidebarBoardsQuery: GraphQLQuery {
         }
     }
 }
+
+public struct BoardTaskAncestorsQuery: GraphQLQuery {
+    public static let operationName = "BoardTaskAncestors"
+    public static let document = """
+    query BoardTaskAncestors($projectId: UUID!, $ids: [UUID!]!) {
+      project(id: $projectId) {
+        __typename
+        id
+        taskAncestors(ids: $ids) {
+          __typename
+          id
+          title
+          parentIds
+          seriesNumbers {
+            __typename
+            seriesId
+            number
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("taskAncestors", arguments: ["ids": .variable("ids")], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("id"),
+                GraphQLField("title"),
+                GraphQLField("parentIds"),
+                GraphQLField("seriesNumbers", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("seriesId"),
+                    GraphQLField("number")
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var ids: [UUID]
+
+    public init(projectId: UUID, ids: [UUID]) {
+        self.projectId = projectId
+        self.ids = ids
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        result["ids"] = ids.graphQLValue
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var taskAncestors: [TaskAncestors]
+
+            public init(id: UUID, taskAncestors: [TaskAncestors]) {
+                self.id = id
+                self.taskAncestors = taskAncestors
+            }
+
+            public struct TaskAncestors: Hashable, Sendable, Decodable {
+                public var id: UUID
+                public var title: String
+                public var parentIds: [UUID]
+                public var seriesNumbers: [SeriesNumbers]
+
+                public init(id: UUID, title: String, parentIds: [UUID], seriesNumbers: [SeriesNumbers]) {
+                    self.id = id
+                    self.title = title
+                    self.parentIds = parentIds
+                    self.seriesNumbers = seriesNumbers
+                }
+
+                public struct SeriesNumbers: Hashable, Sendable, Decodable {
+                    public var seriesId: UUID
+                    public var number: Int
+
+                    public init(seriesId: UUID, number: Int) {
+                        self.seriesId = seriesId
+                        self.number = number
+                    }
+                }
+            }
+        }
+    }
+}

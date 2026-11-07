@@ -108,6 +108,11 @@ internal sealed class ProjectType : ObjectType<Project>
             .Type<NonNullType<ListType<NonNullType<TaskItemType>>>>()
             .Resolve(async x => await x.Service<TaskService>().Resolve(x.Parent<Project>().Id, x.ArgumentValue<string>("ref"), x.RequestAborted));
 
+        descriptor.Read("taskAncestors")
+            .Argument("ids", x => x.Type<NonNullType<ListType<NonNullType<UuidType>>>>())
+            .Type<NonNullType<ListType<NonNullType<TaskRefType>>>>()
+            .Resolve(async x => await x.Service<TaskService>().Ancestors(x.Parent<Project>().Id, x.ArgumentValue<Guid[]>("ids"), x.RequestAborted));
+
         descriptor.Read("task").Id()
             .Type<TaskDetailsType>()
             .Resolve(async x => await x.Service<TaskService>().Describe(x.Parent<Project>().Id, x.Id(), x.RequestAborted));

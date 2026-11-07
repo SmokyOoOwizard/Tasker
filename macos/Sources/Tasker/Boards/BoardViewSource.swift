@@ -20,6 +20,13 @@ struct BoardRowPage: Hashable, Sendable {
     var total: Int
 }
 
+struct BoardParentRef: Hashable, Sendable {
+    var id: UUID
+    var title: String
+    var seriesNumbers: [TaskSeriesRef]
+    var parentIds: [UUID]
+}
+
 struct BoardMoved: Hashable, Sendable {
     var statusId: UUID
     var version: String
@@ -30,7 +37,12 @@ protocol BoardViewSource: Sendable {
     func board(project: UUID, id: UUID) async throws -> BoardInfo?
     func columnPage(project: UUID, board: UUID, column: UUID, field: [String], offset: Int, limit: Int) async throws -> BoardRowPage
     func taskPage(project: UUID, typeIds: [UUID], offset: Int, limit: Int) async throws -> BoardRowPage
+    func ancestors(project: UUID, ids: [UUID]) async throws -> [BoardParentRef]
     func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> BoardMoved
+}
+
+extension BoardViewSource {
+    func ancestors(project: UUID, ids: [UUID]) async throws -> [BoardParentRef] { [] }
 }
 
 struct GraphQLBoardViewSource: BoardViewSource {
@@ -64,6 +76,24 @@ struct GraphQLBoardViewSource: BoardViewSource {
         return BoardRowPage(rows: page.data.map(TaskRow.init), total: page.totalCount)
     }
 
+    func ancestors(project: UUID, ids: [UUID]) async throws -> [BoardParentRef] {
+        var result: [BoardParentRef] = []
+        var start = 0
+        while start < ids.count {
+            let chunk = Array(ids[start..<min(ids.count, start + 1000)])
+            start += chunk.count
+            let query = BoardTaskAncestorsQuery(projectId: project, ids: chunk)
+            guard let found = try await client.graphQL.fetch(query).project?.taskAncestors else { continue }
+            result += found.map { item in
+                BoardParentRef(
+                    id: item.id, title: item.title,
+                    seriesNumbers: item.seriesNumbers.map { TaskSeriesRef(seriesId: $0.seriesId, number: $0.number) },
+                    parentIds: item.parentIds)
+            }
+        }
+        return result
+    }
+
     func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> BoardMoved {
         let item = try await client.rest.perform {
             try await $0.moveTaskToBoardColumn(
@@ -72,5 +102,38 @@ struct GraphQLBoardViewSource: BoardViewSource {
             ).ok.body.json
         }
         return BoardMoved(statusId: UUID(uuidString: item.statusId) ?? UUID(), version: item.version)
+    }
+}
+
+struct BoardParentChain: Hashable, Sendable {
+    var items: [BoardParentRef]
+
+    var nearest: BoardParentRef { items[items.count - 1] }
+}
+
+struct BoardParentChains: Hashable, Sendable {
+    static let maxShown = 2
+    static let maxDepth = 10
+
+    var chains: [BoardParentChain]
+    var more: Int
+
+    static let none = BoardParentChains(chains: [], more: 0)
+
+    static func build(parentIds: [UUID], refs: [UUID: BoardParentRef]) -> BoardParentChains {
+        var all: [BoardParentChain] = []
+        for id in parentIds {
+            guard let first = refs[id] else { continue }
+            var items = [first]
+            var visited: Set<UUID> = [first.id]
+            var current = first
+            while items.count < maxDepth, let next = current.parentIds.compactMap({ refs[$0] }).first(where: { !visited.contains($0.id) }) {
+                items.append(next)
+                visited.insert(next.id)
+                current = next
+            }
+            all.append(BoardParentChain(items: items.reversed()))
+        }
+        return BoardParentChains(chains: Array(all.prefix(maxShown)), more: max(0, all.count - maxShown))
     }
 }

@@ -184,13 +184,21 @@ struct TaskListVocabulary: Hashable, Sendable {
     }
 
     func reference(_ row: TaskRow, preferring series: UUID? = nil) -> String {
-        if let series, let number = row.seriesNumbers.first(where: { $0.seriesId == series }), let prefix = prefixes[series] {
+        reference(id: row.id, seriesNumbers: row.seriesNumbers, preferring: series)
+    }
+
+    func reference(id: UUID, seriesNumbers: [TaskSeriesRef], preferring series: UUID? = nil) -> String {
+        if let series, let number = seriesNumbers.first(where: { $0.seriesId == series }), let prefix = prefixes[series] {
             return "\(prefix)-\(number.number)"
         }
-        for number in row.seriesNumbers {
+        for number in seriesNumbers {
             if let prefix = prefixes[number.seriesId] { return "\(prefix)-\(number.number)" }
         }
-        return "#" + row.id.uuidString.lowercased().prefix(8)
+        return "#" + id.uuidString.lowercased().prefix(8)
+    }
+
+    func prefixedReference(id: UUID, seriesNumbers: [TaskSeriesRef]) -> String? {
+        seriesNumbers.contains { prefixes[$0.seriesId] != nil } ? reference(id: id, seriesNumbers: seriesNumbers) : nil
     }
 
     var defaultChipFields: [UUID] {
