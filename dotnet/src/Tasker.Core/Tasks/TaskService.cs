@@ -457,6 +457,22 @@ public partial class TaskService(
         };
     }
 
+    public const int MaxAncestorRequest = 1000;
+    public const int MaxAncestors = 2000;
+
+    public async Task<TaskRef[]> Ancestors(Guid projectId, IReadOnlyCollection<Guid> ids, CancellationToken ct = default)
+    {
+        if (ids.Count > MaxAncestorRequest)
+            throw TaskerErrors.Invalid($"ids: at most {MaxAncestorRequest}");
+        var hierarchy = await LoadHierarchy(projectId, ct);
+        var found = hierarchy.AncestorsOf(ids, MaxAncestors);
+        var result = new List<TaskRef>(found.Count);
+        foreach (var chunk in found.Chunk(500))
+            foreach (var task in await tasks.GetAll(projectId, new TaskFilter { Ids = chunk }, ct))
+                result.Add(new TaskRef(task.Id, task.Title, task.SeriesNumbers, hierarchy.ParentsOf(task.Id)));
+        return [.. result];
+    }
+
     /// <summary>Иерархические связи проекта: пусто, если иерархических типов нет или связей по ним ещё нет.</summary>
     private async Task<TaskHierarchy> LoadHierarchy(Guid projectId, CancellationToken ct)
     {

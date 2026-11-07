@@ -254,6 +254,7 @@ type Project {
     levels: Int
   ): TaskTreeList!
   resolveTasks(ref: String!): [TaskItem!]!
+  taskAncestors(ids: [UUID!]!): [TaskRef!]!
   task(id: UUID!): TaskDetails
   taskLinks(id: UUID!): [TaskLinkView!]
   seriesList(offset: Int, limit: Int): SeriesPage!
@@ -454,6 +455,13 @@ type TaskListItemPage {
   offset: Int!
   limit: Int!
   data: [TaskListItem!]!
+}
+
+type TaskRef {
+  id: UUID!
+  title: String!
+  seriesNumbers: [TaskSeriesNumber!]!
+  parentIds: [UUID!]!
 }
 
 type TaskSeriesNumber {
