@@ -1969,6 +1969,41 @@
         }
       },
       {
+        "name": "search_tasks",
+        "description": "Finds tasks by free text, best matches first: first the number in a series (\"133\", \"TSK-133\", the start of a number), then the title, then the description. Ignores case and word order, finds parts of words, tolerates typos and a wrong keyboard layout (Russian/English). Several tasks with the same number are all returned. Every hit says where it matched (`field`), how (`match`), its `score` from 0 to 1 and, for a match in the description, a `snippet` of the text around it. `limit` is at most 200. Each task in the list carries a preview of its description: `descriptionLength` (default 200) is how many characters of it to return - 0 none, N the first N characters (Unicode characters, never cut in the middle of an emoji or accented letter, no ellipsis added), -1 the full text. `descriptionTruncated` tells that the text was cut, `descriptionLength` of a task is the length of its full description, `linksCount` the number of its links (outgoing and incoming), `parentIds` the ids of its parents (tasks that include it by a hierarchical link type such as Parent/Child) and `childCount` the number of its child tasks (> 0: an epic). The list is always flat, the hierarchy is in these two fields. Get the full text with get_task or by repeating the call with descriptionLength -1.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "format": "uuid",
+              "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+            },
+            "query": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 30
+            },
+            "descriptionLength": {
+              "type": "integer",
+              "default": 200
+            },
+            "workspace": {
+              "type": "string",
+              "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": true
+        }
+      },
+      {
         "name": "get_series",
         "description": "Gets a series by id or by prefix, including its current `version` needed to update or delete it. `series` is a series id (Guid) or its exact prefix (case matters: TSK and tsk are different series).",
         "inputSchema": {

@@ -33,6 +33,9 @@ internal class TaskStorage(TaskerDirectory directory, WorkspaceIndex index) : IT
     public Task<Guid[]> GetIds(Guid projectId, TaskFilter? filter, CancellationToken ct = default) =>
         index.Ids(Query(projectId, filter), ct);
 
+    public Task<Core.Tasks.Search.TaskSearchStamp[]> GetSearchStamps(Guid projectId, CancellationToken ct = default) =>
+        index.SearchStamps(projectId, ct);
+
     public Task<int> Count(Guid projectId, TaskFilter filter, CancellationToken ct = default) =>
         index.Count(Query(projectId, filter), ct);
 

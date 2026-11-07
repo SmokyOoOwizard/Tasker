@@ -1,6 +1,8 @@
 using Autofac;
 using Autofac.Builder;
 using Tasker.Core;
+using Tasker.Core.Tasks.Search;
+using Tasker.Search.Lucene;
 using Serilog;
 using Tasker.Storage.Db;
 using Tasker.Storage.Db.Configs.Tasker;
@@ -49,6 +51,8 @@ internal static class StorageRegistration
     // Остальной код видит только интерфейсы хранилищ — какая реализация за ними, решается здесь.
     public static void RegisterStorage(this ContainerBuilder builder, FilesConfigs files, DbConfigs db)
     {
+        builder.Register(_ => new LuceneTaskSearchIndex(null)).As<ITaskSearchIndex>().SingleInstance();
+
         if (Resolve(files, db) == StorageKind.Files)
         {
             Log.Information("Storage: files in {Path}", Path.GetFullPath(files.Path!));

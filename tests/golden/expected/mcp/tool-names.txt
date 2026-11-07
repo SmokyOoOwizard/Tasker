@@ -49,6 +49,7 @@ lock_entity
 move_task
 remove_task_from_series
 renumber_task
+search_tasks
 series_health
 unlink_tasks
 unlock_entity

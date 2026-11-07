@@ -6,6 +6,11 @@ enum PaletteIcon {
     case status(StatusGlyph, color: String)
 }
 
+struct PaletteSnippet: Equatable {
+    var text: String
+    var ranges: [Range<Int>]
+}
+
 struct PaletteEntry: Identifiable {
     let id: String
     var title: String
@@ -13,6 +18,7 @@ struct PaletteEntry: Identifiable {
     var detail: String?
     var icon: PaletteIcon
     var keywords = ""
+    var snippet: PaletteSnippet?
     var shortcut: String?
     var isEnabled = true
     var run: @MainActor () -> Void

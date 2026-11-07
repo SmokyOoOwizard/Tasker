@@ -7647,6 +7647,82 @@
         ]
       }
     },
+    "/daemon/search": {
+      "post": {
+        "tags": [
+          "daemon"
+        ],
+        "operationId": "searchDaemonWorkspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/SearchRequest"
+                  }
+                ],
+                "nullable": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "daemonControl": []
+          }
+        ],
+        "x-tasker-modes": [
+          "daemon"
+        ]
+      },
+      "servers": [
+        {
+          "url": "http://127.0.0.1:{port}",
+          "description": "Tasker daemon (control interface, no workspace prefix)",
+          "variables": {
+            "port": {
+              "default": "5719"
+            }
+          }
+        }
+      ]
+    },
     "/daemon/status": {
       "get": {
         "tags": [
@@ -9699,6 +9775,45 @@
           }
         }
       },
+      "SearchRequest": {
+        "required": [
+          "path",
+          "projectId",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "SearchResult": {
+        "required": [
+          "hits"
+        ],
+        "type": "object",
+        "properties": {
+          "hits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskSearchHit"
+            }
+          }
+        }
+      },
       "Series": {
         "required": [
           "id",
@@ -10322,6 +10437,94 @@
           },
           "task": {
             "$ref": "#/components/schemas/LinkedTask"
+          }
+        }
+      },
+      "TaskSearchField": {
+        "type": "string",
+        "enum": [
+          "number",
+          "title",
+          "description"
+        ]
+      },
+      "TaskSearchHit": {
+        "required": [
+          "task",
+          "field",
+          "match",
+          "switchedLayout",
+          "score"
+        ],
+        "type": "object",
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskItem"
+          },
+          "field": {
+            "$ref": "#/components/schemas/TaskSearchField"
+          },
+          "match": {
+            "$ref": "#/components/schemas/TaskSearchMatch"
+          },
+          "switchedLayout": {
+            "type": "boolean"
+          },
+          "score": {
+            "type": "number",
+            "format": "double"
+          },
+          "snippet": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskSearchSnippet"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "TaskSearchMatch": {
+        "type": "string",
+        "enum": [
+          "exact",
+          "prefix",
+          "substring",
+          "typo"
+        ]
+      },
+      "TaskSearchRange": {
+        "required": [
+          "start",
+          "length"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "length": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "TaskSearchSnippet": {
+        "required": [
+          "text",
+          "ranges"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "ranges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskSearchRange"
+            }
           }
         }
       },

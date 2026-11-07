@@ -17,6 +17,7 @@ Options:
 Commands:
   create <title>                     Creates a task
   list                               Lists tasks
+  search <query>                     Finds tasks by number, title and description, best matches first (needs the running daemon: 'tasker mcp start')
   get <task>                         Shows a task (a reference used by several tasks after a merge shows all of them)
   update <task>                      Changes a task
   delete <task>                      Deletes a task

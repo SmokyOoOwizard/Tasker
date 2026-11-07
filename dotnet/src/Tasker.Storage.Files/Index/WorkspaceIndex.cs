@@ -154,6 +154,20 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
         }, ct);
     }
 
+    public async Task<Tasker.Core.Tasks.Search.TaskSearchStamp[]> SearchStamps(Guid projectId, CancellationToken ct = default)
+    {
+        await EnsureReady();
+        return await Cache(async connection =>
+        {
+            await using var command = Select(connection, new IndexQuery(IndexKind.Task) { ProjectId = projectId }, "id, size, mtime");
+            var result = new List<Tasker.Core.Tasks.Search.TaskSearchStamp>();
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                result.Add(new Tasker.Core.Tasks.Search.TaskSearchStamp(Guid.Parse(reader.GetString(0)), $"{reader.GetInt64(1)}:{reader.GetInt64(2)}"));
+            return result.ToArray();
+        }, ct);
+    }
+
     public async Task<int> Count(IndexQuery query, CancellationToken ct = default)
     {
         await EnsureReady();

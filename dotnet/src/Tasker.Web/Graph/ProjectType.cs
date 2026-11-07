@@ -7,6 +7,7 @@ using Tasker.Core.Locks;
 using Tasker.Core.Projects;
 using Tasker.Core.Statuses;
 using Tasker.Core.Tasks;
+using Tasker.Core.Tasks.Search;
 using Tasker.Core.TaskSeries;
 using Tasker.Core.Users;
 using Tasker.Web.Graph.Types;
@@ -88,6 +89,20 @@ internal sealed class ProjectType : ObjectType<Project>
             .Resolve(async x => await x.Service<TaskService>().ListTree(
                 x.Parent<Project>().Id, x.TaskFilter(), x.FieldFilters(), x.Page(), x.DescriptionLength(), x.RequestAborted, x.Sort(),
                 x.ArgumentValue<Guid?>("parentId"), x.ArgumentValue<int?>("levels") ?? TaskHierarchy.MaxDepth));
+
+        descriptor.Read("taskSearch")
+            .Argument("query", x => x.Type<NonNullType<StringType>>())
+            .Argument("limit", x => x.Type<IntType>())
+            .Argument("statusIds", x => x.Type<ListType<NonNullType<UuidType>>>())
+            .Argument("typeIds", x => x.Type<ListType<NonNullType<UuidType>>>())
+            .Argument("seriesIds", x => x.Type<ListType<NonNullType<UuidType>>>())
+            .Type<NonNullType<ListType<NonNullType<TaskSearchHitType>>>>()
+            .Resolve(async x => await x.Service<TaskSearchService>().Search(
+                x.Parent<Project>().Id,
+                x.ArgumentValue<string>("query"),
+                x.ArgumentValue<int?>("limit"),
+                Tasker.Core.Tasks.TaskFilter.Of(x.ArgumentValue<Guid[]?>("typeIds"), x.ArgumentValue<Guid[]?>("statusIds"), x.ArgumentValue<Guid[]?>("seriesIds")),
+                x.RequestAborted));
 
         descriptor.Read("resolveTasks")
             .Argument("ref", x => x.Type<NonNullType<StringType>>())

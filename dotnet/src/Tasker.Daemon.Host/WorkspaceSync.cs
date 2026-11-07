@@ -81,6 +81,25 @@ internal sealed class WorkspaceSync(WorkspaceRegistry registry, DaemonRuntimeSta
         return new SyncResult(location.Path, problems?.TotalCount ?? 0, problems?.Data ?? []) { Series = series };
     }
 
+    public async Task<SearchResult?> Search(WorkspaceLocation location, SearchRequest request, CancellationToken ct)
+    {
+        WorkspaceLease lease;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            if (_disposed || !_open.TryGetValue(location.Id, out var open))
+                return null;
+            lease = open.Lease;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        var hits = await lease.Resolve<Tasker.Core.Tasks.Search.TaskSearchService>().Search(request.ProjectId, request.Text, request.Limit, null, ct);
+        return new SearchResult(hits);
+    }
+
     /// <summary>Сводка по сериям через контейнер уже открытой области (хранилища и индекс — те же, второй раз не грузятся).</summary>
     internal static async Task<ProjectSeriesHealth[]> ComputeSeries(WorkspaceLease lease, CancellationToken ct)
     {

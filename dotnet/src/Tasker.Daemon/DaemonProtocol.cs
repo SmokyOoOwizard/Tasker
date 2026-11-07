@@ -15,5 +15,9 @@ public sealed record SyncResult(string Path, int ProblemCount, Tasker.Core.Works
 /// <summary>Просьба сверить область: <c>POST /daemon/sync</c>.</summary>
 public sealed record SyncRequest(string Path);
 
+public sealed record SearchRequest(string Path, Guid ProjectId, string Text, int? Limit);
+
+public sealed record SearchResult(Tasker.Core.Tasks.Search.TaskSearchHit[] Hits);
+
 /// <summary>Что о себе сообщает программа демона по <c>--build-info</c>.</summary>
 public sealed record DaemonBuildInfo(string Version, string Build);

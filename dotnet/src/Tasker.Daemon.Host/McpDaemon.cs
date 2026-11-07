@@ -190,6 +190,20 @@ public static class McpDaemon
         })
             .RespondsControl<SyncResult>("syncDaemonWorkspace", StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
 
+        routes.MapPost("/daemon/search", async (HttpContext context, SearchRequest? request, CancellationToken ct) =>
+        {
+            if (!Authorized(context))
+                return Results.Unauthorized();
+            if (request is not { Path.Length: > 0, Text: not null })
+                return Results.BadRequest(new ControlError("Body {\"path\", \"projectId\", \"text\"} is required"));
+
+            var location = Tasker.Storage.Files.Workspaces.WorkspaceLocation.Files(request.Path);
+            return await sync.Search(location, request, ct) is { } result
+                ? Results.Ok(result)
+                : Results.NotFound(new ControlError($"The daemon does not serve {location.Path}"));
+        })
+            .RespondsControl<SearchResult>("searchDaemonWorkspace", StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound);
+
         routes.MapPost("/daemon/stop", (HttpContext context, IHostApplicationLifetime lifetime) =>
         {
             if (!Authorized(context))

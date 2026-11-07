@@ -53,6 +53,16 @@ internal class TaskStorage(AppDbContext context) : ITaskStorage
     public async Task<Guid[]> GetIds(Guid projectId, TaskFilter? filter, CancellationToken ct = default) =>
         await TaskSorting.Apply(context, Filter(projectId, filter), filter?.Sort).Select(x => x.Id).ToArrayAsync(ct);
 
+    public async Task<Core.Tasks.Search.TaskSearchStamp[]> GetSearchStamps(Guid projectId, CancellationToken ct = default)
+    {
+        var rows = await context.Tasks
+            .AsNoTracking()
+            .Where(x => x.ProjectId == projectId)
+            .Select(x => new { x.Id, x.Version })
+            .ToArrayAsync(ct);
+        return rows.Select(x => new Core.Tasks.Search.TaskSearchStamp(x.Id, DbVersion.ToText(x.Version))).ToArray();
+    }
+
     public Task<int> Count(Guid projectId, TaskFilter filter, CancellationToken ct = default) =>
         Filter(projectId, filter).CountAsync(ct);
 

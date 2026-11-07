@@ -81,6 +81,24 @@ public static class DaemonClient
         }
     }
 
+    public static async Task<SearchResult?> Search(SearchRequest request, CancellationToken ct = default)
+    {
+        if (!DaemonFiles.IsRunning() || DaemonFiles.ReadInfo() is not { } info)
+            return null;
+
+        try
+        {
+            using var http = Create(info);
+            http.Timeout = TimeSpan.FromMinutes(1);
+            using var response = await http.PostAsJsonAsync("/daemon/search", request, TaskerJson.Options, ct);
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<SearchResult>(TaskerJson.Options, ct) : null;
+        }
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException or JsonException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Просит демон остановиться. false — демон не работает или не принял запрос.</summary>
     public static async Task<bool> RequestStop(CancellationToken ct = default)
     {

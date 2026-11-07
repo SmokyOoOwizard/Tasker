@@ -19,6 +19,8 @@
     tasker task list --json --description-length 100
     tasker task list --sort status,-updated
     tasker task list --flat
+    tasker task search 133
+    tasker task search "палитра поиск"
     tasker task list --status Todo --sort "-Estimate,title"
     tasker task get TSK-1
     tasker task get 3f9a1c2e

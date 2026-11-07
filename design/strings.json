@@ -420,8 +420,6 @@
     "palette.commands": {"ru": "Команды", "en": "Commands"},
     "palette.commandsAndTasks": {"ru": "Команды и задачи", "en": "Commands and tasks"},
     "palette.tasks": {"ru": "Задачи", "en": "Tasks"},
-    "palette.byReference": {"ru": "По ссылке", "en": "By reference"},
-    "palette.refConflict": {"ru": "Номер {0} занят несколькими задачами", "en": "Number {0} is taken by several tasks"},
     "palette.conflictBadge": {"ru": "конфликт номера", "en": "number conflict"},
     "palette.more": {"ru": "Ещё", "en": "More"},
     "palette.searching": {"ru": "Поиск…", "en": "Searching…"},

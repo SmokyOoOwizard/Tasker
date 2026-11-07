@@ -248,6 +248,9 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /api/users/{id}/password`.
     /// - Remark: Generated from `#/paths//api/users/{id}/password/post(changeUserPassword)`.
     func changeUserPassword(_ input: Operations.ChangeUserPassword.Input) async throws -> Operations.ChangeUserPassword.Output
+    /// - Remark: HTTP `POST /daemon/search`.
+    /// - Remark: Generated from `#/paths//daemon/search/post(searchDaemonWorkspace)`.
+    func searchDaemonWorkspace(_ input: Operations.SearchDaemonWorkspace.Input) async throws -> Operations.SearchDaemonWorkspace.Output
     /// - Remark: HTTP `GET /daemon/status`.
     /// - Remark: Generated from `#/paths//daemon/status/get(getDaemonStatus)`.
     func getDaemonStatus(_ input: Operations.GetDaemonStatus.Input) async throws -> Operations.GetDaemonStatus.Output
@@ -1196,6 +1199,17 @@ extension APIProtocol {
     ) async throws -> Operations.ChangeUserPassword.Output {
         try await changeUserPassword(Operations.ChangeUserPassword.Input(
             path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `POST /daemon/search`.
+    /// - Remark: Generated from `#/paths//daemon/search/post(searchDaemonWorkspace)`.
+    public func searchDaemonWorkspace(
+        headers: Operations.SearchDaemonWorkspace.Input.Headers = .init(),
+        body: Operations.SearchDaemonWorkspace.Input.Body? = nil
+    ) async throws -> Operations.SearchDaemonWorkspace.Output {
+        try await searchDaemonWorkspace(Operations.SearchDaemonWorkspace.Input(
             headers: headers,
             body: body
         ))

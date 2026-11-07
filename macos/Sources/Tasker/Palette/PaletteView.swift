@@ -5,6 +5,7 @@ enum PaletteMetrics {
     static let inputHeight: CGFloat = 48
     static let hintHeight: CGFloat = 28
     static let rowHeight: CGFloat = 34
+    static let snippetRowHeight: CGFloat = 52
     static let sectionHeight: CGFloat = 26
     static let listPadding: CGFloat = 6
     static let maxListHeight: CGFloat = 360
@@ -12,7 +13,7 @@ enum PaletteMetrics {
 
     static func listHeight(_ sections: [PaletteSection]) -> CGFloat {
         let content = sections.reduce(CGFloat(0)) { total, section in
-            total + (section.title == nil ? 0 : sectionHeight) + CGFloat(section.entries.count) * rowHeight
+            total + (section.title == nil ? 0 : sectionHeight) + section.entries.reduce(CGFloat(0)) { $0 + ($1.snippet == nil ? rowHeight : snippetRowHeight) }
         }
         guard content > 0 else { return emptyHeight }
         return min(content + listPadding * 2, maxListHeight)
@@ -147,14 +148,25 @@ private struct PaletteRow: View {
             icon
                 .frame(width: DesignLayout.iconColumn)
                 .foregroundStyle(DesignColor.mut.color)
-            if let reference = entry.reference {
-                Text(reference)
-                    .font(.design(DesignTypography.monoSize, mono: true))
-                    .foregroundStyle(DesignColor.dim.color)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: DesignSpacing.gap10) {
+                    if let reference = entry.reference {
+                        Text(reference)
+                            .font(.design(DesignTypography.monoSize, mono: true))
+                            .foregroundStyle(DesignColor.dim.color)
+                    }
+                    Text(entry.title)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                if let snippet = entry.snippet {
+                    Text(highlighted(snippet))
+                        .font(.design(DesignTypography.captionSize))
+                        .foregroundStyle(DesignColor.dim.color)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
             }
-            Text(entry.title)
-                .lineLimit(1)
-                .truncationMode(.tail)
             Spacer(minLength: DesignSpacing.gap8)
             if let detail = entry.detail {
                 Text(detail)
@@ -172,7 +184,7 @@ private struct PaletteRow: View {
             }
         }
         .padding(.horizontal, DesignSpacing.pagePadX)
-        .frame(height: PaletteMetrics.rowHeight)
+        .frame(height: entry.snippet == nil ? PaletteMetrics.rowHeight : PaletteMetrics.snippetRowHeight)
         .background(
             RoundedRectangle(cornerRadius: DesignRadius.control)
                 .fill(selected ? DesignColor.sel.color : .clear)
@@ -182,6 +194,19 @@ private struct PaletteRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func highlighted(_ snippet: PaletteSnippet) -> AttributedString {
+        var result = AttributedString(snippet.text)
+        let utf16 = snippet.text.utf16
+        for range in snippet.ranges {
+            guard let lower = utf16.index(utf16.startIndex, offsetBy: range.lowerBound, limitedBy: utf16.endIndex),
+                  let upper = utf16.index(utf16.startIndex, offsetBy: range.upperBound, limitedBy: utf16.endIndex),
+                  let start = AttributedString.Index(lower, within: result),
+                  let end = AttributedString.Index(upper, within: result) else { continue }
+            result[start..<end].foregroundColor = DesignColor.acc.color
+        }
+        return result
     }
 
     @ViewBuilder

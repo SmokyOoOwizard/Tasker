@@ -7,6 +7,7 @@
     <Project Path="src/Tasker.Daemon.Host/Tasker.Daemon.Host.csproj" />
     <Project Path="src/Tasker.Global/Tasker.Global.csproj" />
     <Project Path="src/Tasker.Mcp/Tasker.Mcp.csproj" />
+    <Project Path="src/Tasker.Search.Lucene/Tasker.Search.Lucene.csproj" />
     <Project Path="src/Tasker.Server/Tasker.Server.csproj" />
     <Project Path="src/Tasker.Storage.Db/Tasker.Storage.Db.csproj" />
     <Project Path="src/Tasker.Storage.Files/Tasker.Storage.Files.csproj" />

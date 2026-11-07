@@ -1,10 +1,16 @@
 import Foundation
 import Observation
 
+struct PaletteTaskHit: Equatable {
+    var brief: TaskLinkedBrief
+    var score: Double
+    var isExactNumber: Bool
+    var snippet: PaletteSnippet?
+}
+
 struct PaletteTaskResult: Equatable {
     var query: String
-    var reference: [TaskLinkedBrief]
-    var matches: [TaskLinkedBrief]
+    var hits: [PaletteTaskHit]
 }
 
 @MainActor
@@ -116,23 +122,19 @@ final class PaletteModel {
         rebuild()
         let text = trimmed
         let token = generation
-        let reference = referenceText(text)
         searching = true
         searchTask = Task { [weak self] in
-            async let found: [TaskLinkedBrief]? = try? await source.search(project: project, text: text, limit: Self.taskLimit)
-            async let exact: [TaskLinkedBrief]? = reference == nil ? [] : (try? await source.resolve(project: project, ref: reference ?? ""))
-            let matches = await found
-            let byReference = await exact ?? []
+            let hits = try? await source.search(project: project, text: text, limit: Self.taskLimit)
             guard !Task.isCancelled else { return }
-            self?.finish(token: token, text: text, matches: matches, reference: byReference)
+            self?.finish(token: token, text: text, hits: hits)
         }
     }
 
-    private func finish(token: Int, text: String, matches: [TaskLinkedBrief]?, reference: [TaskLinkedBrief]) {
+    private func finish(token: Int, text: String, hits: [PaletteTaskHit]?) {
         guard token == generation else { return }
         searching = false
-        failed = matches == nil && reference.isEmpty
-        tasks = PaletteTaskResult(query: text, reference: reference, matches: matches ?? [])
+        failed = hits == nil
+        tasks = PaletteTaskResult(query: text, hits: hits ?? [])
         let anchor = entries.indices.contains(selected) ? entries[selected].id : nil
         rebuild()
         if let anchor, let index = entries.firstIndex(where: { $0.id == anchor }) {
@@ -142,22 +144,15 @@ final class PaletteModel {
         }
     }
 
-    private func referenceText(_ text: String) -> String? {
-        guard PaletteMatcher.looksLikeReference(text), let dash = text.lastIndex(of: "-") else { return nil }
-        let prefix = String(text[..<dash])
-        let number = text[text.index(after: dash)...]
-        let known = vocabulary.prefixes.values.first { $0.caseInsensitiveCompare(prefix) == .orderedSame } ?? prefix
-        return "\(known)-\(number)"
-    }
-
-    private func taskEntry(_ brief: TaskLinkedBrief, detail: String? = nil) -> PaletteEntry {
+    private func taskEntry(_ hit: PaletteTaskHit, detail: String? = nil) -> PaletteEntry {
+        let brief = hit.brief
         let reference = reference(brief)
         let glyph = brief.typeId.map { vocabulary.glyph(status: brief.statusId, type: $0) } ?? vocabulary.glyph(status: brief.statusId)
         let color = vocabulary.status(brief.statusId)?.color ?? DesignTag.palette[0]
         let status = vocabulary.status(brief.statusId)?.name
         return PaletteEntry(
             id: "task:" + brief.id.uuidString, title: brief.title, reference: reference, detail: detail ?? status,
-            icon: .status(glyph, color: color), keywords: "",
+            icon: .status(glyph, color: color), keywords: "", snippet: hit.snippet,
             run: { [openTask] in openTask(brief.id) })
     }
 
@@ -168,6 +163,16 @@ final class PaletteModel {
         return "#" + brief.id.uuidString.lowercased().prefix(8)
     }
 
+    private func conflictingNumbers(_ hits: [PaletteTaskHit]) -> Set<UUID> {
+        var owners: [String: [UUID]] = [:]
+        for hit in hits where hit.isExactNumber {
+            for number in hit.brief.seriesNumbers {
+                owners["\(number.seriesId)-\(number.number)", default: []].append(hit.brief.id)
+            }
+        }
+        return Set(owners.values.filter { $0.count > 1 }.flatMap { $0 })
+    }
+
     private func rebuild() {
         let l = localizer
         var result: [PaletteSection] = []
@@ -176,20 +181,19 @@ final class PaletteModel {
             result.append(PaletteSection(id: "commands", title: l.string(.paletteCommands), entries: commands))
         } else {
             for provider in queryProviders { result += provider.sections(for: text) }
-            let current = tasks
-            let exact = current?.reference ?? []
-            let conflict = exact.count > 1
-            if !exact.isEmpty {
-                let title = conflict ? l.string(.paletteRefConflict, text.uppercased()) : l.string(.paletteByReference)
-                result.append(PaletteSection(
-                    id: "reference", title: title,
-                    entries: exact.map { taskEntry($0, detail: conflict ? l.string(.paletteConflictBadge) : nil) }))
+            let hits = tasks?.hits ?? []
+            let conflicted = conflictingNumbers(hits)
+            let found = hits.map { hit in
+                (entry: taskEntry(hit, detail: conflicted.contains(hit.brief.id) ? l.string(.paletteConflictBadge) : nil), score: hit.score)
             }
-            let shownIds = Set(exact.map(\.id))
-            let found = (current?.matches ?? []).filter { !shownIds.contains($0.id) }.map { taskEntry($0) }
-            let matched = PaletteMatcher.ranked(commands, query: text)
-            if !matched.isEmpty { result.append(PaletteSection(id: "commands", title: found.isEmpty ? l.string(.paletteCommands) : l.string(.paletteCommandsAndTasks), entries: matched)) }
-            if !found.isEmpty { result.append(PaletteSection(id: "tasks", title: l.string(.paletteTasks), entries: found)) }
+            let matched = PaletteMatcher.scored(commands, query: text)
+            let merged = (found + matched.map { (entry: $0.entry, score: $0.score) }).enumerated()
+                .sorted { $0.element.score == $1.element.score ? $0.offset < $1.offset : $0.element.score > $1.element.score }
+                .map(\.element.entry)
+            if !merged.isEmpty {
+                let title = found.isEmpty ? l.string(.paletteCommands) : matched.isEmpty ? l.string(.paletteTasks) : l.string(.paletteCommandsAndTasks)
+                result.append(PaletteSection(id: "results", title: title, entries: merged))
+            }
         }
         sections = result
         if selected >= entries.count { selected = max(0, entries.count - 1) }

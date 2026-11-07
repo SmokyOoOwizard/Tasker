@@ -5978,23 +5978,6 @@
         }
       }
     },
-    "palette.byReference" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "By reference"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "По ссылке"
-          }
-        }
-      }
-    },
     "palette.commands" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6331,23 +6314,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Проект: %@"
-          }
-        }
-      }
-    },
-    "palette.refConflict" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Number %@ is taken by several tasks"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Номер %@ занят несколькими задачами"
           }
         }
       }
