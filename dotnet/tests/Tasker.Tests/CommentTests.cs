@@ -368,6 +368,13 @@ public sealed class DbCommentTests : CommentContract
 
 public class CommentConsoleTests
 {
+    [Fact]
+    public void The_native_console_has_json_metadata_for_comments()
+    {
+        Assert.NotNull(Tasker.Cli.CliJsonContext.Default.GetTypeInfo(typeof(TaskCommentView)));
+        Assert.NotNull(Tasker.Cli.CliJsonContext.Default.GetTypeInfo(typeof(TaskCommentView[])));
+    }
+
     private static Task<CliResult> Ok(Task<CliResult> run) => SeriesRepo.Ok(run);
 
     private static async Task<(string First, string Reply)> TwoComments(Func<string[], Task<CliResult>> p)
