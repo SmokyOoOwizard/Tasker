@@ -223,6 +223,7 @@ internal static class TaskCommands
         var filterSeries = Kit.Many("--series", "Only tasks in this series (id or exact prefix)" + OrHint);
         var filterFields = Kit.Many("--field", "Only tasks by a field - a catalog field or an own field of tasks with that name (a catalog field: own fields of the same name and type match too; no catalog field: the type of the own fields, an error if they differ) (repeat or list several: all must hold): \"Name=value\" or \"Name!=value\" (any type; != also takes tasks without a value; a multiple field - contains the value; enum value by name), \"Name>=value\" with > >= < <= (int, float, date; quote them in the shell), Name:set, Name:unset (has a value or not), Name:attached, Name:detached (the field is connected to the task or not)");
         var sort = Kit.Sort();
+        var query = Kit.Query();
         var flat = new Option<bool>("--flat")
         {
             Description = "A flat list in the order of the sort, as without hierarchy. By default a task with children (an epic: it has links of a hierarchical type such as Parent/Child) " +
@@ -255,6 +256,7 @@ internal static class TaskCommands
             c.Options.Add(filterSeries);
             c.Options.Add(filterFields);
             c.Options.Add(sort);
+            c.Options.Add(query);
             c.Options.Add(flat);
             c.Options.Add(descriptionLength);
             paging.AddTo(c);
@@ -271,15 +273,16 @@ internal static class TaskCommands
 
             var filter = new TaskFilter { TypeIds = typeIds, StatusIds = statusIds, SeriesIds = seriesIds };
             var fieldFilters = parse.GetValue(filterFields);
+            var queryText = await Kit.CheckedQuery(ctx, projectId, parse.GetValue(query));
             var line = await LineFormat(ctx, projectId);
             // --json остаётся плоским списком (parentIds, childCount в записях): клиенты не должны сломаться.
             if (ctx.IsJson || parse.GetValue(flat))
             {
-                ctx.Print(await paging.Load(parse, page => ctx.Get<TaskService>().List(projectId, filter, fieldFilters, page, parse.GetValue(descriptionLength), ctx.Ct, parse.GetValue(sort))), line);
+                ctx.Print(await paging.Load(parse, page => ctx.Get<TaskService>().List(projectId, filter, fieldFilters, page, parse.GetValue(descriptionLength), ctx.Ct, parse.GetValue(sort), queryText)), line);
                 return;
             }
 
-            ctx.PrintTree(await paging.LoadTree(parse, page => ctx.Get<TaskService>().ListTree(projectId, filter, fieldFilters, page, parse.GetValue(descriptionLength), ctx.Ct, parse.GetValue(sort))), line);
+            ctx.PrintTree(await paging.LoadTree(parse, page => ctx.Get<TaskService>().ListTree(projectId, filter, fieldFilters, page, parse.GetValue(descriptionLength), ctx.Ct, parse.GetValue(sort), query: queryText)), line);
         });
 
         var searchText = new Argument<string>("query") { Description = "What to find: a task number (133, TSK-133), words of the title or the description" };
