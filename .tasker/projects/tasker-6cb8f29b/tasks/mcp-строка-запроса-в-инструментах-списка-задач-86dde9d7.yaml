@@ -2,9 +2,9 @@ formatVersion: 12
 id: 86dde9d7-4726-4d56-bd78-1cb2452b6f03
 title: 'MCP: строка запроса в инструментах списка задач'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-07T06:42:56.7689110+00:00
-updatedAt: 2026-11-07T09:14:41.9321290+00:00
+updatedAt: 2026-11-07T21:48:47.0040330+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 244

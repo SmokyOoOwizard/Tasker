@@ -28,8 +28,8 @@ internal static class BoardCommands
     /// <summary>Задачи колонки страницей; задачи колонки получает сервис доски (статус колонки и набор статусов типа задачи).</summary>
     private static async Task<ListDto<TaskListItem>> ColumnTasks(
         Context ctx, Guid projectId, Board board, BoardColumn column, Page page, string[]? fieldFilters = null, int descriptionLength = DescriptionPreview.Full,
-        string? sort = null) =>
-        await ctx.Get<BoardService>().GetColumnTasks(projectId, board.Id, column.Id, page, ctx.Ct, fieldFilters, descriptionLength, sort)
+        string? sort = null, string? query = null) =>
+        await ctx.Get<BoardService>().GetColumnTasks(projectId, board.Id, column.Id, page, ctx.Ct, fieldFilters, descriptionLength, sort, query)
         ?? throw new CliException($"No column '{column.Name}' on board '{board.Name}'");
 
     public static Command Build(GlobalOptions g)
@@ -39,6 +39,7 @@ internal static class BoardCommands
         var tasksPaging = new Kit.Paging();
         var viewFields = Kit.Many("--field", "Show only tasks by a field (catalog or own field of tasks): \"Name=value\", \"Name>=value\", Name:set and so on (as in 'task list --field'); a view filter, the column does not store it");
         var sort = Kit.Sort();
+        var query = Kit.Query();
         var showLimit = new Option<int>("--limit") { Description = $"How many tasks to show in each column, 1-{Page.MaxLimit}", DefaultValueFactory = _ => Page.DefaultLimit };
         var showAll = new Option<bool>("--all") { Description = "Show all tasks of every column (cannot be combined with --limit)" };
         var sets = Kit.Many("--status-set", "Status sets whose tasks are on the board (id or name)", required: true);
@@ -110,6 +111,7 @@ internal static class BoardCommands
                 c.Arguments.Add(column);
                 c.Options.Add(viewFields);
                 c.Options.Add(sort);
+                c.Options.Add(query);
                 c.Options.Add(descriptionLength);
                 tasksPaging.AddTo(c);
             }, async (parse, ctx) =>
@@ -118,7 +120,8 @@ internal static class BoardCommands
                 var board = await Find(ctx, projectId, parse.GetRequiredValue(reference));
                 var found = FindColumn(board, parse.GetRequiredValue(column));
                 var line = await TaskCommands.LineFormat(ctx, projectId);
-                ctx.Print(await tasksPaging.Load(parse, page => ColumnTasks(ctx, projectId, board, found, page, parse.GetValue(viewFields), parse.GetValue(descriptionLength), parse.GetValue(sort))), line);
+                var queryText = await Kit.CheckedQuery(ctx, projectId, parse.GetValue(query));
+                ctx.Print(await tasksPaging.Load(parse, page => ColumnTasks(ctx, projectId, board, found, page, parse.GetValue(viewFields), parse.GetValue(descriptionLength), parse.GetValue(sort), queryText)), line);
             }),
             Kit.Leaf(g, "show", "Shows the whole board: every column in order with its tasks", c =>
             {

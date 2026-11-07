@@ -31,6 +31,12 @@ tasker board show Main --sort -updated
 tasker board tasks Main Doing --sort "Priority,title"
 ```
 
+Строка запроса `--query` у `board tasks` работает как у `task list` (`tasker manual tasks`): складывается с условиями колонки и `--field` через И, а `| sort` в ней главнее `--sort`:
+
+```bash
+tasker board tasks Main Doing --query '.Field.Estimate > 3 | sort -.Updated'
+```
+
 Переместить задачу между колонками — значит поменять её статус на статус нужной колонки:
 
 ```bash
