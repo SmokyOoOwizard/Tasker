@@ -28,21 +28,22 @@ public static class BoardTools
         });
 
     [McpServerTool(Name = "get_board", ReadOnly = true)]
-    [Description("Gets a board together with the tasks in each column (first `tasksPerColumn` tasks per column, 1-200; each column reports totalCount). Each column also lists its own fieldFilters (stored conditions: a task is in the column only if its status AND all of them fit). field (optional): [\"Name=value\", \"Name>=value\", \"Name:set\", ...] shows only tasks matching the field conditions (catalog or own fields), in every column, in addition to the column's own (a view filter, not stored; see list_tasks). " + TaskTools.SortHint + " In get_board the order applies inside every column. " + TaskTools.DescriptionHint)]
+    [Description("Gets a board together with the tasks in each column (first `tasksPerColumn` tasks per column, 1-200; each column reports totalCount). Each column also lists its own fieldFilters (stored conditions: a task is in the column only if its status AND all of them fit). field (optional): [\"Name=value\", \"Name>=value\", \"Name:set\", ...] shows only tasks matching the field conditions (catalog or own fields), in every column, in addition to the column's own (a view filter, not stored; see list_tasks). " + TaskTools.SortHint + " In get_board the order applies inside every column. " + TaskTools.QueryHint + " In get_board the query applies inside every column. " + TaskTools.DescriptionHint)]
     public static Task<BoardView> GetBoard(
-        ProjectService projects, IBoardStorage boards, BoardService boardService, Guid projectId, Guid boardId,
-        int tasksPerColumn = Page.DefaultLimit, string[]? field = null, int descriptionLength = DescriptionPreview.McpDefault, string? sort = null, CancellationToken ct = default) =>
+        ProjectService projects, IBoardStorage boards, BoardService boardService, TaskService tasks, Guid projectId, Guid boardId,
+        int tasksPerColumn = Page.DefaultLimit, string[]? field = null, int descriptionLength = DescriptionPreview.McpDefault, string? sort = null, string? query = null, CancellationToken ct = default) =>
         McpCall.Run(async () =>
         {
             await McpCall.RequireProject(projects, projectId, ct);
+            await McpCall.CheckQuery(tasks, projectId, query, ct);
             var board = McpCall.Found(await boards.GetById(projectId, boardId, ct), $"Board {boardId}");
             var page = Page.Of(0, tasksPerColumn);
 
             var columns = new List<ColumnTasks>();
             foreach (var column in board.Columns)
             {
-                var tasks = await boardService.GetColumnTasks(projectId, boardId, column.Id, page, ct, field, descriptionLength, sort);
-                columns.Add(new ColumnTasks(column.Id, column.Name, await boardService.DescribeFilters(projectId, column, ct), McpCall.Found(tasks, $"Column {column.Id}")));
+                var columnTasks = await boardService.GetColumnTasks(projectId, boardId, column.Id, page, ct, field, descriptionLength, sort, query);
+                columns.Add(new ColumnTasks(column.Id, column.Name, await boardService.DescribeFilters(projectId, column, ct), McpCall.Found(columnTasks, $"Column {column.Id}")));
             }
             return new BoardView(board, columns.ToArray());
         });
