@@ -2,8 +2,9 @@ using Tasker.Core.Fields;
 
 namespace Tasker.Core.Tasks.Query;
 
-internal sealed class TaskQueryBinder(TaskQueryVocabulary vocabulary)
+internal sealed class TaskQueryBinder(TaskQueryVocabulary vocabulary, DateTimeOffset? clock = null)
 {
+    private readonly DateTimeOffset _now = clock ?? DateTimeOffset.UtcNow;
     private readonly List<TaskQueryDiagnostic> _errors = [];
 
     public IReadOnlyList<TaskQueryDiagnostic> Errors => _errors;
@@ -115,10 +116,7 @@ internal sealed class TaskQueryBinder(TaskQueryVocabulary vocabulary)
         if (path.Length == 2 && Same(name.Text, "Field"))
             return Field(path[1]) is { } field ? FieldCompare(node, field, label) : null;
         if (path.Length == 1 && (Same(name.Text, "Created") || Same(name.Text, "Updated")))
-        {
-            Error(TaskerErrors.QuerySortOnly(label), name.Start, name.End);
-            return null;
-        }
+            return TimeCompare(node, Same(name.Text, "Created") ? TaskTimeProperty.Created : TaskTimeProperty.Updated, label);
         if (IsLinkPath(path) || (path.Length == 1 && Same(name.Text, "Parent")))
         {
             Error(TaskerErrors.QueryOperatorNotAllowed(node.OperatorText, label), node.OperatorStart, node.OperatorStart + node.OperatorText.Length);
@@ -126,6 +124,32 @@ internal sealed class TaskQueryBinder(TaskQueryVocabulary vocabulary)
         }
         Error(TaskerErrors.QueryUnknownProperty(label), name.Start, path[^1].End);
         return null;
+    }
+
+    private TaskPredicate? TimeCompare(QueryCompare node, TaskTimeProperty property, string label)
+    {
+        if (node.Value is not QueryScalar scalar)
+        {
+            Error(TaskerErrors.QueryArrayNotAllowed(node.OperatorText), node.Value.Start, node.Value.End);
+            return null;
+        }
+        var interval = scalar.IsNumber || scalar.IsBool ? null : TaskQueryDates.Interval(scalar.Text, _now);
+        if (interval is not { } range)
+        {
+            Error(TaskerErrors.QueryBadDate(label, scalar.Text), scalar.Start, scalar.End);
+            return null;
+        }
+        var (start, end) = range;
+        TaskPredicate Range(long? from, long? before) => new TaskTimeRange(property, from, before);
+        return node.Operator switch
+        {
+            QueryComparison.Equal => Range(start, end),
+            QueryComparison.NotEqual => new TaskNot(Range(start, end)),
+            QueryComparison.Greater => Range(end, null),
+            QueryComparison.GreaterOrEqual => Range(start, null),
+            QueryComparison.Less => Range(null, start),
+            _ => Range(null, end)
+        };
     }
 
     private static string Label(QuerySegment[] path) => "." + string.Join(".", path.Select(x => x.Text.Contains(' ') ? $"\"{x.Text}\"" : x.Text));
@@ -215,6 +239,13 @@ internal sealed class TaskQueryBinder(TaskQueryVocabulary vocabulary)
 
     private string? Canonical(QueryField field, QueryScalar scalar)
     {
+        if (field.Type == FieldType.Date && !scalar.IsNumber && TaskQueryDates.IsRelative(scalar.Text))
+        {
+            if (TaskQueryDates.DateOnlyText(scalar.Text, _now) is { } day)
+                return day;
+            Error(TaskerErrors.QueryBadDate("." + field.Name, scalar.Text), scalar.Start, scalar.End);
+            return null;
+        }
         try
         {
             return FieldValues.Normalize(field.Name, field.Type, false, field.Enumeration, [scalar.Text])[0];

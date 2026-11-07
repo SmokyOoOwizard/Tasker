@@ -3657,6 +3657,23 @@
         }
       }
     },
+    "error.query.badDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%2$@” is not a date for %1$@: write \"2026-11-05\", \"2026-11-05T14:30\", \"today\", \"now\" or an offset like \"-7d\""
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%2$@» не дата для %1$@: пишите \"2026-11-05\", \"2026-11-05T14:30\", \"today\", \"now\" или сдвиг вида \"-7d\""
+          }
+        }
+      }
+    },
     "error.query.badValue" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3857,23 +3874,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Оператор %1$@ не подходит к %2$@"
-          }
-        }
-      }
-    },
-    "error.query.sortOnly" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ can only be used in sort"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ можно использовать только в сортировке"
           }
         }
       }

@@ -1,0 +1,8 @@
+formatVersion: 12
+id: da0895a7-1ee9-4b8f-8e58-20062f60b82d
+taskId: 8bed26ef-8b5e-49b5-90ce-c5a0a0f8485a
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:13.1769670+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: десктоп удалён коммитом `629c93a`. Иконка, бандл и `Info.plist` есть у приложения macOS (`AppIcon.appiconset`, `project.yml`).'

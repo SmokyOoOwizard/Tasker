@@ -460,9 +460,9 @@ public static class TaskerErrors
     public static TaskerValidationException QueryArrayNotAllowed(string op) =>
         Validation($"{op} does not take an array", [op]);
 
-    [ErrorCode("query.sortOnly")]
-    public static TaskerValidationException QuerySortOnly(string name) =>
-        Validation($"{name} can only be used in sort", [name]);
+    [ErrorCode("query.badDate")]
+    public static TaskerValidationException QueryBadDate(string name, string value) =>
+        Validation($"'{value}' is not a date for {name}: write \"2026-11-05\", \"2026-11-05T14:30\", \"today\", \"now\" or an offset like \"-7d\"", [name, value]);
 
     [ErrorCode("query.sortRepeated")]
     public static TaskerValidationException QuerySortRepeated(string name) =>

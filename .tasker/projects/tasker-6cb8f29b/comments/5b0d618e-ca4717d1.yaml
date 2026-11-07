@@ -1,0 +1,8 @@
+formatVersion: 12
+id: ca4717d1-f778-4a0d-bc5b-a105a8c73192
+taskId: 5b0d618e-02e7-4e83-b3df-b1625db80e67
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:11.4955550+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: `GhostWindow.cs` и `TabDragController.cs` удалены вместе с десктопом коммитом `629c93a`.'

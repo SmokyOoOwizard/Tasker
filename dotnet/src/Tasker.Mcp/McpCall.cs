@@ -52,6 +52,17 @@ internal static class McpCall
     public static async Task<Guid> TaskId(TaskService tasks, Guid projectId, string id, CancellationToken ct) =>
         await tasks.ResolveId(projectId, id, ct) ?? throw new McpException($"[not_found] Task {id} not found");
 
+    public static async Task CheckQuery(TaskService tasks, Guid projectId, string? query, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return;
+        var analysis = await tasks.AnalyzeQuery(projectId, query, null, ct);
+        if (analysis.Valid)
+            return;
+        var error = analysis.Errors[0];
+        throw new McpException($"[invalid] {error.Code} (position {error.Start}-{error.End}): {error.Message}");
+    }
+
     public static T Found<T>(T? value, string what) where T : class =>
         value ?? throw new McpException($"[not_found] {what} not found");
 
