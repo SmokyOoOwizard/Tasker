@@ -71,6 +71,8 @@ final class TaskCommentsModel {
 
     var count: Int { items.filter { !$0.deleted }.count }
 
+    var me: TaskCommentAuthor? { items.first { $0.mine }?.author }
+
     var focusItem: TaskCommentItem? { focus.flatMap { id in items.first { $0.id == id } } }
 
     func load() {

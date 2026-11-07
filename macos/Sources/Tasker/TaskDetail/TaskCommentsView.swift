@@ -118,7 +118,7 @@ struct TaskCommentsSection: View {
 
     private var newComment: some View {
         HStack(alignment: .top, spacing: DesignSpacing.gap8) {
-            CommentAvatar(author: nil, mine: true)
+            CommentAvatar(author: comments.me, mine: true)
                 .padding(.top, DesignSpacing.gap8)
             CommentEditor(
                 placeholder: l.string(.taskDetailCommentPlaceholder), hint: l.string(.taskDetailCommentHintSend),
@@ -478,8 +478,8 @@ struct CommentEditor: View {
                 Text(verbatim: hint)
                     .font(.design(DesignTypography.smallSize))
                     .foregroundStyle(DesignColor.mut.color)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                    .lineLimit(1...2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if cancel != nil, heading == nil {
                     Button(l.string(.commonCancel)) { cancel?() }
