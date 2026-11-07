@@ -37,6 +37,8 @@ internal sealed class ApiHost : IAsyncDisposable
     /// <summary>Аренда области, открытой хостом: из неё демон берёт сервисы для отчёта о сериях.</summary>
     public WorkspaceLease Lease => _lease;
 
+    public IServiceProvider Services => _app.Services;
+
     /// <summary>Адрес API области без завершающего слеша: <c>http://127.0.0.1:port/w/key/api</c>.</summary>
     public string BaseUrl { get; }
 

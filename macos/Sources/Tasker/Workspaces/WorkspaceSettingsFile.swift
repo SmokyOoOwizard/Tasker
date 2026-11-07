@@ -8,6 +8,8 @@ struct WorkspaceSettingsError: Error, Equatable, LocalizedError {
 }
 
 struct WorkspaceSettingsFile: Sendable {
+    static let maxUserNameLength = 100
+
     var directory: URL
 
     var file: URL { directory.appending(path: "settings.json") }
@@ -16,6 +18,23 @@ struct WorkspaceSettingsFile: Sendable {
     func workspacePaths() throws -> [String] {
         guard let root = try readRoot() else { return [] }
         return entries(in: root).compactMap { $0["path"] as? String }
+    }
+
+    func userName() throws -> String? {
+        guard let root = try readRoot() else { return nil }
+        guard let name = (root["userName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else { return nil }
+        return name
+    }
+
+    func setUserName(_ name: String?) throws {
+        let value = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let value, value.count > Self.maxUserNameLength { throw WorkspaceSettingsError(message: "\(value.count)") }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try withLock {
+            var root = try readRoot() ?? [:]
+            if let value, !value.isEmpty { root["userName"] = value } else { root.removeValue(forKey: "userName") }
+            try write(root)
+        }
     }
 
     @discardableResult
@@ -32,10 +51,14 @@ struct WorkspaceSettingsFile: Sendable {
             workspaces.append(["kind": "files", "path": canonical])
             mcp["workspaces"] = workspaces
             root["mcp"] = mcp
-            let data = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
-            try (data + Data("\n".utf8)).write(to: file, options: .atomic)
+            try write(root)
             return true
         }
+    }
+
+    private func write(_ root: [String: Any]) throws {
+        let data = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        try (data + Data("\n".utf8)).write(to: file, options: .atomic)
     }
 
     private func entries(in root: [String: Any]) -> [[String: Any]] {

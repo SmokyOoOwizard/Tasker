@@ -1,4 +1,5 @@
 using HotChocolate.Types;
+using Tasker.Core.Links;
 using Tasker.Core.TaskSeries;
 
 namespace Tasker.Web.Graph.Types;
@@ -89,5 +90,42 @@ internal sealed class ConflictPlanStepType : ObjectType<ConflictPlanStep>
         descriptor.Field(x => x.NewNumber);
         descriptor.Field(x => x.KeeperId);
         descriptor.Field(x => x.KeeperTitle);
+    }
+}
+
+internal sealed class LinkHealthType : ObjectType<LinkHealth>
+{
+    protected override void Configure(IObjectTypeDescriptor<LinkHealth> descriptor)
+    {
+        descriptor.Name("LinkHealth");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.TasksWithInvalidLinks);
+        descriptor.Field(x => x.UnreadableFiles);
+        descriptor.Field(x => x.Cycles);
+        descriptor.Field(x => x.NeedsAttention);
+    }
+}
+
+internal sealed class LinkCycleType : ObjectType<LinkCycle>
+{
+    protected override void Configure(IObjectTypeDescriptor<LinkCycle> descriptor)
+    {
+        descriptor.Name("LinkCycle");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.TypeId);
+        descriptor.Field(x => x.TypeName);
+        descriptor.Field(x => x.Path);
+    }
+}
+
+internal sealed class LinkCycleTaskType : ObjectType<LinkCycleTask>
+{
+    protected override void Configure(IObjectTypeDescriptor<LinkCycleTask> descriptor)
+    {
+        descriptor.Name("LinkCycleTask");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.Id);
+        descriptor.Field(x => x.Title);
+        descriptor.Field(x => x.SeriesNumbers);
     }
 }

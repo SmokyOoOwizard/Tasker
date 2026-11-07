@@ -132,7 +132,7 @@ struct SeriesSettingsPage: View {
     }
 }
 
-private struct SeriesResolveHost: View {
+struct SeriesResolveHost: View {
     let client: TaskerAPIClient
     let project: UUID
     let series: UUID

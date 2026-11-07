@@ -527,6 +527,130 @@ extension Components {
                 case newPassword
             }
         }
+        /// - Remark: Generated from `#/components/schemas/CleanupChange`.
+        public struct CleanupChange: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/taskId`.
+            public var taskId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/taskTitle`.
+            public var taskTitle: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/kind`.
+            public var kind: Components.Schemas.CleanupChangeKind
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/seriesId`.
+            public var seriesId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/oldNumber`.
+            public var oldNumber: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/newNumber`.
+            public var newNumber: Swift.Int32?
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/description`.
+            public var description: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/linkTypeId`.
+            public var linkTypeId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CleanupChange/linkTargetId`.
+            public var linkTargetId: Swift.String?
+            /// Creates a new `CleanupChange`.
+            ///
+            /// - Parameters:
+            ///   - taskId:
+            ///   - taskTitle:
+            ///   - kind:
+            ///   - seriesId:
+            ///   - oldNumber:
+            ///   - newNumber:
+            ///   - description:
+            ///   - linkTypeId:
+            ///   - linkTargetId:
+            public init(
+                taskId: Swift.String,
+                taskTitle: Swift.String,
+                kind: Components.Schemas.CleanupChangeKind,
+                seriesId: Swift.String? = nil,
+                oldNumber: Swift.Int32? = nil,
+                newNumber: Swift.Int32? = nil,
+                description: Swift.String,
+                linkTypeId: Swift.String? = nil,
+                linkTargetId: Swift.String? = nil
+            ) {
+                self.taskId = taskId
+                self.taskTitle = taskTitle
+                self.kind = kind
+                self.seriesId = seriesId
+                self.oldNumber = oldNumber
+                self.newNumber = newNumber
+                self.description = description
+                self.linkTypeId = linkTypeId
+                self.linkTargetId = linkTargetId
+            }
+            public enum CodingKeys: String, CodingKey {
+                case taskId
+                case taskTitle
+                case kind
+                case seriesId
+                case oldNumber
+                case newNumber
+                case description
+                case linkTypeId
+                case linkTargetId
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/CleanupChangeKind`.
+        @frozen public enum CleanupChangeKind: String, Codable, Hashable, Sendable, CaseIterable {
+            case removedInvalidSeries = "removedInvalidSeries"
+            case renumbered = "renumbered"
+            case removedInvalidLink = "removedInvalidLink"
+        }
+        /// - Remark: Generated from `#/components/schemas/CleanupReport`.
+        public struct CleanupReport: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CleanupReport/changes`.
+            public var changes: [Components.Schemas.CleanupChange]
+            /// - Remark: Generated from `#/components/schemas/CleanupReport/remainingNumberConflicts`.
+            public var remainingNumberConflicts: [Components.Schemas.NumberConflict]
+            /// - Remark: Generated from `#/components/schemas/CleanupReport/prefixConflicts`.
+            public var prefixConflicts: [Components.Schemas.PrefixConflict]
+            /// - Remark: Generated from `#/components/schemas/CleanupReport/skipped`.
+            public var skipped: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/CleanupReport/skipReason`.
+            public var skipReason: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CleanupReport/linksSkipReason`.
+            public var linksSkipReason: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CleanupReport/linkCycles`.
+            public var linkCycles: [Components.Schemas.LinkCycle]?
+            /// Creates a new `CleanupReport`.
+            ///
+            /// - Parameters:
+            ///   - changes:
+            ///   - remainingNumberConflicts:
+            ///   - prefixConflicts:
+            ///   - skipped:
+            ///   - skipReason:
+            ///   - linksSkipReason:
+            ///   - linkCycles:
+            public init(
+                changes: [Components.Schemas.CleanupChange],
+                remainingNumberConflicts: [Components.Schemas.NumberConflict],
+                prefixConflicts: [Components.Schemas.PrefixConflict],
+                skipped: Swift.Bool,
+                skipReason: Swift.String? = nil,
+                linksSkipReason: Swift.String? = nil,
+                linkCycles: [Components.Schemas.LinkCycle]? = nil
+            ) {
+                self.changes = changes
+                self.remainingNumberConflicts = remainingNumberConflicts
+                self.prefixConflicts = prefixConflicts
+                self.skipped = skipped
+                self.skipReason = skipReason
+                self.linksSkipReason = linksSkipReason
+                self.linkCycles = linkCycles
+            }
+            public enum CodingKeys: String, CodingKey {
+                case changes
+                case remainingNumberConflicts
+                case prefixConflicts
+                case skipped
+                case skipReason
+                case linksSkipReason
+                case linkCycles
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/ColumnFieldFilter`.
         public struct ColumnFieldFilter: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/ColumnFieldFilter/fieldId`.
@@ -1457,6 +1581,35 @@ extension Components {
                 case mode
             }
         }
+        /// - Remark: Generated from `#/components/schemas/LinkCycle`.
+        public struct LinkCycle: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/LinkCycle/typeId`.
+            public var typeId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/LinkCycle/typeName`.
+            public var typeName: Swift.String
+            /// - Remark: Generated from `#/components/schemas/LinkCycle/path`.
+            public var path: [Components.Schemas.LinkCycleTask]
+            /// Creates a new `LinkCycle`.
+            ///
+            /// - Parameters:
+            ///   - typeId:
+            ///   - typeName:
+            ///   - path:
+            public init(
+                typeId: Swift.String,
+                typeName: Swift.String,
+                path: [Components.Schemas.LinkCycleTask]
+            ) {
+                self.typeId = typeId
+                self.typeName = typeName
+                self.path = path
+            }
+            public enum CodingKeys: String, CodingKey {
+                case typeId
+                case typeName
+                case path
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/LinkCycleProblem`.
         public struct LinkCycleProblem: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/LinkCycleProblem/typeId`.
@@ -1490,6 +1643,35 @@ extension Components {
                 case typeName
                 case path
                 case taskIds
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/LinkCycleTask`.
+        public struct LinkCycleTask: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/LinkCycleTask/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/LinkCycleTask/title`.
+            public var title: Swift.String
+            /// - Remark: Generated from `#/components/schemas/LinkCycleTask/seriesNumbers`.
+            public var seriesNumbers: [Components.Schemas.TaskSeriesNumber]
+            /// Creates a new `LinkCycleTask`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - title:
+            ///   - seriesNumbers:
+            public init(
+                id: Swift.String,
+                title: Swift.String,
+                seriesNumbers: [Components.Schemas.TaskSeriesNumber]
+            ) {
+                self.id = id
+                self.title = title
+                self.seriesNumbers = seriesNumbers
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case title
+                case seriesNumbers
             }
         }
         /// - Remark: Generated from `#/components/schemas/LinkDirection`.
@@ -1780,6 +1962,35 @@ extension Components {
                 case opening
             }
         }
+        /// - Remark: Generated from `#/components/schemas/NumberConflict`.
+        public struct NumberConflict: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/NumberConflict/seriesId`.
+            public var seriesId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/NumberConflict/number`.
+            public var number: Swift.Int32
+            /// - Remark: Generated from `#/components/schemas/NumberConflict/taskIds`.
+            public var taskIds: [Swift.String]
+            /// Creates a new `NumberConflict`.
+            ///
+            /// - Parameters:
+            ///   - seriesId:
+            ///   - number:
+            ///   - taskIds:
+            public init(
+                seriesId: Swift.String,
+                number: Swift.Int32,
+                taskIds: [Swift.String]
+            ) {
+                self.seriesId = seriesId
+                self.number = number
+                self.taskIds = taskIds
+            }
+            public enum CodingKeys: String, CodingKey {
+                case seriesId
+                case number
+                case taskIds
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/OwnField`.
         public struct OwnField: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/OwnField/name`.
@@ -1819,6 +2030,29 @@ extension Components {
                 case required
                 case multiple
                 case enumId
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/PrefixConflict`.
+        public struct PrefixConflict: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PrefixConflict/prefix`.
+            public var prefix: Swift.String
+            /// - Remark: Generated from `#/components/schemas/PrefixConflict/seriesIds`.
+            public var seriesIds: [Swift.String]
+            /// Creates a new `PrefixConflict`.
+            ///
+            /// - Parameters:
+            ///   - prefix:
+            ///   - seriesIds:
+            public init(
+                prefix: Swift.String,
+                seriesIds: [Swift.String]
+            ) {
+                self.prefix = prefix
+                self.seriesIds = seriesIds
+            }
+            public enum CodingKeys: String, CodingKey {
+                case prefix
+                case seriesIds
             }
         }
         /// - Remark: Generated from `#/components/schemas/Project`.

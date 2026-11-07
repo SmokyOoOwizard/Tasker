@@ -100,6 +100,7 @@ private struct SidebarRow: View {
                 Text(l.string(section.titleKey))
                 Spacer(minLength: 0)
                 if section == .tasks { SidebarTaskCount() }
+                if section == .admin { AdminSidebarBadge() }
             }
             .foregroundStyle(selected ? DesignColor.tx.color : DesignColor.mut.color)
             .padding(.horizontal, DesignSpacing.rowPadX)
@@ -118,10 +119,13 @@ private struct SidebarRow: View {
 
 private struct ProfileButton: View {
     @Environment(\.localizer) private var l
+    @Environment(WorkspaceTabSession.self) private var session
     @State private var hovering = false
 
     var body: some View {
-        Button {} label: {
+        Button {
+            session.openAdmin(.profile)
+        } label: {
             HStack(spacing: DesignSpacing.gap8) {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.system(size: 18))

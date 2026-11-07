@@ -22,6 +22,7 @@ final class WorkspaceTabSession: Identifiable {
     private(set) var boardModel: BoardViewModel?
     private(set) var boardId: UUID?
     var settingsPage = SettingsPage.statuses
+    var adminPage = AdminPage.problems
     var taskRequest: TaskRequest?
     private(set) var listSelection: UUID?
 
@@ -41,6 +42,8 @@ final class WorkspaceTabSession: Identifiable {
     @ObservationIgnored private var boardOwner: UUID?
     @ObservationIgnored private var settingsStore: SettingsModel?
     @ObservationIgnored private var settingsClient: TaskerAPIClient?
+    @ObservationIgnored private var adminStore: AdminModel?
+    @ObservationIgnored private var adminClient: TaskerAPIClient?
 
     init(tab: WorkspaceTab?, layout: WorkspaceLayout, live: LiveWorkspace, defaults: UserDefaults) {
         let id = tab?.id ?? UUID()
@@ -238,6 +241,34 @@ final class WorkspaceTabSession: Identifiable {
         return model
     }
 
+    var adminModel: AdminModel? { adminStore }
+
+    func openAdmin(_ page: AdminPage? = nil) {
+        if let page { adminPage = page }
+        setSection(.admin)
+    }
+
+    func attachAdmin(client: TaskerAPIClient, localizer: Localizer) -> AdminModel {
+        if let adminStore, adminClient === client {
+            adminStore.localizer = localizer
+            return adminStore
+        }
+        closeAdmin()
+        let model = AdminModel(source: GraphQLAdminSource(client: client))
+        model.localizer = localizer
+        model.onNotice = { [weak self] text in self?.notice(text) }
+        adminStore = model
+        adminClient = client
+        model.load()
+        return model
+    }
+
+    func closeAdmin() {
+        adminStore?.stop()
+        adminStore = nil
+        adminClient = nil
+    }
+
     func closeSettings() {
         settingsStore?.release()
         settingsStore = nil
@@ -287,6 +318,7 @@ final class WorkspaceTabSession: Identifiable {
         closeBoardEditor()
         closeBoard()
         closeSettings()
+        closeAdmin()
         listModel?.stop()
         listModel = nil
         settings.removeTabData()

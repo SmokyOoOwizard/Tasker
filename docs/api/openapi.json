@@ -1767,6 +1767,97 @@
         ]
       }
     },
+    "/api/projects/{projectId}/cleanup": {
+      "post": {
+        "tags": [
+          "cleanup"
+        ],
+        "operationId": "cleanupProject",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanupReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {}
+        ],
+        "x-tasker-modes": [
+          "local",
+          "server"
+        ]
+      }
+    },
     "/api/projects/{projectId}/enums": {
       "post": {
         "tags": [
@@ -7851,6 +7942,110 @@
           }
         }
       },
+      "CleanupChange": {
+        "required": [
+          "taskId",
+          "taskTitle",
+          "kind",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskTitle": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CleanupChangeKind"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "oldNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "newNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "description": {
+            "type": "string"
+          },
+          "linkTypeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "linkTargetId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
+      "CleanupChangeKind": {
+        "type": "string",
+        "enum": [
+          "removedInvalidSeries",
+          "renumbered",
+          "removedInvalidLink"
+        ]
+      },
+      "CleanupReport": {
+        "required": [
+          "changes",
+          "remainingNumberConflicts",
+          "prefixConflicts",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CleanupChange"
+            }
+          },
+          "remainingNumberConflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NumberConflict"
+            }
+          },
+          "prefixConflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrefixConflict"
+            }
+          },
+          "skipped": {
+            "type": "boolean"
+          },
+          "skipReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "linksSkipReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "linkCycles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinkCycle"
+            },
+            "nullable": true
+          }
+        }
+      },
       "ColumnFieldFilter": {
         "required": [
           "fieldId",
@@ -8579,6 +8774,29 @@
           }
         }
       },
+      "LinkCycle": {
+        "required": [
+          "typeId",
+          "typeName",
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "typeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeName": {
+            "type": "string"
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinkCycleTask"
+            }
+          }
+        }
+      },
       "LinkCycleProblem": {
         "required": [
           "typeId",
@@ -8603,6 +8821,29 @@
             "items": {
               "type": "string",
               "format": "uuid"
+            }
+          }
+        }
+      },
+      "LinkCycleTask": {
+        "required": [
+          "id",
+          "title",
+          "seriesNumbers"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "seriesNumbers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskSeriesNumber"
             }
           }
         }
@@ -8824,6 +9065,31 @@
           }
         }
       },
+      "NumberConflict": {
+        "required": [
+          "seriesId",
+          "number",
+          "taskIds"
+        ],
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "taskIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "OwnField": {
         "required": [
           "name",
@@ -8849,6 +9115,25 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          }
+        }
+      },
+      "PrefixConflict": {
+        "required": [
+          "prefix",
+          "seriesIds"
+        ],
+        "type": "object",
+        "properties": {
+          "prefix": {
+            "type": "string"
+          },
+          "seriesIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },

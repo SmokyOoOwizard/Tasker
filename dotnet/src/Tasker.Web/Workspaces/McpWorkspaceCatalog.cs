@@ -17,12 +17,19 @@ public sealed class McpWorkspaceCatalog(WorkspaceRegistry registry) : IMcpWorksp
     /// </summary>
     public Func<IReadOnlyList<McpWorkspace>> Unavailable { get; set; } = () => [];
 
-    public IReadOnlyList<McpWorkspace> List() => registry.OpenedWithKeys
-        .Select(x => new McpWorkspace(x.Key, x.Location.Path, McpWorkspaceStatus.Open))
-        .Concat(Unavailable())
-        .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-        .ThenBy(x => x.Path, StringComparer.Ordinal)
-        .ToArray();
+    public IReadOnlyList<McpWorkspace> List()
+    {
+        var open = registry.OpenedWithKeys
+            .Select(x => new McpWorkspace(x.Key, x.Location.Path, McpWorkspaceStatus.Open))
+            .ToArray();
+        var openPaths = open.Select(x => x.Path).ToHashSet(StringComparer.Ordinal);
+
+        return open
+            .Concat(Unavailable().Where(x => !openPaths.Contains(x.Path)))
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Path, StringComparer.Ordinal)
+            .ToArray();
+    }
 
     public McpWorkspaceScope? Enter(string nameOrPath)
     {
