@@ -279,7 +279,7 @@ private struct BoardColumnView: View {
         }
         .padding(6)
         .frame(width: 290, alignment: .topLeading)
-        .frame(minHeight: minHeight, alignment: .topLeading)
+        .frame(minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
         .background(over ? DesignColor.accbg.color : .clear, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(over ? DesignColor.acc.color : .clear, lineWidth: 1))
         .animation(.easeOut(duration: 0.15), value: over)
