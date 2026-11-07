@@ -2,9 +2,9 @@ formatVersion: 11
 id: de80e7cb-95ba-4e3c-b6d1-216abe10ab9d
 title: 'macOS: новая связь не видна у связанной задачи, пока не сменить раздел и вернуться на доску'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-07T02:41:23.1432590+00:00
-updatedAt: 2026-11-07T02:41:23.1432590+00:00
+updatedAt: 2026-11-07T02:44:35.5170990+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 241

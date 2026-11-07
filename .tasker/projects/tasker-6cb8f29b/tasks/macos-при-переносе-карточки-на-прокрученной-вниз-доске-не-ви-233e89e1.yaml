@@ -2,9 +2,9 @@ formatVersion: 11
 id: 233e89e1-50e1-4d14-99ec-a193c7274188
 title: 'macOS: при переносе карточки на прокрученной вниз доске не видно подсветку колонок'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: e419107c-3971-482e-b68f-46860d54f4d2
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-06T18:20:48.7335740+00:00
-updatedAt: 2026-11-07T02:39:00.0583160+00:00
+updatedAt: 2026-11-07T02:44:33.6746210+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 238

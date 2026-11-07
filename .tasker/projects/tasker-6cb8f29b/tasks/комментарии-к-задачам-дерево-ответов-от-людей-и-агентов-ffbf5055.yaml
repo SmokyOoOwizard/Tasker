@@ -2,9 +2,9 @@ formatVersion: 11
 id: ffbf5055-fdf5-4bba-bf2f-d84b55a6ba2f
 title: 'Комментарии к задачам: дерево ответов от людей и агентов'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: e419107c-3971-482e-b68f-46860d54f4d2
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-06T18:16:51.2672860+00:00
-updatedAt: 2026-11-07T02:39:04.2772330+00:00
+updatedAt: 2026-11-07T02:44:31.9746770+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 237
