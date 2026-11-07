@@ -71,6 +71,7 @@ export const strings = {
     "error.project.notFound": "Project not found.",
     "error.query.ambiguousField": "Tasks have own fields “{0}” of several types",
     "error.query.arrayNotAllowed": "{0} does not take an array",
+    "error.query.badDate": "“{1}” is not a date for {0}: write \"2026-11-05\", \"2026-11-05T14:30\", \"today\", \"now\" or an offset like \"-7d\"",
     "error.query.badValue": "“{1}” does not fit the type of field “{0}”",
     "error.query.emptyArray": "The array is empty",
     "error.query.expectedCondition": "Expected a condition, for example .Status == \"Todo\"",
@@ -83,7 +84,6 @@ export const strings = {
     "error.query.functionArgument": "Wrong argument of {0}(): Contains takes a value, ContainsAny and ContainsAll take an array, checks take nothing",
     "error.query.notSortable": "Cannot sort by {0}",
     "error.query.operatorNotAllowed": "{1} does not support {0}",
-    "error.query.sortOnly": "{0} can only be used in sort",
     "error.query.sortRepeated": "Sort key {0} is listed twice",
     "error.query.tooComplex": "The query is too long or too deeply nested",
     "error.query.unclosedBracket": "The closing bracket is missing",
@@ -382,6 +382,7 @@ export const strings = {
     "error.project.notFound": "Проект не найден.",
     "error.query.ambiguousField": "У задач есть собственные поля «{0}» разных типов",
     "error.query.arrayNotAllowed": "Оператор {0} не принимает массив",
+    "error.query.badDate": "«{1}» не дата для {0}: пишите \"2026-11-05\", \"2026-11-05T14:30\", \"today\", \"now\" или сдвиг вида \"-7d\"",
     "error.query.badValue": "Значение «{1}» не подходит к типу поля «{0}»",
     "error.query.emptyArray": "Массив пуст",
     "error.query.expectedCondition": "Нужно условие, например .Status == \"Todo\"",
@@ -394,7 +395,6 @@ export const strings = {
     "error.query.functionArgument": "Неверный аргумент {0}(): Contains принимает значение, ContainsAny и ContainsAll — массив, проверки — ничего",
     "error.query.notSortable": "По {0} нельзя сортировать",
     "error.query.operatorNotAllowed": "Оператор {0} не подходит к {1}",
-    "error.query.sortOnly": "{0} можно использовать только в сортировке",
     "error.query.sortRepeated": "Ключ сортировки {0} указан дважды",
     "error.query.tooComplex": "Запрос слишком длинный или в нём слишком много вложенных скобок",
     "error.query.unclosedBracket": "Нет закрывающей квадратной скобки",
@@ -789,6 +789,10 @@ export const errorParams: Record<string, readonly string[]> = {
   "query.arrayNotAllowed": [
     "op"
   ],
+  "query.badDate": [
+    "name",
+    "value"
+  ],
   "query.badValue": [
     "field",
     "value"
@@ -814,9 +818,6 @@ export const errorParams: Record<string, readonly string[]> = {
   "query.operatorNotAllowed": [
     "op",
     "target"
-  ],
-  "query.sortOnly": [
-    "name"
   ],
   "query.sortRepeated": [
     "name"

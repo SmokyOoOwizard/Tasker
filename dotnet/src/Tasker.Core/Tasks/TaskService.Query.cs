@@ -21,7 +21,7 @@ public partial class TaskService
             throw error.Failure;
 
         var vocabulary = await QueryVocabulary(projectId, syntax!, ct);
-        var binder = new TaskQueryBinder(vocabulary);
+        var binder = new TaskQueryBinder(vocabulary, time.GetUtcNow());
         var predicate = binder.Bind(syntax!.Filter);
         var sort = binder.BindSort(syntax.Sort);
         if (binder.Errors.Count > 0)
@@ -37,7 +37,7 @@ public partial class TaskService
         if (error != null)
             return new TaskQueryAnalysis(false, false, [Wire(error)], suggestions);
 
-        var binder = new TaskQueryBinder(vocabulary);
+        var binder = new TaskQueryBinder(vocabulary, time.GetUtcNow());
         binder.Bind(syntax!.Filter);
         binder.BindSort(syntax.Sort);
         return new TaskQueryAnalysis(binder.Errors.Count == 0, syntax.Sort.Length > 0, [.. binder.Errors.Select(Wire)], suggestions);

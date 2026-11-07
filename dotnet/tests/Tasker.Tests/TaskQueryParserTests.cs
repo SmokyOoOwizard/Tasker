@@ -212,7 +212,7 @@ public class TaskQueryParserTests
     [InlineData(".Field.Estimate.Contains(\"1\")", "query.unknownFunction", 16, 24)]
     [InlineData(".Field.Estimate.IsSet(1)", "query.functionArgument", 22, 23)]
     [InlineData(".Field.Метки.ContainsAny(\"a\")", "query.functionArgument", 13, 24)]
-    [InlineData(".Created > 1", "query.sortOnly", 1, 8)]
+    [InlineData(".Created > 1", "query.badDate", 11, 12)]
     [InlineData("| sort .Title, .Title", "query.sortRepeated", 15, 21)]
     [InlineData("| sort .Link.Blocks", "query.notSortable", 7, 19)]
     [InlineData(".Parent == 1", "query.operatorNotAllowed", 8, 10)]
@@ -248,7 +248,7 @@ public class TaskQueryParserTests
     [Fact]
     public void Empty_text_suggests_the_properties()
     {
-        Assert.Equal([".Status", ".Type", ".Title", ".Series", ".Field", ".Link", ".Parent"], Labels_(""));
+        Assert.Equal([".Status", ".Type", ".Title", ".Series", ".Created", ".Updated", ".Field", ".Link", ".Parent"], Labels_(""));
         Assert.Equal([".Status"], Labels_(".Sta"));
     }
 
