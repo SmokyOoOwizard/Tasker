@@ -13,6 +13,10 @@ protocol TaskDetailSource: Sendable {
     func delete(project: UUID, task: UUID, version: String?) async throws
     func resolve(project: UUID, ref: String) async throws -> [TaskLinkedBrief]
     func search(project: UUID) async throws -> [TaskLinkedBrief]
+    func comments(project: UUID, task: UUID) async throws -> [TaskCommentItem]?
+    func addComment(project: UUID, task: UUID, parent: UUID?, body: String) async throws
+    func updateComment(project: UUID, task: UUID, comment: UUID, body: String, version: String) async throws
+    func deleteComment(project: UUID, task: UUID, comment: UUID, version: String) async throws
 }
 
 private extension UUID {
@@ -135,6 +139,43 @@ struct GraphQLTaskDetailSource: TaskDetailSource {
             if page.data.isEmpty || offset >= page.totalCount { break }
         }
         return result
+    }
+
+    func comments(project: UUID, task: UUID) async throws -> [TaskCommentItem]? {
+        guard let data = try await client.graphQL.fetch(TaskCommentsQuery(projectId: project, id: task), cachePolicy: .networkOnly).project else { return nil }
+        return data.taskComments?.map {
+            TaskCommentItem(
+                id: $0.id, parentId: $0.parentId, depth: $0.depth,
+                author: $0.author.map { TaskCommentAuthor(id: $0.id, name: $0.name, kind: $0.kind) },
+                body: $0.body, createdAt: $0.createdAt, editedAt: $0.editedAt, deleted: $0.deleted, mine: $0.mine, version: $0.version)
+        }
+    }
+
+    func addComment(project: UUID, task: UUID, parent: UUID?, body: String) async throws {
+        _ = try await client.rest.perform {
+            try await $0.addTaskComment(
+                path: .init(projectId: project.wire, id: task.wire),
+                body: .json(.init(body: body, parentId: parent?.wire))
+            ).ok.body.json
+        }
+    }
+
+    func updateComment(project: UUID, task: UUID, comment: UUID, body: String, version: String) async throws {
+        _ = try await client.rest.perform {
+            try await $0.updateTaskComment(
+                path: .init(projectId: project.wire, id: task.wire, commentId: comment.wire),
+                body: .json(.init(body: body, version: version))
+            ).ok.body.json
+        }
+    }
+
+    func deleteComment(project: UUID, task: UUID, comment: UUID, version: String) async throws {
+        _ = try await client.rest.perform {
+            try await $0.deleteTaskComment(
+                path: .init(projectId: project.wire, id: task.wire, commentId: comment.wire),
+                query: .init(version: version)
+            ).noContent
+        }
     }
 
     static let searchPage = 200

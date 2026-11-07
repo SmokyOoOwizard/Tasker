@@ -56,8 +56,11 @@ internal static class EntityFolders
     public static readonly EntityFolder Enums = new(IndexKind.FieldEnum, "enums", "enum",
         async (project, path, ct) => await FieldEnumFile.Read(project, path, ct) is { } x ? new EntityHead(x.Id, x.Name) : null);
 
+    public static readonly EntityFolder Comments = new(IndexKind.Comment, "comments", "comment",
+        async (project, path, ct) => await TaskCommentFile.Read(project, path, ct) is { } x ? new EntityHead(x.Id, TaskCommentFile.FileSlug(x.TaskId)) : null);
+
     public static readonly IReadOnlyList<EntityFolder> All =
-        [Tasks, TaskTypes, Statuses, StatusSets, Boards, Series, LinkTypes, Fields, Enums];
+        [Tasks, TaskTypes, Statuses, StatusSets, Boards, Series, LinkTypes, Fields, Enums, Comments];
 
     /// <returns>null — у этого вида нет папки сущностей в проекте (пользователь, проект).</returns>
     public static EntityFolder? Find(IndexKind kind) => All.FirstOrDefault(x => x.Kind == kind);

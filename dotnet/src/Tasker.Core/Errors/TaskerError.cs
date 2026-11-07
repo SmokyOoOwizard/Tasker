@@ -54,6 +54,7 @@ public sealed record ErrorSubject(string Entity, string English, string? Name)
     public static ErrorSubject LinkType(string name) => new("linkType", "Link type", name);
     public static ErrorSubject Field(string name) => new("field", "Field", name);
     public static ErrorSubject Enum(string name) => new("enum", "Enum", name);
+    public static ErrorSubject Comment(string name) => new("comment", "Comment", name);
 
     public static ErrorSubject Statuses(IReadOnlyList<string> names) =>
         new(SeveralEntity, $"Statuses {string.Join(", ", names.Select(x => $"'{x}'"))}", string.Join(", ", names));
@@ -78,7 +79,8 @@ public enum ErrorField
     Title,
     BoardName,
     ColumnName,
-    FieldName
+    FieldName,
+    CommentBody
 }
 
 public static class ErrorFields
@@ -106,6 +108,7 @@ public static class ErrorFields
         ErrorField.BoardName => "Board name",
         ErrorField.ColumnName => "Column name",
         ErrorField.FieldName => "Field name",
+        ErrorField.CommentBody => "Comment text",
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
     };
 }

@@ -15,7 +15,9 @@ public enum CleanupChangeKind
     Renumbered,
 
     /// <summary>Убрана недействительная связь: на задачу или тип связи, которых нет.</summary>
-    RemovedInvalidLink
+    RemovedInvalidLink,
+
+    RemovedOrphanComment
 }
 
 /// <param name="Description">Понятным языком: что сделано (в режиме DryRun — что было бы сделано).</param>
@@ -61,7 +63,7 @@ public record CleanupReport(
 #pragma warning disable CS9113
 public class CleanupService(
     ITaskStorage tasks, TaskService taskService, ISeriesStorage series, Links.LinkTypeService linkTypes, IWriteScope writes,
-    Locks.EditLockService locks, TimeProvider time)
+    Locks.EditLockService locks, TimeProvider time, Comments.ITaskCommentStorage? comments = null)
 {
     private const int Attempts = 2;
 
@@ -116,6 +118,7 @@ public class CleanupService(
             }
 
             var linksSkipReason = await RemoveInvalidLinks(projectId, options.DryRun, changes, ct);
+            await RemoveOrphanComments(projectId, options.DryRun, changes, ct);
 
             // Циклы связей — после правок связей (недействительные связи в цикле уже убраны), только чтение.
             var cycles = await Links.LinkCycles.Find(tasks, projectId, await linkTypes.GetAll(projectId, ct), ct);
@@ -195,6 +198,23 @@ public class CleanupService(
         }
 
         return null;
+    }
+
+    private async Task RemoveOrphanComments(Guid projectId, bool dryRun, List<CleanupChange> changes, CancellationToken ct)
+    {
+        if (comments == null || await tasks.CountUnreadable(projectId, ct) > 0)
+            return;
+
+        var known = (await tasks.GetIds(projectId, null, ct)).ToHashSet();
+        foreach (var comment in await comments.GetAll(projectId, ct))
+        {
+            if (known.Contains(comment.TaskId))
+                continue;
+            if (!dryRun)
+                await comments.Delete(projectId, comment.Id, comment.Version, ct);
+            changes.Add(new CleanupChange(comment.TaskId, "", CleanupChangeKind.RemovedOrphanComment, null, null, null,
+                $"Comment {ShortId.Of(comment.Id)}: removed, its task no longer exists"));
+        }
     }
 
     private async Task RemoveInvalidReferences(Guid projectId, HashSet<Guid> known, bool dryRun, List<CleanupChange> changes, CancellationToken ct)

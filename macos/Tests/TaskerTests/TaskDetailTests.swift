@@ -45,6 +45,10 @@ final class StubDetailSource: TaskDetailSource, @unchecked Sendable {
     func delete(project: UUID, task: UUID, version: String?) async throws { try record("delete") }
     func resolve(project: UUID, ref: String) async throws -> [TaskLinkedBrief] { [] }
     func search(project: UUID) async throws -> [TaskLinkedBrief] { [] }
+    func comments(project: UUID, task: UUID) async throws -> [TaskCommentItem]? { [] }
+    func addComment(project: UUID, task: UUID, parent: UUID?, body: String) async throws {}
+    func updateComment(project: UUID, task: UUID, comment: UUID, body: String, version: String) async throws {}
+    func deleteComment(project: UUID, task: UUID, comment: UUID, version: String) async throws {}
 }
 
 @MainActor
@@ -270,4 +274,8 @@ struct MissingSource: TaskDetailSource {
     func delete(project: UUID, task: UUID, version: String?) async throws {}
     func resolve(project: UUID, ref: String) async throws -> [TaskLinkedBrief] { [] }
     func search(project: UUID) async throws -> [TaskLinkedBrief] { [] }
+    func comments(project: UUID, task: UUID) async throws -> [TaskCommentItem]? { [] }
+    func addComment(project: UUID, task: UUID, parent: UUID?, body: String) async throws {}
+    func updateComment(project: UUID, task: UUID, comment: UUID, body: String, version: String) async throws {}
+    func deleteComment(project: UUID, task: UUID, comment: UUID, version: String) async throws {}
 }

@@ -37,7 +37,10 @@ struct TaskDetailHost<Chrome: View>: View {
             value.load()
         }
         .onChange(of: live.revision) { model?.refresh() }
-        .onChange(of: l.language) { model?.localizer = l }
+        .onChange(of: l.language) {
+            model?.localizer = l
+            model?.comments.localizer = l
+        }
         .onDisappear { model?.stop() }
     }
 }

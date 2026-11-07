@@ -28,6 +28,7 @@ internal class DbInitializer(ILifetimeScope scope) : IHostedService, IStorageLif
                 var context = inner.Resolve<AppDbContext>();
                 await context.Database.EnsureCreatedAsync(ct);
                 await AddMissingColumns(context, ct);
+                await AddMissingTable(context, "task_comments", ct);
                 return;
             }
             catch (SqliteException) when (attempt < 5)
@@ -56,6 +57,24 @@ internal class DbInitializer(ILifetimeScope scope) : IHostedService, IStorageLif
 
         await AddColumn(context, "Hierarchical", "0", "FALSE", ct);
         await AddTextColumn(context, "statuses", "Icon", ct);
+    }
+
+    private static async Task AddMissingTable(AppDbContext context, string table, CancellationToken ct)
+    {
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync($"SELECT 1 FROM {table} WHERE 1 = 0", ct);
+            return;
+        }
+        catch (DbException)
+        {
+        }
+
+        foreach (var statement in context.Database.GenerateCreateScript().Split(';'))
+        {
+            if (statement.Contains($"\"{table}\"", StringComparison.Ordinal) && statement.TrimStart().StartsWith("CREATE ", StringComparison.Ordinal))
+                await context.Database.ExecuteSqlRawAsync(statement, ct);
+        }
     }
 
     /// <returns>true — столбец был добавлен сейчас.</returns>

@@ -1,5 +1,6 @@
 using Tasker.Core.Agents;
 using Tasker.Core.Boards;
+using Tasker.Core.Comments;
 using Tasker.Core.Fields;
 using Tasker.Core.Links;
 using Tasker.Core.Locks;
@@ -25,4 +26,5 @@ public sealed record StorageSet(
     IBoardStorage Boards,
     IUserStorage Users,
     IEditLockStorage EditLocks,
+    ITaskCommentStorage Comments,
     IAgentTokenStorage? AgentTokens = null);

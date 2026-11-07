@@ -206,6 +206,15 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /api/projects/{projectId}/tasks/{id}`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/delete(deleteTask)`.
     func deleteTask(_ input: Operations.DeleteTask.Input) async throws -> Operations.DeleteTask.Output
+    /// - Remark: HTTP `POST /api/projects/{projectId}/tasks/{id}/comments`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/comments/post(addTaskComment)`.
+    func addTaskComment(_ input: Operations.AddTaskComment.Input) async throws -> Operations.AddTaskComment.Output
+    /// - Remark: HTTP `PATCH /api/projects/{projectId}/tasks/{id}/comments/{commentId}`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/comments/{commentId}/patch(updateTaskComment)`.
+    func updateTaskComment(_ input: Operations.UpdateTaskComment.Input) async throws -> Operations.UpdateTaskComment.Output
+    /// - Remark: HTTP `DELETE /api/projects/{projectId}/tasks/{id}/comments/{commentId}`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/comments/{commentId}/delete(deleteTaskComment)`.
+    func deleteTaskComment(_ input: Operations.DeleteTaskComment.Input) async throws -> Operations.DeleteTaskComment.Output
     /// - Remark: HTTP `POST /api/projects/{projectId}/tasks/{id}/links`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/links/post(addTaskLink)`.
     func addTaskLink(_ input: Operations.AddTaskLink.Input) async throws -> Operations.AddTaskLink.Output
@@ -1010,6 +1019,45 @@ extension APIProtocol {
         headers: Operations.DeleteTask.Input.Headers = .init()
     ) async throws -> Operations.DeleteTask.Output {
         try await deleteTask(Operations.DeleteTask.Input(
+            path: path,
+            query: query,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `POST /api/projects/{projectId}/tasks/{id}/comments`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/comments/post(addTaskComment)`.
+    public func addTaskComment(
+        path: Operations.AddTaskComment.Input.Path,
+        headers: Operations.AddTaskComment.Input.Headers = .init(),
+        body: Operations.AddTaskComment.Input.Body
+    ) async throws -> Operations.AddTaskComment.Output {
+        try await addTaskComment(Operations.AddTaskComment.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `PATCH /api/projects/{projectId}/tasks/{id}/comments/{commentId}`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/comments/{commentId}/patch(updateTaskComment)`.
+    public func updateTaskComment(
+        path: Operations.UpdateTaskComment.Input.Path,
+        headers: Operations.UpdateTaskComment.Input.Headers = .init(),
+        body: Operations.UpdateTaskComment.Input.Body
+    ) async throws -> Operations.UpdateTaskComment.Output {
+        try await updateTaskComment(Operations.UpdateTaskComment.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `DELETE /api/projects/{projectId}/tasks/{id}/comments/{commentId}`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/tasks/{id}/comments/{commentId}/delete(deleteTaskComment)`.
+    public func deleteTaskComment(
+        path: Operations.DeleteTaskComment.Input.Path,
+        query: Operations.DeleteTaskComment.Input.Query = .init(),
+        headers: Operations.DeleteTaskComment.Input.Headers = .init()
+    ) async throws -> Operations.DeleteTaskComment.Output {
+        try await deleteTaskComment(Operations.DeleteTaskComment.Input(
             path: path,
             query: query,
             headers: headers

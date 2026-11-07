@@ -12,7 +12,7 @@ using Tasker.Storage.Files;
 namespace Tasker.Web.Workspaces;
 
 /// <summary>
-/// Что изменилось в рабочей области: <c>entity</c> — project, task, taskType, linkType, field, enum, status, statusSet, board, series, user,
+/// Что изменилось в рабочей области: <c>entity</c> — project, task, taskType, linkType, field, enum, status, statusSet, board, series, comment, user,
 /// <c>lock</c> (у сущности с этим id взяли или сняли блокировку на время правки; вид сущности в событии не указан)
 /// или <c>unknown</c> (что-то изменилось — перечитать всё); id — если известен.
 /// </summary>
@@ -164,6 +164,7 @@ public sealed class WorkspaceEvents : IDisposable
         "link-types" => "linkType",
         "fields" => "field",
         "enums" => "enum",
+        "comments" => "comment",
         _ => "unknown"
     };
 }

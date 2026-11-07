@@ -5,7 +5,7 @@ status:       Backlog (00000005-0000-4000-8000-000000000005)
 series:       BUG-2, GLD-51
 created:      2026-01-01 00:52:52 +00:00
 updated:      2026-01-01 00:52:52 +00:00
-version:      a725622b7db07ca1
+version:      3392c4c456b4e905
 fields:
   Priority (enum, required): Low
   Estimate (int): -

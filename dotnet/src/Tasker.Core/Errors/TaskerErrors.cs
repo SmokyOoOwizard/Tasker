@@ -329,6 +329,17 @@ public static class TaskerErrors
     [ErrorCode("user.signInRequired")]
     public static TaskerForbiddenException SignInRequired() => Forbidden("Sign in required", []);
 
+    [ErrorCode("comment.notAuthor")]
+    public static TaskerForbiddenException CommentNotAuthor() => Forbidden("You can change only your own comments", []);
+
+    [ErrorCode("comment.parentNotFound")]
+    public static TaskerValidationException CommentParentNotFound(Guid parentId) =>
+        Validation($"ParentId: comment not found in this task: {parentId}", [parentId]);
+
+    [ErrorCode("comment.parentDeleted")]
+    public static TaskerValidationException CommentParentDeleted(Guid parentId) =>
+        Validation($"ParentId: the comment is deleted, it cannot be replied to: {parentId}", [parentId]);
+
     [ErrorCode("user.personOnly")]
     public static TaskerForbiddenException PersonOnly() => Forbidden("Agents cannot do this: only a person can", []);
 

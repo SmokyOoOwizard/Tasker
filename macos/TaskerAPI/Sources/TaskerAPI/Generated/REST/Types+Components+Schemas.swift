@@ -33,6 +33,29 @@ extension Components {
                 case userId
             }
         }
+        /// - Remark: Generated from `#/components/schemas/AddTaskComment`.
+        public struct AddTaskComment: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AddTaskComment/body`.
+            public var body: Swift.String
+            /// - Remark: Generated from `#/components/schemas/AddTaskComment/parentId`.
+            public var parentId: Swift.String?
+            /// Creates a new `AddTaskComment`.
+            ///
+            /// - Parameters:
+            ///   - body:
+            ///   - parentId:
+            public init(
+                body: Swift.String,
+                parentId: Swift.String? = nil
+            ) {
+                self.body = body
+                self.parentId = parentId
+            }
+            public enum CodingKeys: String, CodingKey {
+                case body
+                case parentId
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/AddTaskLink`.
         public struct AddTaskLink: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/AddTaskLink/typeId`.
@@ -194,6 +217,9 @@ extension Components {
                 case board_noStatusSets = "board.noStatusSets"
                 case board_taskNotMatchColumn = "board.taskNotMatchColumn"
                 case board_taskTypeNotOnBoard = "board.taskTypeNotOnBoard"
+                case comment_notAuthor = "comment.notAuthor"
+                case comment_parentDeleted = "comment.parentDeleted"
+                case comment_parentNotFound = "comment.parentNotFound"
                 case entity_locked = "entity.locked"
                 case entity_modified = "entity.modified"
                 case entity_notFound = "entity.notFound"
@@ -597,6 +623,7 @@ extension Components {
             case removedInvalidSeries = "removedInvalidSeries"
             case renumbered = "renumbered"
             case removedInvalidLink = "removedInvalidLink"
+            case removedOrphanComment = "removedOrphanComment"
         }
         /// - Remark: Generated from `#/components/schemas/CleanupReport`.
         public struct CleanupReport: Codable, Hashable, Sendable {
@@ -678,6 +705,35 @@ extension Components {
                 case fieldId
                 case _operator = "operator"
                 case value
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/CommentAuthor`.
+        public struct CommentAuthor: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CommentAuthor/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CommentAuthor/name`.
+            public var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CommentAuthor/kind`.
+            public var kind: Components.Schemas.UserKind
+            /// Creates a new `CommentAuthor`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - name:
+            ///   - kind:
+            public init(
+                id: Swift.String,
+                name: Swift.String,
+                kind: Components.Schemas.UserKind
+            ) {
+                self.id = id
+                self.name = name
+                self.kind = kind
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case name
+                case kind
             }
         }
         /// - Remark: Generated from `#/components/schemas/ConflictPlan`.
@@ -2592,6 +2648,101 @@ extension Components {
                 case series
             }
         }
+        /// - Remark: Generated from `#/components/schemas/TaskCommentView`.
+        public struct TaskCommentView: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/taskId`.
+            public var taskId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/parentId`.
+            public var parentId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/depth`.
+            public var depth: Swift.Int32
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/author`.
+            public struct AuthorPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/TaskCommentView/author/value1`.
+                public var value1: Components.Schemas.CommentAuthor
+                /// Creates a new `AuthorPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.CommentAuthor) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/author`.
+            public var author: Components.Schemas.TaskCommentView.AuthorPayload?
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/body`.
+            public var body: Swift.String
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/createdAt`.
+            public var createdAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/editedAt`.
+            public var editedAt: Foundation.Date?
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/deleted`.
+            public var deleted: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/mine`.
+            public var mine: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/TaskCommentView/version`.
+            public var version: Swift.String
+            /// Creates a new `TaskCommentView`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - taskId:
+            ///   - parentId:
+            ///   - depth:
+            ///   - author:
+            ///   - body:
+            ///   - createdAt:
+            ///   - editedAt:
+            ///   - deleted:
+            ///   - mine:
+            ///   - version:
+            public init(
+                id: Swift.String,
+                taskId: Swift.String,
+                parentId: Swift.String? = nil,
+                depth: Swift.Int32,
+                author: Components.Schemas.TaskCommentView.AuthorPayload? = nil,
+                body: Swift.String,
+                createdAt: Foundation.Date,
+                editedAt: Foundation.Date? = nil,
+                deleted: Swift.Bool,
+                mine: Swift.Bool,
+                version: Swift.String
+            ) {
+                self.id = id
+                self.taskId = taskId
+                self.parentId = parentId
+                self.depth = depth
+                self.author = author
+                self.body = body
+                self.createdAt = createdAt
+                self.editedAt = editedAt
+                self.deleted = deleted
+                self.mine = mine
+                self.version = version
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case taskId
+                case parentId
+                case depth
+                case author
+                case body
+                case createdAt
+                case editedAt
+                case deleted
+                case mine
+                case version
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/TaskDetails`.
         public struct TaskDetails: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/TaskDetails/fieldViews`.
@@ -3541,6 +3692,29 @@ extension Components {
                 case statusId
                 case version
                 case fields
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/UpdateTaskComment`.
+        public struct UpdateTaskComment: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/UpdateTaskComment/body`.
+            public var body: Swift.String
+            /// - Remark: Generated from `#/components/schemas/UpdateTaskComment/version`.
+            public var version: Swift.String?
+            /// Creates a new `UpdateTaskComment`.
+            ///
+            /// - Parameters:
+            ///   - body:
+            ///   - version:
+            public init(
+                body: Swift.String,
+                version: Swift.String? = nil
+            ) {
+                self.body = body
+                self.version = version
+            }
+            public enum CodingKeys: String, CodingKey {
+                case body
+                case version
             }
         }
         /// - Remark: Generated from `#/components/schemas/UpdateTaskType`.

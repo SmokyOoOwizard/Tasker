@@ -37,7 +37,7 @@ claude mcp add --transport http tasker http://127.0.0.1:5719/mcp --header "X-Tas
 
 ## Инструменты
 
-Всего 62 инструмента; все, кроме `list_workspaces`, принимают `workspace` (в серверном режиме его нет), проектные — ещё и `projectId`.
+Всего 66 инструментов; все, кроме `list_workspaces`, принимают `workspace` (в серверном режиме его нет), проектные — ещё и `projectId`.
 
 | Группа | Инструменты | Для чего |
 |---|---|---|
@@ -46,6 +46,7 @@ claude mcp add --transport http tasker http://127.0.0.1:5719/mcp --header "X-Tas
 | Типы, статусы, наборы | `list_/create_/update_/delete_` + `task_type(s)`, `status(es)`, `status_set(s)` | схема процесса |
 | Поля | `list_/get_/create_/update_/delete_` + `field(s)`, `enum(s)` | поля и перечисления ([Связи-и-поля](Связи-и-поля)) |
 | Связи | `list_link_types`, `create_link_type`, `update_link_type`, `delete_link_type`, `get_task_links`, `link_tasks`, `unlink_tasks` | типы связей и связи задач |
+| Комментарии | `get_task_comments`, `add_task_comment`, `update_task_comment`, `delete_task_comment` | дерево комментариев задачи; ответ на комментарий — `parentId`, автором становится сам агент |
 | Доски | `list_boards`, `get_board`, `create_board`, `update_board`, `delete_board`, `move_task` | доски с задачами по колонкам; `move_task` двигает задачу |
 | Серии | `list_series`, `get_series`, `create_series`, `update_series`, `delete_series`, `series_health`, `add_task_to_series`, `remove_task_from_series`, `renumber_task`, `find_tasks_by_reference` | серии, номера, поиск задачи по ссылке ([Концепции](Концепции)) |
 | Блокировки | `lock_entity`, `unlock_entity`, `get_lock` | занять сущность на время серии правок |

@@ -17,6 +17,9 @@ export const strings = {
     "error.board.noStatusSets": "A board needs at least one status set.",
     "error.board.taskNotMatchColumn": "Task “{0}” does not match the conditions of column “{1}”: {2}. Change its fields first.",
     "error.board.taskTypeNotOnBoard": "Task type “{0}” is not on board “{1}”.",
+    "error.comment.notAuthor": "You can change only your own comments.",
+    "error.comment.parentDeleted": "The comment is deleted, it cannot be replied to.",
+    "error.comment.parentNotFound": "The comment you are replying to is not found.",
     "error.entity.locked": "“{0}” is being edited by {1}.",
     "error.entity.modified": "Someone else already changed “{0}”. Reload and try again.",
     "error.entity.notFound": "Not found.",
@@ -43,6 +46,7 @@ export const strings = {
     "error.internal.unexpected": "An unexpected server error occurred.",
     "error.label.boardName": "Board name",
     "error.label.columnName": "Column name",
+    "error.label.commentBody": "Comment text",
     "error.label.enumName": "Enum name",
     "error.label.enumValue": "Enum value",
     "error.label.fieldName": "Field name",
@@ -294,6 +298,9 @@ export const strings = {
     "error.board.noStatusSets": "На доске должен быть хотя бы один набор статусов.",
     "error.board.taskNotMatchColumn": "Задача «{0}» не подходит под условия колонки «{1}»: {2}. Сначала измените её поля.",
     "error.board.taskTypeNotOnBoard": "Типа задач «{0}» нет на доске «{1}».",
+    "error.comment.notAuthor": "Менять и удалять можно только свои комментарии.",
+    "error.comment.parentDeleted": "Комментарий удалён, на него нельзя ответить.",
+    "error.comment.parentNotFound": "Комментарий, на который вы отвечаете, не найден.",
     "error.entity.locked": "«{0}» сейчас редактирует {1}.",
     "error.entity.modified": "«{0}» уже изменил кто-то другой. Обновите данные и повторите.",
     "error.entity.notFound": "Не найдено.",
@@ -320,6 +327,7 @@ export const strings = {
     "error.internal.unexpected": "На сервере произошла непредвиденная ошибка.",
     "error.label.boardName": "Название доски",
     "error.label.columnName": "Название колонки",
+    "error.label.commentBody": "Текст комментария",
     "error.label.enumName": "Название перечисления",
     "error.label.enumValue": "Значение перечисления",
     "error.label.fieldName": "Имя поля",
@@ -611,6 +619,13 @@ export const errorParams: Record<string, readonly string[]> = {
   "board.taskTypeNotOnBoard": [
     "taskType",
     "board"
+  ],
+  "comment.notAuthor": [],
+  "comment.parentDeleted": [
+    "parentId"
+  ],
+  "comment.parentNotFound": [
+    "parentId"
   ],
   "entity.locked": [
     "name",

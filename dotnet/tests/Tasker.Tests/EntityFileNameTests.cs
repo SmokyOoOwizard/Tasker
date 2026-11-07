@@ -100,7 +100,7 @@ public class EntityFileNameTests : IDisposable
 
         Assert.Equal(
             ["task-3f2a9c1e.yaml", "type-3f2a9c1e.yaml", "status-3f2a9c1e.yaml", "set-3f2a9c1e.yaml", "board-3f2a9c1e.yaml",
-             "series-3f2a9c1e.yaml", "link-3f2a9c1e.yaml", "field-3f2a9c1e.yaml", "enum-3f2a9c1e.yaml"],
+             "series-3f2a9c1e.yaml", "link-3f2a9c1e.yaml", "field-3f2a9c1e.yaml", "enum-3f2a9c1e.yaml", "comment-3f2a9c1e.yaml"],
             EntityFolders.All.Select(x => x.FileName("???", id)));
         Assert.Equal(EntityFolders.All.Count, EntityFolders.All.Select(x => x.Name).Distinct().Count());
         Assert.Equal(EntityFolders.All.Count, EntityFolders.All.Select(x => x.Kind).Distinct().Count());
@@ -109,9 +109,9 @@ public class EntityFileNameTests : IDisposable
     [Fact]
     public void Format_version_4_files_are_read_as_version_10_and_a_newer_one_is_refused()
     {
-        Assert.Equal(11, FormatVersions.Current);
-        Assert.StartsWith("formatVersion: 11\n", FormatVersions.Upgrade("formatVersion: 4\nid: 1\n", "x.yaml"));
-        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 12\nid: 1\n", "x.yaml"));
+        Assert.Equal(12, FormatVersions.Current);
+        Assert.StartsWith("formatVersion: 12\n", FormatVersions.Upgrade("formatVersion: 4\nid: 1\n", "x.yaml"));
+        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 13\nid: 1\n", "x.yaml"));
     }
 
     // ---- хранилище: создание, переименование, старые файлы ----

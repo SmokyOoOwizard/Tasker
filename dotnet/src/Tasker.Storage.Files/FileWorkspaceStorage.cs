@@ -27,7 +27,8 @@ public sealed class FileWorkspaceStorage : IDisposable
             new FieldEnumStorage(directory, index),
             new BoardStorage(directory, index),
             new UserStorage(directory, index),
-            new EditLockStorage(directory));
+            new EditLockStorage(directory),
+            new TaskCommentStorage(directory, index));
         Lifecycle = new IndexOnlyLifecycle(index);
         Migration = new FileMigration(directory, index);
     }

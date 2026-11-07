@@ -97,14 +97,14 @@ public class StatusIconTests
     [Fact]
     public void The_step_to_format_11_changes_only_the_version_and_repeating_it_changes_nothing()
     {
-        Assert.Equal(11, FormatVersions.Current);
+        Assert.Equal(12, FormatVersions.Current);
 
         const string body = "id: 1\nname: Doing\ncolor: '#112233'\nicon: half\n";
         var upgraded = FormatVersions.Upgrade("formatVersion: 10\n" + body, "x.yaml");
 
-        Assert.Equal("formatVersion: 11\n" + body, upgraded);
+        Assert.Equal("formatVersion: 12\n" + body, upgraded);
         Assert.Equal(upgraded, FormatVersions.Upgrade(upgraded, "x.yaml"));
-        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 12\n" + body, "x.yaml"));
+        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 13\n" + body, "x.yaml"));
     }
 
     private static async Task<(string WithIcon, string WithoutIcon)> TwoStatuses(TestWorkspace ws)
@@ -140,9 +140,9 @@ public class StatusIconTests
         Assert.Equal(2, (await ws.Run("migrate", "--check")).Code);
 
         await Ok(ws.Run("migrate"));
-        Assert.Equal("formatVersion: 11\n" + iconBody, File.ReadAllText(withIcon));
-        Assert.Equal("formatVersion: 11\n" + plainBody, File.ReadAllText(withoutIcon));
-        Assert.StartsWith("formatVersion: 11\n", File.ReadAllText(project));
+        Assert.Equal("formatVersion: 12\n" + iconBody, File.ReadAllText(withIcon));
+        Assert.Equal("formatVersion: 12\n" + plainBody, File.ReadAllText(withoutIcon));
+        Assert.StartsWith("formatVersion: 12\n", File.ReadAllText(project));
         Assert.Equal(0, (await ws.Run("migrate", "--check")).Code);
 
         var written = File.GetLastWriteTimeUtc(withIcon);
@@ -162,12 +162,12 @@ public class StatusIconTests
         SetFormat(withoutIcon, 10);
 
         await Ok(ws.Run("status", "update", "Doing", "--description", "text"));
-        Assert.StartsWith("formatVersion: 11\n", File.ReadAllText(withIcon));
+        Assert.StartsWith("formatVersion: 12\n", File.ReadAllText(withIcon));
         Assert.Contains("icon: half", File.ReadAllText(withIcon));
         Assert.StartsWith("formatVersion: 10\n", File.ReadAllText(withoutIcon));
 
         await Ok(ws.Run("status", "update", "Plain", "--description", "text"));
-        Assert.StartsWith("formatVersion: 11\n", File.ReadAllText(withoutIcon));
+        Assert.StartsWith("formatVersion: 12\n", File.ReadAllText(withoutIcon));
         Assert.DoesNotContain("icon", File.ReadAllText(withoutIcon));
     }
 
@@ -178,7 +178,7 @@ public class StatusIconTests
         using var ws = TestWorkspace.Create("files");
         var (withIcon, _) = await TwoStatuses(ws);
         var id = Str((await Ok(ws.Run("status", "get", "Doing", "--json"))).Json, "id");
-        SetFormat(withIcon, 12);
+        SetFormat(withIcon, 13);
         var before = File.ReadAllText(withIcon);
 
         var refused = await ws.Run("status", "update", id, "--description", "text");
@@ -186,7 +186,7 @@ public class StatusIconTests
         var migrate = await ws.Run("migrate");
 
         Assert.NotEqual(0, refused.Code);
-        Assert.Contains("format version 12 is newer", sync.Out);
+        Assert.Contains("format version 13 is newer", sync.Out);
         Assert.NotEqual(0, migrate.Code);
         Assert.Equal(before, File.ReadAllText(withIcon));
     }

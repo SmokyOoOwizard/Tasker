@@ -18,7 +18,8 @@ struct WorkspaceLiveUpdates: Sendable {
         "enum": ["enums", "enum"],
         "linkType": ["linkTypes", "linkType", "taskLinks", "stats"],
         "board": ["boards", "board", "columnTasks", "stats"],
-        "series": ["seriesList", "series", "seriesHealth", "stats"]
+        "series": ["seriesList", "series", "seriesHealth", "stats"],
+        "comment": ["taskComments"]
     ]
 
     static let snapshotSelections: [GraphQLField] = [

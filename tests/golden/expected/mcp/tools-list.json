@@ -2783,6 +2783,142 @@
             "typeId"
           ]
         }
+      },
+      {
+        "name": "update_task_comment",
+        "description": "Changes the text of your own comment; someone else's fails with [forbidden]. `version` is the comment's current version (from get_task_comments); if it changed since, the call fails with [modified]: re-read and retry. `commentId` is the comment's id, full or short (the first 8 or more hex characters), from get_task_comments. `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "format": "uuid",
+              "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+            },
+            "taskId": {
+              "type": "string"
+            },
+            "commentId": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "workspace": {
+              "type": "string",
+              "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+            }
+          },
+          "required": [
+            "taskId",
+            "commentId",
+            "body",
+            "version"
+          ]
+        },
+        "annotations": {
+          "idempotentHint": true
+        }
+      },
+      {
+        "name": "add_task_comment",
+        "description": "Adds a comment to a task, or a reply when `parentId` is given: reply to any comment at any depth, except a deleted one. `body` is Markdown. You become the author automatically and are shown as an agent. Returns the new comment. `parentId` is a comment id, full or short. `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "format": "uuid",
+              "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+            },
+            "taskId": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "parentId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "workspace": {
+              "type": "string",
+              "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+            }
+          },
+          "required": [
+            "taskId",
+            "body"
+          ]
+        }
+      },
+      {
+        "name": "get_task_comments",
+        "description": "Reads the comment tree of a task, in reading order: every reply follows its parent. Each comment has `id`, `parentId` (null for a top-level comment), `depth` (0 for top level), `author` {id, name, kind: human|agent}, `body` (Markdown), `createdAt`, `editedAt`, `mine` and `version`. A deleted comment that still has replies is present with `deleted` true, no author and an empty body. `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "format": "uuid",
+              "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+            },
+            "taskId": {
+              "type": "string"
+            },
+            "workspace": {
+              "type": "string",
+              "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+            }
+          },
+          "required": [
+            "taskId"
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": true
+        }
+      },
+      {
+        "name": "delete_task_comment",
+        "description": "Deletes your own comment; someone else's fails with [forbidden]. Its replies stay: if it has any, a mark is shown in its place. `version` as in update_task_comment. `commentId` is the comment's id, full or short (the first 8 or more hex characters), from get_task_comments. `taskId` is the task's id (Guid) or its short id: the first 8 or more hex characters of the Guid (as the console lists it), if they match one task only.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "format": "uuid",
+              "description": " Optional if the workspace has exactly one project: then that project is used; with several projects it is required."
+            },
+            "taskId": {
+              "type": "string"
+            },
+            "commentId": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "workspace": {
+              "type": "string",
+              "description": "Workspace (folder) to work in: its name or path from list_workspaces. Optional if exactly one workspace is available; with several it is required. A workspace that is still opening is waited for a few seconds; if it is still not ready the call fails with [unavailable] (retry later), and with [failed] if it could not be opened."
+            }
+          },
+          "required": [
+            "taskId",
+            "commentId",
+            "version"
+          ]
+        },
+        "annotations": {
+          "destructiveHint": true
+        }
       }
     ]
   }

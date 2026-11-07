@@ -26,6 +26,9 @@ enum ErrorCatalog {
         "board.noStatusSets": ErrorCatalogEntry(key: .errorBoardNoStatusSets, params: [], shown: 0, plural: nil),
         "board.taskNotMatchColumn": ErrorCatalogEntry(key: .errorBoardTaskNotMatchColumn, params: ["task", "column", "conditions"], shown: 3, plural: nil),
         "board.taskTypeNotOnBoard": ErrorCatalogEntry(key: .errorBoardTaskTypeNotOnBoard, params: ["taskType", "board"], shown: 2, plural: nil),
+        "comment.notAuthor": ErrorCatalogEntry(key: .errorCommentNotAuthor, params: [], shown: 0, plural: nil),
+        "comment.parentDeleted": ErrorCatalogEntry(key: .errorCommentParentDeleted, params: ["parentId"], shown: 0, plural: nil),
+        "comment.parentNotFound": ErrorCatalogEntry(key: .errorCommentParentNotFound, params: ["parentId"], shown: 0, plural: nil),
         "entity.locked": ErrorCatalogEntry(key: .errorEntityLocked, params: ["name", "holder", "entity", "expiresAt"], shown: 2, plural: nil),
         "entity.modified": ErrorCatalogEntry(key: .errorEntityModified, params: ["name", "entity"], shown: 1, plural: nil),
         "entity.notFound": ErrorCatalogEntry(key: .errorEntityNotFound, params: [], shown: 0, plural: nil),
@@ -101,6 +104,7 @@ enum ErrorCatalog {
     static let fields: [String: L10nKey] = [
         "boardName": .errorLabelBoardName,
         "columnName": .errorLabelColumnName,
+        "commentBody": .errorLabelCommentBody,
         "enumName": .errorLabelEnumName,
         "enumValue": .errorLabelEnumValue,
         "fieldName": .errorLabelFieldName,

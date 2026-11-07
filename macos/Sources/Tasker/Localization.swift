@@ -149,6 +149,12 @@ struct Localizer: Sendable {
         value.formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(locale))
     }
 
+    func commentTime(_ value: Date) -> String {
+        let sameYear = Calendar.current.isDate(value, equalTo: Date(), toGranularity: .year)
+        let format = Date.FormatStyle.dateTime.day().month(.abbreviated).hour().minute().locale(locale)
+        return sameYear ? value.formatted(format) : value.formatted(format.year())
+    }
+
     func number(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(0...2)).locale(locale))
     }

@@ -211,6 +211,21 @@ CREATE TABLE IF NOT EXISTS "tasks" (
     CONSTRAINT "FK_tasks_statuses_StatusId" FOREIGN KEY ("StatusId") REFERENCES "statuses" ("Id"),
     CONSTRAINT "FK_tasks_task_types_TypeId" FOREIGN KEY ("TypeId") REFERENCES "task_types" ("Id")
 );
+CREATE TABLE IF NOT EXISTS "task_comments" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_task_comments" PRIMARY KEY,
+    "ProjectId" TEXT NOT NULL,
+    "TaskId" TEXT NOT NULL,
+    "ParentId" TEXT NULL,
+    "AuthorId" TEXT NOT NULL,
+    "AuthorName" TEXT NOT NULL,
+    "AuthorKind" INTEGER NOT NULL,
+    "Body" TEXT NOT NULL,
+    "CreatedAt" TEXT NOT NULL,
+    "EditedAt" TEXT NULL,
+    "Deleted" INTEGER NOT NULL,
+    "Version" INTEGER NOT NULL,
+    CONSTRAINT "FK_task_comments_tasks_TaskId" FOREIGN KEY ("TaskId") REFERENCES "tasks" ("Id") ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS "task_fields" (
     "TaskId" TEXT NOT NULL,
     "FieldId" TEXT NOT NULL,
@@ -274,6 +289,8 @@ CREATE UNIQUE INDEX "IX_series_ProjectId_Prefix" ON "series" ("ProjectId", "Pref
 CREATE INDEX "IX_status_set_statuses_StatusId" ON "status_set_statuses" ("StatusId");
 CREATE INDEX "IX_status_sets_ProjectId" ON "status_sets" ("ProjectId");
 CREATE INDEX "IX_statuses_ProjectId" ON "statuses" ("ProjectId");
+CREATE INDEX "IX_task_comments_ProjectId_TaskId_CreatedAt" ON "task_comments" ("ProjectId", "TaskId", "CreatedAt");
+CREATE INDEX "IX_task_comments_TaskId" ON "task_comments" ("TaskId");
 CREATE INDEX "IX_task_field_values_FieldId_Number" ON "task_field_values" ("FieldId", "Number");
 CREATE INDEX "IX_task_field_values_FieldId_Value" ON "task_field_values" ("FieldId", "Value");
 CREATE INDEX "IX_task_field_values_OwnKey_Number" ON "task_field_values" ("OwnKey", "Number");

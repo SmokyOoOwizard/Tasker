@@ -7,6 +7,7 @@ internal class AppDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<ProjectDbModel> Projects { get; set; }
     public DbSet<TaskDbModel> Tasks { get; set; }
+    public DbSet<TaskCommentDbModel> TaskComments { get; set; }
     public DbSet<TaskTypeDbModel> TaskTypes { get; set; }
     public DbSet<StatusDbModel> Statuses { get; set; }
     public DbSet<SeriesDbModel> Series { get; set; }
@@ -297,6 +298,18 @@ internal class AppDbContext(DbContextOptions options) : DbContext(options)
             x.Property(t => t.OutwardName).HasMaxLength(100);
             x.Property(t => t.InwardName).HasMaxLength(100);
             BelongsToProject(x, t => t.ProjectId);
+        });
+
+        modelBuilder.Entity<TaskCommentDbModel>(x =>
+        {
+            x.ToTable("task_comments");
+            x.HasKey(c => c.Id);
+            x.Property(c => c.AuthorName).HasMaxLength(200);
+            x.HasIndex(c => new { c.ProjectId, c.TaskId, c.CreatedAt });
+            x.HasOne<TaskDbModel>()
+                .WithMany()
+                .HasForeignKey(c => c.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<TaskLinkDbModel>(x =>

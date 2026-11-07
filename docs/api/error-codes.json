@@ -122,6 +122,25 @@
       ],
       "usages": false
     },
+    "comment.notAuthor": {
+      "status": 403,
+      "params": [],
+      "usages": false
+    },
+    "comment.parentDeleted": {
+      "status": 400,
+      "params": [
+        "parentId"
+      ],
+      "usages": false
+    },
+    "comment.parentNotFound": {
+      "status": 400,
+      "params": [
+        "parentId"
+      ],
+      "usages": false
+    },
     "entity.locked": {
       "status": 409,
       "params": [
@@ -600,7 +619,8 @@
     "title",
     "boardName",
     "columnName",
-    "fieldName"
+    "fieldName",
+    "commentBody"
   ],
   "usageKinds": [
     "tasks",
