@@ -48,6 +48,7 @@ final class BoardViewModel {
     private(set) var columns: [BoardColumnState] = []
     private(set) var outside = 0
     private(set) var vocabulary = TaskListVocabulary.empty
+    private(set) var parentRefs: [UUID: BoardParentRef] = [:]
     private(set) var moving: [UUID: UUID] = [:]
     private(set) var refusal: BoardRefusal?
     var dragging: UUID?
@@ -163,7 +164,9 @@ final class BoardViewModel {
                 let all = try await source.taskPage(project: project, typeIds: typeIds, offset: 0, limit: 1).total
                 outside = max(0, all - states.reduce(0) { $0 + $1.total })
             }
+            let parents = await loadParents(for: states.flatMap(\.rows)) ?? parentRefs
             guard current == generation else { return }
+            parentRefs = parents
             apply(vocabulary: vocabulary, choices: list, board: info, columns: states, outside: outside, phase: .ready, animated: !initial)
         } catch is CancellationError {
             return
@@ -173,6 +176,21 @@ final class BoardViewModel {
                 phase = .failed(localizer.message(for: error))
             }
         }
+    }
+
+    private func loadParents(for rows: [TaskRow]) async -> [UUID: BoardParentRef]? {
+        let ids = Array(Set(rows.filter { !$0.parentIds.isEmpty }.map(\.id)))
+        guard !ids.isEmpty else { return [:] }
+        guard let found = try? await source.ancestors(project: project, ids: ids) else { return nil }
+        return Dictionary(found.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    func parentChains(of row: TaskRow) -> BoardParentChains {
+        row.parentIds.isEmpty ? .none : BoardParentChains.build(parentIds: row.parentIds, refs: parentRefs)
+    }
+
+    func parentReference(_ parent: BoardParentRef) -> String? {
+        vocabulary.prefixedReference(id: parent.id, seriesNumbers: parent.seriesNumbers)
     }
 
     private func apply(vocabulary: TaskListVocabulary, choices: [BoardChoice], board: BoardInfo?, columns: [BoardColumnState], outside: Int, phase: Phase, animated: Bool) {
@@ -234,8 +252,14 @@ final class BoardViewModel {
                     if page.rows.isEmpty { break }
                     state.rows += page.rows
                     state.total = page.total
+                    guard current == self.generation else { return }
+                    let parents = await self.loadParents(for: page.rows)
                     guard current == self.generation, let at = self.columns.firstIndex(where: { $0.id == column }) else { return }
-                    withAnimation(.easeInOut(duration: 0.2)) { self.columns[at].rows = state.rows; self.columns[at].total = state.total }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        if let parents { self.parentRefs.merge(parents) { _, new in new } }
+                        self.columns[at].rows = state.rows
+                        self.columns[at].total = state.total
+                    }
                 }
             } catch {
                 self.onFailure?(self.localizer.message(for: error))

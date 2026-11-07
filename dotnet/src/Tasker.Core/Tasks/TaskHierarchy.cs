@@ -71,6 +71,23 @@ public sealed class TaskHierarchy
 
     public Guid[] ParentsOf(Guid id) => parents.GetValueOrDefault(id) ?? [];
 
+    public List<Guid> AncestorsOf(IEnumerable<Guid> ids, int limit)
+    {
+        var seen = new HashSet<Guid>();
+        var result = new List<Guid>();
+        var queue = new Queue<Guid>(ids);
+        while (queue.Count > 0 && result.Count < limit)
+        {
+            foreach (var parent in ParentsOf(queue.Dequeue()))
+                if (seen.Add(parent))
+                {
+                    result.Add(parent);
+                    queue.Enqueue(parent);
+                }
+        }
+        return result;
+    }
+
     public int ChildCount(Guid id) => children.TryGetValue(id, out var list) ? list.Length : 0;
 
     public List<Guid> ChildrenOf(Guid id, IReadOnlyDictionary<Guid, int> position) =>

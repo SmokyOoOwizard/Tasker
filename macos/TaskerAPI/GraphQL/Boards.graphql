@@ -99,3 +99,18 @@ query SidebarBoards($projectId: UUID!) {
     }
   }
 }
+
+query BoardTaskAncestors($projectId: UUID!, $ids: [UUID!]!) {
+  project(id: $projectId) {
+    id
+    taskAncestors(ids: $ids) {
+      id
+      title
+      parentIds
+      seriesNumbers {
+        seriesId
+        number
+      }
+    }
+  }
+}

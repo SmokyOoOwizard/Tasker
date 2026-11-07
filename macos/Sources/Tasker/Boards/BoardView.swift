@@ -352,6 +352,8 @@ private struct BoardCardView: View {
                         navigator.togglePeek(row.id)
                     },
                     open: { navigator.open(row.id) },
+                    parents: model.parentChains(of: row).chains.map { $0.nearest.id },
+                    openParent: { navigator.open($0) },
                     begin: {
                         BoardDragState.active = true
                         model.dragging = row.id
@@ -386,6 +388,54 @@ private struct BoardCardView: View {
     }
 }
 
+private struct BoardParentLine: View {
+    let model: BoardViewModel
+    let chain: BoardParentChain
+    let more: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 3)
+                .strokeBorder(DesignColor.dim.color, lineWidth: DesignLayout.iconStroke)
+                .frame(width: 11, height: 11)
+            ForEach(Array(chain.items.dropLast().enumerated()), id: \.offset) { _, item in
+                if let reference = model.parentReference(item) {
+                    Text(reference)
+                        .font(.design(DesignTypography.captionSize, mono: true))
+                        .foregroundStyle(DesignColor.dim.color)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text(verbatim: "›")
+                        .font(.design(DesignTypography.captionSize))
+                        .foregroundStyle(DesignColor.dim.color)
+                }
+            }
+            if let reference = model.parentReference(chain.nearest) {
+                Text(reference)
+                    .font(.design(DesignTypography.captionSize, mono: true))
+                    .foregroundStyle(DesignColor.dim.color)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            Text(chain.nearest.title)
+                .font(.design(DesignTypography.captionSize))
+                .foregroundStyle(DesignColor.mut.color)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
+            if more > 0 {
+                Text(verbatim: "+\(more)")
+                    .font(.design(DesignTypography.captionSize))
+                    .foregroundStyle(DesignColor.mut.color)
+                    .padding(.horizontal, 5)
+                    .background(DesignColor.hov.color, in: RoundedRectangle(cornerRadius: DesignRadius.tag))
+                    .fixedSize()
+            }
+        }
+        .frame(height: BoardParentLayout.lineHeight)
+    }
+}
+
 private struct BoardCardBody: View {
     let model: BoardViewModel
     let row: TaskRow
@@ -397,7 +447,17 @@ private struct BoardCardBody: View {
         let vocabulary = model.vocabulary
         let chips = vocabulary.chips(row, fieldIds: nil, limit: 2, l: l)
         let typeIndex = vocabulary.typeOrder.firstIndex(of: row.typeId) ?? 0
+        let parents = model.parentChains(of: row)
         VStack(alignment: .leading, spacing: 0) {
+            if !parents.chains.isEmpty {
+                VStack(alignment: .leading, spacing: BoardParentLayout.spacing) {
+                    ForEach(Array(parents.chains.enumerated()), id: \.offset) { index, chain in
+                        BoardParentLine(model: model, chain: chain, more: index == parents.chains.count - 1 ? parents.more : 0)
+                    }
+                }
+                .padding(.bottom, BoardParentLayout.gap)
+                .accessibilityElement(children: .combine)
+            }
             HStack(spacing: 7) {
                 GlyphView(glyph: vocabulary.glyph(status: row.statusId, type: row.typeId), color: DesignColor.mut.color, size: 13)
                 Text(model.reference(row))
