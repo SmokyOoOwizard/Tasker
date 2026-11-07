@@ -38,6 +38,14 @@ public static class TaskTools
         "int/float by value, date by date, bool false before true, enum by the order of its values, string ignoring case; a multiple field by its first value). " +
         "Tasks without a value go last in both directions; equal keys keep the creation order, so pages never overlap. totalCount and filters are not affected. An unknown key is an error listing the valid ones.";
 
+    public const string QueryHint =
+        "`query` (optional) selects and orders tasks with a query string, combined with the other filters by AND; its `| sort` part overrides `sort`. " +
+        "Conditions start with a dot and are joined by && || ! and parentheses: .Status == \"Todo\", .Type, .Title.Contains(\"x\"), .Series.Contains(\"TSK\"), " +
+        ".Field.Name > 3 (fields of the catalog or own fields; quote names with spaces: .Field.\"My field\"), .Field.Labels.Contains(\"bug\"), .Field.Due.IsSet(), .Link.Blocks.IsSet(), .Parent.IsUnset(). " +
+        "Sort goes last: | sort .Status, -.Updated, .Field.Estimate ('-' descending; keys .Status .Type .Title .Created .Updated .Series .Field.Name). " +
+        "Example: .Status == \"Todo\" && .Field.Labels.Contains(\"bug\") | sort -.Updated. " +
+        "A malformed query fails with [invalid] query.<code> (position start-end): message; fix the query at that position.";
+
     /// <summary>Описание фильтров по типу, статусу и серии для инструментов, которые отдают задачи списком.</summary>
     public const string FilterHint =
         "Filters: typeIds / statusIds / seriesIds (arrays; the single typeId / statusId / seriesId are the same and are merged with them). " +
@@ -49,16 +57,17 @@ public static class TaskTools
         single == null ? many : (many ?? []).Append(single.Value);
 
     [McpServerTool(Name = "list_tasks", ReadOnly = true)]
-    [Description("Lists tasks of a project in creation order (or in the order of `sort`), optionally filtered by task types, statuses, series (tasks that have a number in it) and/or fields (catalog fields and own fields of tasks; field: [\"Estimate>=3\", \"Level!=Low\", \"Due:set\"], all must hold; Name is letters and digits only; operators = != (any type; != also takes tasks without a value; for a multiple field = means contains the value and != means none equals it; enum value by name or id) and > >= < <= (int, float, date only); Name:set / Name:unset - has a value or not; Name:attached / Name:detached - the field is connected to the task (its type has it or it was added) or not (for an own field: the task has it). A name found in the catalog is read by the catalog field's type and also matches own fields of that name and type (other types are skipped); a name only own fields have is read by their type, several types - an error). Paged: offset/limit (limit 1-200, default 50). " + FilterHint + " " + SortHint + " " + DescriptionHint)]
+    [Description("Lists tasks of a project in creation order (or in the order of `sort`), optionally filtered by task types, statuses, series (tasks that have a number in it) and/or fields (catalog fields and own fields of tasks; field: [\"Estimate>=3\", \"Level!=Low\", \"Due:set\"], all must hold; Name is letters and digits only; operators = != (any type; != also takes tasks without a value; for a multiple field = means contains the value and != means none equals it; enum value by name or id) and > >= < <= (int, float, date only); Name:set / Name:unset - has a value or not; Name:attached / Name:detached - the field is connected to the task (its type has it or it was added) or not (for an own field: the task has it). A name found in the catalog is read by the catalog field's type and also matches own fields of that name and type (other types are skipped); a name only own fields have is read by their type, several types - an error). Paged: offset/limit (limit 1-200, default 50). " + FilterHint + " " + SortHint + " " + QueryHint + " " + DescriptionHint)]
     public static Task<ListDto<TaskListItem>> ListTasks(
         ProjectService projects, TaskService tasks, Guid projectId,
         Guid? typeId = null, Guid? statusId = null, Guid? seriesId = null, Guid[]? typeIds = null, Guid[]? statusIds = null, Guid[]? seriesIds = null,
-        string[]? field = null, int offset = 0, int limit = Page.DefaultLimit, int descriptionLength = DescriptionPreview.McpDefault, string? sort = null, CancellationToken ct = default) =>
+        string[]? field = null, int offset = 0, int limit = Page.DefaultLimit, int descriptionLength = DescriptionPreview.McpDefault, string? sort = null, string? query = null, CancellationToken ct = default) =>
         McpCall.Run(async () =>
         {
             await McpCall.RequireProject(projects, projectId, ct);
+            await McpCall.CheckQuery(tasks, projectId, query, ct);
             var filter = TaskFilter.Of(Merge(typeId, typeIds), Merge(statusId, statusIds), Merge(seriesId, seriesIds));
-            return await tasks.List(projectId, filter, field, Page.Of(offset, limit), descriptionLength, ct, sort);
+            return await tasks.List(projectId, filter, field, Page.Of(offset, limit), descriptionLength, ct, sort, query);
         });
 
     [McpServerTool(Name = "get_task", ReadOnly = true)]
