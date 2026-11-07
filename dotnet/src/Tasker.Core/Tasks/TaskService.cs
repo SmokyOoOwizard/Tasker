@@ -41,7 +41,8 @@ public partial class TaskService(
     IFieldStorage fields,
     IFieldEnumStorage enums,
     Links.TaskLinkService links,
-    IStatusStorage statuses)
+    IStatusStorage statuses,
+    Comments.ITaskCommentStorage? comments = null)
 {
     public const int MaxTitleLength = 500;
 
@@ -514,6 +515,8 @@ public partial class TaskService(
             throw Versioning.Modified(Subject(task));
         await locks.Forget(Locks.LockedEntity.Task, task.Id, ct);
         await Links.TaskLinks.RemoveInbound(tasks, time, projectId, task.Id, ct);
+        if (comments != null)
+            await comments.DeleteByTask(projectId, task.Id, ct);
         return true;
     }
 

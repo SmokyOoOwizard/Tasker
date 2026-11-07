@@ -1,5 +1,6 @@
 using Tasker.Core.Agents;
 using Tasker.Core.Boards;
+using Tasker.Core.Comments;
 using Tasker.Core.Fields;
 using Tasker.Core.Links;
 using Tasker.Core.Locks;
@@ -18,7 +19,8 @@ public sealed class CoreServices(
     UserOptions options,
     ILocalEditor? localEditor = null,
     ILockNotifier? notifier = null,
-    TimeProvider? time = null)
+    TimeProvider? time = null,
+    LocalHuman? localHuman = null)
 {
     private static readonly Dictionary<Type, Func<CoreServices, object?>> Services = new()
     {
@@ -35,6 +37,7 @@ public sealed class CoreServices(
         [typeof(IBoardStorage)] = x => x.Storage.Boards,
         [typeof(IUserStorage)] = x => x.Storage.Users,
         [typeof(IEditLockStorage)] = x => x.Storage.EditLocks,
+        [typeof(ITaskCommentStorage)] = x => x.Storage.Comments,
         [typeof(IAgentTokenStorage)] = x => x.Storage.AgentTokens,
         [typeof(ICurrentUser)] = x => x.CurrentUser,
         [typeof(IProjectAccess)] = x => x.Access,
@@ -53,6 +56,7 @@ public sealed class CoreServices(
         [typeof(BoardService)] = x => x.Boards,
         [typeof(LinkTypeService)] = x => x.LinkTypes,
         [typeof(TaskLinkService)] = x => x.TaskLinks,
+        [typeof(TaskCommentService)] = x => x.TaskComments,
         [typeof(LinkHealthService)] = x => x.LinkHealth,
         [typeof(FieldService)] = x => x.Fields,
         [typeof(FieldEnumService)] = x => x.FieldEnums,
@@ -92,7 +96,7 @@ public sealed class CoreServices(
         storage.Writes, Time, EditLocks, storage.Series));
 
     public TaskService Tasks => One(() => new TaskService(storage.Tasks, storage.TaskTypes, storage.StatusSets, Time, storage.Series,
-        storage.Writes, EditLocks, storage.Fields, storage.FieldEnums, TaskLinks, storage.Statuses));
+        storage.Writes, EditLocks, storage.Fields, storage.FieldEnums, TaskLinks, storage.Statuses, storage.Comments));
 
     public BoardService Boards => One(() => new BoardService(storage.Boards, storage.StatusSets, storage.Statuses, storage.TaskTypes, storage.Tasks, storage.Fields,
         storage.FieldEnums, Tasks, storage.Writes, EditLocks));
@@ -100,6 +104,8 @@ public sealed class CoreServices(
     public LinkTypeService LinkTypes => One(() => new LinkTypeService(storage.LinkTypes, storage.Tasks, EditLocks));
 
     public TaskLinkService TaskLinks => One(() => new TaskLinkService(storage.Tasks, LinkTypes, Time, EditLocks, storage.Series, storage.Writes));
+
+    public TaskCommentService TaskComments => One(() => new TaskCommentService(storage.Comments, storage.Tasks, storage.Users, currentUser, Time, localHuman));
 
     public LinkHealthService LinkHealth => One(() => new LinkHealthService(storage.Tasks, storage.LinkTypes));
 
@@ -114,7 +120,7 @@ public sealed class CoreServices(
 
     public SeriesConflictService SeriesConflicts => One(() => new SeriesConflictService(storage.Tasks, storage.Series, storage.Writes, EditLocks, Time));
 
-    public CleanupService Cleanup => One(() => new CleanupService(storage.Tasks, Tasks, storage.Series, LinkTypes, storage.Writes, EditLocks, Time));
+    public CleanupService Cleanup => One(() => new CleanupService(storage.Tasks, Tasks, storage.Series, LinkTypes, storage.Writes, EditLocks, Time, storage.Comments));
 
     public T Get<T>() where T : class =>
         Find<T>() ?? throw new InvalidOperationException($"{typeof(T).Name} is not available in this workspace");

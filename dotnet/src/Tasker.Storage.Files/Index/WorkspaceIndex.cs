@@ -80,7 +80,7 @@ internal record IndexQuery(IndexKind Kind)
 internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
 {
     // Поднять, если меняется схема или содержимое data: старый индекс пересоберётся.
-    private const int SchemaVersion = 11;
+    private const int SchemaVersion = 12;
 
     private readonly TaskerDirectory directory;
     private readonly ILogger<WorkspaceIndex> log;
@@ -672,6 +672,8 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                     x => new() { SortText = x.Name }),
                 IndexKind.FieldEnum => Row(await FieldEnumFile.Read(layout.ProjectId!.Value, file.FullPath, ct), x => x.Id,
                     x => new() { SortText = x.Name }),
+                IndexKind.Comment => Row(await TaskCommentFile.Read(layout.ProjectId!.Value, file.FullPath, ct), x => x.Id,
+                    x => new() { SortNum = x.CreatedAt.UtcTicks, TypeId = x.TaskId }),
                 _ => throw new ArgumentOutOfRangeException(nameof(layout), layout.Kind, null)
             };
             return row;

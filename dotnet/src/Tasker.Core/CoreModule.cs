@@ -41,6 +41,7 @@ public class CoreModule(bool lazy) : Module
         Scoped<BoardService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Links.LinkTypeService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Links.TaskLinkService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
+        Scoped<Comments.TaskCommentService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Links.LinkHealthService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Fields.FieldService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Fields.FieldEnumService>(builder, x => x.AsSelf().InstancePerLifetimeScope());

@@ -7,6 +7,7 @@ using Tasker.Core;
 using Tasker.Core.Agents;
 using Tasker.Core.Auth;
 using Tasker.Core.Boards;
+using Tasker.Core.Comments;
 using Tasker.Core.Fields;
 using Tasker.Core.Links;
 using Tasker.Core.Locks;
@@ -201,6 +202,18 @@ internal static class TaskerApi
         project.MapDelete("/tasks/{id:guid}/links", async (TaskLinkService service, Guid projectId, Guid id, Guid typeId, Guid targetId, string? version, CancellationToken ct) =>
             OkOrNotFound(await service.Remove(projectId, id, typeId, targetId, version, ct)))
             .RespondsOk<TaskItem>("removeTaskLink");
+
+        project.MapPost("/tasks/{id:guid}/comments", async (TaskCommentService service, Guid projectId, Guid id, AddTaskComment command, CancellationToken ct) =>
+            OkOrNotFound(await service.Add(projectId, id, command, ct)))
+            .RespondsOk<TaskCommentView>("addTaskComment");
+
+        project.MapPatch("/tasks/{id:guid}/comments/{commentId:guid}", async (TaskCommentService service, Guid projectId, Guid id, Guid commentId, UpdateTaskComment command, CancellationToken ct) =>
+            OkOrNotFound(await service.Update(projectId, id, commentId, command, ct)))
+            .RespondsOk<TaskCommentView>("updateTaskComment");
+
+        project.MapDelete("/tasks/{id:guid}/comments/{commentId:guid}", async (TaskCommentService service, Guid projectId, Guid id, Guid commentId, string? version, CancellationToken ct) =>
+            NoContentOrNotFound(await service.Delete(projectId, id, commentId, version, ct)))
+            .RespondsNoContent("deleteTaskComment");
 
         project.MapPost("/series", async (SeriesService service, Guid projectId, CreateSeries command, CancellationToken ct) =>
             Created(await service.Create(projectId, command, ct)))

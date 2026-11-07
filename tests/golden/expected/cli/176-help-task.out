@@ -20,6 +20,7 @@ Commands:
   get <task>                         Shows a task (a reference used by several tasks after a merge shows all of them)
   update <task>                      Changes a task
   delete <task>                      Deletes a task
+  comment                            Comments of a task: a tree of replies from people and agents
   link <task> <link> <other-task>    Links two tasks: 'task link TSK-5 blocks TSK-7' (or 'TSK-7 is blocked by TSK-5'); types: see 'link-type list'
   unlink <task> <link> <other-task>  Removes a link between two tasks (the same arguments as 'task link'; a missing link is not an error)
   links <task>                       Shows the links of a task: the ones it starts and the ones pointing at it

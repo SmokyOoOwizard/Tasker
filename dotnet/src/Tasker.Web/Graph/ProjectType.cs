@@ -1,5 +1,6 @@
 using HotChocolate.Types;
 using Tasker.Core.Boards;
+using Tasker.Core.Comments;
 using Tasker.Core.Fields;
 using Tasker.Core.Links;
 using Tasker.Core.Locks;
@@ -100,6 +101,10 @@ internal sealed class ProjectType : ObjectType<Project>
         descriptor.Read("taskLinks").Id()
             .Type<ListType<NonNullType<TaskLinkViewType>>>()
             .Resolve(async x => await x.Service<TaskLinkService>().GetLinks(x.Parent<Project>().Id, x.Id(), x.RequestAborted));
+
+        descriptor.Read("taskComments").Id()
+            .Type<ListType<NonNullType<TaskCommentViewType>>>()
+            .Resolve(async x => await x.Service<TaskCommentService>().List(x.Parent<Project>().Id, x.Id(), x.RequestAborted));
 
         descriptor.Read("seriesList").Paged()
             .Returns<PageType<Series>>()

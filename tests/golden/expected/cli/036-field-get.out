@@ -3,4 +3,4 @@ name:         Platforms
 type:         enum
 multiple:     yes
 enum:         Платформа (00000016-0000-4000-8000-000000000016)
-version:      b0e357c9817d09d8
+version:      378814a8bba5f325

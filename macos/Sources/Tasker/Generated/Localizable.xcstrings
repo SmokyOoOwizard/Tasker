@@ -2739,6 +2739,57 @@
         }
       }
     },
+    "error.comment.notAuthor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can change only your own comments."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Менять и удалять можно только свои комментарии."
+          }
+        }
+      }
+    },
+    "error.comment.parentDeleted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The comment is deleted, it cannot be replied to."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Комментарий удалён, на него нельзя ответить."
+          }
+        }
+      }
+    },
+    "error.comment.parentNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The comment you are replying to is not found."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Комментарий, на который вы отвечаете, не найден."
+          }
+        }
+      }
+    },
     "error.entity.locked" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3177,6 +3228,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Название колонки"
+          }
+        }
+      }
+    },
+    "error.label.commentBody" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comment text"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текст комментария"
           }
         }
       }

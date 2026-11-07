@@ -48,6 +48,7 @@ public class FileStorageModule(string workspacePath, bool watchFiles = true, boo
         Single<BoardStorage>(builder, x => x.AsImplementedInterfaces().SingleInstance());
         Single<UserStorage>(builder, x => x.AsImplementedInterfaces().SingleInstance());
         Single<EditLockStorage>(builder, x => x.AsImplementedInterfaces().SingleInstance());
+        Single<TaskCommentStorage>(builder, x => x.AsImplementedInterfaces().SingleInstance());
         // Участников проектов в файлах нет: доступ по участию есть только на сервере, а он работает с БД.
     }
 

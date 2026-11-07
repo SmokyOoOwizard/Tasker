@@ -74,6 +74,12 @@ type ColumnFieldFilter {
   value: String
 }
 
+type CommentAuthor {
+  id: UUID!
+  name: String!
+  kind: UserKind!
+}
+
 type ConflictPlan {
   seriesId: UUID!
   token: String!
@@ -256,6 +262,7 @@ type Project {
   resolveTasks(ref: String!): [TaskItem!]!
   task(id: UUID!): TaskDetails
   taskLinks(id: UUID!): [TaskLinkView!]
+  taskComments(id: UUID!): [TaskComment!]
   seriesList(offset: Int, limit: Int): SeriesPage!
   series(id: UUID!): Series
   seriesHealth: SeriesHealth!
@@ -363,6 +370,20 @@ type StatusSetPage {
   offset: Int!
   limit: Int!
   data: [StatusSet!]!
+}
+
+type TaskComment {
+  id: UUID!
+  taskId: UUID!
+  parentId: UUID
+  depth: Int!
+  author: CommentAuthor
+  body: String!
+  createdAt: DateTime!
+  editedAt: DateTime
+  deleted: Boolean!
+  mine: Boolean!
+  version: String!
 }
 
 type TaskDetails {

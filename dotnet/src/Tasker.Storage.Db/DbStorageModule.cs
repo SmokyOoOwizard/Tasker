@@ -93,6 +93,7 @@ public class DbStorageModule(DbConfigs configs) : Module
         builder.RegisterType<BoardStorage>().AsImplementedInterfaces().InstancePerLifetimeScope();
         builder.RegisterType<UserStorage>().AsImplementedInterfaces().InstancePerLifetimeScope();
         builder.RegisterType<EditLockStorage>().AsImplementedInterfaces().InstancePerLifetimeScope();
+        builder.RegisterType<TaskCommentStorage>().AsImplementedInterfaces().InstancePerLifetimeScope();
         builder.RegisterType<ProjectMemberStorage>().AsImplementedInterfaces().InstancePerLifetimeScope();
         builder.RegisterType<RefreshTokenStorage>().AsImplementedInterfaces().InstancePerLifetimeScope();
         builder.RegisterType<AgentTokenStorage>().AsImplementedInterfaces().InstancePerLifetimeScope();

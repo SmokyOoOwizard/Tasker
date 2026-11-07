@@ -421,6 +421,7 @@ internal static class TaskCommands
                 await ctx.Get<TaskService>().Delete(projectId, task.Id, parse.GetValue(expected) ?? task.Version, ctx.Ct);
                 ctx.Print(new { deleted = task.Id }, Kit.Deleted("task", task.Title, task.Id));
             }),
+            TaskCommentCommands.Build(g, reference, async (ctx, projectId, text) => (await FindOne(ctx, projectId, text)).Id),
             Kit.Leaf(g, "link", "Links two tasks: 'task link TSK-5 blocks TSK-7' (or 'TSK-7 is blocked by TSK-5'); types: see 'link-type list'", c =>
             {
                 c.Arguments.Add(reference);

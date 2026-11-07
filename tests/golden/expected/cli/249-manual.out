@@ -13,3 +13,4 @@ Tasker manual (ru): 'tasker manual <topic>' shows a recipe, 'tasker manual <word
   install-daemon  Установка и MCP-демон
   statuses-types  Статусы и типы задач с описанием
   windows         Windows: PowerShell, кодировка, кавычки, Tab
+  comments        Комментарии к задачам

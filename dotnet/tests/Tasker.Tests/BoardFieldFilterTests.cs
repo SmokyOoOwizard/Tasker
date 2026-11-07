@@ -511,7 +511,7 @@ public class BoardFieldFilterTests
 
             var folder = Path.Combine(ProjectPaths.Folder(root, project), "boards");
             var text = (await File.ReadAllTextAsync(Directory.GetFiles(folder).Single())).ReplaceLineEndings("\n");
-            Assert.StartsWith("formatVersion: 11\n", text);
+            Assert.StartsWith("formatVersion: 12\n", text);
             var fieldId = board.Columns[0].FieldConditions[0].FieldId;
             Assert.Contains($"  fieldFilters:\n  - field: {fieldId}\n    op: greaterOrEqual\n    value: \"3\"\n  - field: {board.Columns[0].FieldConditions[1].FieldId}\n    op: unset\n", text);
             Assert.DoesNotContain("fieldFilters", text[(text.IndexOf("name: Rest", StringComparison.Ordinal))..]);
@@ -533,11 +533,11 @@ public class BoardFieldFilterTests
             var report = await fresh.Resolve<IFileMigration>().Run(new MigrationOptions());
             Assert.Equal(FormatVersions.Current, report.CurrentFormat);
             Assert.Single(report.Migrated);
-            Assert.Equal(old.Replace("formatVersion: 5", "formatVersion: 11"), (await File.ReadAllTextAsync(Directory.GetFiles(folder).Single())).ReplaceLineEndings("\n"));
+            Assert.Equal(old.Replace("formatVersion: 5", "formatVersion: 12"), (await File.ReadAllTextAsync(Directory.GetFiles(folder).Single())).ReplaceLineEndings("\n"));
 
             // Файл с неизвестным оператором (записан более новым Tasker) не читается молча.
             await File.WriteAllTextAsync(Directory.GetFiles(folder).Single(),
-                old.Replace("formatVersion: 5", "formatVersion: 11") + $"  fieldFilters:\n  - field: {Guid.NewGuid()}\n    op: matches\n    value: x\n");
+                old.Replace("formatVersion: 5", "formatVersion: 12") + $"  fieldFilters:\n  - field: {Guid.NewGuid()}\n    op: matches\n    value: x\n");
             await Assert.ThrowsAsync<UnsupportedFormatException>(() => fresh.Resolve<IBoardStorage>().GetById(project, board.Id));
         }
         finally
