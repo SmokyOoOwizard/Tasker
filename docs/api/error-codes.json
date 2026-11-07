@@ -383,6 +383,14 @@
       ],
       "usages": false
     },
+    "query.badDate": {
+      "status": 400,
+      "params": [
+        "name",
+        "value"
+      ],
+      "usages": false
+    },
     "query.badValue": {
       "status": 400,
       "params": [
@@ -454,13 +462,6 @@
       "params": [
         "op",
         "target"
-      ],
-      "usages": false
-    },
-    "query.sortOnly": {
-      "status": 400,
-      "params": [
-        "name"
       ],
       "usages": false
     },

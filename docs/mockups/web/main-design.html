@@ -1183,11 +1183,9 @@ const EN={
 "имя значения в кавычках":"a quoted value name",
 "Нет значения «{0}» в перечислении «{1}»":"No value “{0}” in enum “{1}”",
 "число":"a number",
-"дату в кавычках \"ГГГГ-ММ-ДД\"":"a quoted date \"YYYY-MM-DD\"",
 "true или false":"true or false",
 "текст в кавычках":"quoted text",
 "После точки укажите свойство: .Status, .Type, .Title, .Series, .Field.Имя, .Link.Имя, .Parent":"Name a property after the dot: .Status, .Type, .Title, .Series, .Field.Name, .Link.Name, .Parent",
-".{0} доступно только в сортировке: | sort .{0}":".{0} is available only in sorting: | sort .{0}",
 "После .Field укажите имя поля: .Field.Имя или .Field.\"Имя с пробелами\"":"Name a field after .Field: .Field.Name or .Field.\"Name with spaces\"",
 "Нет поля «{0}»":"No field “{0}”",
 "После .Link укажите тип связи: .Link.Имя":"Name a link type after .Link: .Link.Name",
@@ -1241,6 +1239,11 @@ const EN={
 "и":"and",
 "или":"or",
 "сортировка: | sort .Status, -.Updated":"sorting: | sort .Status, -.Updated",
+"дату в кавычках \"ГГГГ-ММ-ДД\" или \"today\", \"today-7d\"":"a date in quotes \"YYYY-MM-DD\" or \"today\", \"today-7d\"",
+"«{0}» не дата для {1}: пишите \"2026-11-05\", \"2026-11-05T14:30\", \"today\", \"now\" или сдвиг вида \"-7d\"":"“{0}” is not a date for {1}: write \"2026-11-05\", \"2026-11-05T14:30\", \"today\", \"now\" or an offset like \"-7d\"",
+"относительная дата":"relative date",
+"дата и время":"date and time",
+"даты создания и обновления: день, момент (\"2026-11-05T14:30\"), \"today\", \"now\", сдвиг \"-7d\", время UTC":"creation and update dates: a day, a moment (\"2026-11-05T14:30\"), \"today\", \"now\", an offset \"-7d\", UTC time",
 "ключи через запятую, «-» по убыванию":"comma-separated keys, “-” for descending",
 "ещё один ключ":"another key",
 "↑↓ выбор · Tab подставить · Enter применить · Esc закрыть":"↑↓ select · Tab insert · Enter apply · Esc close",
@@ -1502,6 +1505,27 @@ function evTag(eid,vid){const e=en(eid);const v=e&&e.values.find(x=>x.id===vid);
 const QSORTK=['status','type','title','created','updated','series'];
 const QMETH={contains:'Contains',containsany:'ContainsAny',containsall:'ContainsAll',isset:'IsSet',isunset:'IsUnset',isattached:'IsAttached',isdetached:'IsDetached'};
 const QCMP=['==','!=','>','>=','<','<='];
+const QDAY=864e5,QREL=/^(?:(now|today)?([+-])(\d{1,6})([mhdw])|(now|today))$/i;
+function qRelMoment(v,now){
+  const m=QREL.exec(v.trim());if(!m)return null;
+  const base=(m[1]||m[5]||'now').toLowerCase(),t0=base==='today'?Math.floor(now/QDAY)*QDAY:now;
+  if(m[5])return{ms:t0,day:base==='today'};
+  const u=m[4].toLowerCase();if(base==='today'&&(u==='m'||u==='h'))return null;
+  const k={m:6e4,h:36e5,d:QDAY,w:7*QDAY}[u]*(+m[3])*(m[2]==='-'?-1:1);
+  return{ms:t0+k,day:base==='today'};
+}
+function qDateRange(v,now){
+  const r=qRelMoment(v,now);
+  if(r)return r.day?[Math.floor(r.ms/QDAY)*QDAY,Math.floor(r.ms/QDAY)*QDAY+QDAY]:[Math.floor(r.ms/1e3)*1e3,Math.floor(r.ms/1e3)*1e3+1e3];
+  const m=/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2})(:\d{2})?Z?)?$/.exec(v.trim());if(!m)return null;
+  const ms=Date.parse(m[1]+'T'+(m[2]||'00:00')+(m[3]||':00')+'Z');if(isNaN(ms))return null;
+  return[ms,ms+(m[2]?(m[3]?1e3:6e4):QDAY)];
+}
+function qDateDay(v,now){
+  const r=qRelMoment(v,now);
+  if(r)return new Date(r.ms).toISOString().slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v))?v:null;
+}
 const customDefs=()=>{const m={};DB.tasks.forEach(t=>(t.custom||[]).forEach(c=>{m[c.fieldId]={id:c.fieldId,name:c.name,type:c.type,multiple:c.multiple,custom:true}}));return Object.values(m)};
 const allFields=()=>DB.fields.concat(customDefs());
 const fld=id=>fl(id)||customDefs().find(f=>f.id===id);
@@ -1561,7 +1585,7 @@ function qPathInfo(t){
   const sg=t.segs,h=(sg[0]&&sg[0].v||'').toLowerCase();let pr=null,i=1;
   if(h==='field'){const f=sg[1]&&qFieldByName(sg[1].v);if(f)pr={k:'field',f};i=2}
   else if(h==='link'){const l=sg[1]&&qLinkByName(sg[1].v);if(l)pr={k:'link',lt:l};i=2}
-  else if(['status','type','title','series','parent'].includes(h))pr={k:h};
+  else if(['status','type','title','series','parent','created','updated'].includes(h))pr={k:h};
   const m=sg[i]&&QMETH[sg[i].v.toLowerCase()];
   return{h,pr,fn:m||null,i};
 }
@@ -1602,6 +1626,11 @@ function parseQ(s){
   }
   function conv(pr,tok){
     const isS=tok.t==='str',nm=isS?tok.v.toLowerCase():'';
+    if(pr.k==='created'||pr.k==='updated'){
+      const r=isS&&qDateRange(tok.v,Date.now());
+      if(!r)fail(_t('«{0}» не дата для {1}: пишите "2026-11-05", "2026-11-05T14:30", "today", "now" или сдвиг вида "-7d"',[tok.raw.replace(/^"|"$/g,''),qPropTxt(pr)]),tok);
+      return r;
+    }
     if(pr.k==='status'||pr.k==='type'||pr.k==='series'||pr.k==='title'){
       if(!isS)fail(_t('Ожидается текст в кавычках'),tok);
       if(pr.k==='title')return tok.v;
@@ -1620,7 +1649,7 @@ function parseQ(s){
     }
     if(f.type==='int'){if(tok.t!=='num'||!tok.int)bad(_t('целое число'));return tok.v}
     if(f.type==='float'){if(tok.t!=='num')bad(_t('число'));return tok.v}
-    if(f.type==='date'){if(!isS||!/^\d{4}-\d{2}-\d{2}$/.test(tok.v)||isNaN(Date.parse(tok.v)))bad(_t('дату в кавычках "ГГГГ-ММ-ДД"'));return tok.v}
+    if(f.type==='date'){const d=isS&&qDateDay(tok.v,Date.now());if(!d)bad(_t('дату в кавычках "ГГГГ-ММ-ДД" или "today", "today-7d"'));return d}
     if(f.type==='bool'){if(tok.t!=='word')bad(_t('true или false'));return tok.v.toLowerCase()==='true'}
     if(!isS)bad(_t('текст в кавычках'));
     return tok.v;
@@ -1628,7 +1657,6 @@ function parseQ(s){
   function pPred(){
     const t=ct[p++],sg=t.segs,h=sg[0].v,hl=h.toLowerCase();
     if(!h)fail(_t('После точки укажите свойство: .Status, .Type, .Title, .Series, .Field.Имя, .Link.Имя, .Parent'),t);
-    if(hl==='created'||hl==='updated')fail(_t('.{0} доступно только в сортировке: | sort .{0}',[qCap(hl)]),t);
     let pr,i=1;
     if(hl==='field'){
       if(!sg[1]||!sg[1].v)fail(_t('После .Field укажите имя поля: .Field.Имя или .Field."Имя с пробелами"'),t);
@@ -1638,7 +1666,7 @@ function parseQ(s){
       if(!sg[1]||!sg[1].v)fail(_t('После .Link укажите тип связи: .Link.Имя'),t);
       const l=qLinkByName(sg[1].v);if(!l)fail(_t('Нет типа связи «{0}»',[sg[1].v]),t);
       pr={k:'link',lt:l};i=2;
-    }else if(['status','type','title','series','parent'].includes(hl))pr={k:hl};
+    }else if(['status','type','title','series','parent','created','updated'].includes(hl))pr={k:hl};
     else fail(_t('Неизвестное свойство «.{0}»',[h]),t);
     const lab=qPropTxt(pr);
     const rest=sg.slice(i);
@@ -1665,8 +1693,8 @@ function parseQ(s){
       fail(_t('После {0} ожидается оператор: ==, != или функция, например {0}.IsSet()',[lab]),op||t);
     }
     p++;
-    if(op.v!=='=='&&op.v!=='!='&&!(pr.k==='field'&&qCmpType(pr.f)))fail(_t('Операторы >, >=, <, <= только для полей int, float и date'),op);
-    const v=pVal(pr.k!=='title'&&(op.v==='=='||op.v==='!='));
+    if(op.v!=='=='&&op.v!=='!='&&!(pr.k==='field'&&qCmpType(pr.f))&&pr.k!=='created'&&pr.k!=='updated')fail(_t('Операторы >, >=, <, <= только для полей int, float и date'),op);
+    const v=pVal(pr.k!=='title'&&pr.k!=='created'&&pr.k!=='updated'&&(op.v==='=='||op.v==='!='));
     return{t:'cmp',pr,op:op.v,vals:v.items.map(x=>conv(pr,x)),names:v.items.map(x=>x.t==='str'?x.v:x.raw),arr:v.arr,s:t.s,e:ct[p-1].e};
   }
   function pAtom(){
@@ -1831,6 +1859,12 @@ function qEv(t,n){
     const u=qUniq(n.vals);
     return fin(ids.length===u.length&&u.every(v=>ids.includes(v)));
   }
+  if(k==='created'||k==='updated'){
+    const ms=Date.parse(k==='created'?t.createdAt:t.updatedAt),[a,b]=n.vals[0];
+    if(op==='==')return ms>=a&&ms<b;
+    if(op==='!=')return !(ms>=a&&ms<b);
+    return op==='>'?ms>=b:op==='>='?ms>=a:op==='<'?ms<a:ms<b;
+  }
   if(k==='parent'){const h=parentsOf(t.id).filter(Boolean).length>0;return fn==='IsSet'?h:!h}
   if(k==='link'){const h=DB.links.some(l=>l.typeId===n.pr.lt.id&&(l.from===t.id||l.to===t.id));return fn==='IsSet'?h:!h}
   return false;
@@ -1923,6 +1957,11 @@ function acCtx(ta){
   return{s,pos,cur,S,st:S.st,from,to:cur?cur.e:pos,tokText:cur?s.slice(cur.s,cur.e):'',prefix:cur?s.slice(cur.s,cur.e):'',lead:pc&&!/[\s(\[!\-]/.test(pc)?' ':'',mode:['op','arr','call'].includes(S.st)?'val':'key',head:''};
 }
 function qValItems(pr,add){
+  if(pr.k==='created'||pr.k==='updated'){
+    add('2026-11-01',qStr('2026-11-01'),_t('дата ГГГГ-ММ-ДД'));add('2026-11-01T14:30',qStr('2026-11-01T14:30'),_t('дата и время'));
+    ['today','today-7d','now','-1d','-7d','now-1h'].forEach(x=>add(x,qStr(x),_t('относительная дата')));
+    return;
+  }
   if(pr.k==='status')DB.statuses.forEach(x=>add(x.name,qStr(x.name),_t('статус'),x.color));
   else if(pr.k==='type')DB.taskTypes.forEach(x=>add(x.name,qStr(x.name),_t('тип · набор {0}',[sset(x.statusSetId).name]),typeColor(x.id)));
   else if(pr.k==='series')DB.series.forEach(x=>add(x.prefix,qStr(x.prefix),x.name));
@@ -1930,7 +1969,7 @@ function qValItems(pr,add){
     const f=pr.f;
     if(f.type==='enum')en(f.enumId).values.forEach(v=>add(v.name,qStr(v.name),_t('значение'),evColor(f.enumId,v.id)));
     else if(f.type==='bool'){add('true','true',_t('да'));add('false','false',_t('нет'))}
-    else if(f.type==='date')add('2026-11-01',qStr('2026-11-01'),_t('дата ГГГГ-ММ-ДД'));
+    else if(f.type==='date'){add('2026-11-01',qStr('2026-11-01'),_t('дата ГГГГ-ММ-ДД'));['today','today-7d','today+7d'].forEach(x=>add(x,qStr(x),_t('относительная дата')))}
     else if(f.type==='string'){
       const seen={};
       DB.tasks.forEach(t=>{const v=t.fields[f.id];(Array.isArray(v)?v:[v]).forEach(x=>{if(typeof x==='string'&&x&&!seen[x]){seen[x]=1;add(x,qStr(x),_t('значение'))}})});
@@ -1953,7 +1992,7 @@ function acItems(cx){
     add('.Status','.Status',_t('статус задачи'));
     add('.Type','.Type',_t('тип задачи'));
     add('.Title','.Title',_t('название'));
-    if(sortMode){add('.Created','.Created',_t('дата создания'));add('.Updated','.Updated',_t('дата обновления'))}
+    add('.Created','.Created',_t('дата создания'));add('.Updated','.Updated',_t('дата обновления'));
     add('.Series','.Series',_t('серии задачи'));
     add('.Field.','.Field.',_t('поле: .Field.Имя'));
     if(!sortMode){add('.Link.','.Link.',_t('связь: .Link.Имя'));add('.Parent','.Parent',_t('родитель'))}
@@ -1992,7 +2031,7 @@ function acItems(cx){
       cx.head=_t('Операторы');
       add('==','== ',_t('равно; массив справа — одно из'));
       add('!=','!= ',_t('не равно; массив справа — ни одно из'));
-      if(S.pr.k==='field'&&qCmpType(S.pr.f)){add('>','> ',_t('больше'));add('>=','>= ',_t('больше или равно'));add('<','< ',_t('меньше'));add('<=','<= ',_t('меньше или равно'))}
+      if((S.pr.k==='field'&&qCmpType(S.pr.f))||S.pr.k==='created'||S.pr.k==='updated'){add('>','> ',_t('больше'));add('>=','>= ',_t('больше или равно'));add('<','< ',_t('меньше'));add('<=','<= ',_t('меньше или равно'))}
     }
   }else if(S.st==='op'||S.st==='arr'||S.st==='call'){
     if(!cur||cur.t==='str'||cur.t==='word'||cur.t==='num'){
@@ -2265,6 +2304,7 @@ function qHelp(){
   return `<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:12.5px"><div class="sech" style="margin-bottom:6px">${_t('Синтаксис строки запроса')}</div>`+
     ln('.Status == "Туду" || .Status == "Готово"',_t('условие начинается с точки; логика: && || ! и скобки'))+
     ln('.Status .Type .Title .Series',_t('свойства задачи; имена без учёта регистра'))+
+    ln('.Created >= "2026-11-01" && .Updated < "today-7d"',_t('даты создания и обновления: день, момент ("2026-11-05T14:30"), "today", "now", сдвиг "-7d", время UTC'))+
     ln('.Field.Оценка  .Field."Имя с пробелами"',_t('поле по имени'))+
     ln('.Link.Blocks  .Parent',_t('связь и родитель: только IsSet() и IsUnset()'))+
     ln('==  !=   >  >=  <  <=',_t('== и != для всех, остальные — для int, float и date'))+

@@ -71,3 +71,14 @@ public sealed record TaskHasIncomingLink(Guid[] TypeIds) : TaskPredicate
     public override bool Matches(TaskItem task) =>
         throw new NotSupportedException("Incoming links are not stored in the task: this condition is checked by the storage");
 }
+
+public enum TaskTimeProperty { Created, Updated }
+
+public sealed record TaskTimeRange(TaskTimeProperty Property, long? FromTicks, long? BeforeTicks) : TaskPredicate
+{
+    public override bool Matches(TaskItem task)
+    {
+        var ticks = (Property == TaskTimeProperty.Created ? task.CreatedAt : task.UpdatedAt).UtcTicks;
+        return (FromTicks == null || ticks >= FromTicks) && (BeforeTicks == null || ticks < BeforeTicks);
+    }
+}
