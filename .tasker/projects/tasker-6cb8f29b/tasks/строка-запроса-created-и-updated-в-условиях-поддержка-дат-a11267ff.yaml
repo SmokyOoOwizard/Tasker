@@ -2,9 +2,9 @@ formatVersion: 12
 id: a11267ff-f595-4a24-94df-c2232219eecf
 title: 'Строка запроса: .Created и .Updated в условиях, поддержка дат'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
+statusId: e419107c-3971-482e-b68f-46860d54f4d2
 createdAt: 2026-11-07T06:42:39.7443790+00:00
-updatedAt: 2026-11-07T06:42:39.7443790+00:00
+updatedAt: 2026-11-07T08:00:48.1762110+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 242
