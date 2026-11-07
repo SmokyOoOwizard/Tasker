@@ -1,0 +1,8 @@
+formatVersion: 12
+id: 0d295eb9-eda6-47c8-bf90-34a70cdd1490
+taskId: c8bbc84d-ceff-4eaf-8d26-1c4b2cbc38be
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:14.5244220+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: значок в трее и `tray.png` удалены вместе с десктопом коммитом `629c93a`. У приложения macOS значка в строке меню нет.'

@@ -1,0 +1,8 @@
+formatVersion: 12
+id: d5657d23-ae4f-4dea-bb0b-566abd7cb56c
+taskId: 3eeb052e-1f55-4af1-8019-847d5c6fb261
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:21.2817290+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: задача про `rust/.../mcp_daemon.rs`, а Rust удалён коммитом `747c526`. Тесты демона теперь на .NET (`DaemonTests.cs`, `DaemonFixture.cs`).'

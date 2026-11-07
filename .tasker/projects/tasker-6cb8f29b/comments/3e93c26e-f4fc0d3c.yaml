@@ -1,0 +1,8 @@
+formatVersion: 12
+id: f4fc0d3c-a0b0-4acc-bdd4-6b6f4c675d1b
+taskId: 3e93c26e-8e8d-4f7a-a120-0ae4a6e137ff
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:16.3192270+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: проекта десктопа больше нет (`629c93a`). Приложение macOS собирается как `Tasker.app` (`scripts/macos-build.sh package`, TSK-218), консоль и демон для Linux и Windows собирает `scripts/release.sh`. Подпись и DMG — в TSK-204.'

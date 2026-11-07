@@ -1,0 +1,8 @@
+formatVersion: 12
+id: 1920703a-8d0e-480d-9405-82b6a6bd0425
+taskId: 8b2af2bb-4e77-4d8f-a809-51c7d2c7cd4c
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:17.9800460+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: консоль работает только с папкой (`Session.Locate`), параметра `--sqlite` у неё нет, а Rust-файл `sync.rs` удалён. Позже области в SQLite убраны и из демона (TSK-236).'
