@@ -76,6 +76,7 @@ final class TaskDetailModel {
     private(set) var busy = false
     private(set) var revision = 0
     var conflict: TaskEditConflict?
+    let comments: TaskCommentsModel
 
     @ObservationIgnored var localizer = Localizer(choice: .system)
     @ObservationIgnored var onNotice: ((String) -> Void)?
@@ -92,6 +93,7 @@ final class TaskDetailModel {
         self.project = project
         taskId = task
         self.source = source
+        comments = TaskCommentsModel(project: project, task: task, source: source)
     }
 
     func draftSlot(_ slot: String) -> TaskDraftSlot? {
@@ -155,6 +157,9 @@ final class TaskDetailModel {
     func load() {
         loadTask?.cancel()
         phase = .loading
+        comments.localizer = localizer
+        comments.onFailure = onFailure
+        comments.load()
         loadTask = Task { [weak self] in
             guard let self else { return }
             await fetch(initial: true)
@@ -162,6 +167,7 @@ final class TaskDetailModel {
     }
 
     func refresh() {
+        comments.load()
         if busy { reloadAgain = true; return }
         loadTask?.cancel()
         loadTask = Task { [weak self] in
@@ -171,6 +177,7 @@ final class TaskDetailModel {
     }
 
     func stop() {
+        comments.stop()
         loadTask?.cancel()
     }
 

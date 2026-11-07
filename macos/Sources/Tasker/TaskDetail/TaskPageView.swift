@@ -100,6 +100,7 @@ struct MainColumn: View {
                 .padding(.top, DesignSpacing.gap10)
             hierarchy
             links
+            TaskCommentsSection(comments: model.comments, drafts: model.drafts, taskId: model.taskId, prefixes: Set(model.vocabulary.prefixes.values), compact: compact, open: openRef)
         }
         .onChange(of: session.taskRequest, initial: true) {
             guard let request = session.taskRequest else { return }

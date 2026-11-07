@@ -1771,3 +1771,128 @@ public struct TaskPaletteSearchQuery: GraphQLQuery {
         }
     }
 }
+
+public struct TaskCommentsQuery: GraphQLQuery {
+    public static let operationName = "TaskComments"
+    public static let document = """
+    query TaskComments($projectId: UUID!, $id: UUID!) {
+      project(id: $projectId) {
+        __typename
+        id
+        taskComments(id: $id) {
+          __typename
+          id
+          parentId
+          depth
+          author {
+            __typename
+            id
+            name
+            kind
+          }
+          body
+          createdAt
+          editedAt
+          deleted
+          mine
+          version
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("taskComments", arguments: ["id": .variable("id")], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("id"),
+                GraphQLField("parentId"),
+                GraphQLField("depth"),
+                GraphQLField("author", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("id"),
+                    GraphQLField("name"),
+                    GraphQLField("kind")
+                ]),
+                GraphQLField("body"),
+                GraphQLField("createdAt"),
+                GraphQLField("editedAt"),
+                GraphQLField("deleted"),
+                GraphQLField("mine"),
+                GraphQLField("version")
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var id: UUID
+
+    public init(projectId: UUID, id: UUID) {
+        self.projectId = projectId
+        self.id = id
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        result["id"] = id.graphQLValue
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var taskComments: [TaskComments]?
+
+            public init(id: UUID, taskComments: [TaskComments]?) {
+                self.id = id
+                self.taskComments = taskComments
+            }
+
+            public struct TaskComments: Hashable, Sendable, Decodable {
+                public var id: UUID
+                public var parentId: UUID?
+                public var depth: Int
+                public var author: Author?
+                public var body: String
+                public var createdAt: Date
+                public var editedAt: Date?
+                public var deleted: Bool
+                public var mine: Bool
+                public var version: String
+
+                public init(id: UUID, parentId: UUID?, depth: Int, author: Author?, body: String, createdAt: Date, editedAt: Date?, deleted: Bool, mine: Bool, version: String) {
+                    self.id = id
+                    self.parentId = parentId
+                    self.depth = depth
+                    self.author = author
+                    self.body = body
+                    self.createdAt = createdAt
+                    self.editedAt = editedAt
+                    self.deleted = deleted
+                    self.mine = mine
+                    self.version = version
+                }
+
+                public struct Author: Hashable, Sendable, Decodable {
+                    public var id: UUID
+                    public var name: String
+                    public var kind: UserKind
+
+                    public init(id: UUID, name: String, kind: UserKind) {
+                        self.id = id
+                        self.name = name
+                        self.kind = kind
+                    }
+                }
+            }
+        }
+    }
+}
