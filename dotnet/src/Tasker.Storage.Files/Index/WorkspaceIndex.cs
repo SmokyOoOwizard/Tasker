@@ -51,6 +51,8 @@ internal record IndexQuery(IndexKind Kind)
     /// <summary>Все условия по значениям полей (И; таблица <c>task_field_values</c>).</summary>
     public FieldCondition[]? FieldValues { get; init; }
 
+    public Tasker.Core.Tasks.Query.TaskPredicate? Predicate { get; init; }
+
     /// <summary>Порядок задач (<see cref="TaskFilter.Sort"/>); null — по времени создания, затем по id.</summary>
     public TaskSortKey[]? Sort { get; init; }
     public UserKind? UserKind { get; init; }
@@ -958,10 +960,33 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
             command.Parameters.AddWithValue("@enums", IndexJsonContext.Array(enumIds.Select(Key)));
         }
 
-        for (var i = 0; i < (query.FieldValues?.Length ?? 0); i++)
+        var parameterIndex = 0;
+        foreach (var condition in query.FieldValues ?? [])
+            where.Add(FieldClause(condition));
+        if (query.Predicate is { } predicate)
+            where.Add(PredicateSql(predicate));
+
+        command.CommandText = $"SELECT {what} FROM files WHERE {string.Join(" AND ", where)}";
+        return command;
+
+        // Список id — одним параметром через json_each, без ограничения на число параметров.
+        void AddIn(string column, string parameter, Guid[]? ids)
         {
-            var condition = query.FieldValues![i];
-            where.Add(FieldSql(condition, i));
+            if (ids == null)
+                return;
+            where.Add($"{column} IN (SELECT value FROM json_each({parameter}))");
+            command.Parameters.AddWithValue(parameter, IndexJsonContext.Array(ids.Select(Key)));
+        }
+
+        string FieldClause(FieldCondition condition)
+        {
+            var i = parameterIndex++;
+            AddFieldParameters(condition, i);
+            return FieldSql(condition, i);
+        }
+
+        void AddFieldParameters(FieldCondition condition, int i)
+        {
             if (condition.FieldId is { } catalogField)
                 command.Parameters.AddWithValue($"@field{i}", Key(catalogField));
             command.Parameters.AddWithValue($"@own{i}", condition.Key);
@@ -974,16 +999,58 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                 command.Parameters.AddWithValue($"@fieldTypes{i}", IndexJsonContext.Array(condition.TypeIds.Select(Key)));
         }
 
-        command.CommandText = $"SELECT {what} FROM files WHERE {string.Join(" AND ", where)}";
-        return command;
-
-        // Список id — одним параметром через json_each, без ограничения на число параметров.
-        void AddIn(string column, string parameter, Guid[]? ids)
+        string IdList(IEnumerable<Guid> ids)
         {
-            if (ids == null)
-                return;
-            where.Add($"{column} IN (SELECT value FROM json_each({parameter}))");
-            command.Parameters.AddWithValue(parameter, IndexJsonContext.Array(ids.Select(Key)));
+            var name = $"@predicate{parameterIndex++}";
+            command.Parameters.AddWithValue(name, IndexJsonContext.Array(ids.Select(Key)));
+            return $"(SELECT value FROM json_each({name}))";
+        }
+
+        string TextParameter(string value)
+        {
+            var name = $"@predicate{parameterIndex++}";
+            command.Parameters.AddWithValue(name, value);
+            return name;
+        }
+
+        string PredicateSql(Tasker.Core.Tasks.Query.TaskPredicate node)
+        {
+            switch (node)
+            {
+                case Tasker.Core.Tasks.Query.TaskAllOf all:
+                    return "(" + string.Join(" AND ", all.Parts.Select(PredicateSql)) + ")";
+                case Tasker.Core.Tasks.Query.TaskAnyOf any:
+                    return "(" + string.Join(" OR ", any.Parts.Select(PredicateSql)) + ")";
+                case Tasker.Core.Tasks.Query.TaskNot not:
+                    return $"NOT {PredicateSql(not.Inner)}";
+                case Tasker.Core.Tasks.Query.TaskStatusIn status:
+                    return $"status_id IN {IdList(status.Ids)}";
+                case Tasker.Core.Tasks.Query.TaskTypeIn type:
+                    return $"type_id IN {IdList(type.Ids)}";
+                case Tasker.Core.Tasks.Query.TaskInSeries series:
+                    return $"path IN (SELECT path FROM task_series WHERE series_id IN {IdList(series.Ids)})";
+                case Tasker.Core.Tasks.Query.TaskInOtherSeries other:
+                    return $"path IN (SELECT path FROM task_series WHERE series_id NOT IN {IdList(other.Ids)})";
+                case Tasker.Core.Tasks.Query.TaskTitleContains contains:
+                    return $"instr(sort_text, {TextParameter(contains.Folded)}) > 0";
+                case Tasker.Core.Tasks.Query.TaskTitleEquals equals:
+                    return $"sort_text = {TextParameter(equals.Folded)}";
+                case Tasker.Core.Tasks.Query.TaskFieldMatches field:
+                    return $"({FieldClause(field.Condition)})";
+                case Tasker.Core.Tasks.Query.TaskFieldHasOther field:
+                    var i = parameterIndex++;
+                    AddFieldParameters(field.Condition, i);
+                    var row = field.Condition.FieldId != null ? $"(field_id = @field{i} OR (own_name = @own{i} AND own_type = @ownType{i}))" : $"(own_name = @own{i} AND own_type = @ownType{i})";
+                    var known = $"@predicate{parameterIndex++}";
+                    command.Parameters.AddWithValue(known, IndexJsonContext.Array(field.Values));
+                    return $"path IN (SELECT path FROM task_field_values WHERE {row} AND value NOT IN (SELECT value FROM json_each({known})))";
+                case Tasker.Core.Tasks.Query.TaskHasOutgoingLink outgoing:
+                    return $"path IN (SELECT path FROM task_links WHERE type_id IN {IdList(outgoing.TypeIds)})";
+                case Tasker.Core.Tasks.Query.TaskHasIncomingLink incoming:
+                    return $"id IN (SELECT target_id FROM task_links WHERE type_id IN {IdList(incoming.TypeIds)})";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(node), node, null);
+            }
         }
     }
 

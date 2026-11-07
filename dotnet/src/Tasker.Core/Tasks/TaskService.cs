@@ -372,10 +372,10 @@ public partial class TaskService(
     /// </summary>
     public async Task<ListDto<TaskListItem>> List(
         Guid projectId, TaskFilter? filter, IEnumerable<string>? fieldFilters, Page page, int descriptionLength = DescriptionPreview.Full,
-        CancellationToken ct = default, string? sort = null)
+        CancellationToken ct = default, string? sort = null, string? query = null)
     {
         DescriptionPreview.Check(descriptionLength);
-        filter = await ListFilter(projectId, filter, fieldFilters, sort, ct);
+        filter = await ListFilter(projectId, filter, fieldFilters, sort, query, ct);
         var found = await tasks.GetRange(projectId, filter, page, ct);
         return new ListDto<TaskListItem>
         {
@@ -385,11 +385,12 @@ public partial class TaskService(
     }
 
     /// <summary>Фильтр списка клиента: заданный фильтр, условия по полям (<see cref="ParseFieldFilters"/>) и порядок (<see cref="ParseSort"/>) вместе.</summary>
-    private async Task<TaskFilter?> ListFilter(Guid projectId, TaskFilter? filter, IEnumerable<string>? fieldFilters, string? sort, CancellationToken ct)
+    private async Task<TaskFilter?> ListFilter(Guid projectId, TaskFilter? filter, IEnumerable<string>? fieldFilters, string? sort, string? query, CancellationToken ct)
     {
         var conditions = await ParseFieldFilters(projectId, fieldFilters, ct);
-        var keys = await ParseSort(projectId, sort, ct);
-        if (conditions == null && keys == null)
+        var parsed = await ParseQuery(projectId, query, ct);
+        var keys = parsed?.Sort ?? await ParseSort(projectId, sort, ct);
+        if (conditions == null && keys == null && parsed == null)
             return filter;
 
         return new TaskFilter
@@ -399,7 +400,8 @@ public partial class TaskService(
             LinkTypeIds = filter?.LinkTypeIds, FieldIds = filter?.FieldIds, EnumIds = filter?.EnumIds,
             // Условия, уже заданные фильтром (например, условия колонки доски), и условия клиента — вместе, по И.
             FieldValues = conditions == null ? filter?.FieldValues : [.. filter?.FieldValues ?? [], .. conditions],
-            Sort = keys ?? filter?.Sort
+            Sort = keys ?? filter?.Sort,
+            Predicate = Combine(filter?.Predicate, parsed?.Predicate)
         };
     }
 
@@ -418,10 +420,10 @@ public partial class TaskService(
     /// </summary>
     public async Task<TaskTreeList> ListTree(
         Guid projectId, TaskFilter? filter, IEnumerable<string>? fieldFilters, Page page, int descriptionLength = DescriptionPreview.Full,
-        CancellationToken ct = default, string? sort = null, Guid? parentId = null, int levels = TaskHierarchy.MaxDepth)
+        CancellationToken ct = default, string? sort = null, Guid? parentId = null, int levels = TaskHierarchy.MaxDepth, string? query = null)
     {
         DescriptionPreview.Check(descriptionLength);
-        filter = await ListFilter(projectId, filter, fieldFilters, sort, ct);
+        filter = await ListFilter(projectId, filter, fieldFilters, sort, query, ct);
         var hierarchy = await LoadHierarchy(projectId, ct);
 
         if (hierarchy.IsEmpty && parentId == null)

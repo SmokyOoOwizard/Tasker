@@ -41,7 +41,12 @@ struct BoardScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             if let model {
-                BoardQueryBar(model: model) { outsideShown = true }
+                BoardQueryBar(model: model, showOutside: { outsideShown = true }) {
+                    if let query = session.boardQuery {
+                        TaskQueryBarField(model: query)
+                    }
+                }
+                .zIndex(1)
                 ZStack {
                     BoardCanvas(model: model, navigator: navigator, focus: { focused = true })
                     BoardStateOverlay(model: model)

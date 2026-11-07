@@ -76,10 +76,10 @@ fragment TaskListFields on TaskListItem {
   childCount
 }
 
-query TaskListPage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $offset: Int, $limit: Int) {
+query TaskListPage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $query: String, $offset: Int, $limit: Int) {
   project(id: $projectId) {
     id
-    tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, offset: $offset, limit: $limit, descriptionLength: 0) {
+    tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, query: $query, offset: $offset, limit: $limit, descriptionLength: 0) {
       totalCount
       offset
       limit
@@ -90,10 +90,10 @@ query TaskListPage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $s
   }
 }
 
-query TaskTreePage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $parentId: UUID, $levels: Int, $offset: Int, $limit: Int) {
+query TaskTreePage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $query: String, $parentId: UUID, $levels: Int, $offset: Int, $limit: Int) {
   project(id: $projectId) {
     id
-    taskTree(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, parentId: $parentId, levels: $levels, offset: $offset, limit: $limit, descriptionLength: 0) {
+    taskTree(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, query: $query, parentId: $parentId, levels: $levels, offset: $offset, limit: $limit, descriptionLength: 0) {
       totalCount
       topLevelCount
       offset
@@ -105,10 +105,10 @@ query TaskTreePage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $s
   }
 }
 
-query TaskListCount($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!]) {
+query TaskListCount($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $query: String) {
   project(id: $projectId) {
     id
-    tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, limit: 1, descriptionLength: 0) {
+    tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, query: $query, limit: 1, descriptionLength: 0) {
       totalCount
     }
   }
@@ -331,6 +331,35 @@ query TaskComments($projectId: UUID!, $id: UUID!) {
       deleted
       mine
       version
+    }
+  }
+}
+
+query TaskQueryAnalysis($projectId: UUID!, $text: String!, $cursor: Int) {
+  project(id: $projectId) {
+    id
+    taskQueryAnalysis(text: $text, cursor: $cursor) {
+      valid
+      hasSort
+      errors {
+        code
+        message
+        start
+        end
+        params {
+          name
+          value
+        }
+      }
+      suggestions {
+        kind
+        label
+        insert
+        start
+        end
+        caret
+        detail
+      }
     }
   }
 }

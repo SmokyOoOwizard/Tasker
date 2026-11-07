@@ -168,6 +168,8 @@ public class TaskFilter
     /// </summary>
     public TaskSortKey[]? Sort { get; init; }
 
+    public Query.TaskPredicate? Predicate { get; init; }
+
     public bool Matches(TaskItem task) =>
         (Ids == null || Ids.Contains(task.Id)) &&
         (TypeIds == null || TypeIds.Contains(task.TypeId)) &&
@@ -177,5 +179,6 @@ public class TaskFilter
         (LinkTypeIds == null || task.Links.Any(x => LinkTypeIds.Contains(x.TypeId))) &&
         (FieldIds == null || task.Fields.Any(x => FieldIds.Contains(x.FieldId))) &&
         (EnumIds == null || task.Fields.Any(x => x.Own?.EnumId is { } enumId && EnumIds.Contains(enumId))) &&
-        (FieldValues == null || FieldValues.All(c => c.Matches(task)));
+        (FieldValues == null || FieldValues.All(c => c.Matches(task))) &&
+        (Predicate == null || Predicate.Matches(task));
 }

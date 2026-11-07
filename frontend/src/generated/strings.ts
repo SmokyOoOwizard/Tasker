@@ -69,6 +69,36 @@ export const strings = {
     "error.project.agentOfAnotherUser": "Agent “{0}” belongs to another user.",
     "error.project.lastPerson": "The last person cannot be removed from the project.",
     "error.project.notFound": "Project not found.",
+    "error.query.ambiguousField": "Tasks have own fields “{0}” of several types",
+    "error.query.arrayNotAllowed": "{0} does not take an array",
+    "error.query.badValue": "“{1}” does not fit the type of field “{0}”",
+    "error.query.emptyArray": "The array is empty",
+    "error.query.expectedCondition": "Expected a condition, for example .Status == \"Todo\"",
+    "error.query.expectedOperator": "Expected an operator or a function after {0}",
+    "error.query.expectedProperty": "Expected a property name after the dot",
+    "error.query.expectedSort": "Expected sort after |. Logical OR is written as ||",
+    "error.query.expectedSortKey": "Expected a sort key, for example .Updated or -.Updated",
+    "error.query.expectedValue": "Expected a value",
+    "error.query.freeText": "“{0}” is not a condition: conditions start with a dot. To search titles use .Title.Contains",
+    "error.query.functionArgument": "Wrong argument of {0}(): Contains takes a value, ContainsAny and ContainsAll take an array, checks take nothing",
+    "error.query.notSortable": "Cannot sort by {0}",
+    "error.query.operatorNotAllowed": "{1} does not support {0}",
+    "error.query.sortOnly": "{0} can only be used in sort",
+    "error.query.sortRepeated": "Sort key {0} is listed twice",
+    "error.query.tooComplex": "The query is too long or too deeply nested",
+    "error.query.unclosedBracket": "The closing bracket is missing",
+    "error.query.unclosedParen": "The closing parenthesis is missing",
+    "error.query.unclosedString": "The closing quote is missing",
+    "error.query.unexpected": "Unexpected “{0}”",
+    "error.query.unknownEnumValue": "Field “{0}” has no value “{1}”",
+    "error.query.unknownField": "No field “{0}” in the catalog or in the tasks",
+    "error.query.unknownFunction": "{1} has no function {0}()",
+    "error.query.unknownLinkType": "No link type “{0}” in the project",
+    "error.query.unknownProperty": "Unknown property {0}. Use .Status, .Type, .Title, .Series, .Field.Name, .Link.Name or .Parent",
+    "error.query.unknownSeries": "No series with the prefix “{0}” in the project",
+    "error.query.unknownStatus": "No status “{0}” in the project",
+    "error.query.unknownType": "No task type “{0}” in the project",
+    "error.query.valueNeedsQuotes": "Text is written in quotes: \"{0}\"",
     "error.series.planChanged": "The conflicts changed since the plan was built. Reload the plan and confirm it again.",
     "error.series.prefixInvalid": "Series prefix: 1 to {0} Latin letters or digits.",
     "error.series.prefixTaken": "Prefix “{0}” is already used in the project.",
@@ -350,6 +380,36 @@ export const strings = {
     "error.project.agentOfAnotherUser": "Агент «{0}» принадлежит другому пользователю.",
     "error.project.lastPerson": "Нельзя убрать из проекта последнего человека.",
     "error.project.notFound": "Проект не найден.",
+    "error.query.ambiguousField": "У задач есть собственные поля «{0}» разных типов",
+    "error.query.arrayNotAllowed": "Оператор {0} не принимает массив",
+    "error.query.badValue": "Значение «{1}» не подходит к типу поля «{0}»",
+    "error.query.emptyArray": "Массив пуст",
+    "error.query.expectedCondition": "Нужно условие, например .Status == \"Todo\"",
+    "error.query.expectedOperator": "После {0} нужен оператор или функция",
+    "error.query.expectedProperty": "После точки нужно имя свойства",
+    "error.query.expectedSort": "После | нужно слово sort. Логическое ИЛИ пишется как ||",
+    "error.query.expectedSortKey": "Нужен ключ сортировки, например .Updated или -.Updated",
+    "error.query.expectedValue": "Нужно значение",
+    "error.query.freeText": "«{0}» — не условие: условия начинаются с точки. Для поиска по заголовку используйте .Title.Contains",
+    "error.query.functionArgument": "Неверный аргумент {0}(): Contains принимает значение, ContainsAny и ContainsAll — массив, проверки — ничего",
+    "error.query.notSortable": "По {0} нельзя сортировать",
+    "error.query.operatorNotAllowed": "Оператор {0} не подходит к {1}",
+    "error.query.sortOnly": "{0} можно использовать только в сортировке",
+    "error.query.sortRepeated": "Ключ сортировки {0} указан дважды",
+    "error.query.tooComplex": "Запрос слишком длинный или в нём слишком много вложенных скобок",
+    "error.query.unclosedBracket": "Нет закрывающей квадратной скобки",
+    "error.query.unclosedParen": "Нет закрывающей скобки",
+    "error.query.unclosedString": "Нет закрывающей кавычки",
+    "error.query.unexpected": "Неожиданное «{0}»",
+    "error.query.unknownEnumValue": "У поля «{0}» нет значения «{1}»",
+    "error.query.unknownField": "Нет поля «{0}» ни в каталоге, ни в задачах",
+    "error.query.unknownFunction": "У {1} нет функции {0}()",
+    "error.query.unknownLinkType": "В проекте нет типа связи «{0}»",
+    "error.query.unknownProperty": "Нет свойства {0}. Есть .Status, .Type, .Title, .Series, .Field.Имя, .Link.Имя и .Parent",
+    "error.query.unknownSeries": "В проекте нет серии с префиксом «{0}»",
+    "error.query.unknownStatus": "В проекте нет статуса «{0}»",
+    "error.query.unknownType": "В проекте нет типа «{0}»",
+    "error.query.valueNeedsQuotes": "Текст пишется в кавычках: \"{0}\"",
     "error.series.planChanged": "Конфликты изменились с момента построения плана. Обновите план и подтвердите его снова.",
     "error.series.prefixInvalid": "Префикс серии: от 1 до {0} латинских букв или цифр.",
     "error.series.prefixTaken": "Префикс «{0}» в проекте уже занят.",
@@ -722,6 +782,80 @@ export const errorParams: Record<string, readonly string[]> = {
   "project.lastPerson": [],
   "project.notFound": [
     "id"
+  ],
+  "query.ambiguousField": [
+    "name"
+  ],
+  "query.arrayNotAllowed": [
+    "op"
+  ],
+  "query.badValue": [
+    "field",
+    "value"
+  ],
+  "query.emptyArray": [],
+  "query.expectedCondition": [],
+  "query.expectedOperator": [
+    "path"
+  ],
+  "query.expectedProperty": [],
+  "query.expectedSort": [],
+  "query.expectedSortKey": [],
+  "query.expectedValue": [],
+  "query.freeText": [
+    "text"
+  ],
+  "query.functionArgument": [
+    "name"
+  ],
+  "query.notSortable": [
+    "name"
+  ],
+  "query.operatorNotAllowed": [
+    "op",
+    "target"
+  ],
+  "query.sortOnly": [
+    "name"
+  ],
+  "query.sortRepeated": [
+    "name"
+  ],
+  "query.tooComplex": [],
+  "query.unclosedBracket": [],
+  "query.unclosedParen": [],
+  "query.unclosedString": [],
+  "query.unexpected": [
+    "text"
+  ],
+  "query.unknownEnumValue": [
+    "field",
+    "value"
+  ],
+  "query.unknownField": [
+    "name"
+  ],
+  "query.unknownFunction": [
+    "name",
+    "target"
+  ],
+  "query.unknownLinkType": [
+    "name"
+  ],
+  "query.unknownProperty": [
+    "name"
+  ],
+  "query.unknownSeries": [
+    "name"
+  ],
+  "query.unknownStatus": [
+    "name"
+  ],
+  "query.unknownType": [
+    "name"
+  ],
+  "query.valueNeedsQuotes": [
+    "text"
   ],
   "series.planChanged": [],
   "series.prefixInvalid": [

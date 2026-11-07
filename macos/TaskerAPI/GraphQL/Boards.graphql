@@ -74,10 +74,10 @@ query BoardLock($projectId: UUID!, $entity: LockedEntity!, $id: UUID!) {
   }
 }
 
-query BoardColumnTasks($projectId: UUID!, $boardId: UUID!, $columnId: UUID!, $field: [String!], $offset: Int, $limit: Int) {
+query BoardColumnTasks($projectId: UUID!, $boardId: UUID!, $columnId: UUID!, $query: String, $offset: Int, $limit: Int) {
   project(id: $projectId) {
     id
-    columnTasks(boardId: $boardId, columnId: $columnId, field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
+    columnTasks(boardId: $boardId, columnId: $columnId, query: $query, offset: $offset, limit: $limit, descriptionLength: 0) {
       totalCount
       offset
       limit

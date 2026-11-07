@@ -16,6 +16,9 @@ struct WorkspaceTabViewState: Codable, Equatable, Sendable {
     var history: [UUID] = []
     var selectedRow: String?
     var scrollY: Double = 0
+    var listQuery: String?
+    var boardQueries: [String: String]?
+    var board: UUID?
 }
 
 struct WorkspaceTab: Codable, Equatable, Identifiable, Sendable {

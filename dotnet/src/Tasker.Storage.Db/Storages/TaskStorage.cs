@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using Tasker.Core.Tasks.Query;
 using Microsoft.EntityFrameworkCore;
 using Tasker.Core.Dto;
 using Tasker.Core.Tasks;
@@ -215,8 +217,79 @@ internal class TaskStorage(AppDbContext context) : ITaskStorage
         if (filter?.EnumIds is { } enumIds)
             query = query.Where(x => context.TaskFields.Any(f => f.TaskId == x.Id && f.OwnEnumId != null && enumIds.Contains(f.OwnEnumId.Value)));
         foreach (var condition in filter?.FieldValues ?? [])
-            query = FieldCondition(query, condition);
+            query = query.Where(FieldCondition(condition));
+        if (filter?.Predicate is { } predicate)
+            query = query.Where(Predicate(predicate));
         return query;
+    }
+
+    private Expression<Func<TaskDbModel, bool>> Predicate(TaskPredicate predicate)
+    {
+        switch (predicate)
+        {
+            case TaskAllOf all:
+                return Merge(all.Parts, Expression.AndAlso);
+            case TaskAnyOf any:
+                return Merge(any.Parts, Expression.OrElse);
+            case TaskNot not:
+                var inner = Predicate(not.Inner);
+                return Expression.Lambda<Func<TaskDbModel, bool>>(Expression.Not(inner.Body), inner.Parameters);
+            case TaskStatusIn status:
+                var statusIds = status.Ids;
+                return x => statusIds.Contains(x.StatusId);
+            case TaskTypeIn type:
+                var typeIds = type.Ids;
+                return x => typeIds.Contains(x.TypeId);
+            case TaskInSeries series:
+                var seriesIds = series.Ids;
+                return x => context.TaskSeriesNumbers.Any(n => n.TaskId == x.Id && seriesIds.Contains(n.SeriesId));
+            case TaskInOtherSeries other:
+                var knownSeries = other.Ids;
+                return x => context.TaskSeriesNumbers.Any(n => n.TaskId == x.Id && !knownSeries.Contains(n.SeriesId));
+            case TaskTitleContains contains:
+                var part = contains.Folded;
+                return x => x.Title.ToLower().Contains(part);
+            case TaskTitleEquals equals:
+                var title = equals.Folded;
+                return x => x.Title.ToLower() == title;
+            case TaskFieldMatches field:
+                return FieldCondition(field.Condition);
+            case TaskFieldHasOther field:
+                var values = field.Values;
+                var rows = FieldValueRows(field.Condition);
+                return x => rows.Any(v => v.TaskId == x.Id && !values.Contains(v.Value));
+            case TaskHasOutgoingLink outgoing:
+                var outgoingTypes = outgoing.TypeIds;
+                return x => context.TaskLinks.Any(l => l.TaskId == x.Id && outgoingTypes.Contains(l.TypeId));
+            case TaskHasIncomingLink incoming:
+                var incomingTypes = incoming.TypeIds;
+                return x => context.TaskLinks.Any(l => l.TargetId == x.Id && incomingTypes.Contains(l.TypeId));
+            default:
+                throw new ArgumentOutOfRangeException(nameof(predicate), predicate, null);
+        }
+    }
+
+    private Expression<Func<TaskDbModel, bool>> Merge(TaskPredicate[] parts, Func<Expression, Expression, BinaryExpression> join)
+    {
+        var parameter = Expression.Parameter(typeof(TaskDbModel), "x");
+        var body = parts
+            .Select(Predicate)
+            .Select(x => new ParameterSwap(x.Parameters[0], parameter).Visit(x.Body))
+            .Aggregate((a, b) => join(a, b));
+        return Expression.Lambda<Func<TaskDbModel, bool>>(body, parameter);
+    }
+
+    private sealed class ParameterSwap(ParameterExpression from, ParameterExpression to) : ExpressionVisitor
+    {
+        protected override Expression VisitParameter(ParameterExpression node) => node == from ? to : base.VisitParameter(node);
+    }
+
+    private IQueryable<TaskFieldValueDbModel> FieldValueRows(Core.Tasks.FieldCondition condition)
+    {
+        var (field, key, ownType) = (condition.FieldId, condition.Key, (int)condition.Type);
+        return field is { } catalogId
+            ? context.TaskFieldValues.Where(v => v.FieldId == catalogId || (v.OwnKey == key && v.OwnType == ownType))
+            : context.TaskFieldValues.Where(v => v.OwnKey == key && v.OwnType == ownType);
     }
 
     /// <summary>
@@ -224,35 +297,33 @@ internal class TaskStorage(AppDbContext context) : ITaskStorage
     /// (поэтому <c>!=</c> и <c>:unset</c> берут и задачи без значения). Строка относится к условию, если это поле каталога или собственное поле с тем же
     /// именем и типом. Подключённость поля: тип задачи из типов, где поле каталога есть, или запись о поле в самой задаче.
     /// </summary>
-    private IQueryable<TaskDbModel> FieldCondition(IQueryable<TaskDbModel> query, Core.Tasks.FieldCondition condition)
+    private Expression<Func<TaskDbModel, bool>> FieldCondition(Core.Tasks.FieldCondition condition)
     {
         var (field, key, ownType) = (condition.FieldId, condition.Key, (int)condition.Type);
         var (value, number) = (condition.Value, condition.Number);
         var typeIds = condition.TypeIds ?? [];
         // Только строки этого условия: подзапросы ниже добавляют своё — по задаче и значению.
-        var values = field is { } catalogId
-            ? context.TaskFieldValues.Where(v => v.FieldId == catalogId || (v.OwnKey == key && v.OwnType == ownType))
-            : context.TaskFieldValues.Where(v => v.OwnKey == key && v.OwnType == ownType);
+        var values = FieldValueRows(condition);
         var entries = field is { } catalogId2
             ? context.TaskFields.Where(f => f.FieldId == catalogId2 || (f.OwnKey == key && f.OwnType == ownType))
             : context.TaskFields.Where(f => f.OwnKey == key && f.OwnType == ownType);
         // Сравнение: int и float — по числовому столбцу, date — по тексту yyyy-MM-dd (сортируется как текст).
         return condition.Operator switch
         {
-            FieldOperator.Equal => query.Where(x => values.Any(v => v.TaskId == x.Id && v.Value == value)),
-            FieldOperator.NotEqual => query.Where(x => !values.Any(v => v.TaskId == x.Id && v.Value == value)),
-            FieldOperator.Set => query.Where(x => values.Any(v => v.TaskId == x.Id)),
-            FieldOperator.Unset => query.Where(x => !values.Any(v => v.TaskId == x.Id)),
-            FieldOperator.Attached => query.Where(x => typeIds.Contains(x.TypeId) || entries.Any(f => f.TaskId == x.Id)),
-            FieldOperator.Detached => query.Where(x => !typeIds.Contains(x.TypeId) && !entries.Any(f => f.TaskId == x.Id)),
-            FieldOperator.Greater when number != null => query.Where(x => values.Any(v => v.TaskId == x.Id && v.Number > number)),
-            FieldOperator.GreaterOrEqual when number != null => query.Where(x => values.Any(v => v.TaskId == x.Id && v.Number >= number)),
-            FieldOperator.Less when number != null => query.Where(x => values.Any(v => v.TaskId == x.Id && v.Number < number)),
-            FieldOperator.LessOrEqual when number != null => query.Where(x => values.Any(v => v.TaskId == x.Id && v.Number <= number)),
-            FieldOperator.Greater => query.Where(x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) > 0)),
-            FieldOperator.GreaterOrEqual => query.Where(x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) >= 0)),
-            FieldOperator.Less => query.Where(x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) < 0)),
-            FieldOperator.LessOrEqual => query.Where(x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) <= 0)),
+            FieldOperator.Equal => x => values.Any(v => v.TaskId == x.Id && v.Value == value),
+            FieldOperator.NotEqual => x => !values.Any(v => v.TaskId == x.Id && v.Value == value),
+            FieldOperator.Set => x => values.Any(v => v.TaskId == x.Id),
+            FieldOperator.Unset => x => !values.Any(v => v.TaskId == x.Id),
+            FieldOperator.Attached => x => typeIds.Contains(x.TypeId) || entries.Any(f => f.TaskId == x.Id),
+            FieldOperator.Detached => x => !typeIds.Contains(x.TypeId) && !entries.Any(f => f.TaskId == x.Id),
+            FieldOperator.Greater when number != null => x => values.Any(v => v.TaskId == x.Id && v.Number > number),
+            FieldOperator.GreaterOrEqual when number != null => x => values.Any(v => v.TaskId == x.Id && v.Number >= number),
+            FieldOperator.Less when number != null => x => values.Any(v => v.TaskId == x.Id && v.Number < number),
+            FieldOperator.LessOrEqual when number != null => x => values.Any(v => v.TaskId == x.Id && v.Number <= number),
+            FieldOperator.Greater => x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) > 0),
+            FieldOperator.GreaterOrEqual => x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) >= 0),
+            FieldOperator.Less => x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) < 0),
+            FieldOperator.LessOrEqual => x => values.Any(v => v.TaskId == x.Id && string.Compare(v.Value, value) <= 0),
             _ => throw new ArgumentOutOfRangeException(nameof(condition), condition.Operator, null)
         };
     }

@@ -356,6 +356,126 @@ public static class TaskerErrors
     public static TaskerUnauthenticatedException SessionExpired() =>
         Unauthenticated("Refresh token is invalid, expired or already used: sign in again", []);
 
+    [ErrorCode("query.freeText")]
+    public static TaskerValidationException QueryFreeText(string text) =>
+        Validation($"'{text}' is not a condition: conditions start with a dot; to search titles use .Title.Contains(\"{text}\")", [text]);
+
+    [ErrorCode("query.unexpected")]
+    public static TaskerValidationException QueryUnexpected(string text) =>
+        Validation($"Unexpected '{text}'", [text]);
+
+    [ErrorCode("query.expectedCondition")]
+    public static TaskerValidationException QueryExpectedCondition() =>
+        Validation("Expected a condition, for example .Status == \"Todo\"", []);
+
+    [ErrorCode("query.expectedProperty")]
+    public static TaskerValidationException QueryExpectedProperty() =>
+        Validation("Expected a property name after the dot", []);
+
+    [ErrorCode("query.expectedOperator")]
+    public static TaskerValidationException QueryExpectedOperator(string path) =>
+        Validation($"Expected an operator or a function after {path}", [path]);
+
+    [ErrorCode("query.expectedValue")]
+    public static TaskerValidationException QueryExpectedValue() =>
+        Validation("Expected a value", []);
+
+    [ErrorCode("query.valueNeedsQuotes")]
+    public static TaskerValidationException QueryValueNeedsQuotes(string text) =>
+        Validation($"Text values are written in quotes: \"{text}\"", [text]);
+
+    [ErrorCode("query.unclosedString")]
+    public static TaskerValidationException QueryUnclosedString() =>
+        Validation("The closing quote is missing", []);
+
+    [ErrorCode("query.unclosedParen")]
+    public static TaskerValidationException QueryUnclosedParen() =>
+        Validation("The closing parenthesis is missing", []);
+
+    [ErrorCode("query.unclosedBracket")]
+    public static TaskerValidationException QueryUnclosedBracket() =>
+        Validation("The closing bracket is missing", []);
+
+    [ErrorCode("query.emptyArray")]
+    public static TaskerValidationException QueryEmptyArray() =>
+        Validation("The array is empty", []);
+
+    [ErrorCode("query.expectedSort")]
+    public static TaskerValidationException QueryExpectedSort() =>
+        Validation("Expected sort after |; use || for OR", []);
+
+    [ErrorCode("query.expectedSortKey")]
+    public static TaskerValidationException QueryExpectedSortKey() =>
+        Validation("Expected a sort key, for example .Updated or -.Updated", []);
+
+    [ErrorCode("query.unknownProperty")]
+    public static TaskerValidationException QueryUnknownProperty(string name) =>
+        Validation($"Unknown property {name}: use .Status, .Type, .Title, .Series, .Field.Name, .Link.Name or .Parent", [name]);
+
+    [ErrorCode("query.unknownStatus")]
+    public static TaskerValidationException QueryUnknownStatus(string name) =>
+        Validation($"No status '{name}' in the project", [name]);
+
+    [ErrorCode("query.unknownType")]
+    public static TaskerValidationException QueryUnknownType(string name) =>
+        Validation($"No task type '{name}' in the project", [name]);
+
+    [ErrorCode("query.unknownSeries")]
+    public static TaskerValidationException QueryUnknownSeries(string name) =>
+        Validation($"No series with the prefix '{name}' in the project", [name]);
+
+    [ErrorCode("query.unknownField")]
+    public static TaskerValidationException QueryUnknownField(string name) =>
+        Validation($"No field '{name}' in the catalog or in the tasks", [name]);
+
+    [ErrorCode("query.ambiguousField")]
+    public static TaskerValidationException QueryAmbiguousField(string name) =>
+        Validation($"Tasks have own fields '{name}' of several types", [name]);
+
+    [ErrorCode("query.unknownLinkType")]
+    public static TaskerValidationException QueryUnknownLinkType(string name) =>
+        Validation($"No link type '{name}' in the project", [name]);
+
+    [ErrorCode("query.unknownEnumValue")]
+    public static TaskerValidationException QueryUnknownEnumValue(string field, string value) =>
+        Validation($"Field '{field}' has no value '{value}'", [field, value]);
+
+    [ErrorCode("query.badValue")]
+    public static TaskerValidationException QueryBadValue(string field, string value) =>
+        Validation($"'{value}' does not fit the type of field '{field}'", [field, value]);
+
+    [ErrorCode("query.unknownFunction")]
+    public static TaskerValidationException QueryUnknownFunction(string name, string target) =>
+        Validation($"{target} has no function {name}()", [name, target]);
+
+    [ErrorCode("query.functionArgument")]
+    public static TaskerValidationException QueryFunctionArgument(string name) =>
+        Validation($"Wrong argument of {name}(): Contains takes a value, ContainsAny and ContainsAll take an array, checks take nothing", [name]);
+
+    [ErrorCode("query.operatorNotAllowed")]
+    public static TaskerValidationException QueryOperatorNotAllowed(string op, string target) =>
+        Validation($"{target} does not support {op}", [op, target]);
+
+    [ErrorCode("query.arrayNotAllowed")]
+    public static TaskerValidationException QueryArrayNotAllowed(string op) =>
+        Validation($"{op} does not take an array", [op]);
+
+    [ErrorCode("query.sortOnly")]
+    public static TaskerValidationException QuerySortOnly(string name) =>
+        Validation($"{name} can only be used in sort", [name]);
+
+    [ErrorCode("query.sortRepeated")]
+    public static TaskerValidationException QuerySortRepeated(string name) =>
+        Validation($"Sort key {name} is listed twice", [name]);
+
+    [ErrorCode("query.notSortable")]
+    public static TaskerValidationException QueryNotSortable(string name) =>
+        Validation($"Cannot sort by {name}", [name]);
+
+    [ErrorCode("query.tooComplex")]
+    public static TaskerValidationException QueryTooComplex() =>
+        Validation("The query is too long or too deeply nested", []);
+
     [ErrorCode("entity.notFound")]
     public static TaskerNotFoundException EntityNotFound(string message = "Not found") => NotFound(message, []);
 

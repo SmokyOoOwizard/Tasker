@@ -242,6 +242,7 @@ type Project {
     search: String
     field: [String!]
     sort: String
+    query: String
     offset: Int
     limit: Int
     descriptionLength: Int
@@ -253,12 +254,14 @@ type Project {
     search: String
     field: [String!]
     sort: String
+    query: String
     offset: Int
     limit: Int
     descriptionLength: Int
     parentId: UUID
     levels: Int
   ): TaskTreeList!
+  taskQueryAnalysis(text: String!, cursor: Int): TaskQueryAnalysis!
   taskSearch(
     query: String!
     limit: Int
@@ -283,6 +286,7 @@ type Project {
     columnId: UUID!
     field: [String!]
     sort: String
+    query: String
     offset: Int
     limit: Int
     descriptionLength: Int
@@ -485,6 +489,36 @@ type TaskListItemPage {
   data: [TaskListItem!]!
 }
 
+type TaskQueryAnalysis {
+  valid: Boolean!
+  hasSort: Boolean!
+  errors: [TaskQueryError!]!
+  suggestions: [TaskQuerySuggestion!]!
+}
+
+type TaskQueryError {
+  code: String!
+  message: String!
+  params: [TaskQueryParam!]!
+  start: Int!
+  end: Int!
+}
+
+type TaskQueryParam {
+  name: String!
+  value: String!
+}
+
+type TaskQuerySuggestion {
+  kind: TaskQuerySuggestionKind!
+  label: String!
+  insert: String!
+  start: Int!
+  end: Int!
+  caret: Int!
+  detail: String
+}
+
 type TaskRef {
   id: UUID!
   title: String!
@@ -681,6 +715,16 @@ enum TaskFieldSource {
   type
   extra
   own
+}
+
+enum TaskQuerySuggestionKind {
+  property
+  field
+  link
+  function
+  operator
+  value
+  keyword
 }
 
 enum TaskSearchField {

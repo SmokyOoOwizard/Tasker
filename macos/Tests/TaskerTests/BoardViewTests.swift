@@ -69,8 +69,8 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
 
     func board(project: UUID, id: UUID) async throws -> BoardInfo? { id == info.id ? info : nil }
 
-    func columnPage(project: UUID, board: UUID, column: UUID, field: [String], offset: Int, limit: Int) async throws -> BoardRowPage {
-        lock.withLock { _fields.append(field) }
+    func columnPage(project: UUID, board: UUID, column: UUID, query: String?, offset: Int, limit: Int) async throws -> BoardRowPage {
+        lock.withLock { _fields.append(query.map { [$0] } ?? []) }
         let statuses = info.columns.first { $0.id == column }?.statusIds ?? []
         let all = rows.filter { statuses.contains($0.statusId) }
         if holdPages {
@@ -338,9 +338,9 @@ struct BoardViewTests {
         let model = model(stub)
         model.start()
         await until { model.phase == .ready }
-        model.fieldFilter = ["Приоритет=Высокий"]
-        await until { stub.fields.contains { $0 == ["Приоритет=Высокий"] } }
-        #expect(stub.fields.contains { $0 == ["Приоритет=Высокий"] })
+        model.query = ".Field.Приоритет == \"Высокий\""
+        await until { stub.fields.contains { $0 == [".Field.Приоритет == \"Высокий\""] } }
+        #expect(stub.fields.contains { $0 == [".Field.Приоритет == \"Высокий\""] })
         await until { model.phase == .ready }
         #expect(model.outside == 0)
     }

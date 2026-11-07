@@ -81,6 +81,10 @@ final class TaskListModel {
     var filter: TaskListFilter = .none {
         didSet { if filter != oldValue, started { reload() } }
     }
+    var query = "" {
+        didSet { if query != oldValue, started { reload() } }
+    }
+    var queryHasSort = false
 
     @ObservationIgnored var localizer = Localizer(choice: .system)
     @ObservationIgnored var onChange: ((TaskListChange) -> Void)?
@@ -118,7 +122,7 @@ final class TaskListModel {
     var mode: TaskListMode { preferences.mode }
 
     var request: TaskListRequest {
-        TaskListRequest(filter: filter, sort: preferences.sort)
+        TaskListRequest(filter: filter, sort: preferences.sort, query: query.isEmpty ? nil : query)
     }
 
     func request(group status: UUID) -> TaskListRequest {

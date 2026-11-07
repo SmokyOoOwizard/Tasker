@@ -546,7 +546,6 @@ const EN={
 "Создана":"Created",
 "Обновлена":"Updated",
 "Серия":"Series",
-"равно, у списка — хотя бы одно":"equals; for a list, at least one",
 "не равно":"not equal",
 "больше":"greater than",
 "больше или равно":"greater or equal",
@@ -556,39 +555,20 @@ const EN={
 "поле есть, значения нет":"field exists, no value",
 "поле есть у типа задачи":"field exists on the task type",
 "поля нет у типа задачи":"field is absent from the task type",
-"Неизвестный ключ «{0}»":"Unknown key “{0}”",
 "Нет статуса «{0}»":"No status “{0}”",
 "Нет типа «{0}»":"No type “{0}”",
 "Нет серии «{0}»":"No series “{0}”",
 "Нельзя сортировать по «{0}»":"Cannot sort by “{0}”",
-"Вид: дерево, плоско или группы":"View: tree, flat or groups",
-"Значение «{0}» не подходит полю «{1}»":"Value “{0}” does not fit field “{1}”",
-"ключ · статусы":"key · statuses",
-"ключ · типы задач":"key · task types",
-"ключ · префиксы серий":"key · series prefixes",
-"ключ · порядок, «-» по убыванию":"key · order, “-” for descending",
-"ключ · дерево или плоско":"key · tree or flat",
-"поле · {0}{1}":"field · {0}{1}",
 "статус":"status",
 "тип · набор {0}":"type · set {0}",
-"с вложенностью":"with nesting",
-"без вложенности":"without nesting",
-"по статусам":"by status",
 "по убыванию":"descending",
 "по возрастанию":"ascending",
 "значение":"value",
-"оператор сравнения":"comparison operator",
 "дата ГГГГ-ММ-ДД":"date YYYY-MM-DD",
-"Ключи и поля":"Keys and fields",
 "Значения: {0}":"Values: {0}",
 "Фильтр карточек: ":"Filter cards: ",
 "Запрос: ":"Query: ",
-"Текст":"Text",
-"Вид":"View",
-"дерево":"tree",
-"плоско":"flat",
 "Примеры:":"Examples:",
-"{0}{1}: это игнорируется":"{0}{1}: ignored",
 " и ещё {0}":" and {0} more",
 "Нельзя связать задачу с самой собой":"Cannot link a task to itself",
 "Такая связь уже есть":"This link already exists",
@@ -666,7 +646,6 @@ const EN={
 "Запрос по проекту":"Project query",
 "Задачи":"Tasks",
 "и ещё {0} — открыть все в списке":"and {0} more — open all in list",
-"{0}: это игнорируется":"{0}: ignored",
 "Найдено {0}. Enter — открыть выбранное, первая строка — весь результат в списке":"Found {0}. Enter opens the selected item, the first row opens the whole result in the list",
 "конфликт номера":"number conflict",
 "Номер {0} занят несколькими задачами":"Number {0} is taken by several tasks",
@@ -694,16 +673,8 @@ const EN={
 "Новая задача":"New task",
 "Создать":"Create",
 "обязательно":"required",
-"ключ статус":"key status",
-"ключ тип":"key type",
 "префикс":"prefix",
-"слово в названии или описании":"word in title or description",
-"Фильтр — меняет строку запроса":"Filter — changes the query string",
 "Что отфильтровать?":"What to filter?",
-"Слово в названии или описании":"Word in title or description",
-"Введите слово":"Enter a word",
-"{0}: отметьте значения (ИЛИ внутри ключа, И между ключами)":"{0}: tick values (OR within a key, AND between keys)",
-"{0} {1}: отметьте значения (ИЛИ)":"{0} {1}: tick values (OR)",
 "{0} — условие":"{0} — condition",
 "Значение":"Value",
 "Ожидается целое число":"An integer is expected",
@@ -1194,7 +1165,108 @@ const EN={
 "связал {0} {1} {2}":"linked {0} {1} {2}",
 "Маркеры конфликта git (<<<<<<<)":"git merge conflict markers (<<<<<<<)",
 "formatVersion 11 новее этой версии Tasker (10)":"formatVersion 11 is newer than this Tasker version (10)",
-"Вторая папка проекта после переименования в другой ветке":"A second project folder after a rename in another branch"
+"Вторая папка проекта после переименования в другой ветке":"A second project folder after a rename in another branch",
+"название содержит текст":"title contains the text",
+"содержит значение":"contains the value",
+"содержит любое из":"contains any of",
+"содержит все":"contains all of",
+"значения нет":"no value",
+"Условие начинается с точки. Для поиска по названию: .Title.Contains(\"текст\")":"A condition starts with a dot. To search by title: .Title.Contains(\"text\")",
+"Ожидается значение":"A value is expected",
+"Не закрыты кавычки":"Unclosed quotes",
+"Ожидается значение: текст в кавычках, число, true или false, либо массив [...]":"A value is expected: quoted text, a number, true or false, or an array [...]",
+"Здесь нужно одно значение, не массив":"A single value is expected here, not an array",
+"Пустой массив":"Empty array",
+"В массиве ожидается «,» или «]»":"Expected “,” or “]” in the array",
+"Ожидается текст в кавычках":"Quoted text is expected",
+"Поле «{0}» ждёт {1}":"Field “{0}” expects {1}",
+"имя значения в кавычках":"a quoted value name",
+"Нет значения «{0}» в перечислении «{1}»":"No value “{0}” in enum “{1}”",
+"число":"a number",
+"дату в кавычках \"ГГГГ-ММ-ДД\"":"a quoted date \"YYYY-MM-DD\"",
+"true или false":"true or false",
+"текст в кавычках":"quoted text",
+"После точки укажите свойство: .Status, .Type, .Title, .Series, .Field.Имя, .Link.Имя, .Parent":"Name a property after the dot: .Status, .Type, .Title, .Series, .Field.Name, .Link.Name, .Parent",
+".{0} доступно только в сортировке: | sort .{0}":".{0} is available only in sorting: | sort .{0}",
+"После .Field укажите имя поля: .Field.Имя или .Field.\"Имя с пробелами\"":"Name a field after .Field: .Field.Name or .Field.\"Name with spaces\"",
+"Нет поля «{0}»":"No field “{0}”",
+"После .Link укажите тип связи: .Link.Имя":"Name a link type after .Link: .Link.Name",
+"Нет типа связи «{0}»":"No link type “{0}”",
+"Неизвестное свойство «.{0}»":"Unknown property “.{0}”",
+"Лишнее «.{0}» после {1}":"Unexpected “.{0}” after {1}",
+"Неизвестная функция «{0}»":"Unknown function “{0}”",
+"У {0} только IsSet() и IsUnset()":"{0} supports only IsSet() and IsUnset()",
+"Функции Contains есть только у множественных полей, у одиночного используйте == и массив":"Contains functions exist only for multiple-value fields; for a single-value field use == with an array",
+"У {0} нет функции {1}":"{0} has no function {1}",
+"После {0} нужны скобки: {0}()":"{0} needs parentheses: {0}()",
+"Не закрыта скобка":"Unclosed parenthesis",
+"{0}() не принимает аргументов":"{0}() takes no arguments",
+"Используйте == вместо =":"Use == instead of =",
+"После {0} ожидается оператор: ==, != или функция, например {0}.IsSet()":"An operator is expected after {0}: ==, != or a function such as {0}.IsSet()",
+"Операторы >, >=, <, <= только для полей int, float и date":"Operators >, >=, <, <= work only for int, float and date fields",
+"Ожидается условие":"A condition is expected",
+"Ожидается условие, а не «{0}»":"A condition is expected, not “{0}”",
+"Ожидается && или ||, а не «{0}»":"Expected && or ||, not “{0}”",
+"{0} — условие не применено":"{0} — condition not applied",
+"После | ожидается sort: | sort .Status, -.Updated":"Expected sort after |: | sort .Status, -.Updated",
+"После sort укажите ключи: | sort .Status, -.Updated":"Give sort keys after sort: | sort .Status, -.Updated",
+"Ожидается ключ сортировки: .Status, .Type, .Title, .Created, .Updated, .Series, .Field.Имя":"A sort key is expected: .Status, .Type, .Title, .Created, .Updated, .Series, .Field.Name",
+"Ключи сортировки разделяются запятой":"Sort keys are separated by commas",
+"{0} — сортировка не применена":"{0} — sorting not applied",
+"да":"yes",
+"статус задачи":"task status",
+"тип задачи":"task type",
+"название":"title",
+"дата создания":"creation date",
+"дата обновления":"update date",
+"серии задачи":"task series",
+"поле: .Field.Имя":"field: .Field.Name",
+"связь: .Link.Имя":"link: .Link.Name",
+"родитель":"parent",
+"Свойства":"Properties",
+"Функции":"Functions",
+"Ключи сортировки":"Sort keys",
+"не":"not",
+"группа в скобках":"parenthesized group",
+"Операторы":"Operators",
+"равно; массив справа — одно из":"equals; an array on the right means one of",
+"не равно; массив справа — ни одно из":"not equal; an array on the right means none of",
+"массив значений":"array of values",
+"Массив":"Array",
+"ещё значение":"another value",
+"закрыть массив":"close array",
+"Функция":"Function",
+"закрыть скобку":"close parenthesis",
+"Дальше":"Next",
+"и":"and",
+"или":"or",
+"сортировка: | sort .Status, -.Updated":"sorting: | sort .Status, -.Updated",
+"ключи через запятую, «-» по убыванию":"comma-separated keys, “-” for descending",
+"ещё один ключ":"another key",
+"↑↓ выбор · Tab подставить · Enter применить · Esc закрыть":"↑↓ select · Tab insert · Enter apply · Esc close",
+"Синтаксис строки запроса":"Query bar syntax",
+"условие начинается с точки; логика: && || ! и скобки":"a condition starts with a dot; logic: && || ! and parentheses",
+"свойства задачи; имена без учёта регистра":"task properties; names are case-insensitive",
+"поле по имени":"a field by name",
+"связь и родитель: только IsSet() и IsUnset()":"link and parent: only IsSet() and IsUnset()",
+"== и != для всех, остальные — для int, float и date":"== and != for all, the rest for int, float and date",
+"массив справа: одно из (!= — ни одно из)":"array on the right: one of (!= means none of)",
+"у множественных полей и .Series: ровно эти значения":"for multiple-value fields and .Series: exactly these values",
+"номер только в этой серии":"numbered only in this series",
+"поиск по названию без учёта регистра":"case-insensitive title search",
+"сортировка в конце, минус — по убыванию":"sorting goes last, minus means descending",
+"Текст без точки в строке запроса — ошибка. Нечёткий поиск остаётся в палитре команд.":"Text without a dot in the query bar is an error. Fuzzy search stays in the command palette.",
+"Связь":"Link",
+"Фильтр — дописывает условие в строку запроса":"Filter — appends a condition to the query bar",
+"Текст в названии":"Text in the title",
+"Введите текст":"Enter some text",
+"есть":"exists",
+"{0}: отметьте значения":"{0}: tick values",
+"ровно эти значения, порядок неважен":"exactly these values, order does not matter",
+"равно; массив — одно из":"equals; an array means one of",
+"не ровно эти значения":"not exactly these values",
+"не равно; массив — ни одно из":"not equal; an array means none of",
+"Значения через запятую":"Comma-separated values",
 };
 const LKEY='tasker-lang';
 const MISS={};
@@ -1226,12 +1298,6 @@ function dfmt(kind){
   if(!DFC[k])DFC[k]=new Intl.DateTimeFormat(LOC(),kind==='d'?{day:'numeric',month:'short',timeZone:'UTC'}:{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'UTC'});
   return DFC[k];
 }
-const QKW={ru:{status:'статус',type:'тип',series:'серия',sort:'сортировка',view:'вид'},en:{status:'status',type:'type',series:'series',sort:'sort',view:'view'}};
-const QSN={ru:{status:'статус',type:'тип',title:'название',created:'создана',updated:'обновлена',series:'серия'},en:{status:'status',type:'type',title:'title',created:'created',updated:'updated',series:'series'}};
-const QVW={ru:{tree:'дерево',flat:'плоско',groups:'группы'},en:{tree:'tree',flat:'flat',groups:'groups'}};
-const qk=k=>QKW[LANG][k];
-const qvw=v=>QVW[LANG][v];
-const qbool=()=>LANG==='ru'?['да','нет']:['yes','no'];
 const ACT=[[/^перевёл (\S+) в «([\s\S]*)»$/,'перевёл {0} в «{1}»'],[/^правит (\S+)$/,'правит {0}','editing {0}'],[/^создал (\S+) «([\s\S]*)»$/,'создал {0} «{1}»'],[/^связал (\S+) ([\s\S]+) (\S+)$/,'связал {0} {1} {2}']];
 const actText=s=>{if(LANG==='ru')return s;for(const [re,k,o] of ACT){const m=re.exec(s);if(m)return o?_f(o,m.slice(1)):_t(k,m.slice(1))}return s};
 const $=(s,r=document)=>r.querySelector(s);
@@ -1433,140 +1499,344 @@ const tag=(txt,c,x)=>`<span class="tag ${x||''}" style="--c:${c}">${esc(txt)}</s
 const stTag=(sid,setId)=>{const s=st(sid);return `<span class="tag" style="--c:${s.color}">${sIcon(sid,setId,13)}${esc(s.name)}</span>`};
 function evTag(eid,vid){const e=en(eid);const v=e&&e.values.find(x=>x.id===vid);return v?tag(v.name,evColor(eid,vid)):`<span class="tag">${esc(vid)}</span>`}
 
-const QK={status:['статус','status'],type:['тип','type'],series:['серия','series'],sort:['сортировка','sort'],view:['вид','view']};
-const QSORT={'статус':'status',status:'status','тип':'type',type:'type','название':'title',title:'title','создана':'created',created:'created','обновлена':'updated',updated:'updated','серия':'series',series:'series'};
-const QVIEW={'дерево':'tree',tree:'tree','плоско':'flat','плоский':'flat','список':'flat',flat:'flat','группы':'groups',groups:'groups'};
-const QOPW=['set','unset','attached','detached'];
-const QSYM=()=>({'=':'=','!=':'≠','>':'>','>=':'≥','<':'<','<=':'≤',set:_t('задано'),unset:_t('не задано'),attached:_t('привязано'),detached:_t('не привязано')});
-const QOPLIST=()=>[['=',_t('равно, у списка — хотя бы одно')],['!=',_t('не равно')],['>',_t('больше')],['>=',_t('больше или равно')],['<',_t('меньше')],['<=',_t('меньше или равно')],['set',_t('значение задано')],['unset',_t('поле есть, значения нет')],['attached',_t('поле есть у типа задачи')],['detached',_t('поля нет у типа задачи')]];
-const qOpsFor=f=>['int','float','date'].includes(f.type)?QOPLIST().map(x=>x[0]):['=','!=','set','unset','attached','detached'];
+const QSORTK=['status','type','title','created','updated','series'];
+const QMETH={contains:'Contains',containsany:'ContainsAny',containsall:'ContainsAll',isset:'IsSet',isunset:'IsUnset',isattached:'IsAttached',isdetached:'IsDetached'};
+const QCMP=['==','!=','>','>=','<','<='];
 const customDefs=()=>{const m={};DB.tasks.forEach(t=>(t.custom||[]).forEach(c=>{m[c.fieldId]={id:c.fieldId,name:c.name,type:c.type,multiple:c.multiple,custom:true}}));return Object.values(m)};
 const allFields=()=>DB.fields.concat(customDefs());
 const fld=id=>fl(id)||customDefs().find(f=>f.id===id);
-const qKind=k=>{k=k.toLowerCase();for(const x in QK)if(QK[x].includes(k))return x;return allFields().some(f=>f.name.toLowerCase()===k)?'field':null};
-const qSortId=k=>{const l=k.toLowerCase();if(QSORT[l])return QSORT[l];const f=allFields().find(x=>x.name.toLowerCase()===l);return f?f.id:null};
-const qSortName=id=>QSN[LANG][id]||(fld(id)||{name:id}).name;
-const qwrap=x=>/[\s,{}:]/.test(x)?'{'+x+'}':x;
-function qNames(key){
-  const k=qKind(key);
-  if(k==='status')return DB.statuses.map(x=>x.name);
-  if(k==='type')return DB.taskTypes.map(x=>x.name);
-  if(k==='series')return DB.series.map(x=>x.prefix);
-  if(k==='field'){const f=allFields().find(x=>x.name.toLowerCase()===key.toLowerCase());return f&&f.type==='enum'?en(f.enumId).values.map(v=>v.name):[]}
+const qSimple=x=>/^[\p{L}_][\p{L}\p{N}_]*$/u.test(x);
+const qStr=x=>'"'+String(x).replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"';
+const qName=x=>qSimple(x)?x:qStr(x);
+const qCmpType=f=>['int','float','date'].includes(f.type)&&!f.multiple;
+const qFieldByName=n=>allFields().find(f=>f.name.toLowerCase()===n.toLowerCase());
+const qLinkByName=n=>DB.linkTypes.find(l=>l.name.toLowerCase()===n.toLowerCase());
+const qIsQ=q=>/^\s*[.!(|]/.test(q);
+const qCap=k=>k[0].toUpperCase()+k.slice(1);
+const qSortTxt=id=>QSORTK.includes(id)?'.'+qCap(id):'.Field.'+qName((fld(id)||{name:id}).name);
+const qPropTxt=pr=>pr.k==='field'?'.Field.'+qName(pr.f.name):pr.k==='link'?'.Link.'+qName(pr.lt.name):'.'+qCap(pr.k);
+const qPk=pr=>pr.k==='field'?'f:'+pr.f.id:pr.k;
+function qMethods(pr){
+  if(pr.k==='title')return['Contains'];
+  if(pr.k==='series')return['Contains','ContainsAny','ContainsAll','IsSet','IsUnset'];
+  if(pr.k==='field')return(pr.f.multiple?['Contains','ContainsAny','ContainsAll']:[]).concat(['IsSet','IsUnset','IsAttached','IsDetached']);
+  if(pr.k==='link'||pr.k==='parent')return['IsSet','IsUnset'];
   return[];
 }
-function qTok(s){
-  const out=[];let i=0;const n=s.length;const kre=/([^\s:,{}]+):[ \t]*/y;
+const qMethHint=(pr,m)=>({Contains:pr.k==='title'?_t('название содержит текст'):_t('содержит значение'),ContainsAny:_t('содержит любое из'),ContainsAll:_t('содержит все'),IsSet:_t('значение задано'),IsUnset:pr.k==='field'?_t('поле есть, значения нет'):_t('значения нет'),IsAttached:_t('поле есть у типа задачи'),IsDetached:_t('поля нет у типа задачи')})[m];
+function qLex(s){
+  const out=[];let i=0;const n=s.length;
+  const push=(t,a,b,x)=>{const k={t,s:a,e:b,raw:s.slice(a,b)};if(x)Object.assign(k,x);out.push(k)};
+  const rdStr=j=>{let k=j+1,v='';while(k<n&&s[k]!=='"'){if(s[k]==='\\'&&k+1<n){v+=s[k+1];k+=2}else{v+=s[k];k++}}return{v,end:k<n?k+1:n,open:k>=n}};
+  const rid=/[\p{L}_][\p{L}\p{N}_]*/uy,rnum=/\d+(\.\d+)?/y;
   while(i<n){
-    if(/\s/.test(s[i])){i++;continue}
-    kre.lastIndex=i;const m=kre.exec(s);
-    if(m){
-      const tok={kind:'kv',key:m[1],ks:i,ke:i+m[1].length+1,vals:[],s:i};
-      const names=qNames(m[1]).filter(x=>x.indexOf(' ')>=0).sort((a,b)=>b.length-a.length);
-      i=kre.lastIndex;
-      for(;;){
-        if(i>=n)break;
-        const vs=i;let raw;let pre='';
-        const pm=/^(>=|<=|!=|>|<|=)/.exec(s.slice(i,i+2));if(pm){pre=pm[1];i+=pre.length}
-        if(s[i]==='{'){const j=s.indexOf('}',i);if(j<0){raw=pre+s.slice(i+1);i=n}else{raw=pre+s.slice(i+1,j);i=j+1}}
-        else{
-          let hit=null;
-          for(const nm of names){const seg=s.slice(i,i+nm.length);if(seg.toLowerCase()===nm.toLowerCase()&&(i+nm.length>=n||/[\s,]/.test(s[i+nm.length]))){hit=seg;break}}
-          if(hit){raw=pre+hit;i+=hit.length}
-          else{let j=i;while(j<n&&!/[\s,]/.test(s[j]))j++;raw=pre+s.slice(i,j);i=j}
-        }
-        tok.vals.push({raw,s:vs,e:i});
-        if(i<n&&s[i]===','){i++;while(i<n&&(s[i]===' '||s[i]==='\t'))i++;continue}
-        break;
+    const c=s[i];
+    if(/\s/.test(c)){i++;continue}
+    if(c==='.'){
+      const a=i,segs=[];
+      while(i<n&&s[i]==='.'){
+        const ds=i;i++;
+        if(s[i]==='"'){const r=rdStr(i);segs.push({v:r.v,s:ds,e:r.end,q:true});i=r.end}
+        else{rid.lastIndex=i;const m=rid.exec(s);if(m){segs.push({v:m[0],s:ds,e:i+m[0].length});i+=m[0].length}else segs.push({v:'',s:ds,e:i})}
       }
-      tok.e=i;out.push(tok);
-    }else{let j=i;while(j<n&&!/\s/.test(s[j]))j++;out.push({kind:'text',raw:s.slice(i,j),s:i,e:j});i=j}
+      push('path',a,i,{segs});continue;
+    }
+    if(c==='"'){const r=rdStr(i);push('str',i,r.end,{v:r.v,open:r.open});i=r.end;continue}
+    if(/\d/.test(c)||(c==='-'&&/\d/.test(s[i+1]||''))){
+      const a=i;if(c==='-')i++;
+      rnum.lastIndex=i;const m=rnum.exec(s);i+=m[0].length;
+      push('num',a,i,{v:parseFloat(s.slice(a,i)),int:m[1]===undefined});continue;
+    }
+    rid.lastIndex=i;const m=rid.exec(s);
+    if(m){push('word',i,i+m[0].length,{v:m[0]});i+=m[0].length;continue}
+    const two=s.slice(i,i+2);
+    if(['&&','||','==','!=','>=','<='].includes(two)){push('op',i,i+2,{v:two});i+=2;continue}
+    if('!><|=-&'.includes(c)){push('op',i,i+1,{v:c});i++;continue}
+    if('()[],'.includes(c)){push('p',i,i+1,{v:c});i++;continue}
+    push('bad',i,i+1,{v:c});i++;
   }
   return out;
 }
-function qConv(f,r){
-  if(f.type==='enum'){const e=en(f.enumId);const v=e&&e.values.find(x=>x.name.toLowerCase()===r.toLowerCase());return v?v.id:undefined}
-  if(f.type==='int')return /^-?\d+$/.test(r)?+r:undefined;
-  if(f.type==='float')return /^-?\d+([.,]\d+)?$/.test(r)?parseFloat(r.replace(',','.')):undefined;
-  if(f.type==='date')return /^\d{4}-\d{2}-\d{2}$/.test(r)?r:undefined;
-  if(f.type==='bool')return /^(да|true|yes)$/i.test(r)?true:/^(нет|false|no)$/i.test(r)?false:undefined;
-  return r===''?undefined:r;
+function qPathInfo(t){
+  const sg=t.segs,h=(sg[0]&&sg[0].v||'').toLowerCase();let pr=null,i=1;
+  if(h==='field'){const f=sg[1]&&qFieldByName(sg[1].v);if(f)pr={k:'field',f};i=2}
+  else if(h==='link'){const l=sg[1]&&qLinkByName(sg[1].v);if(l)pr={k:'link',lt:l};i=2}
+  else if(['status','type','title','series','parent'].includes(h))pr={k:h};
+  const m=sg[i]&&QMETH[sg[i].v.toLowerCase()];
+  return{h,pr,fn:m||null,i};
 }
 function parseQ(s){
-  const o={text:[],status:[],type:[],series:[],groups:[],sort:[],view:null,unk:[],toks:qTok(s),ranges:[],errors:[],hasKey:false};
-  const R=(a,b,c)=>o.ranges.push([a,b,c]);
-  const nm=(arr,k,v)=>arr.find(x=>x[k].toLowerCase()===v.toLowerCase());
-  for(const t of o.toks){
-    if(t.kind==='text'){o.text.push(t.raw);continue}
-    const kk=qKind(t.key);
-    R(t.ks,t.ke,kk?'k':'bad');
-    if(!kk){o.unk.push(s.slice(t.s,t.e));o.errors.push(_t('Неизвестный ключ «{0}»',[t.key]));t.vals.forEach(v=>R(v.s,v.e,'bad'));continue}
-    o.hasKey=true;
-    let g=null;
-    if(kk==='field'){const f=allFields().find(x=>x.name.toLowerCase()===t.key.toLowerCase());g={f,fname:f.name,alts:[]};o.groups.push(g)}
-    for(const v of t.vals){
-      const r=v.raw;if(r==='')continue;
-      let ok=true;
-      if(kk==='status'){const x=nm(DB.statuses,'name',r);ok=!!x;o.status.push({raw:r,ok,id:x&&x.id});if(!ok)o.errors.push(_t('Нет статуса «{0}»',[r]))}
-      else if(kk==='type'){const x=nm(DB.taskTypes,'name',r);ok=!!x;o.type.push({raw:r,ok,id:x&&x.id});if(!ok)o.errors.push(_t('Нет типа «{0}»',[r]))}
-      else if(kk==='series'){const x=nm(DB.series,'prefix',r);ok=!!x;o.series.push({raw:r,ok,id:x&&x.id});if(!ok)o.errors.push(_t('Нет серии «{0}»',[r]))}
-      else if(kk==='sort'){const d=r[0]==='-',key=r.replace(/^-/,''),id=qSortId(key);ok=!!id;o.sort.push({key,desc:d,ok,id});if(!ok)o.errors.push(_t('Нельзя сортировать по «{0}»',[key]))}
-      else if(kk==='view'){const vv=QVIEW[r.toLowerCase()];ok=!!vv;if(ok)o.view=vv;else o.errors.push(_t('Вид: дерево, плоско или группы'))}
-      else{
-        const m=/^(>=|<=|!=|>|<|=)?([\s\S]*)$/.exec(r);let op=m[1]||'=',rest=m[2],val;
-        if(!m[1]&&QOPW.includes(r.toLowerCase())){op=r.toLowerCase();rest=''}
-        else{
-          val=qConv(g.f,rest);ok=val!==undefined;
-          if(['>','<','>=','<='].includes(op)&&!['int','float','date'].includes(g.f.type))ok=false;
-          if(!ok)o.errors.push(_t('Значение «{0}» не подходит полю «{1}»',[r,g.fname]));
-        }
-        g.alts.push({op,raw:rest,val,ok});
-        const ol=m[1]?m[1].length:0;
-        if(ok&&QOPW.includes(op))R(v.s,v.e,'o');
-        else if(ok&&ol){R(v.s,v.s+ol,'o');R(v.s+ol,v.e,'v')}
-        else R(v.s,v.e,ok?'v':'bad');
-        continue;
+  const toks=qLex(s);
+  const o={s,toks,cond:null,conj:[],sort:[],errors:[]};
+  const pi=toks.findIndex(t=>t.t==='op'&&t.v==='|');
+  const ct=pi<0?toks:toks.slice(0,pi);
+  const fail=(m,tok)=>{throw{m,tok}};
+  let p=0;
+  const isOp=v=>ct[p]&&ct[p].t==='op'&&ct[p].v===v;
+  const isP=(t,v)=>t&&t.t==='p'&&t.v===v;
+  const DOTMSG=_t('Условие начинается с точки. Для поиска по названию: .Title.Contains("текст")');
+  function pLit(){
+    const t=ct[p];
+    if(!t)fail(_t('Ожидается значение'),ct[p-1]);
+    if(t.t==='str'){if(t.open)fail(_t('Не закрыты кавычки'),t);p++;return t}
+    if(t.t==='num'){p++;return t}
+    if(t.t==='word'&&/^(true|false)$/i.test(t.v)){p++;return t}
+    fail(_t('Ожидается значение: текст в кавычках, число, true или false, либо массив [...]'),t);
+  }
+  function pVal(allowArr){
+    const t=ct[p];
+    if(isP(t,'[')){
+      if(!allowArr)fail(_t('Здесь нужно одно значение, не массив'),t);
+      p++;const items=[];
+      for(;;){
+        if(isP(ct[p],']')){if(!items.length)fail(_t('Пустой массив'),ct[p]);p++;break}
+        items.push(pLit());
+        const d=ct[p];
+        if(isP(d,',')){p++;continue}
+        if(isP(d,']')){p++;break}
+        fail(_t('В массиве ожидается «,» или «]»'),d||t);
       }
-      R(v.s,v.e,ok?'v':'bad');
+      return{items,arr:true};
+    }
+    return{items:[pLit()],arr:false};
+  }
+  function conv(pr,tok){
+    const isS=tok.t==='str',nm=isS?tok.v.toLowerCase():'';
+    if(pr.k==='status'||pr.k==='type'||pr.k==='series'||pr.k==='title'){
+      if(!isS)fail(_t('Ожидается текст в кавычках'),tok);
+      if(pr.k==='title')return tok.v;
+      const a=pr.k==='status'?DB.statuses:pr.k==='type'?DB.taskTypes:DB.series;
+      const x=a.find(y=>(pr.k==='series'?y.prefix:y.name).toLowerCase()===nm);
+      if(!x)fail(pr.k==='status'?_t('Нет статуса «{0}»',[tok.v]):pr.k==='type'?_t('Нет типа «{0}»',[tok.v]):_t('Нет серии «{0}»',[tok.v]),tok);
+      return x.id;
+    }
+    const f=pr.f;
+    const bad=w=>fail(_t('Поле «{0}» ждёт {1}',[f.name,w]),tok);
+    if(f.type==='enum'){
+      if(!isS)bad(_t('имя значения в кавычках'));
+      const e=en(f.enumId);const v=e&&e.values.find(x=>x.name.toLowerCase()===nm);
+      if(!v)fail(_t('Нет значения «{0}» в перечислении «{1}»',[tok.v,e?e.name:'']),tok);
+      return v.id;
+    }
+    if(f.type==='int'){if(tok.t!=='num'||!tok.int)bad(_t('целое число'));return tok.v}
+    if(f.type==='float'){if(tok.t!=='num')bad(_t('число'));return tok.v}
+    if(f.type==='date'){if(!isS||!/^\d{4}-\d{2}-\d{2}$/.test(tok.v)||isNaN(Date.parse(tok.v)))bad(_t('дату в кавычках "ГГГГ-ММ-ДД"'));return tok.v}
+    if(f.type==='bool'){if(tok.t!=='word')bad(_t('true или false'));return tok.v.toLowerCase()==='true'}
+    if(!isS)bad(_t('текст в кавычках'));
+    return tok.v;
+  }
+  function pPred(){
+    const t=ct[p++],sg=t.segs,h=sg[0].v,hl=h.toLowerCase();
+    if(!h)fail(_t('После точки укажите свойство: .Status, .Type, .Title, .Series, .Field.Имя, .Link.Имя, .Parent'),t);
+    if(hl==='created'||hl==='updated')fail(_t('.{0} доступно только в сортировке: | sort .{0}',[qCap(hl)]),t);
+    let pr,i=1;
+    if(hl==='field'){
+      if(!sg[1]||!sg[1].v)fail(_t('После .Field укажите имя поля: .Field.Имя или .Field."Имя с пробелами"'),t);
+      const f=qFieldByName(sg[1].v);if(!f)fail(_t('Нет поля «{0}»',[sg[1].v]),t);
+      pr={k:'field',f};i=2;
+    }else if(hl==='link'){
+      if(!sg[1]||!sg[1].v)fail(_t('После .Link укажите тип связи: .Link.Имя'),t);
+      const l=qLinkByName(sg[1].v);if(!l)fail(_t('Нет типа связи «{0}»',[sg[1].v]),t);
+      pr={k:'link',lt:l};i=2;
+    }else if(['status','type','title','series','parent'].includes(hl))pr={k:hl};
+    else fail(_t('Неизвестное свойство «.{0}»',[h]),t);
+    const lab=qPropTxt(pr);
+    const rest=sg.slice(i);
+    if(rest.length>1)fail(_t('Лишнее «.{0}» после {1}',[rest[1].v,lab]),t);
+    if(rest.length===1){
+      const mn=QMETH[rest[0].v.toLowerCase()];
+      if(!mn)fail(_t('Неизвестная функция «{0}»',[rest[0].v]),t);
+      if(!qMethods(pr).includes(mn))fail(pr.k==='link'||pr.k==='parent'?_t('У {0} только IsSet() и IsUnset()',[lab]):pr.k==='field'&&!pr.f.multiple&&/^Contains/.test(mn)?_t('Функции Contains есть только у множественных полей, у одиночного используйте == и массив'):_t('У {0} нет функции {1}',[lab,mn+'()']),t);
+      if(!isP(ct[p],'('))fail(_t('После {0} нужны скобки: {0}()',[mn]),t);
+      p++;
+      let names=[],vals=[];
+      if(/^Contains/.test(mn)){
+        const v=pVal(mn!=='Contains');
+        names=v.items.map(x=>x.t==='str'?x.v:x.raw);vals=v.items.map(x=>conv(pr,x));
+      }
+      if(!isP(ct[p],')'))fail(/^Contains/.test(mn)?_t('Не закрыта скобка'):_t('{0}() не принимает аргументов',[mn]),ct[p]||t);
+      p++;
+      return{t:'call',pr,fn:mn,vals,names,s:t.s,e:ct[p-1].e};
+    }
+    if(pr.k==='link'||pr.k==='parent')fail(_t('У {0} только IsSet() и IsUnset()',[lab]),t);
+    const op=ct[p];
+    if(!op||op.t!=='op'||!QCMP.includes(op.v)){
+      if(op&&op.t==='op'&&op.v==='=')fail(_t('Используйте == вместо ='),op);
+      fail(_t('После {0} ожидается оператор: ==, != или функция, например {0}.IsSet()',[lab]),op||t);
+    }
+    p++;
+    if(op.v!=='=='&&op.v!=='!='&&!(pr.k==='field'&&qCmpType(pr.f)))fail(_t('Операторы >, >=, <, <= только для полей int, float и date'),op);
+    const v=pVal(pr.k!=='title'&&(op.v==='=='||op.v==='!='));
+    return{t:'cmp',pr,op:op.v,vals:v.items.map(x=>conv(pr,x)),names:v.items.map(x=>x.t==='str'?x.v:x.raw),arr:v.arr,s:t.s,e:ct[p-1].e};
+  }
+  function pAtom(){
+    const t=ct[p];
+    if(!t)fail(_t('Ожидается условие'),ct[p-1]);
+    if(isP(t,'(')){
+      p++;const x=pOr();const c=ct[p];
+      if(!isP(c,')'))fail(_t('Не закрыта скобка'),t);
+      p++;x.s=t.s;x.e=c.e;x.paren=true;return x;
+    }
+    if(t.t==='path')return pPred();
+    if(t.t==='word'||t.t==='str'||t.t==='num')fail(DOTMSG,t);
+    fail(_t('Ожидается условие, а не «{0}»',[t.raw]),t);
+  }
+  function pNot(){
+    if(isOp('!')){const t=ct[p++];const x=pNot();return{t:'not',x,s:t.s,e:x.e}}
+    return pAtom();
+  }
+  function pAnd(){
+    const a=[pNot()];
+    while(isOp('&&')){p++;a.push(pNot())}
+    return a.length===1?a[0]:{t:'and',a,s:a[0].s,e:a[a.length-1].e};
+  }
+  function pOr(){
+    const a=[pAnd()];
+    while(isOp('||')){p++;a.push(pAnd())}
+    return a.length===1?a[0]:{t:'or',a,s:a[0].s,e:a[a.length-1].e};
+  }
+  const simple=n=>{
+    if(!n||(n.t!=='cmp'&&n.t!=='call'))return null;
+    if(n.t==='cmp'&&n.op!=='=='&&n.op!=='!=')return null;
+    if(n.t==='call'&&!/^Contains/.test(n.fn))return null;
+    if(!['status','type','series','field'].includes(n.pr.k))return null;
+    return{pk:qPk(n.pr),mode:n.t==='cmp'?n.op:n.fn==='ContainsAll'?'ContainsAll':'ContainsAny',names:n.names};
+  };
+  if(ct.length){
+    try{
+      const node=pOr();
+      if(p<ct.length){
+        const t=ct[p];
+        if(t.t==='op'&&t.v==='=')fail(_t('Используйте == вместо ='),t);
+        fail(_t('Ожидается && или ||, а не «{0}»',[t.raw]),t);
+      }
+      o.cond=node;
+      const list=node.t==='and'&&!node.paren?node.a:[node];
+      o.conj=list.map(n=>({text:s.slice(n.s,n.e),s:n.s,e:n.e,node:n,simple:simple(n)}));
+    }catch(e){
+      if(!e.m)throw e;
+      o.errors.push(_t('{0} — условие не применено',[e.m]));
+      if(e.tok)e.tok.bad=true;
+      o.cond=null;
+      o.conj=[{text:s.slice(ct[0].s,ct[ct.length-1].e),s:ct[0].s,e:ct[ct.length-1].e,node:null,bad:true}];
+    }
+  }
+  if(pi>=0){
+    const st=toks.slice(pi+1);let q=0;
+    try{
+      const kw=st[0];
+      if(!kw||kw.t!=='word'||kw.v.toLowerCase()!=='sort')fail(_t('После | ожидается sort: | sort .Status, -.Updated'),kw||toks[pi]);
+      q=1;
+      if(q>=st.length)fail(_t('После sort укажите ключи: | sort .Status, -.Updated'),kw);
+      for(;;){
+        let desc=false,t=st[q];
+        if(t&&t.t==='op'&&t.v==='-'){desc=true;q++;t=st[q]}
+        if(!t||t.t!=='path')fail(_t('Ожидается ключ сортировки: .Status, .Type, .Title, .Created, .Updated, .Series, .Field.Имя'),t||st[q-1]||kw);
+        const sg=t.segs,h=sg[0].v.toLowerCase();let id=null;
+        if(sg.length===1&&QSORTK.includes(h))id=h;
+        else if(h==='field'&&sg.length===2&&sg[1].v){const f=qFieldByName(sg[1].v);if(!f)fail(_t('Нет поля «{0}»',[sg[1].v]),t);id=f.id}
+        if(!id)fail(_t('Нельзя сортировать по «{0}»',[t.raw]),t);
+        o.sort.push({id,desc});q++;
+        const c=st[q];
+        if(!c)break;
+        if(isP(c,',')){q++;continue}
+        fail(_t('Ключи сортировки разделяются запятой'),c);
+      }
+    }catch(e){
+      if(!e.m)throw e;
+      o.errors.push(_t('{0} — сортировка не применена',[e.m]));
+      if(e.tok)e.tok.bad=true;
+      o.sort=[];
     }
   }
   return o;
 }
-function qSer(o){
-  const p=o.text.slice();
-  const L=(k,a)=>{if(a.length)p.push(k+': '+a.map(x=>qwrap(x.raw)).join(', '))};
-  L(qk('status'),o.status);L(qk('type'),o.type);L(qk('series'),o.series);
-  o.groups.forEach(g=>{if(g.alts.length)p.push(g.fname+': '+g.alts.map(a=>QOPW.includes(a.op)?a.op:(a.op==='='?'':a.op)+qwrap(a.raw)).join(', '))});
-  if(o.sort.length)p.push(qk('sort')+': '+o.sort.map(x=>(x.desc?'-':'')+(x.ok?qSortName(x.id):x.key)).join(', '));
-  if(o.view)p.push(qk('view')+': '+qvw(o.view));
-  o.unk.forEach(u=>p.push(u));
-  return p.join(' ');
+function qRanges(o){
+  const r=[];
+  o.toks.forEach(t=>{
+    if(t.bad||t.t==='bad'){r.push([t.s,t.e,'bad']);return}
+    if(t.t==='path'){const mi=/^(field|link)$/i.test(t.segs[0].v)?2:1;t.segs.forEach((g,i)=>r.push([g.s,g.e,i>=mi&&QMETH[g.v.toLowerCase()]?'o':'k']));return}
+    if(t.t==='str'||t.t==='num')r.push([t.s,t.e,'v']);
+    else if(t.t==='word')r.push([t.s,t.e,/^(true|false)$/i.test(t.v)?'v':/^sort$/i.test(t.v)?'o':'t']);
+    else if(t.t==='op')r.push([t.s,t.e,'o']);
+  });
+  return r;
 }
-function qEval(t,f,a){
+function qSer(o){
+  const w=o.conj.length>1;
+  const c=o.conj.map(x=>w&&x.node&&x.node.t==='or'&&!x.node.paren?'('+x.text+')':x.text).join(' && ');
+  const so=o.sort.length?'| sort '+o.sort.map(x=>(x.desc?'-':'')+qSortTxt(x.id)).join(', '):'';
+  return [c,so].filter(Boolean).join(' ');
+}
+function qBuild(pt,mode,names){
+  const l=names.map(qStr);
+  if(mode==='=='||mode==='!=')return l.length===1?pt+' '+mode+' '+l[0]:pt+' '+mode+' ['+l.join(', ')+']';
+  if(l.length===1)return pt+'.Contains('+l[0]+')';
+  return pt+'.'+(mode==='ContainsAll'?'ContainsAll':'ContainsAny')+'(['+l.join(', ')+'])';
+}
+function qAdd(o,text){if(!o.conj.some(c=>c.text===text))o.conj.push({text,node:null,s:null,e:null})}
+function qNamesOf(o,pk,mode){
+  const c=o.conj.find(x=>x.simple&&x.simple.pk===pk&&x.simple.mode===mode);
+  return c?c.simple.names:[];
+}
+function qToggleName(o,pk,mode,pt,name){
+  const i=o.conj.findIndex(x=>x.simple&&x.simple.pk===pk&&x.simple.mode===mode);
+  const cur=i>=0?o.conj[i].simple.names.slice():[];
+  const k=cur.findIndex(x=>x.toLowerCase()===name.toLowerCase());
+  if(k>=0)cur.splice(k,1);else cur.push(name);
+  if(!cur.length){if(i>=0)o.conj.splice(i,1);return}
+  const c={text:qBuild(pt,mode,cur),node:null,s:null,e:null,simple:{pk,mode,names:cur}};
+  if(i>=0)o.conj[i]=c;else o.conj.push(c);
+}
+function qUniq(a){return a.filter((x,i)=>a.indexOf(x)===i)}
+function qEvF(t,f,fn,op,vals){
   const att=tFields(t).some(x=>x.id===f.id),v=t.fields[f.id],has=att&&isSet(v);
-  if(a.op==='detached')return !att;
-  if(a.op==='attached')return att;
-  if(a.op==='set')return has;
-  if(a.op==='unset')return att&&!has;
+  if(fn==='IsAttached')return att;
+  if(fn==='IsDetached')return !att;
+  if(fn==='IsSet')return has;
+  if(fn==='IsUnset')return att&&!has;
   const arr=!has?[]:Array.isArray(v)?v:[v];
   const same=(x,y)=>typeof x==='string'&&typeof y==='string'?x.toLowerCase()===y.toLowerCase():x===y;
-  if(a.op==='=')return arr.some(x=>same(x,a.val));
-  if(a.op==='!=')return !arr.some(x=>same(x,a.val));
-  return arr.some(x=>a.op==='>'?x>a.val:a.op==='>='?x>=a.val:a.op==='<'?x<a.val:x<=a.val);
+  const any=l=>arr.some(x=>l.some(y=>same(x,y)));
+  if(fn==='Contains'||fn==='ContainsAny')return any(vals);
+  if(fn==='ContainsAll')return vals.every(y=>arr.some(x=>same(x,y)));
+  if(op==='=='||op==='!='){
+    const u=qUniq(vals);
+    const r=f.multiple?has&&arr.length===u.length&&u.every(y=>arr.some(x=>same(x,y))):any(vals);
+    return op==='=='?r:!r;
+  }
+  const y=vals[0];
+  return arr.some(x=>op==='>'?x>y:op==='>='?x>=y:op==='<'?x<y:x<=y);
 }
-function qFilter(o,arr){
-  const ids=k=>o[k].filter(x=>x.ok).map(x=>x.id);
-  const sts=ids('status'),tys=ids('type'),srs=ids('series');
-  const gs=o.groups.map(g=>({f:g.f,alts:g.alts.filter(a=>a.ok)})).filter(g=>g.alts.length);
-  return arr.filter(t=>{
-    if(sts.length&&!sts.includes(t.statusId))return false;
-    if(tys.length&&!tys.includes(t.typeId))return false;
-    if(srs.length&&!t.series.some(s=>srs.includes(s.seriesId)))return false;
-    for(const w of o.text){const l=w.toLowerCase();if(!(t.title.toLowerCase().includes(l)||(t.description||'').toLowerCase().includes(l)||t.series.some(s=>refS(s).toLowerCase().includes(l))))return false}
-    return gs.every(g=>g.alts.some(a=>qEval(t,g.f,a)));
-  });
+function qEv(t,n){
+  if(n.t==='or')return n.a.some(x=>qEv(t,x));
+  if(n.t==='and')return n.a.every(x=>qEv(t,x));
+  if(n.t==='not')return !qEv(t,n.x);
+  const k=n.pr.k,fn=n.t==='call'?n.fn:null,op=n.t==='cmp'?n.op:null;
+  const neg=op==='!=';
+  const fin=r=>neg?!r:r;
+  if(k==='field')return qEvF(t,n.pr.f,fn,op,n.vals);
+  if(k==='status')return fin(n.vals.includes(t.statusId));
+  if(k==='type')return fin(n.vals.includes(t.typeId));
+  if(k==='title'){
+    const ti=t.title.toLowerCase(),v=String(n.vals[0]).toLowerCase();
+    return fn==='Contains'?ti.includes(v):fin(ti===v);
+  }
+  if(k==='series'){
+    const ids=t.series.map(s=>s.seriesId);
+    if(fn==='IsSet')return ids.length>0;
+    if(fn==='IsUnset')return ids.length===0;
+    if(fn==='Contains'||fn==='ContainsAny')return n.vals.some(v=>ids.includes(v));
+    if(fn==='ContainsAll')return n.vals.every(v=>ids.includes(v));
+    const u=qUniq(n.vals);
+    return fin(ids.length===u.length&&u.every(v=>ids.includes(v)));
+  }
+  if(k==='parent'){const h=parentsOf(t.id).filter(Boolean).length>0;return fn==='IsSet'?h:!h}
+  if(k==='link'){const h=DB.links.some(l=>l.typeId===n.pr.lt.id&&(l.from===t.id||l.to===t.id));return fn==='IsSet'?h:!h}
+  return false;
 }
-const qSortKeys=o=>o.sort.filter(s=>s.ok).map(s=>({key:s.id,dir:s.desc?'desc':'asc'}));
+const qFilter=(o,arr)=>o.cond?arr.filter(t=>qEv(t,o.cond)):arr;
+const qSortKeys=o=>o.sort.map(s=>({key:s.id,dir:s.desc?'desc':'asc'}));
 const qGet=scope=>scope==='board'?S.bq:S.lq;
 function hashQ(){const h=location.hash;const i=h.indexOf('?');if(i<0)return '';try{return new URLSearchParams(h.slice(i+1)).get('q')||''}catch(e){return ''}}
 function setQ(scope,q){
@@ -1584,64 +1854,183 @@ const AC={comp:null,items:[],idx:-1,cx:null,nav:false};
 const acEl=document.getElementById('ac');
 function qHl(s,o,ph){
   if(!s)return `<span class="ph">${esc(ph)}</span>​`;
-  const rs=o.ranges.slice().sort((a,b)=>a[0]-b[0]);let out='',i=0;
+  if(!o)return `<span class="t">${esc(s)}</span>​`;
+  const rs=qRanges(o).sort((a,b)=>a[0]-b[0]);let out='',i=0;
   const put=(a,b,c)=>{if(b>a)out+=`<span class="${c}">${esc(s.slice(a,b))}</span>`};
   rs.forEach(r=>{if(r[0]<i)return;put(i,r[0],'t');put(r[0],r[1],r[2]);i=r[1]});
   put(i,s.length,'t');return out+'​';
 }
-function acCtx(ta){
-  const s=ta.value,pos=ta.selectionStart;
-  for(const t of qTok(s)){
-    if(pos<t.s||pos>t.e)continue;
-    if(t.kind==='text')return{mode:'key',from:t.s,to:t.e,prefix:s.slice(t.s,pos)};
-    if(pos<t.ke)return{mode:'key',from:t.s,to:t.ke,prefix:s.slice(t.s,pos)};
-    const v=t.vals.find(v=>pos>=v.s&&pos<=v.e);
-    if(v)return{mode:'val',key:t.key,from:v.s,to:v.e,prefix:s.slice(v.s,pos).replace(/^\{/,'')};
-    return{mode:'val',key:t.key,from:pos,to:pos,prefix:''};
+function qState(toks){
+  const R={st:'start',depth:0,pr:null,fn:null,op:null,inCall:false};
+  const isP=(t,v)=>t.t==='p'&&t.v===v;
+  const lit=t=>t.t==='str'||t.t==='num'||(t.t==='word'&&/^(true|false)$/i.test(t.v));
+  let sort=false;
+  for(const t of toks){
+    if(t.t==='op'&&t.v==='|'){sort=true;R.st='sortkw';continue}
+    if(sort){
+      if(R.st==='sortkw'){if(t.t==='word')R.st='sortkey'}
+      else if(R.st==='sortkey'){if(t.t==='path')R.st='sortnext'}
+      else if(R.st==='sortnext'){if(isP(t,','))R.st='sortkey'}
+      continue;
+    }
+    switch(R.st){
+      case 'start':
+        if(isP(t,'('))R.depth++;
+        else if(t.t==='path'){const i=qPathInfo(t);R.pr=i.pr;R.fn=i.fn;R.op=null;R.st=i.fn?'fnparen':'prop'}
+        break;
+      case 'prop':
+        if(t.t==='op'&&QCMP.includes(t.v)){R.op=t.v;R.st='op'}
+        break;
+      case 'fnparen':
+        if(isP(t,'('))R.st=/^Contains/.test(R.fn)?'call':'callend';
+        break;
+      case 'call':
+        if(isP(t,'[')){R.inCall=true;R.st='arr'}
+        else if(lit(t))R.st='callend';
+        else if(isP(t,')'))R.st='val';
+        break;
+      case 'callend':
+        if(isP(t,')'))R.st='val';
+        break;
+      case 'op':
+        if(isP(t,'[')){R.inCall=false;R.st='arr'}
+        else if(lit(t))R.st='val';
+        break;
+      case 'arr':
+        if(lit(t))R.st='arrnext';
+        else if(isP(t,']'))R.st=R.inCall?'callend':'val';
+        break;
+      case 'arrnext':
+        if(isP(t,','))R.st='arr';
+        else if(isP(t,']'))R.st=R.inCall?'callend':'val';
+        break;
+      case 'val':
+        if(t.t==='op'&&(t.v==='&&'||t.v==='||'))R.st='start';
+        else if(isP(t,')')&&R.depth>0)R.depth--;
+        break;
+    }
   }
-  return{mode:'key',from:pos,to:pos,prefix:''};
+  return R;
+}
+function acCtx(ta){
+  const s=ta.value,pos=ta.selectionStart,toks=qLex(s);
+  const idx=toks.findIndex(t=>t.s<pos&&pos<=t.e&&t.t!=='p'&&t.t!=='bad'&&!(t.t==='str'&&!t.open&&pos===t.e));
+  let cur=idx>=0?toks[idx]:null,before=cur?toks.filter(t=>t.e<=cur.s):toks.filter(t=>t.e<=pos),S=qState(before);
+  if(cur&&cur.t==='op'&&(['==','!=','>=','<=','&&','||'].includes(cur.v)||(cur.v==='!'&&S.st!=='prop')||(cur.v==='-'&&S.st!=='sortkey'))){
+    cur=null;before=toks.filter(t=>t.e<=pos);S=qState(before);
+  }
+  const from=cur?cur.s:pos,pc=s[from-1];
+  return{s,pos,cur,S,st:S.st,from,to:cur?cur.e:pos,tokText:cur?s.slice(cur.s,cur.e):'',prefix:cur?s.slice(cur.s,cur.e):'',lead:pc&&!/[\s(\[!\-]/.test(pc)?' ':'',mode:['op','arr','call'].includes(S.st)?'val':'key',head:''};
+}
+function qValItems(pr,add){
+  if(pr.k==='status')DB.statuses.forEach(x=>add(x.name,qStr(x.name),_t('статус'),x.color));
+  else if(pr.k==='type')DB.taskTypes.forEach(x=>add(x.name,qStr(x.name),_t('тип · набор {0}',[sset(x.statusSetId).name]),typeColor(x.id)));
+  else if(pr.k==='series')DB.series.forEach(x=>add(x.prefix,qStr(x.prefix),x.name));
+  else if(pr.k==='field'){
+    const f=pr.f;
+    if(f.type==='enum')en(f.enumId).values.forEach(v=>add(v.name,qStr(v.name),_t('значение'),evColor(f.enumId,v.id)));
+    else if(f.type==='bool'){add('true','true',_t('да'));add('false','false',_t('нет'))}
+    else if(f.type==='date')add('2026-11-01',qStr('2026-11-01'),_t('дата ГГГГ-ММ-ДД'));
+    else if(f.type==='string'){
+      const seen={};
+      DB.tasks.forEach(t=>{const v=t.fields[f.id];(Array.isArray(v)?v:[v]).forEach(x=>{if(typeof x==='string'&&x&&!seen[x]){seen[x]=1;add(x,qStr(x),_t('значение'))}})});
+    }
+  }
 }
 function acItems(cx){
-  const items=[],p=cx.prefix.toLowerCase();
-  const add=(l,ins,hint,c)=>{const ll=l.toLowerCase();if(!p||ll.startsWith(p)||(p.length>1&&ll.includes(p)))items.push({l,ins,hint,c})};
-  if(cx.mode==='key'){
-    add(qk('status'),qk('status')+': ',_t('ключ · статусы'));
-    add(qk('type'),qk('type')+': ',_t('ключ · типы задач'));
-    add(qk('series'),qk('series')+': ',_t('ключ · префиксы серий'));
-    add(qk('sort'),qk('sort')+': ',_t('ключ · порядок, «-» по убыванию'));
-    add(qk('view'),qk('view')+': ',_t('ключ · дерево или плоско'));
-    allFields().forEach(f=>add(f.name,f.name+': ',_t('поле · {0}{1}',[f.type,(f.multiple?'[]':'')])));
-    return items;
-  }
-  const kk=qKind(cx.key);if(!kk)return[];
-  if(kk==='status')DB.statuses.forEach(x=>add(x.name,qwrap(x.name),_t('статус'),x.color));
-  else if(kk==='type')DB.taskTypes.forEach(x=>add(x.name,qwrap(x.name),_t('тип · набор {0}',[sset(x.statusSetId).name]),typeColor(x.id)));
-  else if(kk==='series')DB.series.forEach(x=>add(x.prefix,x.prefix,x.name));
-  else if(kk==='view'){add(qvw('tree'),qvw('tree'),_t('с вложенностью'));add(qvw('flat'),qvw('flat'),_t('без вложенности'));add(qvw('groups'),qvw('groups'),_t('по статусам'))}
-  else if(kk==='sort'){
-    const names=['status','type','title','created','updated','series'].map(qSortName).concat(allFields().map(f=>f.name));
-    const minus=cx.prefix[0]==='-',bare=cx.prefix.replace(/^-/,'').toLowerCase();
-    names.forEach(n=>{if(!bare||n.toLowerCase().startsWith(bare))items.push({l:(minus?'-':'')+n,ins:(minus?'-':'')+n,hint:minus?_t('по убыванию'):_t('по возрастанию')})});
-    if(!minus&&!cx.prefix)names.slice(0,3).forEach(n=>items.push({l:'-'+n,ins:'-'+n,hint:_t('по убыванию')}));
-  }else{
-    const f=allFields().find(x=>x.name.toLowerCase()===cx.key.toLowerCase());
-    const m=/^(>=|<=|!=|>|<|=)/.exec(cx.prefix),op=m?m[1]:'',rest=cx.prefix.slice(op.length).toLowerCase();
-    const addv=(l,ins,hint,c)=>{if(!rest||l.toLowerCase().startsWith(rest))items.push({l:op+l,ins:op+ins,hint,c})};
-    if(f.type==='enum')en(f.enumId).values.forEach(v=>addv(v.name,qwrap(v.name),_t('значение'),evColor(f.enumId,v.id)));
-    if(f.type==='bool'){addv(qbool()[0],qbool()[0],_t('значение'));addv(qbool()[1],qbool()[1],_t('значение'))}
-    if(['int','float','date'].includes(f.type)&&!op)['>=','<=','>','<','!='].forEach(x=>{if(!p||x.startsWith(p))items.push({l:x,ins:x,hint:_t('оператор сравнения')})});
-    if(f.type==='date'&&!op&&!p)items.push({l:'2026-11-01',ins:'2026-11-01',hint:_t('дата ГГГГ-ММ-ДД')});
-    if(!op){
-      const ow={set:_t('значение задано'),unset:_t('поле есть, значения нет'),attached:_t('поле есть у типа задачи'),detached:_t('поля нет у типа задачи')};
-      QOPW.forEach(w=>{if(!p||w.startsWith(p))items.push({l:w,ins:w,hint:ow[w]})});
+  const items=[],S=cx.S,cur=cx.cur;
+  let mt='';
+  const norm=x=>x.replace(/^[-.\s"]+/,'').toLowerCase();
+  const add=(l,ins,hint,c)=>{const ll=norm(l);if(!mt||ll.startsWith(mt)||(mt.length>1&&ll.includes(mt)))items.push({l,ins:cx.lead+ins,hint,c})};
+  const setMt=()=>{
+    if(!cur)mt='';
+    else if(cur.t==='str')mt=cx.s.slice(cur.s+1,cx.pos).toLowerCase();
+    else if(cur.t==='path')mt='';
+    else mt=cx.s.slice(cur.s,cx.pos).toLowerCase();
+  };
+  setMt();
+  const props=sortMode=>{
+    add('.Status','.Status',_t('статус задачи'));
+    add('.Type','.Type',_t('тип задачи'));
+    add('.Title','.Title',_t('название'));
+    if(sortMode){add('.Created','.Created',_t('дата создания'));add('.Updated','.Updated',_t('дата обновления'))}
+    add('.Series','.Series',_t('серии задачи'));
+    add('.Field.','.Field.',_t('поле: .Field.Имя'));
+    if(!sortMode){add('.Link.','.Link.',_t('связь: .Link.Имя'));add('.Parent','.Parent',_t('родитель'))}
+  };
+  const fieldNames=pre=>allFields().forEach(f=>add(f.name,pre+qName(f.name),f.type+(f.multiple?'[]':'')));
+  const pathMode=(sortMode)=>{
+    const sg=cur.segs,h=sg[0].v.toLowerCase(),n=sg.length,info=qPathInfo(cur);
+    if(n===1){cx.head=_t('Свойства');mt=h;props(sortMode);return}
+    if(h==='field'&&n===2){cx.head=_t('Поля');mt=sg[1].v.toLowerCase();fieldNames('.Field.');return}
+    if(sortMode)return;
+    if(h==='link'&&n===2){cx.head=_t('Типы связей');mt=sg[1].v.toLowerCase();DB.linkTypes.forEach(l=>add(l.name,'.Link.'+qName(l.name),l.outward+(l.inward?' / '+l.inward:'')));return}
+    if(info.pr&&n===((h==='field'||h==='link')?3:2)){
+      cx.head=_t('Функции');mt=sg[n-1].v.toLowerCase();
+      const base=cx.s.slice(cur.s,sg[n-1].s);
+      qMethods(info.pr).forEach(m=>add(m,base+'.'+m+(/^Contains/.test(m)?'(':'()'),qMethHint(info.pr,m)));
     }
+  };
+  const sortKeys=()=>{
+    cx.head=_t('Ключи сортировки');
+    if(cur&&cur.t==='path'){pathMode(true);return}
+    const minus=cur&&cur.t==='op'&&cur.v==='-';
+    mt='';
+    if(!minus){
+      QSORTK.forEach(k=>add('.'+qCap(k),'.'+qCap(k),_t('по возрастанию')));
+      allFields().forEach(f=>add('.Field.'+qName(f.name),'.Field.'+qName(f.name),_t('по возрастанию')));
+    }
+    ['updated','created','status','type','title','series'].forEach(k=>add('-.'+qCap(k),'-.'+qCap(k),_t('по убыванию')));
+    if(minus)allFields().forEach(f=>add('-.Field.'+qName(f.name),'-.Field.'+qName(f.name),_t('по убыванию')));
+  };
+  const st=S.st;
+  if(st==='start'){
+    if(cur&&cur.t==='path'){pathMode(false)}
+    else if(!cur||cur.t==='word'){cx.head=_t('Свойства');props(false);add('!','!',_t('не'));add('(','(',_t('группа в скобках'))}
+  }else if(st==='prop'){
+    if(S.pr&&(!cur||cur.t==='op')){
+      cx.head=_t('Операторы');
+      add('==','== ',_t('равно; массив справа — одно из'));
+      add('!=','!= ',_t('не равно; массив справа — ни одно из'));
+      if(S.pr.k==='field'&&qCmpType(S.pr.f)){add('>','> ',_t('больше'));add('>=','>= ',_t('больше или равно'));add('<','< ',_t('меньше'));add('<=','<= ',_t('меньше или равно'))}
+    }
+  }else if(S.st==='op'||S.st==='arr'||S.st==='call'){
+    if(!cur||cur.t==='str'||cur.t==='word'||cur.t==='num'){
+      cx.head=_t('Значения: {0}',[S.pr?qPropTxt(S.pr):'']);
+      if(S.pr){
+        qValItems(S.pr,add);
+        const arrOk=S.st==='op'?(S.op==='=='||S.op==='!=')&&S.pr.k!=='title':S.st==='call'&&(S.fn==='ContainsAny'||S.fn==='ContainsAll');
+        if(arrOk&&(!cur||cur.t!=='str')){mt=cur?mt:'';add('[','[',_t('массив значений'))}
+      }
+    }
+  }else if(st==='arrnext'){
+    cx.head=_t('Массив');mt=cur?cx.s.slice(cur.s,cx.pos).toLowerCase():'';
+    add(',',', ',_t('ещё значение'));add(']',']',_t('закрыть массив'));
+  }else if(st==='callend'){
+    cx.head=_t('Функция');mt=cur?cx.s.slice(cur.s,cx.pos).toLowerCase():'';
+    add(')',')',_t('закрыть скобку'));
+  }else if(st==='val'){
+    if(!cur||cur.t==='op'||cur.t==='bad'){
+      cx.head=_t('Дальше');
+      add('&&','&& ',_t('и'));add('||','|| ',_t('или'));
+      add('|','| sort ',_t('сортировка: | sort .Status, -.Updated'));
+      if(S.depth>0)add(')',')',_t('закрыть скобку'));
+    }
+  }else if(st==='sortkw'){
+    if(!cur||cur.t==='word'){cx.head=_t('Сортировка');add('sort','sort ',_t('ключи через запятую, «-» по убыванию'))}
+  }else if(st==='sortkey'){
+    sortKeys();
+  }else if(st==='sortnext'){
+    cx.head=_t('Сортировка');mt=cur?cx.s.slice(cur.s,cx.pos).toLowerCase():'';
+    add(',',', ',_t('ещё один ключ'));
   }
   return items;
 }
 function acShow(c,forceKeys){
   const cx=acCtx(c.ta);
-  let items=acItems(cx).filter(i=>i.ins!==cx.prefix);
+  let items=acItems(cx).filter(i=>i.ins!==cx.tokText&&i.ins.trim()!==cx.tokText);
   if(cx.mode==='key'&&!forceKeys&&!c.opts.autoKeys)items=[];
+  if(c.opts.fuzzy&&!qIsQ(c.ta.value))items=[];
   if(!items.length||document.activeElement!==c.ta){acHide();return false}
   AC.comp=c;AC.items=items.slice(0,40);AC.idx=cx.prefix?0:-1;AC.nav=false;AC.cx=cx;
   acPaint();acEl.style.display='block';
@@ -1651,8 +2040,7 @@ function acShow(c,forceKeys){
   return true;
 }
 function acPaint(){
-  const hd=AC.cx.mode==='key'?_t('Ключи и поля'):_t('Значения: {0}',[AC.cx.key]);
-  acEl.innerHTML=`<div class="hd">${esc(hd)} · ↑↓ Tab Esc</div>`+AC.items.map((it,i)=>`<div class="it${i===AC.idx?' on':''}" data-ai="${i}">${it.c?`<span class="dot" style="--c:${it.c}"></span>`:''}<span>${esc(it.l)}</span><small>${esc(it.hint||'')}</small></div>`).join('');
+  acEl.innerHTML=`<div class="hd">${esc(AC.cx.head)} · <span style="text-transform:none">${esc(_t('↑↓ выбор · Tab подставить · Enter применить · Esc закрыть'))}</span></div>`+AC.items.map((it,i)=>`<div class="it${i===AC.idx?' on':''}" data-ai="${i}">${it.c?`<span class="dot" style="--c:${it.c}"></span>`:''}<span>${esc(it.l)}</span><small>${esc(it.hint||'')}</small></div>`).join('');
   const on=$('.on',acEl);if(on)on.scrollIntoView({block:'nearest'});
 }
 function acHide(){acEl.style.display='none';AC.items=[];AC.idx=-1;AC.comp=null}
@@ -1670,7 +2058,7 @@ function mkQBar(scope,opts){
   const el=document.createElement('div');el.className='qbx';
   el.innerHTML=`<span class="qic">${ic('search',14)}</span><div class="qhl"></div><textarea class="qta" rows="1" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>`;
   const ta=$('.qta',el),hl=$('.qhl',el);
-  const c={scope,el,ta,opts,paint(){hl.innerHTML=qHl(ta.value,parseQ(ta.value),typeof opts.ph==='function'?opts.ph():opts.ph)},set(q){if(ta.value!==q)ta.value=q;c.paint()},get:()=>ta.value};
+  const c={scope,el,ta,opts,paint(){hl.innerHTML=qHl(ta.value,opts.fuzzy&&!qIsQ(ta.value)?null:parseQ(ta.value),typeof opts.ph==='function'?opts.ph():opts.ph)},set(q){if(ta.value!==q)ta.value=q;c.paint()},get:()=>ta.value};
   ta.addEventListener('input',()=>{const q=ta.value.replace(/\n/g,' ');if(q!==ta.value)ta.value=q;c.paint();opts.onChange(q);acShow(c,false)});
   ta.addEventListener('focus',()=>acShow(c,false));
   ta.addEventListener('click',()=>acShow(c,false));
@@ -1695,7 +2083,7 @@ function mkQBar(scope,opts){
 }
 function getQBar(scope){
   if(!QBAR[scope]){
-    const ph=()=>scope==='board'?_t('Фильтр карточек: ')+'Приоритет: Критичный  '+qk('type')+': Баг  Компонент: Демон, MCP':_t('Запрос: ')+qk('status')+': Ревью, Готово  Приоритет: Высокий, Критичный  '+qk('sort')+': -Оценка  '+qk('view')+': '+qvw('tree');
+    const ph=()=>scope==='board'?_t('Фильтр карточек: ')+'.Field.Приоритет == "Критичный" && .Type == "Баг"':_t('Запрос: ')+'.Status == ["Ревью", "Готово"] && .Field.Приоритет == "Высокий" | sort -.Field.Оценка';
     QBAR[scope]=mkQBar(scope,{ph,autoKeys:true,onChange:q=>setQ(scope,q),onKey:e=>{if(e.key==='Enter'){e.preventDefault();acHide();QBAR[scope].ta.blur();return true}return false}});
   }
   return QBAR[scope];
@@ -1715,29 +2103,13 @@ function qFocus(){
   const r=route()[0];const sc=r==='boards'?'board':(r==='tasks'||!r)?'list':null;const c=sc&&QBAR[sc];
   if(c&&c.el.isConnected){c.ta.focus();const n=c.ta.value.length;c.ta.setSelectionRange(n,n)}else palette();
 }
-function qvLab(k,x){
-  if(!x.ok)return `<span style="color:var(--red)">${esc(x.raw)}</span>`;
-  if(k==='status')return `<span class="dot" style="background:${st(x.id).color};width:8px;height:8px;margin-right:5px"></span>${esc(st(x.id).name)}`;
-  if(k==='type')return esc(ty(x.id).name);
-  return esc(sr(x.id).prefix);
-}
-function qAltsLab(g){
-  const same=g.alts.every(a=>a.op===g.alts[0].op)&&!QOPW.includes(g.alts[0].op);
-  const val=a=>a.ok&&a.val!==undefined?esc(fmtVal(g.f,a.val)):a.ok?'':`<span style="color:var(--red)">${esc(a.raw)}</span>`;
-  if(same)return QSYM()[g.alts[0].op]+' '+g.alts.map(val).join(', ');
-  return g.alts.map(a=>QOPW.includes(a.op)?QSYM()[a.op]:QSYM()[a.op]+' '+val(a)).join(', ');
-}
-const QEX=()=>({list:[qk('status')+': В работе, Ревью','Приоритет: Высокий, Критичный',qk('type')+': Баг '+qk('sort')+': -Приоритет','Оценка: >=5 '+qk('view')+': '+qvw('tree')],board:['Приоритет: Высокий, Критичный','Компонент: Демон, MCP',qk('type')+': Баг','Оценка: unset']});
+const QEX=()=>({list:['.Status == ["В работе", "Ревью"]','.Field.Приоритет == ["Высокий", "Критичный"] | sort -.Field.Оценка','.Type == "Баг" && .Parent.IsUnset()','.Field.Оценка >= 5 || .Title.Contains("Rust")'],board:['.Field.Приоритет == ["Высокий", "Критичный"]','.Field.Компонент.ContainsAny(["Демон", "MCP"])','.Type == "Баг"','.Field.Оценка.IsUnset()']});
 function qpills(o,scope){
-  const pb=(lab,val,k,i,bad)=>`<span class="pill${bad?' bad':''}"><b>${lab}</b> <span class="v" data-act="pillv" data-k="${k}" data-i="${i}" data-s="${scope}">${val}</span><button class="x" data-act="pillx" data-k="${k}" data-i="${i}" data-s="${scope}">${ic('x',10)}</button></span>`;
   let h='';
-  o.text.forEach((w,i)=>{h+=pb(_t('Текст'),esc(w),'text',i,false)});
-  [['status',_t('Статус')],['type',_t('Тип')],['series',_t('Серия')]].forEach(([k,lab])=>{if(o[k].length)h+=pb(lab,o[k].map(x=>qvLab(k,x)).join(', '),k,0,o[k].some(x=>!x.ok))});
-  o.groups.forEach((g,i)=>{if(g.alts.length)h+=pb(esc(g.fname),qAltsLab(g),'group',i,g.alts.some(a=>!a.ok))});
-  o.sort.forEach((s,i)=>{h+=`<span class="pill${s.ok?'':' bad'}"><b>${s.desc?'↓':'↑'}</b> <span class="v" data-act="sortflip" data-i="${i}" data-s="${scope}">${esc(s.ok?sortLabel(s.id):s.key)}</span><button class="x" data-act="sortx" data-i="${i}" data-s="${scope}">${ic('x',10)}</button></span>`});
-  if(o.view)h+=`<span class="pill"><b>${_t('Вид')}</b> <span class="v">${{tree:_t('дерево'),flat:_t('плоско'),groups:_t('по статусам')}[o.view]}</span></span>`;
-  if(!h)h=`<span class="dim">${_t('Примеры:')}</span>`+QEX()[scope].map(q=>`<button class="chip acc" data-act="qex" data-q="${esc(q)}" data-s="${scope}">${esc(q)}</button>`).join('');
-  const er=o.errors.length?`<span class="qerr">${ic('warn',12)} ${_t('{0}{1}: это игнорируется',[esc(o.errors.slice(0,2).join(' · ')),o.errors.length>2?_t(' и ещё {0}',[(o.errors.length-2)]):''])}</span>`:'';
+  o.conj.forEach((c,i)=>{h+=`<span class="pill${c.bad?' bad':''}"><span class="v mono" data-act="pillv" data-i="${i}" data-s="${scope}">${esc(c.text)}</span><button class="x" data-act="pillx" data-i="${i}" data-s="${scope}">${ic('x',10)}</button></span>`});
+  o.sort.forEach((s,i)=>{h+=`<span class="pill"><b>${s.desc?'↓':'↑'}</b> <span class="v" data-act="sortflip" data-i="${i}" data-s="${scope}">${esc(sortLabel(s.id))}</span><button class="x" data-act="sortx" data-i="${i}" data-s="${scope}">${ic('x',10)}</button></span>`});
+  if(!h)h=`<span class="dim">${_t('Примеры:')}</span>`+QEX()[scope].map(q=>`<button class="chip acc mono" data-act="qex" data-q="${esc(q)}" data-s="${scope}">${esc(q)}</button>`).join('');
+  const er=o.errors.length?`<span class="qerr">${ic('warn',12)} ${esc(o.errors.join(' · '))}</span>`:'';
   return `<div class="qpl">${h}${er}</div>`;
 }
 
@@ -1888,9 +2260,26 @@ function promptDlg(title,label,value,cb,type='text',ph=''){
   formDlg(title,[{name:'v',label,type,value,ph}],_t('Сохранить'),v=>cb(v.v));
 }
 
+function qHelp(){
+  const ln=(code,txt)=>`<div style="display:flex;gap:12px;padding:3px 0"><span class="mono" style="flex:0 0 330px;color:var(--acc)">${esc(code)}</span><span class="mut">${esc(txt)}</span></div>`;
+  return `<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:12.5px"><div class="sech" style="margin-bottom:6px">${_t('Синтаксис строки запроса')}</div>`+
+    ln('.Status == "Туду" || .Status == "Готово"',_t('условие начинается с точки; логика: && || ! и скобки'))+
+    ln('.Status .Type .Title .Series',_t('свойства задачи; имена без учёта регистра'))+
+    ln('.Field.Оценка  .Field."Имя с пробелами"',_t('поле по имени'))+
+    ln('.Link.Blocks  .Parent',_t('связь и родитель: только IsSet() и IsUnset()'))+
+    ln('==  !=   >  >=  <  <=',_t('== и != для всех, остальные — для int, float и date'))+
+    ln('.Status == ["Туду", "Готово"]',_t('массив справа: одно из (!= — ни одно из)'))+
+    ln('.Field.Метки == ["a", "b"]',_t('у множественных полей и .Series: ровно эти значения'))+
+    ln('.Series == "TSK"',_t('номер только в этой серии'))+
+    ln('.Field.Метки.ContainsAny(["a", "b"])',_t('Contains, ContainsAny, ContainsAll'))+
+    ln('.Field.Срок.IsSet()',_t('IsSet, IsUnset, IsAttached, IsDetached'))+
+    ln('.Title.Contains("текст")',_t('поиск по названию без учёта регистра'))+
+    ln('| sort .Status, -.Updated',_t('сортировка в конце, минус — по убыванию'))+
+    `<div class="mut" style="padding-top:6px">${_t('Текст без точки в строке запроса — ошибка. Нечёткий поиск остаётся в палитре команд.')}</div></div>`;
+}
 function cheat(){
   const rows=[[_t('Палитра команд'),'⌘K'],[_t('Создать задачу'),'C'],[_t('Сменить статус'),'S'],[_t('Связать с…'),'L'],[_t('Назначить родителя'),'P'],[_t('Фильтр'),'F'],[_t('Доска / список'),'B'],[_t('К задачам'),'G T'],[_t('К доскам'),'G B'],[_t('К настройкам'),'G S'],[_t('Peek задачи'),'Space'],[_t('Открыть задачу'),'Enter'],[_t('Навигация по списку'),'J K'],[_t('Закрыть'),'Esc'],[_t('Строка запроса'),'/'],[_t('Подсказки в запросе'),'Tab'],[_t('Подсказки принудительно'),'Ctrl Space'],[_t('Шпаргалка'),'?']];
-  const el=dlg({title:_t('Горячие клавиши'),wide:false,body:'<div class="ks" style="padding:0">'+rows.map(r=>`<div><span>${r[0]}</span><span>${r[1].split(' ').map(k=>`<kbd>${k}</kbd>`).join(' ')}</span></div>`).join('')+'</div>',actions:[{label:_t('Закрыть'),primary:true}]});
+  const el=dlg({title:_t('Горячие клавиши'),wide:false,body:'<div class="ks" style="padding:0">'+rows.map(r=>`<div><span>${r[0]}</span><span>${r[1].split(' ').map(k=>`<kbd>${k}</kbd>`).join(' ')}</span></div>`).join('')+'</div>'+qHelp(),actions:[{label:_t('Закрыть'),primary:true}]});
   $('.dlg',el).style.width='640px';$('.ks',el).style.padding='0';
 }
 
@@ -1932,15 +2321,15 @@ function palette(){
   const taskItem=t=>({kind:'task',t,label:`<span class="mono dim">${esc(refOf(t))}</span> ${esc(t.title)}`,raw:refOf(t)+'  '+t.title,sub:t.series.slice(1).map(refS).join(' '),subHtml:stTag(t.statusId,ty(t.typeId).statusSetId),icon:sIcon(t.statusId,ty(t.typeId).statusSetId),kw:t.series.map(refS).join(' ')});
   const itemHtml=(x,i)=>`<div class="pi${i===idx?' on':''}" data-i="${i}">${x.icon?`<span class="iw">${x.icon}</span>`:''}<span class="lb">${x.label.indexOf('<')===0||x.html?x.label:esc(x.label)}</span>${x.subHtml||x.sub?`<span class="sub">${x.subHtml||''}${x.subHtml&&x.sub?' ':''}${esc(x.sub||'')}</span>`:''}${x.keys?`<span class="sub">${x.keys.split(' ').map(k=>`<kbd>${esc(k)}</kbd>`).join(' ')}</span>`:''}</div>`;
   function paint(){
-    const q=comp.get().trim(),o=parseQ(q);let secs=[];
+    const q=comp.get().trim(),isQ=qIsQ(q),o=isQ?parseQ(q):null;let secs=[];
     let hh=`<span>${_t('↑↓ выбор · Enter открыть · Tab подсказки запроса · Esc закрыть')}</span>`;
     if(!q)secs=[[_t('Команды'),cmds.map(c=>({...c,kind:'cmd'}))]];
-    else if(o.hasKey){
-      const res=sortTasks(qFilter(o,DB.tasks),qSortKeys(o));
+    else if(isQ){
+      const res=o.errors.length?[]:sortTasks(qFilter(o,DB.tasks),qSortKeys(o));
       const open={kind:'open',q,label:_t('Открыть в списке'),html:1,sub:res.length+' '+plural(res.length,_t('задача'),_t('задачи'),_t('задач')),icon:ic('list')};
-      secs=[[_t('Запрос по проекту'),[open]],[_t('Задачи'),res.slice(0,30).map(taskItem)]];
+      secs=o.errors.length?[]:[[_t('Запрос по проекту'),[open]],[_t('Задачи'),res.slice(0,30).map(taskItem)]];
       if(res.length>30)secs.push(['',[{kind:'open',q,label:_t('и ещё {0} — открыть все в списке',[(res.length-30)]),html:1,icon:ic('list')}]]);
-      hh=o.errors.length?`<span class="qerr">${_t('{0}: это игнорируется',[esc(o.errors.slice(0,2).join(' · '))])}</span>`:`<span>${_t('Найдено {0}. Enter — открыть выбранное, первая строка — весь результат в списке',[res.length])}</span>`;
+      hh=o.errors.length?`<span class="qerr">${esc(o.errors.join(' · '))}</span>`:`<span>${_t('Найдено {0}. Enter — открыть выбранное, первая строка — весь результат в списке',[res.length])}</span>`;
     }else{
       const ts=DB.tasks.map(taskItem);
       const ex=findRef(q).map(t=>ts.find(x=>x.t===t));
@@ -1964,7 +2353,7 @@ function palette(){
     else if(x.kind==='task')openTask(x.t,true);
     else if(x.kind==='cmd')x.onRun();
   }
-  const comp=mkQBar('pal',{ph:()=>_t('Команда, задача, ссылка TSK-133 или запрос: ')+qk('status')+': Ревью '+qk('type')+': Фича',autoKeys:false,onChange:()=>{idx=0;paint()},onKey:e=>{
+  const comp=mkQBar('pal',{ph:()=>_t('Команда, задача, ссылка TSK-133 или запрос: ')+'.Status == "Ревью" && .Type == "Фича"',autoKeys:false,fuzzy:true,onChange:()=>{idx=0;paint()},onKey:e=>{
     if(e.key==='ArrowDown'||(e.ctrlKey&&e.key==='n')){e.preventDefault();idx=Math.min(cur.length-1,idx+1);paintSel();return true}
     if(e.key==='ArrowUp'||(e.ctrlKey&&e.key==='p')){e.preventDefault();idx=Math.max(0,idx-1);paintSel();return true}
     if(e.key==='Enter'){e.preventDefault();choose(idx);return true}
@@ -2112,49 +2501,65 @@ function createDlg(parentId,seriesId){
   return el;
 }
 function addFilter(scope){
-  const items=[{k:'status',label:_t('Статус'),sub:_t('ключ статус'),icon:ic('check')},{k:'type',label:_t('Тип'),sub:_t('ключ тип'),icon:ic('tag')},{k:'series',label:_t('Серия'),sub:_t('префикс'),icon:ic('list')},{k:'text',label:_t('Текст'),sub:_t('слово в названии или описании'),icon:ic('search')}];
-  allFields().forEach(f=>items.push({k:'field',f,label:f.name,sub:f.type+(f.multiple?'[]':''),icon:ic('filter')}));
-  pick({title:_t('Фильтр — меняет строку запроса'),placeholder:_t('Что отфильтровать?'),items,onPick:i=>{
-    if(i.k==='field')fieldCond(scope,i.f,-1);
-    else if(i.k==='text')promptDlg(_t('Текст'),_t('Слово в названии или описании'),'',v=>{v=v.trim();if(!v)return _t('Введите слово');qEdit(scope,o=>{o.text.push(v)})});
+  const items=[{k:'status',label:_t('Статус'),sub:'.Status',icon:ic('check')},{k:'type',label:_t('Тип'),sub:'.Type',icon:ic('tag')},{k:'series',label:_t('Серия'),sub:'.Series',icon:ic('list')},{k:'title',label:_t('Название'),sub:'.Title.Contains("…")',icon:ic('search')},{k:'parent',label:_t('Родитель'),sub:'.Parent',icon:ic('epic')},{k:'link',label:_t('Связь'),sub:'.Link.Имя',icon:ic('link')}];
+  allFields().forEach(f=>items.push({k:'field',f,label:f.name,sub:'.Field.'+qName(f.name)+' · '+f.type+(f.multiple?'[]':''),icon:ic('filter')}));
+  pick({title:_t('Фильтр — дописывает условие в строку запроса'),placeholder:_t('Что отфильтровать?'),items,onPick:i=>{
+    if(i.k==='field')fieldCond(scope,i.f);
+    else if(i.k==='title')promptDlg(_t('Название'),_t('Текст в названии'),'',v=>{v=v.trim();if(!v)return _t('Введите текст');qEdit(scope,o=>qAdd(o,'.Title.Contains('+qStr(v)+')'))});
+    else if(i.k==='parent')setPick(scope,'.Parent',_t('Родитель'));
+    else if(i.k==='link')pick({title:_t('Связь'),placeholder:_t('Тип связи'),items:DB.linkTypes.map(l=>({lt:l,label:l.name,sub:l.outward+(l.inward?' / '+l.inward:'')})),onPick:j=>setPick(scope,'.Link.'+qName(j.lt.name),j.lt.name)});
     else idsFilter(scope,i.k);
   }});
 }
+function setPick(scope,pt,title){
+  pick({title,items:[{fn:'IsSet',label:pt+'.IsSet()',sub:_t('есть')},{fn:'IsUnset',label:pt+'.IsUnset()',sub:_t('нет')}],onPick:i=>qEdit(scope,o=>qAdd(o,pt+'.'+i.fn+'()'))});
+}
 function idsFilter(scope,kind){
   const src=()=>kind==='type'?DB.taskTypes.map(x=>({n:x.name,sub:sset(x.statusSetId).name,icon:`<span class="dot" style="background:${typeColor(x.id)}"></span>`})):kind==='status'?DB.statuses.map(x=>({n:x.name,icon:sIcon(x.id,'ss-main')})):DB.series.map(x=>({n:x.prefix,sub:x.name}));
-  pick({title:_t('{0}: отметьте значения (ИЛИ внутри ключа, И между ключами)',[{status:_t('Статус'),type:_t('Тип'),series:_t('Серия')}[kind]]),multi:true,noSort:true,
-    items:()=>{const o=parseQ(qGet(scope));return src().map(x=>({id:x.n,label:x.n,sub:x.sub,icon:x.icon,chk:o[kind].some(v=>v.raw.toLowerCase()===x.n.toLowerCase())}))},
-    onPick:i=>qEdit(scope,o=>{const k=o[kind].findIndex(v=>v.raw.toLowerCase()===i.id.toLowerCase());if(k>=0)o[kind].splice(k,1);else o[kind].push({raw:i.id,ok:true})})});
+  const mode=kind==='series'?'ContainsAny':'==',pt='.'+qCap(kind);
+  pick({title:_t('{0}: отметьте значения',[{status:_t('Статус'),type:_t('Тип'),series:_t('Серия')}[kind]]),multi:true,noSort:true,
+    items:()=>{const nm=qNamesOf(parseQ(qGet(scope)),kind,mode);return src().map(x=>({id:x.n,label:x.n,sub:x.sub,icon:x.icon,chk:nm.some(v=>v.toLowerCase()===x.n.toLowerCase())}))},
+    onPick:i=>qEdit(scope,o=>qToggleName(o,kind,mode,pt,i.id))});
 }
-function enumMulti(scope,f,gi,op){
-  let idx=gi;
-  pick({title:_t('{0} {1}: отметьте значения (ИЛИ)',[f.name,QSYM()[op]]),multi:true,noSort:true,
-    items:()=>{const g=idx>=0?parseQ(qGet(scope)).groups[idx]:null;return en(f.enumId).values.map(v=>({id:v.name,label:v.name,chk:!!(g&&g.alts.some(a=>a.raw.toLowerCase()===v.name.toLowerCase()))}))},
-    onPick:i=>qEdit(scope,o=>{
-      let g=idx>=0?o.groups[idx]:null;
-      if(!g){g={f,fname:f.name,alts:[]};o.groups.push(g);idx=o.groups.length-1}
-      const k=g.alts.findIndex(a=>a.raw.toLowerCase()===i.id.toLowerCase());
-      if(k>=0)g.alts.splice(k,1);else g.alts.push({op:(g.alts[0]&&g.alts[0].op)||op,raw:i.id,ok:true});
-      if(!g.alts.length){o.groups.splice(idx,1);idx=-1}
-    })});
+function enumMulti(scope,f,mode){
+  const pk='f:'+f.id,pt='.Field.'+qName(f.name);
+  pick({title:_t('{0}: отметьте значения',[f.name]),multi:true,noSort:true,
+    items:()=>{const nm=qNamesOf(parseQ(qGet(scope)),pk,mode);return en(f.enumId).values.map(v=>({id:v.name,label:v.name,chk:nm.some(x=>x.toLowerCase()===v.name.toLowerCase())}))},
+    onPick:i=>qEdit(scope,o=>qToggleName(o,pk,mode,pt,i.id))});
 }
-function fieldCond(scope,f,gi){
-  pick({title:_t('{0} — условие',[f.name]),items:QOPLIST().filter(x=>qOpsFor(f).includes(x[0])).map(x=>({o:x[0],label:QSYM()[x[0]],sub:x[1]})),onPick:i=>{
-    const fin=a=>qEdit(scope,o=>{const g={f,fname:f.name,alts:[a]};if(gi>=0&&o.groups[gi])o.groups[gi]=g;else o.groups.push(g)});
-    if(QOPW.includes(i.o))return fin({op:i.o,raw:'',ok:true});
-    if(f.type==='enum'&&(i.o==='='||i.o==='!='))return enumMulti(scope,f,gi,i.o);
-    if(f.type==='bool')return pick({title:f.name+' '+QSYM()[i.o],items:[{id:qbool()[0],label:_t('Да')},{id:qbool()[1],label:_t('Нет')}],onPick:v=>fin({op:i.o,raw:v.id,ok:true})});
-    promptDlg(f.name+' '+QSYM()[i.o],_t('Значение'),f.type==='date'?'2026-12-01':'',v=>{
+function fieldCond(scope,f){
+  const pt='.Field.'+qName(f.name);
+  const L=[['==',f.multiple?_t('ровно эти значения, порядок неважен'):_t('равно; массив — одно из')],['!=',f.multiple?_t('не ровно эти значения'):_t('не равно; массив — ни одно из')]];
+  if(qCmpType(f))[['>',_t('больше')],['>=',_t('больше или равно')],['<',_t('меньше')],['<=',_t('меньше или равно')]].forEach(x=>L.push(x));
+  if(f.multiple){L.push(['ContainsAny',_t('содержит любое из')]);L.push(['ContainsAll',_t('содержит все')])}
+  [['IsSet',_t('значение задано')],['IsUnset',_t('поле есть, значения нет')],['IsAttached',_t('поле есть у типа задачи')],['IsDetached',_t('поля нет у типа задачи')]].forEach(x=>L.push(x));
+  const add=text=>qEdit(scope,o=>qAdd(o,text));
+  pick({title:_t('{0} — условие',[f.name]),noSort:true,items:L.map(x=>({o:x[0],label:/^Is/.test(x[0])||/^Contains/.test(x[0])?pt+'.'+x[0]+'()':pt+' '+x[0],sub:x[1]})),onPick:i=>{
+    const op=i.o;
+    if(/^Is/.test(op))return add(pt+'.'+op+'()');
+    const names=op==='=='||op==='!='||/^Contains/.test(op);
+    if(f.type==='enum'&&names)return enumMulti(scope,f,op);
+    if(f.type==='bool')return pick({title:pt+' '+op,items:[{id:'true',label:'true',sub:_t('Да')},{id:'false',label:'false',sub:_t('Нет')}],onPick:v=>add(pt+' '+op+' '+v.id)});
+    const hint=f.type==='date'?'2026-12-01':'';
+    promptDlg(pt+' '+op,/^Contains/.test(op)?_t('Значения через запятую'):_t('Значение'),hint,v=>{
       v=v.trim();
-      if(qConv(f,v)===undefined)return f.type==='int'?_t('Ожидается целое число'):f.type==='float'?_t('Ожидается число'):f.type==='date'?_t('Дата в формате ГГГГ-ММ-ДД'):_t('Укажите значение');
-      fin({op:i.o,raw:v,ok:true});
+      const vs=/^Contains/.test(op)?v.split(',').map(x=>x.trim()).filter(Boolean):[v];
+      if(!vs.length||vs.some(x=>!x))return _t('Укажите значение');
+      for(const x of vs){
+        if(f.type==='int'&&!/^-?\d+$/.test(x))return _t('Ожидается целое число');
+        if(f.type==='float'&&!/^-?\d+(\.\d+)?$/.test(x))return _t('Ожидается число');
+        if(f.type==='date'&&!/^\d{4}-\d{2}-\d{2}$/.test(x))return _t('Дата в формате ГГГГ-ММ-ДД');
+      }
+      const lit=x=>f.type==='int'||f.type==='float'?x:qStr(x);
+      if(/^Contains/.test(op))add(pt+'.'+(vs.length===1?'Contains':op)+'('+(vs.length===1?lit(vs[0]):'['+vs.map(lit).join(', ')+']')+')');
+      else add(pt+' '+op+' '+lit(vs[0]));
     },f.type==='date'?'date':'text');
   }});
 }
 function sortPick(scope){
   pick({title:_t('Сортировка: клик добавляет ↑, затем ↓, затем убирает'),multi:true,noSort:true,
-    items:()=>{const o=parseQ(qGet(scope));return SORTKEYS().map(k=>{const s=o.sort.find(x=>x.id===k.id);return{id:k.id,label:k.label,sub:s?(s.desc?_t('по убыванию'):_t('по возрастанию')):'',chk:!!s}})},
-    onPick:i=>qEdit(scope,o=>{const k=o.sort.findIndex(x=>x.id===i.id);if(k<0)o.sort.push({key:qSortName(i.id),desc:false,ok:true,id:i.id});else if(!o.sort[k].desc)o.sort[k].desc=true;else o.sort.splice(k,1)})});
+    items:()=>{const o=parseQ(qGet(scope));return SORTKEYS().map(k=>{const s=o.sort.find(x=>x.id===k.id);return{id:k.id,label:k.label,sub:s?(s.desc?_t('по убыванию'):_t('по возрастанию')):qSortTxt(k.id),chk:!!s}})},
+    onPick:i=>qEdit(scope,o=>{const k=o.sort.findIndex(x=>x.id===i.id);if(k<0)o.sort.push({id:i.id,desc:false});else if(!o.sort[k].desc)o.sort[k].desc=true;else o.sort.splice(k,1)})});
 }
 
 const SETS=()=>[['statuses',_t('Статусы')],['sets',_t('Наборы статусов')],['types',_t('Типы задач')],['series',_t('Серии')],['linktypes',_t('Типы связей')],['fields',_t('Поля')],['enums',_t('Перечисления')],['members',_t('Участники')],['project',_t('Проект')]];
@@ -2189,7 +2594,7 @@ function vList(ser){
   const base=ser?DB.tasks.filter(t=>t.series.some(x=>x.seriesId===ser.id)):DB.tasks;
   const numIn=t=>{const x=t.series.find(y=>y.seriesId===ser.id);return x?x.number:0};
   const rows=ser&&!keys.length?qFilter(o,base).sort((a,b)=>numIn(a)-numIn(b)):sortTasks(qFilter(o,base),keys);
-  const view=o.view==='tree'?'tree':o.view==='flat'?'flat':'groups';
+  const view=S.lview||'groups';
   const total=rows.length;const pages=Math.max(1,Math.ceil(total/50));if(S.page>pages)S.page=pages;
   const dispNames={groups:_t('По статусам'),flat:_t('Плоский'),tree:_t('Дерево')};
   const actions=`<button class="btn sm ghost" data-act="sortpick" data-s="list">${ic('up',12)}${_t('Сортировка')}</button><div class="seg2">${Object.keys(dispNames).map(k=>`<button class="${view===k?'on':''}" data-act="view" data-v="${k}">${dispNames[k]}</button>`).join('')}</div><button class="btn pri sm" data-act="create">${ic('plus',12)}${_t('Задача')} <kbd style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">C</kbd></button>`;
@@ -2903,45 +3308,14 @@ function langCard(){
 function langPick(){
   pick({title:_t('Язык интерфейса'),items:[['system',_t('Как в системе')],['ru','Русский'],['en','English']].map(x=>({id:x[0],label:x[1],chk:S.langPref===x[0],icon:ic('cmd')})),onPick:i=>setLangPref(i.id)});
 }
-function qRewrite(s,to){
-  if(!s)return s;
-  const reps=[];
-  qTok(s).forEach(t=>{
-    if(t.kind!=='kv')return;
-    const kk=qKind(t.key);
-    if(!kk||kk==='field')return;
-    reps.push([t.ks,t.ke-1,QKW[to][kk]]);
-    t.vals.forEach(v=>{
-      const raw=s.slice(v.s,v.e);
-      if(kk==='sort'){const m=/^(-?)([^\s,{}]+)$/.exec(raw);const id=m&&QSORT[m[2].toLowerCase()];if(id)reps.push([v.s,v.e,m[1]+QSN[to][id]])}
-      else if(kk==='view'){const id=QVIEW[raw.toLowerCase()];if(id)reps.push([v.s,v.e,QVW[to][id]])}
-    });
-  });
-  reps.sort((a,b)=>b[0]-a[0]);
-  reps.forEach(r=>{s=s.slice(0,r[0])+r[2]+s.slice(r[1])});
-  return s;
-}
-function rewriteHash(h,to){
-  const i=h.indexOf('?q=');
-  if(i<0)return h;
-  let q='';try{q=decodeURIComponent(h.slice(i+3))}catch(e){return h}
-  const nq=qRewrite(q,to);
-  return h.slice(0,i)+(nq?'?q='+encodeURIComponent(nq):'');
-}
 function applyLang(){
   document.documentElement.lang=LANG;
   document.title=_t('Tasker — Сводный макет');
 }
 function setLangPref(p){
-  const from=LANG;
   S.langPref=p;
   try{if(p==='system')localStorage.removeItem(LKEY);else localStorage.setItem(LKEY,p)}catch(e){}
   LANG=p==='system'?detectLang():p;
-  if(LANG!==from){
-    S.lq=qRewrite(S.lq,LANG);S.bq=qRewrite(S.bq,LANG);S.lastList=rewriteHash(S.lastList,LANG);
-    const h=location.hash;
-    if(h.indexOf('?q=')>=0){try{history.replaceState(null,'',rewriteHash(h,LANG))}catch(e){}}
-  }
   applyLang();
   render();
 }
@@ -3081,17 +3455,16 @@ function setMode(m){DB.mode=m;toast(m==='server'?_t('Режим Server: вход
 A.ws=el=>{S.ws=+el.dataset.i;S.proj=S.ws?'p-demo':'p-tasker';go('#/tasks');render()};
 A.openfolder=()=>toast(_t('Выбор папки в системном диалоге (макет)'));
 A.create=()=>createDlg(null,curSeriesId());
-A.view=el=>{qEdit('list',o=>{o.view=el.dataset.v==='groups'?null:el.dataset.v})};
+A.view=el=>{S.lview=el.dataset.v;S.page=1;render()};
 A.addfilter=el=>addFilter(el.dataset.s);
 A.sortpick=el=>sortPick(el.dataset.s||'list');
 A.sortflip=el=>qEdit(el.dataset.s,o=>{const s=o.sort[+el.dataset.i];s.desc=!s.desc});
 A.sortx=el=>qEdit(el.dataset.s,o=>{o.sort.splice(+el.dataset.i,1)});
-A.pillx=el=>{const d=el.dataset;qEdit(d.s,o=>{if(d.k==='text')o.text.splice(+d.i,1);else if(d.k==='group')o.groups.splice(+d.i,1);else o[d.k]=[]})};
+A.pillx=el=>{const d=el.dataset;qEdit(d.s,o=>{o.conj.splice(+d.i,1)})};
 A.pillv=el=>{
-  const d=el.dataset,s=d.s;
-  if(d.k==='text'){const w=parseQ(qGet(s)).text[+d.i];promptDlg(_t('Текст'),_t('Слово в названии или описании'),w,v=>{v=v.trim();if(!v)return _t('Введите слово');qEdit(s,o=>{o.text[+d.i]=v})});return}
-  if(d.k==='group'){const g=parseQ(qGet(s)).groups[+d.i];if(!g)return;if(g.f.type==='enum'&&g.alts.every(a=>a.op==='='||a.op==='!='))enumMulti(s,g.f,+d.i,g.alts[0].op);else fieldCond(s,g.f,+d.i);return}
-  idsFilter(s,d.k);
+  const d=el.dataset,c=parseQ(qGet(d.s)).conj[+d.i],bar=QBAR[d.s];
+  if(!c||!bar||c.s==null)return;
+  bar.ta.focus();try{bar.ta.setSelectionRange(c.s,c.e)}catch(e){}
 };
 A.clearfilters=()=>setQ('list','');
 A.qex=el=>setQ(el.dataset.s,el.dataset.q);

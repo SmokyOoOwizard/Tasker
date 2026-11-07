@@ -92,6 +92,8 @@ public class TaskLinkService(
     }
 
     /// <summary>Id иерархических типов проекта (<see cref="LinkType.Hierarchical"/>); пусто — иерархии нет. Типы по умолчанию читаются без записи.</summary>
+    public async Task<LinkType[]> LinkTypes(Guid projectId, CancellationToken ct = default) => await types.GetAll(projectId, ct);
+
     public async Task<Guid[]> HierarchicalTypeIds(Guid projectId, CancellationToken ct = default) =>
         (await types.GetAll(projectId, ct)).Where(x => x.Hierarchical && !x.IsSymmetric).Select(x => x.Id).ToArray();
 
