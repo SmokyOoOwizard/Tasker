@@ -1,0 +1,8 @@
+formatVersion: 12
+id: 80b2dde2-c3a4-463a-8e1e-994458aee5f0
+taskId: dbf4ac5a-fbdf-454e-b955-2ca6afa004c8
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:36.2433690+00:00
+body: 'Отменена 2026-10-14 как дубль TSK-173 (коммит `e53d2562`): та же проблема перебора каталогов в `CanonicalPath`, работа продолжается там.'

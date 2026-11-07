@@ -1,0 +1,8 @@
+formatVersion: 12
+id: c690bb12-baa9-484b-9a0e-01c1280bd4bd
+taskId: 160dd998-74bf-4563-8d76-b110928ef613
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:40.4375270+00:00
+body: Отменена 2026-11-05 (коммит `2c112936`), причина там не записана. Задача про интеграционные тесты Rust-демона на Windows, а Rust удалён коммитом `747c526` двумя днями раньше.

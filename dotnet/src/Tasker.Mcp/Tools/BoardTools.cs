@@ -27,13 +27,14 @@ public static class BoardTools
         });
 
     [McpServerTool(Name = "get_board", ReadOnly = true)]
-    [Description("Gets a board together with the tasks in each column (first `tasksPerColumn` tasks per column, 1-200; each column reports totalCount). Each column also shows its own query (stored: a task is in the column only if its status fits AND it matches the query; a `| sort` in it orders the column unless `sort` is given). A column whose stored query no longer parses (a field was renamed or deleted) has `error` instead of `tasks`. field (optional): [\"Name=value\", \"Name>=value\", \"Name:set\", ...] shows only tasks matching the field conditions (catalog or own fields), in every column, in addition to the column's own (a view filter, not stored; see list_tasks). " + TaskTools.SortHint + " In get_board the order applies inside every column. " + TaskTools.DescriptionHint)]
+    [Description("Gets a board together with the tasks in each column (first `tasksPerColumn` tasks per column, 1-200; each column reports totalCount). Each column also shows its own query (stored: a task is in the column only if its status fits AND it matches the query; a `| sort` in it orders the column unless `sort` or a `| sort` in `query` is given). A column whose stored query no longer parses (a field was renamed or deleted) has `error` instead of `tasks`. field (optional): [\"Name=value\", \"Name>=value\", \"Name:set\", ...] shows only tasks matching the field conditions (catalog or own fields), in every column, in addition to the column's own (a view filter, not stored; see list_tasks). " + TaskTools.SortHint + " In get_board the order applies inside every column. " + TaskTools.QueryHint + " In get_board the query applies inside every column, AND with the column's own query. " + TaskTools.DescriptionHint)]
     public static Task<BoardView> GetBoard(
-        ProjectService projects, IBoardStorage boards, BoardService boardService, Guid projectId, Guid boardId,
-        int tasksPerColumn = Page.DefaultLimit, string[]? field = null, int descriptionLength = DescriptionPreview.McpDefault, string? sort = null, CancellationToken ct = default) =>
+        ProjectService projects, IBoardStorage boards, BoardService boardService, TaskService tasks, Guid projectId, Guid boardId,
+        int tasksPerColumn = Page.DefaultLimit, string[]? field = null, int descriptionLength = DescriptionPreview.McpDefault, string? sort = null, string? query = null, CancellationToken ct = default) =>
         McpCall.Run(async () =>
         {
             await McpCall.RequireProject(projects, projectId, ct);
+            await McpCall.CheckQuery(tasks, projectId, query, ct);
             var board = McpCall.Found(await boards.GetById(projectId, boardId, ct), $"Board {boardId}");
             var page = Page.Of(0, tasksPerColumn);
 
@@ -42,8 +43,8 @@ public static class BoardTools
             {
                 try
                 {
-                    var tasks = await boardService.GetColumnTasks(projectId, boardId, column.Id, page, ct, field, descriptionLength, sort);
-                    columns.Add(new ColumnTasks(column.Id, column.Name, column.Query, McpCall.Found(tasks, $"Column {column.Id}")));
+                    var columnTasks = await boardService.GetColumnTasks(projectId, boardId, column.Id, page, ct, field, descriptionLength, sort, query);
+                    columns.Add(new ColumnTasks(column.Id, column.Name, column.Query, McpCall.Found(columnTasks, $"Column {column.Id}")));
                 }
                 catch (Tasker.Core.TaskerValidationException e) when (e.Error.Code == BoardService.ColumnQueryInvalidCode)
                 {

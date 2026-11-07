@@ -1,0 +1,8 @@
+formatVersion: 12
+id: dbca456f-0d1b-4c95-92ad-489a0db110fd
+taskId: 75871c43-b688-4137-9cda-ffc103e33ce4
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:08.8775140+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: стартовая страница десктопа удалена вместе с ним коммитом `629c93a`. В приложении macOS недавние папки уже есть (`WorkspaceController.swift`).'

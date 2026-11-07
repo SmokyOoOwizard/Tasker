@@ -10,7 +10,7 @@ internal static class TaskQuerySuggester
 {
     private const int Limit = 40;
 
-    private static readonly string[] FilterRoots = ["Status", "Type", "Title", "Series", "Field", "Link", "Parent"];
+    private static readonly string[] FilterRoots = ["Status", "Type", "Title", "Series", "Created", "Updated", "Field", "Link", "Parent"];
     private static readonly string[] SortRoots = ["Status", "Type", "Title", "Created", "Updated", "Series", "Field"];
 
     private sealed record Cursor(int Start, int End, string Partial, bool IsText);
@@ -263,7 +263,9 @@ internal static class TaskQuerySuggester
     {
         if (path.Count == 2 && Same(path[0], "Field") && FieldOf(path[1], vocabulary)?.Type is FieldType.Int or FieldType.Float or FieldType.Date)
             return ["==", "!=", ">", ">=", "<", "<="];
-        if (path.Count == 1 && (Same(path[0], "Parent") || Same(path[0], "Created") || Same(path[0], "Updated")))
+        if (path.Count == 1 && (Same(path[0], "Created") || Same(path[0], "Updated")))
+            return ["==", "!=", ">", ">=", "<", "<="];
+        if (path.Count == 1 && Same(path[0], "Parent"))
             return [];
         if (path.Count == 2 && Same(path[0], "Link"))
             return [];
@@ -281,6 +283,10 @@ internal static class TaskQuerySuggester
     {
         var path = state.Path;
         IEnumerable<string> values = [];
+        if (state.Function == null && !state.InArray && path.Count == 1 && (Same(path[0], "Created") || Same(path[0], "Updated")))
+            return DateValues(place, ["today", "today-7d", "now", "-1d", "-7d", "now-1h"], "yyyy-MM-dd[Thh:mm[:ss]]");
+        if (state.Function == null && !state.InArray && path.Count == 2 && Same(path[0], "Field") && FieldOf(path[1], vocabulary)?.Type == FieldType.Date)
+            return DateValues(place, ["today", "today-7d", "today+7d"], "yyyy-MM-dd");
         if (path.Count == 1 && Same(path[0], "Status"))
             values = vocabulary.Statuses.Select(x => x.Name);
         else if (path.Count == 1 && Same(path[0], "Type"))
@@ -301,6 +307,9 @@ internal static class TaskQuerySuggester
             .Select(x => Item(TaskQuerySuggestionKind.Value, x, place, Quoted(x) + (open ? "" : " ")))
             .ToList();
     }
+
+    private static List<TaskQuerySuggestion> DateValues(Cursor place, string[] values, string detail) =>
+        values.Select(x => Item(TaskQuerySuggestionKind.Value, x, place, Quoted(x) + " ", detail: detail)).ToList();
 
     private static List<TaskQuerySuggestion> AfterValue(State state, Cursor place)
     {

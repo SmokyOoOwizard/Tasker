@@ -1,0 +1,8 @@
+formatVersion: 12
+id: 46b81b6f-c2e8-4df4-a823-622c5d1a2ece
+taskId: 832ac1fd-737b-4f90-b53b-53cee3e730fc
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:10.2811530+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: окно Avalonia и `NativeWebView` удалены вместе с десктопом коммитом `629c93a`, проблемы больше нет.'

@@ -1,0 +1,8 @@
+formatVersion: 12
+id: d39059b8-3823-453c-9675-bd0e09c9507c
+taskId: 0b88090b-ea0c-45d6-8e17-cc2ae00edfb8
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:07.4060110+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: задача про `WindowManager`, `TabModel` и `App.axaml.cs` десктопа, удалённого коммитом `629c93a`. В приложении macOS восстановление окон и вкладок уже есть (`WorkspaceLayout.swift`, `WorkspaceSessions.swift`).'

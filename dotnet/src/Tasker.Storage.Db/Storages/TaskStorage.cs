@@ -258,6 +258,12 @@ internal class TaskStorage(AppDbContext context) : ITaskStorage
                 var values = field.Values;
                 var rows = FieldValueRows(field.Condition);
                 return x => rows.Any(v => v.TaskId == x.Id && !values.Contains(v.Value));
+            case TaskTimeRange range:
+                var from = range.FromTicks is { } fromTicks ? new DateTime(Math.Clamp(fromTicks, 0, DateTime.MaxValue.Ticks), DateTimeKind.Utc) : (DateTime?)null;
+                var before = range.BeforeTicks is { } beforeTicks ? new DateTime(Math.Clamp(beforeTicks, 0, DateTime.MaxValue.Ticks), DateTimeKind.Utc) : (DateTime?)null;
+                return range.Property == TaskTimeProperty.Created
+                    ? x => (from == null || x.CreatedAt >= from) && (before == null || x.CreatedAt < before)
+                    : x => (from == null || x.UpdatedAt >= from) && (before == null || x.UpdatedAt < before);
             case TaskHasOutgoingLink outgoing:
                 var outgoingTypes = outgoing.TypeIds;
                 return x => context.TaskLinks.Any(l => l.TaskId == x.Id && outgoingTypes.Contains(l.TypeId));

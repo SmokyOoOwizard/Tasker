@@ -1,0 +1,8 @@
+formatVersion: 12
+id: a4945ecf-bcfb-4a28-9d89-b630a3cbc175
+taskId: e3ad610d-f573-40a5-874e-6d47c9fe1896
+authorId: 83562623-cb26-4d3b-9786-453d25aa0854
+authorName: agent
+authorKind: agent
+createdAt: 2026-11-07T21:16:19.4749690+00:00
+body: 'Отменена 2026-11-06 при сверке открытых задач с кодом: супервизор демона удалён в TSK-235 (`4469474`), `tasker mcp upgrade` теперь перезапускает единственный процесс.'

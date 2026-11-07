@@ -1044,6 +1044,22 @@ internal sealed partial class WorkspaceIndex : IWorkspaceIndex, IDisposable
                     var known = $"@predicate{parameterIndex++}";
                     command.Parameters.AddWithValue(known, IndexJsonContext.Array(field.Values));
                     return $"path IN (SELECT path FROM task_field_values WHERE {row} AND value NOT IN (SELECT value FROM json_each({known})))";
+                case Tasker.Core.Tasks.Query.TaskTimeRange range:
+                    var column = range.Property == Tasker.Core.Tasks.Query.TaskTimeProperty.Created ? "sort_num" : "sort_updated";
+                    var bounds = new List<string> { $"{column} IS NOT NULL" };
+                    if (range.FromTicks is { } fromTicks)
+                    {
+                        var name = $"@predicate{parameterIndex++}";
+                        command.Parameters.AddWithValue(name, fromTicks);
+                        bounds.Add($"{column} >= {name}");
+                    }
+                    if (range.BeforeTicks is { } beforeTicks)
+                    {
+                        var name = $"@predicate{parameterIndex++}";
+                        command.Parameters.AddWithValue(name, beforeTicks);
+                        bounds.Add($"{column} < {name}");
+                    }
+                    return "(" + string.Join(" AND ", bounds) + ")";
                 case Tasker.Core.Tasks.Query.TaskHasOutgoingLink outgoing:
                     return $"path IN (SELECT path FROM task_links WHERE type_id IN {IdList(outgoing.TypeIds)})";
                 case Tasker.Core.Tasks.Query.TaskHasIncomingLink incoming:
