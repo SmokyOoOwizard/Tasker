@@ -556,11 +556,11 @@ public struct TaskQuery: GraphQLQuery {
 public struct TaskListPageQuery: GraphQLQuery {
     public static let operationName = "TaskListPage"
     public static let document = """
-    query TaskListPage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $offset: Int, $limit: Int) {
+    query TaskListPage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $query: String, $offset: Int, $limit: Int) {
       project(id: $projectId) {
         __typename
         id
-        tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, offset: $offset, limit: $limit, descriptionLength: 0) {
+        tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, query: $query, offset: $offset, limit: $limit, descriptionLength: 0) {
           __typename
           totalCount
           offset
@@ -607,7 +607,7 @@ public struct TaskListPageQuery: GraphQLQuery {
         GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
             GraphQLField("__typename"),
             GraphQLField("id"),
-            GraphQLField("tasks", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "sort": .variable("sort"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+            GraphQLField("tasks", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "sort": .variable("sort"), "query": .variable("query"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
                 GraphQLField("__typename"),
                 GraphQLField("totalCount"),
                 GraphQLField("offset"),
@@ -651,16 +651,18 @@ public struct TaskListPageQuery: GraphQLQuery {
     public var seriesIds: [UUID]?
     public var field: [String]?
     public var sort: String?
+    public var query: String?
     public var offset: Int?
     public var limit: Int?
 
-    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil, sort: String? = nil, offset: Int? = nil, limit: Int? = nil) {
+    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil, sort: String? = nil, query: String? = nil, offset: Int? = nil, limit: Int? = nil) {
         self.projectId = projectId
         self.statusIds = statusIds
         self.typeIds = typeIds
         self.seriesIds = seriesIds
         self.field = field
         self.sort = sort
+        self.query = query
         self.offset = offset
         self.limit = limit
     }
@@ -673,6 +675,7 @@ public struct TaskListPageQuery: GraphQLQuery {
         if let seriesIds { result["seriesIds"] = seriesIds.graphQLValue }
         if let field { result["field"] = field.graphQLValue }
         if let sort { result["sort"] = sort.graphQLValue }
+        if let query { result["query"] = query.graphQLValue }
         if let offset { result["offset"] = offset.graphQLValue }
         if let limit { result["limit"] = limit.graphQLValue }
         return result
@@ -714,11 +717,11 @@ public struct TaskListPageQuery: GraphQLQuery {
 public struct TaskTreePageQuery: GraphQLQuery {
     public static let operationName = "TaskTreePage"
     public static let document = """
-    query TaskTreePage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $parentId: UUID, $levels: Int, $offset: Int, $limit: Int) {
+    query TaskTreePage($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $sort: String, $query: String, $parentId: UUID, $levels: Int, $offset: Int, $limit: Int) {
       project(id: $projectId) {
         __typename
         id
-        taskTree(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, parentId: $parentId, levels: $levels, offset: $offset, limit: $limit, descriptionLength: 0) {
+        taskTree(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, sort: $sort, query: $query, parentId: $parentId, levels: $levels, offset: $offset, limit: $limit, descriptionLength: 0) {
           __typename
           totalCount
           topLevelCount
@@ -769,7 +772,7 @@ public struct TaskTreePageQuery: GraphQLQuery {
         GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
             GraphQLField("__typename"),
             GraphQLField("id"),
-            GraphQLField("taskTree", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "sort": .variable("sort"), "parentId": .variable("parentId"), "levels": .variable("levels"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+            GraphQLField("taskTree", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "sort": .variable("sort"), "query": .variable("query"), "parentId": .variable("parentId"), "levels": .variable("levels"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
                 GraphQLField("__typename"),
                 GraphQLField("totalCount"),
                 GraphQLField("topLevelCount"),
@@ -817,18 +820,20 @@ public struct TaskTreePageQuery: GraphQLQuery {
     public var seriesIds: [UUID]?
     public var field: [String]?
     public var sort: String?
+    public var query: String?
     public var parentId: UUID?
     public var levels: Int?
     public var offset: Int?
     public var limit: Int?
 
-    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil, sort: String? = nil, parentId: UUID? = nil, levels: Int? = nil, offset: Int? = nil, limit: Int? = nil) {
+    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil, sort: String? = nil, query: String? = nil, parentId: UUID? = nil, levels: Int? = nil, offset: Int? = nil, limit: Int? = nil) {
         self.projectId = projectId
         self.statusIds = statusIds
         self.typeIds = typeIds
         self.seriesIds = seriesIds
         self.field = field
         self.sort = sort
+        self.query = query
         self.parentId = parentId
         self.levels = levels
         self.offset = offset
@@ -843,6 +848,7 @@ public struct TaskTreePageQuery: GraphQLQuery {
         if let seriesIds { result["seriesIds"] = seriesIds.graphQLValue }
         if let field { result["field"] = field.graphQLValue }
         if let sort { result["sort"] = sort.graphQLValue }
+        if let query { result["query"] = query.graphQLValue }
         if let parentId { result["parentId"] = parentId.graphQLValue }
         if let levels { result["levels"] = levels.graphQLValue }
         if let offset { result["offset"] = offset.graphQLValue }
@@ -888,11 +894,11 @@ public struct TaskTreePageQuery: GraphQLQuery {
 public struct TaskListCountQuery: GraphQLQuery {
     public static let operationName = "TaskListCount"
     public static let document = """
-    query TaskListCount($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!]) {
+    query TaskListCount($projectId: UUID!, $statusIds: [UUID!], $typeIds: [UUID!], $seriesIds: [UUID!], $field: [String!], $query: String) {
       project(id: $projectId) {
         __typename
         id
-        tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, limit: 1, descriptionLength: 0) {
+        tasks(statusIds: $statusIds, typeIds: $typeIds, seriesIds: $seriesIds, field: $field, query: $query, limit: 1, descriptionLength: 0) {
           __typename
           totalCount
         }
@@ -903,7 +909,7 @@ public struct TaskListCountQuery: GraphQLQuery {
         GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
             GraphQLField("__typename"),
             GraphQLField("id"),
-            GraphQLField("tasks", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "limit": .value(.int(1)), "descriptionLength": .value(.int(0))], selections: [
+            GraphQLField("tasks", arguments: ["statusIds": .variable("statusIds"), "typeIds": .variable("typeIds"), "seriesIds": .variable("seriesIds"), "field": .variable("field"), "query": .variable("query"), "limit": .value(.int(1)), "descriptionLength": .value(.int(0))], selections: [
                 GraphQLField("__typename"),
                 GraphQLField("totalCount")
             ])
@@ -915,13 +921,15 @@ public struct TaskListCountQuery: GraphQLQuery {
     public var typeIds: [UUID]?
     public var seriesIds: [UUID]?
     public var field: [String]?
+    public var query: String?
 
-    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil) {
+    public init(projectId: UUID, statusIds: [UUID]? = nil, typeIds: [UUID]? = nil, seriesIds: [UUID]? = nil, field: [String]? = nil, query: String? = nil) {
         self.projectId = projectId
         self.statusIds = statusIds
         self.typeIds = typeIds
         self.seriesIds = seriesIds
         self.field = field
+        self.query = query
     }
 
     public var variables: [String: JSONValue] {
@@ -931,6 +939,7 @@ public struct TaskListCountQuery: GraphQLQuery {
         if let typeIds { result["typeIds"] = typeIds.graphQLValue }
         if let seriesIds { result["seriesIds"] = seriesIds.graphQLValue }
         if let field { result["field"] = field.graphQLValue }
+        if let query { result["query"] = query.graphQLValue }
         return result
     }
 
@@ -1938,6 +1947,174 @@ public struct TaskCommentsQuery: GraphQLQuery {
                         self.id = id
                         self.name = name
                         self.kind = kind
+                    }
+                }
+            }
+        }
+    }
+}
+
+public struct TaskQueryAnalysisQuery: GraphQLQuery {
+    public static let operationName = "TaskQueryAnalysis"
+    public static let document = """
+    query TaskQueryAnalysis($projectId: UUID!, $text: String!, $cursor: Int) {
+      project(id: $projectId) {
+        __typename
+        id
+        taskQueryAnalysis(text: $text, cursor: $cursor) {
+          __typename
+          valid
+          hasSort
+          errors {
+            __typename
+            code
+            message
+            start
+            end
+            params {
+              __typename
+              name
+              value
+            }
+          }
+          suggestions {
+            __typename
+            kind
+            label
+            insert
+            start
+            end
+            caret
+            detail
+          }
+        }
+      }
+    }
+    """
+    public static let selections: [GraphQLField] = [
+        GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
+            GraphQLField("__typename"),
+            GraphQLField("id"),
+            GraphQLField("taskQueryAnalysis", arguments: ["text": .variable("text"), "cursor": .variable("cursor")], selections: [
+                GraphQLField("__typename"),
+                GraphQLField("valid"),
+                GraphQLField("hasSort"),
+                GraphQLField("errors", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("code"),
+                    GraphQLField("message"),
+                    GraphQLField("start"),
+                    GraphQLField("end"),
+                    GraphQLField("params", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("name"),
+                        GraphQLField("value")
+                    ])
+                ]),
+                GraphQLField("suggestions", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("kind"),
+                    GraphQLField("label"),
+                    GraphQLField("insert"),
+                    GraphQLField("start"),
+                    GraphQLField("end"),
+                    GraphQLField("caret"),
+                    GraphQLField("detail")
+                ])
+            ])
+        ])
+    ]
+
+    public var projectId: UUID
+    public var text: String
+    public var cursor: Int?
+
+    public init(projectId: UUID, text: String, cursor: Int? = nil) {
+        self.projectId = projectId
+        self.text = text
+        self.cursor = cursor
+    }
+
+    public var variables: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        result["projectId"] = projectId.graphQLValue
+        result["text"] = text.graphQLValue
+        if let cursor { result["cursor"] = cursor.graphQLValue }
+        return result
+    }
+
+    public struct Data: Hashable, Sendable, Decodable {
+        public var project: Project?
+
+        public init(project: Project?) {
+            self.project = project
+        }
+
+        public struct Project: Hashable, Sendable, Decodable {
+            public var id: UUID
+            public var taskQueryAnalysis: TaskQueryAnalysis
+
+            public init(id: UUID, taskQueryAnalysis: TaskQueryAnalysis) {
+                self.id = id
+                self.taskQueryAnalysis = taskQueryAnalysis
+            }
+
+            public struct TaskQueryAnalysis: Hashable, Sendable, Decodable {
+                public var valid: Bool
+                public var hasSort: Bool
+                public var errors: [Errors]
+                public var suggestions: [Suggestions]
+
+                public init(valid: Bool, hasSort: Bool, errors: [Errors], suggestions: [Suggestions]) {
+                    self.valid = valid
+                    self.hasSort = hasSort
+                    self.errors = errors
+                    self.suggestions = suggestions
+                }
+
+                public struct Errors: Hashable, Sendable, Decodable {
+                    public var code: String
+                    public var message: String
+                    public var start: Int
+                    public var end: Int
+                    public var params: [Params]
+
+                    public init(code: String, message: String, start: Int, end: Int, params: [Params]) {
+                        self.code = code
+                        self.message = message
+                        self.start = start
+                        self.end = end
+                        self.params = params
+                    }
+
+                    public struct Params: Hashable, Sendable, Decodable {
+                        public var name: String
+                        public var value: String
+
+                        public init(name: String, value: String) {
+                            self.name = name
+                            self.value = value
+                        }
+                    }
+                }
+
+                public struct Suggestions: Hashable, Sendable, Decodable {
+                    public var kind: TaskQuerySuggestionKind
+                    public var label: String
+                    public var insert: String
+                    public var start: Int
+                    public var end: Int
+                    public var caret: Int
+                    public var detail: String?
+
+                    public init(kind: TaskQuerySuggestionKind, label: String, insert: String, start: Int, end: Int, caret: Int, detail: String?) {
+                        self.kind = kind
+                        self.label = label
+                        self.insert = insert
+                        self.start = start
+                        self.end = end
+                        self.caret = caret
+                        self.detail = detail
                     }
                 }
             }

@@ -151,7 +151,8 @@ public class BoardService(
         CancellationToken ct = default,
         IEnumerable<string>? fieldFilters = null,
         int descriptionLength = DescriptionPreview.Full,
-        string? sort = null
+        string? sort = null,
+        string? query = null
     )
     {
         var board = await boards.GetById(projectId, boardId, ct);
@@ -173,7 +174,7 @@ public class BoardService(
                 ? ColumnFilters.ToConditions(column.FieldConditions, allTypes, (await fields.GetAll(projectId, ct)).ToDictionary(x => x.Id))
                 : null
         };
-        return await taskService.List(projectId, filter, fieldFilters, page, descriptionLength, ct, sort);
+        return await taskService.List(projectId, filter, fieldFilters, page, descriptionLength, ct, sort, query);
     }
 
     /// <summary>

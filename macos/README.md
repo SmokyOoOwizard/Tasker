@@ -215,6 +215,10 @@ TASKER_LIVE_PORT=5719 TASKER_LIVE_WORKSPACE=<область> swift test --packag
 TEST_RUNNER_TASKER_BENCH=1 TEST_RUNNER_TASKER_BENCH_PORT=5793 scripts/macos-build.sh test
 ```
 
+## Строка запроса
+
+Общий компонент `Sources/Tasker/Query` стоит над списком и доской. Разбор и подсказки выполняет сервер (`project.taskQueryAnalysis`), приложение только показывает результат: ошибку под строкой и подчёркиванием, подсказки списком с управлением клавишами ↑↓, Tab, Enter и Esc. Правильный запрос передаётся в `tasks`, `taskTree` и `columnTasks` аргументом `query`, неверный не применяется. Текст запроса хранится в `WorkspaceTabViewState`: один для списка и отдельный для каждой доски. Пока в запросе есть `| sort`, кнопки сортировки скрыты. Синтаксис описан в `docs/wiki/Строка-запроса.md`.
+
 ## Иконка
 
 Исходники иконок в `Design/icon/`: `icon-dark.svg` для тёмной темы и `icon-light.svg` для светлой. Растровые копии лежат в `Sources/Tasker/Assets.xcassets`: набор `AppIcon` (светлая, все размеры macOS) и наборы `IconDark`/`IconLight`, между которыми приложение переключает иконку в Dock вслед за темой системы.

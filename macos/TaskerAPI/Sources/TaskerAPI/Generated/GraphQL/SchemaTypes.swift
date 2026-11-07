@@ -56,6 +56,16 @@ public enum TaskFieldSource: String, GraphQLEnum, CaseIterable {
     case own
 }
 
+public enum TaskQuerySuggestionKind: String, GraphQLEnum, CaseIterable {
+    case property
+    case field
+    case link
+    case function
+    case `operator`
+    case value
+    case keyword
+}
+
 public enum TaskSearchField: String, GraphQLEnum, CaseIterable {
     case number
     case title

@@ -76,7 +76,12 @@ struct TaskListScreen: View {
                 if let series = session.seriesPage {
                     SeriesPageHeader(client: client, project: project.id, series: series) { model.scheduleRefresh() }
                 }
-                TaskListQueryBar(model: model)
+                TaskListQueryBar(model: model) {
+                    if let query = session.listQuery {
+                        TaskQueryBarField(model: query)
+                    }
+                }
+                .zIndex(1)
                 ZStack {
                     TaskOutline(model: model, localizer: l) { session.notice($0) }
                     TaskListStateOverlay(model: model)
@@ -121,7 +126,7 @@ private struct TaskListStateOverlay: View {
                 VStack(spacing: DesignSpacing.gap10) {
                     MockupIconView(icon: .inbox, size: 28)
                         .foregroundStyle(DesignColor.dim.color)
-                    Text(l.string(model.filter == .none ? .taskListEmptyProject : .taskListEmpty))
+                    Text(l.string(model.filter == .none && model.query.isEmpty ? .taskListEmptyProject : .taskListEmpty))
                         .foregroundStyle(DesignColor.mut.color)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -140,7 +145,9 @@ struct TaskListQueryBar<Query: View>: View {
         VStack(alignment: .leading, spacing: DesignSpacing.gap6) {
             HStack(alignment: .center, spacing: DesignSpacing.gap8) {
                 query()
-                TaskSortPills(model: model)
+                if !model.queryHasSort {
+                    TaskSortPills(model: model)
+                }
                 Spacer(minLength: 0)
                 if let total = model.totalCount {
                     Text(l.string(.taskListFound, l.number(Double(total))))
@@ -209,6 +216,7 @@ struct TaskListTopActions: View {
     @Environment(TaskCreationCoordinator.self) private var creation
     @Environment(\.localizer) private var l
     @State private var sorting = false
+    @Environment(WorkspaceTabSession.self) private var session
 
     var body: some View {
         if let project = selection.current?.id {
@@ -229,6 +237,8 @@ struct TaskListTopActions: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .disabled(session.listQuery?.hasSort ?? false)
+                .opacity(session.listQuery?.hasSort == true ? 0.4 : 1)
                 .popover(isPresented: $sorting, arrowEdge: .bottom) {
                     TaskSortPicker(project: project)
                 }

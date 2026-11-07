@@ -80,7 +80,7 @@ internal sealed class ProjectType : ObjectType<Project>
         descriptor.Read("tasks").TaskFilters()
             .Returns<PageType<TaskListItem>>()
             .Resolve(async x => await x.Service<TaskService>().List(
-                x.Parent<Project>().Id, x.TaskFilter(), x.FieldFilters(), x.Page(), x.DescriptionLength(), x.RequestAborted, x.Sort()));
+                x.Parent<Project>().Id, x.TaskFilter(), x.FieldFilters(), x.Page(), x.DescriptionLength(), x.RequestAborted, x.Sort(), x.QueryText()));
 
         descriptor.Read("taskTree").TaskFilters()
             .Argument("parentId", x => x.Type<UuidType>())
@@ -88,7 +88,14 @@ internal sealed class ProjectType : ObjectType<Project>
             .Returns<TaskTreeListType>()
             .Resolve(async x => await x.Service<TaskService>().ListTree(
                 x.Parent<Project>().Id, x.TaskFilter(), x.FieldFilters(), x.Page(), x.DescriptionLength(), x.RequestAborted, x.Sort(),
-                x.ArgumentValue<Guid?>("parentId"), x.ArgumentValue<int?>("levels") ?? TaskHierarchy.MaxDepth));
+                x.ArgumentValue<Guid?>("parentId"), x.ArgumentValue<int?>("levels") ?? TaskHierarchy.MaxDepth, x.QueryText()));
+
+        descriptor.Read("taskQueryAnalysis")
+            .Argument("text", x => x.Type<NonNullType<StringType>>())
+            .Argument("cursor", x => x.Type<IntType>())
+            .Type<NonNullType<TaskQueryAnalysisType>>()
+            .Resolve(async x => await x.Service<TaskService>().AnalyzeQuery(
+                x.Parent<Project>().Id, x.ArgumentValue<string>("text"), x.ArgumentValue<int?>("cursor"), x.RequestAborted));
 
         descriptor.Read("taskSearch")
             .Argument("query", x => x.Type<NonNullType<StringType>>())
@@ -157,7 +164,7 @@ internal sealed class ProjectType : ObjectType<Project>
         descriptor.Read("columnTasks").Id("boardId").Id("columnId").TaskQuery()
             .Type<PageType<TaskListItem>>()
             .Resolve(async x => await x.Service<BoardService>().GetColumnTasks(
-                x.Parent<Project>().Id, x.Id("boardId"), x.Id("columnId"), x.Page(), x.RequestAborted, x.FieldFilters(), x.DescriptionLength(), x.Sort()));
+                x.Parent<Project>().Id, x.Id("boardId"), x.Id("columnId"), x.Page(), x.RequestAborted, x.FieldFilters(), x.DescriptionLength(), x.Sort(), x.QueryText()));
 
         descriptor.Read("locks").Paged()
             .Returns<PageType<LockInfo>>()

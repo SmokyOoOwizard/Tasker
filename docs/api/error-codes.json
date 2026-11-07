@@ -369,6 +369,200 @@
       ],
       "usages": false
     },
+    "query.ambiguousField": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.arrayNotAllowed": {
+      "status": 400,
+      "params": [
+        "op"
+      ],
+      "usages": false
+    },
+    "query.badValue": {
+      "status": 400,
+      "params": [
+        "field",
+        "value"
+      ],
+      "usages": false
+    },
+    "query.emptyArray": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.expectedCondition": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.expectedOperator": {
+      "status": 400,
+      "params": [
+        "path"
+      ],
+      "usages": false
+    },
+    "query.expectedProperty": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.expectedSort": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.expectedSortKey": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.expectedValue": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.freeText": {
+      "status": 400,
+      "params": [
+        "text"
+      ],
+      "usages": false
+    },
+    "query.functionArgument": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.notSortable": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.operatorNotAllowed": {
+      "status": 400,
+      "params": [
+        "op",
+        "target"
+      ],
+      "usages": false
+    },
+    "query.sortOnly": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.sortRepeated": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.tooComplex": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.unclosedBracket": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.unclosedParen": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.unclosedString": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
+    "query.unexpected": {
+      "status": 400,
+      "params": [
+        "text"
+      ],
+      "usages": false
+    },
+    "query.unknownEnumValue": {
+      "status": 400,
+      "params": [
+        "field",
+        "value"
+      ],
+      "usages": false
+    },
+    "query.unknownField": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.unknownFunction": {
+      "status": 400,
+      "params": [
+        "name",
+        "target"
+      ],
+      "usages": false
+    },
+    "query.unknownLinkType": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.unknownProperty": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.unknownSeries": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.unknownStatus": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.unknownType": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "query.valueNeedsQuotes": {
+      "status": 400,
+      "params": [
+        "text"
+      ],
+      "usages": false
+    },
     "series.planChanged": {
       "status": 409,
       "params": [],

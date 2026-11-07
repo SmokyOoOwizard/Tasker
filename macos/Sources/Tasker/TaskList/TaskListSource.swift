@@ -4,6 +4,7 @@ import TaskerAPI
 struct TaskListRequest: Hashable, Sendable {
     var filter: TaskListFilter = .none
     var sort: [TaskSortKey] = []
+    var query: String?
 }
 
 struct TaskRowPage: Hashable, Sendable {
@@ -33,7 +34,7 @@ struct GraphQLTaskListSource: TaskListSource {
     func flat(project: UUID, request: TaskListRequest, offset: Int, limit: Int) async throws -> TaskRowPage {
         let query = TaskListPageQuery(
             projectId: project, statusIds: request.filter.statusIds, typeIds: request.filter.typeIds, seriesIds: request.filter.seriesIds,
-            field: request.filter.field, sort: TaskSort.string(request.sort), offset: offset, limit: limit)
+            field: request.filter.field, sort: TaskSort.string(request.sort), query: request.query, offset: offset, limit: limit)
         guard let page = try await client.graphQL.fetch(query).project?.tasks else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString)) }
         return TaskRowPage(rows: page.data.map(TaskRow.init), totalCount: page.totalCount, levelCount: page.totalCount)
     }
@@ -41,7 +42,7 @@ struct GraphQLTaskListSource: TaskListSource {
     func tree(project: UUID, request: TaskListRequest, parent: UUID?, offset: Int, limit: Int) async throws -> TaskRowPage {
         let query = TaskTreePageQuery(
             projectId: project, statusIds: request.filter.statusIds, typeIds: request.filter.typeIds, seriesIds: request.filter.seriesIds,
-            field: request.filter.field, sort: TaskSort.string(request.sort), parentId: parent, levels: 1, offset: offset, limit: limit)
+            field: request.filter.field, sort: TaskSort.string(request.sort), query: request.query, parentId: parent, levels: 1, offset: offset, limit: limit)
         guard let page = try await client.graphQL.fetch(query).project?.taskTree else { throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString)) }
         return TaskRowPage(rows: page.data.map(TaskRow.init), totalCount: page.totalCount, levelCount: page.topLevelCount)
     }
@@ -50,7 +51,7 @@ struct GraphQLTaskListSource: TaskListSource {
         let statuses = request.filter.statusIds.map { $0.contains(status) ? [status] : [] } ?? [status]
         if statuses.isEmpty { return 0 }
         let query = TaskListCountQuery(
-            projectId: project, statusIds: statuses, typeIds: request.filter.typeIds, seriesIds: request.filter.seriesIds, field: request.filter.field)
+            projectId: project, statusIds: statuses, typeIds: request.filter.typeIds, seriesIds: request.filter.seriesIds, field: request.filter.field, query: request.query)
         return try await client.graphQL.fetch(query).project?.tasks.totalCount ?? 0
     }
 

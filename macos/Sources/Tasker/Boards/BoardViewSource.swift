@@ -35,7 +35,7 @@ struct BoardMoved: Hashable, Sendable {
 protocol BoardViewSource: Sendable {
     func vocabulary(project: UUID) async throws -> TaskListVocabulary
     func board(project: UUID, id: UUID) async throws -> BoardInfo?
-    func columnPage(project: UUID, board: UUID, column: UUID, field: [String], offset: Int, limit: Int) async throws -> BoardRowPage
+    func columnPage(project: UUID, board: UUID, column: UUID, query: String?, offset: Int, limit: Int) async throws -> BoardRowPage
     func taskPage(project: UUID, typeIds: [UUID], offset: Int, limit: Int) async throws -> BoardRowPage
     func ancestors(project: UUID, ids: [UUID]) async throws -> [BoardParentRef]
     func move(project: UUID, board: UUID, column: UUID, task: UUID, version: String) async throws -> BoardMoved
@@ -60,9 +60,9 @@ struct GraphQLBoardViewSource: BoardViewSource {
         return BoardInfo(id: record.id, name: record.draft.name, setIds: record.draft.setIds, columns: columns)
     }
 
-    func columnPage(project: UUID, board: UUID, column: UUID, field: [String], offset: Int, limit: Int) async throws -> BoardRowPage {
-        let query = BoardColumnTasksQuery(projectId: project, boardId: board, columnId: column, offset: offset, limit: limit)
-        guard let page = try await client.graphQL.fetch(query).project?.columnTasks else {
+    func columnPage(project: UUID, board: UUID, column: UUID, query: String?, offset: Int, limit: Int) async throws -> BoardRowPage {
+        let operation = BoardColumnTasksQuery(projectId: project, boardId: board, columnId: column, query: query, offset: offset, limit: limit)
+        guard let page = try await client.graphQL.fetch(operation).project?.columnTasks else {
             throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: column.uuidString))
         }
         return BoardRowPage(rows: page.data.map(TaskRow.init), total: page.totalCount)

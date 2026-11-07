@@ -470,11 +470,11 @@ public struct BoardLockQuery: GraphQLQuery {
 public struct BoardColumnTasksQuery: GraphQLQuery {
     public static let operationName = "BoardColumnTasks"
     public static let document = """
-    query BoardColumnTasks($projectId: UUID!, $boardId: UUID!, $columnId: UUID!, $field: [String!], $offset: Int, $limit: Int) {
+    query BoardColumnTasks($projectId: UUID!, $boardId: UUID!, $columnId: UUID!, $query: String, $offset: Int, $limit: Int) {
       project(id: $projectId) {
         __typename
         id
-        columnTasks(boardId: $boardId, columnId: $columnId, field: $field, offset: $offset, limit: $limit, descriptionLength: 0) {
+        columnTasks(boardId: $boardId, columnId: $columnId, query: $query, offset: $offset, limit: $limit, descriptionLength: 0) {
           __typename
           totalCount
           offset
@@ -521,7 +521,7 @@ public struct BoardColumnTasksQuery: GraphQLQuery {
         GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
             GraphQLField("__typename"),
             GraphQLField("id"),
-            GraphQLField("columnTasks", arguments: ["boardId": .variable("boardId"), "columnId": .variable("columnId"), "field": .variable("field"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+            GraphQLField("columnTasks", arguments: ["boardId": .variable("boardId"), "columnId": .variable("columnId"), "query": .variable("query"), "offset": .variable("offset"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
                 GraphQLField("__typename"),
                 GraphQLField("totalCount"),
                 GraphQLField("offset"),
@@ -562,15 +562,15 @@ public struct BoardColumnTasksQuery: GraphQLQuery {
     public var projectId: UUID
     public var boardId: UUID
     public var columnId: UUID
-    public var field: [String]?
+    public var query: String?
     public var offset: Int?
     public var limit: Int?
 
-    public init(projectId: UUID, boardId: UUID, columnId: UUID, field: [String]? = nil, offset: Int? = nil, limit: Int? = nil) {
+    public init(projectId: UUID, boardId: UUID, columnId: UUID, query: String? = nil, offset: Int? = nil, limit: Int? = nil) {
         self.projectId = projectId
         self.boardId = boardId
         self.columnId = columnId
-        self.field = field
+        self.query = query
         self.offset = offset
         self.limit = limit
     }
@@ -580,7 +580,7 @@ public struct BoardColumnTasksQuery: GraphQLQuery {
         result["projectId"] = projectId.graphQLValue
         result["boardId"] = boardId.graphQLValue
         result["columnId"] = columnId.graphQLValue
-        if let field { result["field"] = field.graphQLValue }
+        if let query { result["query"] = query.graphQLValue }
         if let offset { result["offset"] = offset.graphQLValue }
         if let limit { result["limit"] = limit.graphQLValue }
         return result

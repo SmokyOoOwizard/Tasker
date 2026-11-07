@@ -29,6 +29,7 @@ internal static class GraphFields
         field
             .Argument("field", x => x.Type<ListType<NonNullType<StringType>>>())
             .Argument("sort", x => x.Type<StringType>())
+            .Argument("query", x => x.Type<StringType>())
             .Paged()
             .Described();
 
@@ -61,6 +62,8 @@ internal static class GraphFields
     public static string[]? FieldFilters(this IResolverContext context) => context.ArgumentValue<string[]?>("field");
 
     public static string? Sort(this IResolverContext context) => context.ArgumentValue<string?>("sort");
+
+    public static string? QueryText(this IResolverContext context) => context.ArgumentValue<string?>("query");
 
     public static TaskerMode Mode(this IResolverContext context) => context.Service<TaskerHost>().Mode;
 

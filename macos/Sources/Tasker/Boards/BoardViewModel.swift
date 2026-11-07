@@ -53,9 +53,9 @@ final class BoardViewModel {
     private(set) var refusal: BoardRefusal?
     var dragging: UUID?
 
-    var fieldFilter: [String] = [] {
+    var query = "" {
         didSet {
-            if started, fieldFilter != oldValue { reload() }
+            if started, query != oldValue { reload() }
         }
     }
 
@@ -160,7 +160,7 @@ final class BoardViewModel {
             let states = try await loadColumns(info, previous: board?.id == info.id ? previous : [:])
             let typeIds = vocabulary.typeOrder.filter { id in vocabulary.types[id].map { info.setIds.contains($0.statusSetId) } ?? false }
             var outside = 0
-            if !typeIds.isEmpty, fieldFilter.isEmpty {
+            if !typeIds.isEmpty, query.isEmpty {
                 let all = try await source.taskPage(project: project, typeIds: typeIds, offset: 0, limit: 1).total
                 outside = max(0, all - states.reduce(0) { $0 + $1.total })
             }
@@ -213,18 +213,18 @@ final class BoardViewModel {
         let source = source
         let project = project
         let board = info.id
-        let field = fieldFilter
+        let query = query.isEmpty ? nil : query
         return try await withThrowingTaskGroup(of: (Int, BoardColumnState).self) { group in
             for (index, column) in info.columns.enumerated() {
                 let old = previous[column.id]
                 group.addTask {
                     var state = BoardColumnState(info: column, expanded: old?.expanded ?? false)
-                    let first = try await source.columnPage(project: project, board: board, column: column.id, field: field, offset: 0, limit: Self.pageSize)
+                    let first = try await source.columnPage(project: project, board: board, column: column.id, query: query, offset: 0, limit: Self.pageSize)
                     state.rows = first.rows
                     state.total = first.total
                     if state.expanded {
                         while state.rows.count < state.total {
-                            let page = try await source.columnPage(project: project, board: board, column: column.id, field: field, offset: state.rows.count, limit: Self.fetchSize)
+                            let page = try await source.columnPage(project: project, board: board, column: column.id, query: query, offset: state.rows.count, limit: Self.fetchSize)
                             if page.rows.isEmpty { break }
                             state.rows += page.rows
                             state.total = page.total
@@ -248,7 +248,7 @@ final class BoardViewModel {
             do {
                 var state = self.columns.first { $0.id == column } ?? self.columns[index]
                 while state.rows.count < state.total {
-                    let page = try await self.source.columnPage(project: self.project, board: board.id, column: column, field: self.fieldFilter, offset: state.rows.count, limit: Self.fetchSize)
+                    let page = try await self.source.columnPage(project: self.project, board: board.id, column: column, query: self.query.isEmpty ? nil : self.query, offset: state.rows.count, limit: Self.fetchSize)
                     if page.rows.isEmpty { break }
                     state.rows += page.rows
                     state.total = page.total
@@ -342,7 +342,7 @@ final class BoardViewModel {
                         var ids: Set<UUID> = []
                         var offset = 0
                         while true {
-                            let page = try await source.columnPage(project: project, board: board.id, column: column.id, field: [], offset: offset, limit: Self.fetchSize)
+                            let page = try await source.columnPage(project: project, board: board.id, column: column.id, query: nil, offset: offset, limit: Self.fetchSize)
                             ids.formUnion(page.rows.map(\.id))
                             offset += page.rows.count
                             if page.rows.isEmpty || offset >= page.total { return ids }

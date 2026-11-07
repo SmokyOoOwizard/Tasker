@@ -20,6 +20,8 @@ final class WorkspaceTabSession: Identifiable {
     var seriesPrefix: String?
     private(set) var boardEditor: BoardEditorModel?
     private(set) var boardModel: BoardViewModel?
+    private(set) var listQuery: TaskQueryModel?
+    private(set) var boardQuery: TaskQueryModel?
     private(set) var boardId: UUID?
     var settingsPage = SettingsPage.statuses
     var adminPage = AdminPage.problems
@@ -33,6 +35,7 @@ final class WorkspaceTabSession: Identifiable {
 
     @ObservationIgnored private weak var layout: WorkspaceLayout?
     @ObservationIgnored private var restored: WorkspaceTabViewState
+    @ObservationIgnored private var boardQueryOwner: String?
     @ObservationIgnored private var lastProject: UUID?
     @ObservationIgnored private(set) var listModel: TaskListModel?
     @ObservationIgnored private var listClient: TaskerAPIClient?
@@ -55,6 +58,7 @@ final class WorkspaceTabSession: Identifiable {
         settings = TaskListSettings(defaults: defaults, tab: id)
         selection = ProjectSelection(tab: id, layout: layout, live: live)
         restored = tab?.view ?? WorkspaceTabViewState()
+        boardId = restored.board
         lastProject = tab?.project
         navigator.restore(peek: restored.peek, card: restored.card, history: restored.history)
         listSelection = restored.selectedRow.flatMap { $0.split(separator: "/").last }.flatMap { UUID(uuidString: String($0)) }
@@ -90,6 +94,9 @@ final class WorkspaceTabSession: Identifiable {
             creation.dismiss()
             listSelection = nil
             taskRequest = nil
+            listQuery = nil
+            boardQuery = nil
+            boardQueryOwner = nil
             restored = WorkspaceTabViewState()
             listModel?.stop()
             listModel = nil
@@ -119,6 +126,15 @@ final class WorkspaceTabSession: Identifiable {
         model.localizer = localizer
         model.selectedRow = restored.selectedRow
         model.scrollY = restored.scrollY
+        let query = TaskQueryModel(project: project, source: GraphQLTaskQuerySource(client: client), text: restored.listQuery ?? "")
+        model.query = query.applied
+        query.onApply = { [weak model] text, hasSort in
+            model?.query = text
+            model?.queryHasSort = hasSort
+        }
+        query.onTextChange = { [weak layout] in layout?.scheduleSave() }
+        listQuery = query
+        query.start()
         model.onNotice = { [weak self] text in self?.notice(text) }
         model.onFailure = { [weak self] text in self?.failure(text) }
         model.onOpen = { [navigator] row in navigator.open(row.id) }
@@ -173,8 +189,17 @@ final class WorkspaceTabSession: Identifiable {
             return boardModel
         }
         boardModel?.stop()
+        rememberBoardQuery()
         let model = BoardViewModel(project: project, board: boardId, source: GraphQLBoardViewSource(client: client))
         model.localizer = localizer
+        let key = boardQueryKey
+        let query = TaskQueryModel(project: project, source: GraphQLTaskQuerySource(client: client), text: restored.boardQueries?[key] ?? "")
+        model.query = query.applied
+        query.onApply = { [weak model] text, _ in model?.query = text }
+        query.onTextChange = { [weak layout] in layout?.scheduleSave() }
+        boardQuery = query
+        boardQueryOwner = key
+        query.start()
         model.onNotice = { [weak self] text in self?.notice(text) }
         model.onFailure = { [weak self] text in self?.failure(text) }
         boardModel = model
@@ -190,7 +215,19 @@ final class WorkspaceTabSession: Identifiable {
         boardModel?.stop()
     }
 
+    private var boardQueryKey: String { boardId?.uuidString ?? "" }
+
+    private func rememberBoardQuery() {
+        guard let boardQuery, let boardQueryOwner else { return }
+        var saved = restored.boardQueries ?? [:]
+        saved[boardQueryOwner] = boardQuery.text.isEmpty ? nil : boardQuery.text
+        restored.boardQueries = saved.isEmpty ? nil : saved
+    }
+
     private func closeBoard() {
+        rememberBoardQuery()
+        boardQuery = nil
+        boardQueryOwner = nil
         boardModel?.stop()
         boardModel = nil
         boardClient = nil
@@ -304,13 +341,29 @@ final class WorkspaceTabSession: Identifiable {
         listModel?.stop()
     }
 
+    private var currentListQuery: String? {
+        let text = listQuery?.text ?? restored.listQuery ?? ""
+        return text.isEmpty ? nil : text
+    }
+
+    private var currentBoardQueries: [String: String]? {
+        var saved = restored.boardQueries ?? [:]
+        if let boardQuery, let boardQueryOwner {
+            saved[boardQueryOwner] = boardQuery.text.isEmpty ? nil : boardQuery.text
+        }
+        return saved.isEmpty ? nil : saved
+    }
+
     var viewState: WorkspaceTabViewState {
         WorkspaceTabViewState(
             peek: navigator.peek,
             card: navigator.card,
             history: navigator.history,
             selectedRow: listModel?.selectedRow ?? restored.selectedRow,
-            scrollY: listModel?.scrollY ?? restored.scrollY
+            scrollY: listModel?.scrollY ?? restored.scrollY,
+            listQuery: currentListQuery,
+            boardQueries: currentBoardQueries,
+            board: boardId
         )
     }
 

@@ -95,6 +95,7 @@ internal class TaskStorage(TaskerDirectory directory, WorkspaceIndex index) : IT
         FieldIds = filter?.FieldIds,
         EnumIds = filter?.EnumIds,
         FieldValues = filter?.FieldValues,
+        Predicate = filter?.Predicate,
         Sort = filter?.Sort
     };
 }
