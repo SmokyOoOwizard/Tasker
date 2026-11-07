@@ -8,6 +8,8 @@ struct BoardCardHandle: NSViewRepresentable {
     let image: @MainActor () -> NSImage?
     let click: @MainActor () -> Void
     let open: @MainActor () -> Void
+    var parents: [UUID] = []
+    let openParent: @MainActor (UUID) -> Void
     let begin: @MainActor () -> Void
     let end: @MainActor () -> Void
 
@@ -21,6 +23,8 @@ struct BoardCardHandle: NSViewRepresentable {
         view.imageProvider = image
         view.onClick = click
         view.onOpen = open
+        view.parents = parents
+        view.onOpenParent = openParent
         view.onBegin = begin
         view.onEnd = end
     }
@@ -32,6 +36,8 @@ final class BoardCardHandleView: NSView, NSDraggingSource {
     var imageProvider: @MainActor () -> NSImage? = { nil }
     var onClick: @MainActor () -> Void = {}
     var onOpen: @MainActor () -> Void = {}
+    var parents: [UUID] = []
+    var onOpenParent: @MainActor (UUID) -> Void = { _ in }
     var onBegin: @MainActor () -> Void = {}
     var onEnd: @MainActor () -> Void = {}
 
@@ -54,6 +60,12 @@ final class BoardCardHandleView: NSView, NSDraggingSource {
 
     override func mouseUp(with event: NSEvent) {
         guard !dragging else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        if let index = BoardParentLayout.line(at: point.y, count: parents.count) {
+            let parent = parents[index]
+            MainActor.assumeIsolated { onOpenParent(parent) }
+            return
+        }
         MainActor.assumeIsolated {
             if event.clickCount >= 2 { onOpen() } else { onClick() }
         }
@@ -81,6 +93,21 @@ final class BoardCardHandleView: NSView, NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         MainActor.assumeIsolated { onEnd() }
+    }
+}
+
+enum BoardParentLayout {
+    static let top: CGFloat = 10
+    static let lineHeight: CGFloat = 16
+    static let spacing: CGFloat = 2
+    static let gap: CGFloat = 7
+
+    static func line(at y: CGFloat, count: Int) -> Int? {
+        guard count > 0, y >= top else { return nil }
+        let step = lineHeight + spacing
+        let index = Int((y - top) / step)
+        guard index < count, (y - top) - CGFloat(index) * step <= lineHeight else { return nil }
+        return index
     }
 }
 

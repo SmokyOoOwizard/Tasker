@@ -11,6 +11,8 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
     private var _failure: TaskerAPIError?
     private var _moves: [String] = []
     private var _fields: [[String]] = []
+    private var _refs: [BoardParentRef] = []
+    private var _ancestorCalls: [[UUID]] = []
     let vocabularyValue: TaskListVocabulary
     let info: BoardInfo
     let drop: [UUID: UUID]
@@ -50,6 +52,18 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
         held.forEach { $0.resume() }
     }
     var fields: [[String]] { lock.withLock { _fields } }
+
+    var refs: [BoardParentRef] {
+        get { lock.withLock { _refs } }
+        set { lock.withLock { _refs = newValue } }
+    }
+
+    var ancestorCalls: [[UUID]] { lock.withLock { _ancestorCalls } }
+
+    func ancestors(project: UUID, ids: [UUID]) async throws -> [BoardParentRef] {
+        lock.withLock { _ancestorCalls.append(ids) }
+        return refs
+    }
 
     func vocabulary(project: UUID) async throws -> TaskListVocabulary { vocabularyValue }
 
@@ -337,5 +351,130 @@ struct BoardViewTests {
         model.start()
         await until { model.phase == .ready }
         #expect(model.board?.id == board)
+    }
+
+    private func ref(_ number: Int, parents: [UUID] = []) -> BoardParentRef {
+        BoardParentRef(
+            id: UUID(uuidString: String(format: "%08d-0000-0000-0000-000000000000", number))!, title: "Эпик \(number)",
+            seriesNumbers: [TaskSeriesRef(seriesId: series, number: number)], parentIds: parents)
+    }
+
+    private func child(_ number: Int, parents: [BoardParentRef], status: UUID) -> TaskRow {
+        var value = row(number, status: status)
+        value.parentIds = parents.map(\.id)
+        return value
+    }
+
+    @Test func parentsAreLoadedInOneRequestForAllCards() async {
+        let epic = ref(900)
+        let stub = source((1...30).map { child($0, parents: [epic], status: todo) } + [row(99, status: doing)])
+        stub.refs = [epic]
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        #expect(stub.ancestorCalls.count == 1)
+        #expect(stub.ancestorCalls[0].count == 30)
+        let chains = model.parentChains(of: model.columns[0].rows[0])
+        #expect(chains.chains.map { $0.nearest.title } == ["Эпик 900"])
+        #expect(model.parentChains(of: model.columns[1].rows[0]) == .none)
+    }
+
+    @Test func noParentsMeansNoRequest() async {
+        let stub = source([row(1, status: todo), row(2, status: doing)])
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        #expect(stub.ancestorCalls.isEmpty)
+    }
+
+    @Test func renamingTheParentUpdatesTheCardOnRefresh() async {
+        let epic = ref(900)
+        let stub = source([child(1, parents: [epic], status: todo)])
+        stub.refs = [epic]
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        var renamed = epic
+        renamed.title = "Новое имя"
+        stub.refs = [renamed]
+        model.scheduleRefresh()
+        await until { model.parentChains(of: model.columns[0].rows[0]).chains.first?.nearest.title == "Новое имя" }
+        #expect(model.parentChains(of: model.columns[0].rows[0]).chains.first?.nearest.title == "Новое имя")
+    }
+
+    @Test func removingTheLinkRemovesTheParentOnRefresh() async {
+        let epic = ref(900)
+        let stub = source([child(1, parents: [epic], status: todo)])
+        stub.refs = [epic]
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        stub.rows = [row(1, status: todo)]
+        model.scheduleRefresh()
+        await until { model.parentChains(of: model.columns[0].rows[0]) == .none }
+        #expect(model.parentChains(of: model.columns[0].rows[0]) == .none)
+    }
+
+    @Test func draggingKeepsTheParentLine() async {
+        let epic = ref(900)
+        let stub = source([child(1, parents: [epic], status: todo)])
+        stub.refs = [epic]
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        let id = model.columns[0].rows[0].id
+        model.move(task: id, to: doingColumn)
+        await until { model.columns[1].rows.contains { $0.id == id } }
+        let moved = model.columns[1].rows.first { $0.id == id }
+        #expect(moved.map { model.parentChains(of: $0).chains.count } == 1)
+    }
+
+    @Test func chainsGoToTheTopAndFollowTheFirstParent() {
+        let top = ref(1)
+        let middle = ref(2, parents: [top.id])
+        let other = ref(3)
+        let leaf = ref(4, parents: [middle.id, other.id])
+        let refs = Dictionary(uniqueKeysWithValues: [top, middle, other, leaf].map { ($0.id, $0) })
+        let result = BoardParentChains.build(parentIds: [leaf.id, other.id], refs: refs)
+        #expect(result.chains.map { $0.items.map(\.id) } == [[top.id, middle.id, leaf.id], [other.id]])
+        #expect(result.more == 0)
+    }
+
+    @Test func moreThanTwoParentsAreCounted() {
+        let items = (1...5).map { ref($0) }
+        let refs = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        let result = BoardParentChains.build(parentIds: items.map(\.id), refs: refs)
+        #expect(result.chains.count == 2)
+        #expect(result.more == 3)
+    }
+
+    @Test func cyclesAndMissingParentsDoNotBreakChains() {
+        var first = ref(1)
+        var second = ref(2)
+        first.parentIds = [second.id]
+        second.parentIds = [first.id]
+        let missing = UUID()
+        let refs = [first.id: first, second.id: second]
+        let result = BoardParentChains.build(parentIds: [missing, first.id], refs: refs)
+        #expect(result.chains.map { $0.items.map(\.id) } == [[second.id, first.id]])
+    }
+
+    @Test func clickOnAParentLineIsFoundByHeight() {
+        #expect(BoardParentLayout.line(at: 5, count: 2) == nil)
+        #expect(BoardParentLayout.line(at: BoardParentLayout.top + 4, count: 2) == 0)
+        #expect(BoardParentLayout.line(at: BoardParentLayout.top + BoardParentLayout.lineHeight + BoardParentLayout.spacing + 4, count: 2) == 1)
+        #expect(BoardParentLayout.line(at: BoardParentLayout.top + BoardParentLayout.lineHeight + 1, count: 2) == nil)
+        #expect(BoardParentLayout.line(at: 200, count: 2) == nil)
+        #expect(BoardParentLayout.line(at: 12, count: 0) == nil)
+    }
+
+    @Test func parentWithoutASeriesNumberHasNoReference() async {
+        let stub = source([])
+        let model = model(stub)
+        model.start()
+        await until { model.phase == .ready }
+        let bare = BoardParentRef(id: UUID(), title: "Исследование", seriesNumbers: [], parentIds: [])
+        #expect(model.parentReference(bare) == nil)
+        #expect(model.parentReference(ref(7)) == "TSK-7")
     }
 }

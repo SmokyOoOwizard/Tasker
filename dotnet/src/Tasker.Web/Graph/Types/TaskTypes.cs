@@ -132,3 +132,16 @@ internal sealed class TaskDetailsType : ObjectType<TaskDetails>
         descriptor.Field(x => x.LinkCount);
     }
 }
+
+internal sealed class TaskRefType : ObjectType<TaskRef>
+{
+    protected override void Configure(IObjectTypeDescriptor<TaskRef> descriptor)
+    {
+        descriptor.Name("TaskRef");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.Id);
+        descriptor.Field(x => x.Title);
+        descriptor.Field(x => x.SeriesNumbers);
+        descriptor.Field(x => x.ParentIds);
+    }
+}

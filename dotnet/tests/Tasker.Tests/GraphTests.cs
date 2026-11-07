@@ -84,6 +84,35 @@ public class GraphTests
     }
 
     [Fact]
+    public async Task Task_ancestors_come_in_one_query_with_all_levels()
+    {
+        await using var api = await ApiHost.Start("files");
+        using var http = new HttpClient();
+        async Task<string> Make(string title) => (await api.Post(api.P("/tasks"), new { title, typeId = api.TypeId })).Body!["id"]!.GetValue<string>();
+        var top = await Make("Top");
+        var mid = await Make("Mid");
+        var other = await Make("Other");
+        var leaf = await Make("Leaf");
+        var lone = await Make("Lone");
+        var parentType = (await api.Get(api.P("/link-types"))).Body!["data"]!.AsArray()
+            .Single(x => x!["name"]!.GetValue<string>() == "Parent/Child")!["id"]!.GetValue<string>();
+        foreach (var (from, to) in new[] { (top, mid), (mid, leaf), (other, leaf) })
+            Assert.Equal(HttpStatusCode.OK, (await api.Post(api.P($"/tasks/{from}/links"), new { typeId = parentType, targetId = to })).Status);
+
+        const string query = "query($p: UUID!, $ids: [UUID!]!) { project(id: $p) { taskAncestors(ids: $ids) { id title parentIds seriesNumbers { number } } } }";
+        var (status, body) = await GraphReads.Query(http, api.BaseUrl, query, new { p = api.ProjectId, ids = new[] { leaf, lone } });
+        Assert.Equal(HttpStatusCode.OK, status);
+        var found = body!["data"]!["project"]!["taskAncestors"]!.AsArray();
+        Assert.Equal(new[] { top, mid, other }.Order().ToArray(), found.Select(x => x!["id"]!.GetValue<string>()).Order().ToArray());
+        var midRef = found.Single(x => x!["id"]!.GetValue<string>() == mid)!;
+        Assert.Equal("Mid", midRef["title"]!.GetValue<string>());
+        Assert.Equal([top], midRef["parentIds"]!.AsArray().Select(x => x!.GetValue<string>()).ToArray());
+
+        (status, body) = await GraphReads.Query(http, api.BaseUrl, query, new { p = api.ProjectId, ids = new[] { lone } });
+        Assert.Empty(body!["data"]!["project"]!["taskAncestors"]!.AsArray());
+    }
+
+    [Fact]
     public async Task Errors_carry_the_code_and_status_of_the_rest_api()
     {
         await using var api = await ApiHost.Start("files");
