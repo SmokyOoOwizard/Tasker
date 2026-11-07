@@ -4,10 +4,13 @@ title: 'Сервер и демон: универсальный нечёткий 
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 943a8e7d-9573-4e9f-a4e4-7f67d8473c7a
 createdAt: 2026-11-05T10:24:51.4460840+00:00
-updatedAt: 2026-11-05T10:33:11.3410610+00:00
+updatedAt: 2026-11-07T02:39:53.9753310+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 225
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 3eb67e18-8e2e-42ea-a13a-ce37befe55b4
 description: |-
   Что происходит
   В поиске палитры macOS есть задача TSK-133, но по запросу «133» она не показывается.
