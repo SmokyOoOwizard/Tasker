@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Tasker.Core.Boards;
+using Tasker.Core.Comments;
 using Tasker.Core.Fields;
 using Tasker.Core.Links;
 using Tasker.Core.Projects;
@@ -28,6 +29,7 @@ namespace Tasker.Storage.Files.Index;
 [JsonSerializable(typeof(LinkType))]
 [JsonSerializable(typeof(FieldDefinition))]
 [JsonSerializable(typeof(FieldEnum))]
+[JsonSerializable(typeof(TaskComment))]
 internal sealed partial class IndexJsonContext : JsonSerializerContext
 {
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, typeof(T), Default);

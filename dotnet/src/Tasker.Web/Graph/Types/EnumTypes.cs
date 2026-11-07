@@ -20,6 +20,8 @@ internal static class TaskerTypes
     public static IRequestExecutorBuilder AddTaskerTypes(this IRequestExecutorBuilder builder) =>
         builder
             .AddType<ProjectType>()
+            .AddType<TaskCommentViewType>()
+            .AddType<CommentAuthorType>()
             .AddType<ProjectStatsType>()
             .AddType<RegistrationType>()
             .AddType<StatusType>()

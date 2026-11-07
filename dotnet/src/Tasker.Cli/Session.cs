@@ -32,7 +32,8 @@ internal sealed class Session : IAsyncDisposable
     {
         _files = files;
         _services = new CoreServices(files.Storage, new NoCurrentUser(), new OpenProjectAccess(), new UserOptions(RequireCredentials: false),
-            new SettingsLocalEditor(new SettingsStore(), "cli", " (console)"));
+            new SettingsLocalEditor(new SettingsStore(), "cli", " (console)"),
+            localHuman: new LocalHuman(new SettingsLocalPerson(new SettingsStore(), TimeProvider.System)));
     }
 
     public T Get<T>() where T : class => GetOptional<T>() ?? throw new InvalidOperationException($"{typeof(T).Name} is not available in this workspace");

@@ -75,8 +75,8 @@
     "file": "description-two-trailing-newlines-00000051.yaml"
   },
   {
-    "value": "Кириллица, 日本語, emoji 🎉, combining é, zero-width​space, nbsp here",
-    "yaml": "description: \"Кириллица, 日本語, emoji \\U0001F389, combining é, zero-width​space, nbsp here\"",
+    "value": "Кириллица, 日本語, emoji \uD83C\uDF89, combining é, zero-width​space, nbsp\u00A0here",
+    "yaml": "description: \"Кириллица, 日本語, emoji \\U0001F389, combining é, zero-width​space, nbsp\u00A0here\"",
     "file": "description-unicode-00000052.yaml"
   },
   {

@@ -312,3 +312,25 @@ query TaskPaletteSearch($projectId: UUID!, $query: String!, $limit: Int) {
     }
   }
 }
+
+query TaskComments($projectId: UUID!, $id: UUID!) {
+  project(id: $projectId) {
+    id
+    taskComments(id: $id) {
+      id
+      parentId
+      depth
+      author {
+        id
+        name
+        kind
+      }
+      body
+      createdAt
+      editedAt
+      deleted
+      mine
+      version
+    }
+  }
+}

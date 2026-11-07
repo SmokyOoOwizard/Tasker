@@ -19,7 +19,7 @@ public class ManualTests
         Assert.Equal(0, result.Code);
         Assert.Empty(result.Err);
         var topics = (await Run("manual", "--json")).Json["topics"]!.AsArray();
-        Assert.Equal(13, topics.Count);
+        Assert.Equal(14, topics.Count);
         foreach (var topic in topics)
         {
             Assert.Contains(topic!["id"]!.GetValue<string>(), result.Out);
@@ -152,7 +152,7 @@ public class ManualTests
         Assert.Equal("ru", json["language"]!.GetValue<string>());
         Assert.Contains("ru", json["languages"]!.AsArray().Select(x => x!.GetValue<string>()));
         var topics = json["topics"]!.AsArray();
-        Assert.Equal(13, topics.Count);
+        Assert.Equal(14, topics.Count);
         Assert.Equal("first-project", topics[0]!["id"]!.GetValue<string>());
         Assert.Equal("Проект и первая доска", topics[0]!["title"]!.GetValue<string>());
         Assert.False(string.IsNullOrEmpty(topics[0]!["description"]!.GetValue<string>()));

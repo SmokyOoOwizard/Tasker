@@ -14,7 +14,8 @@ internal enum IndexKind
     Series,
     LinkType,
     Field,
-    FieldEnum
+    FieldEnum,
+    Comment
 }
 
 /// <summary>

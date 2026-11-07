@@ -1,3 +1,4 @@
+add_task_comment
 add_task_to_series
 create_board
 create_enum
@@ -17,6 +18,7 @@ delete_series
 delete_status
 delete_status_set
 delete_task
+delete_task_comment
 delete_task_type
 find_tasks_by_reference
 get_board
@@ -26,6 +28,7 @@ get_lock
 get_project
 get_series
 get_task
+get_task_comments
 get_task_links
 link_tasks
 list_boards
@@ -59,5 +62,6 @@ update_series
 update_status
 update_status_set
 update_task
+update_task_comment
 update_task_type
 whoami
