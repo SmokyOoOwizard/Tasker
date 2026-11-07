@@ -176,6 +176,12 @@ internal sealed class WorkspaceLockNotifier(WorkspaceEvents events) : Tasker.Cor
 
 internal static class WorkspaceEventsEndpoint
 {
+    public static bool ChangesData(HttpRequest request) =>
+        !HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method)
+        // Блокировки правки данных не меняют и о себе сообщают отдельным событием lock.
+        && request.Path.Value?.EndsWith("/lock", StringComparison.Ordinal) != true
+        && request.Path.Value?.EndsWith(Graph.GraphSetup.Path, StringComparison.Ordinal) != true;
+
     public static void UseChangeAuthors(this IApplicationBuilder app) =>
         app.Use(async (context, next) =>
         {

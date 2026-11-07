@@ -17,8 +17,15 @@ public sealed record GlobalSettings
     /// </summary>
     public string? UserName { get; init; }
 
+    public LocalUserSettings? LocalUser { get; init; }
+
+    [JsonIgnore]
+    public string EffectiveUserName => string.IsNullOrWhiteSpace(UserName) ? OsUser.Name : UserName;
+
     public McpSettings Mcp { get; init; } = new();
 }
+
+public sealed record LocalUserSettings(Guid Id, DateTimeOffset CreatedAt);
 
 public sealed record McpSettings
 {

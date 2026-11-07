@@ -17,17 +17,14 @@ public sealed class SettingsLocalEditor(SettingsStore settings, string key, stri
     {
         get
         {
-            string? configured;
             try
             {
-                configured = settings.Load().UserName;
+                return settings.Load().EffectiveUserName + suffix;
             }
             catch (SettingsException)
             {
-                configured = null;
+                return OsUser.Name + suffix;
             }
-
-            return (string.IsNullOrWhiteSpace(configured) ? OsUser.Name : configured) + suffix;
         }
     }
 }

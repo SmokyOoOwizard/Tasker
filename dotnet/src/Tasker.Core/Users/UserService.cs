@@ -187,8 +187,7 @@ public class UserService(IUserStorage users, ICurrentUser currentUser, UserOptio
     }
 
     /// <summary>
-    /// Текущий пользователь (человек из JWT или агент из MCP). На десктопе для REST-запросов его нет —
-    /// там только агент MCP (<see cref="ICurrentUser"/>).
+    /// Текущий пользователь (человек из JWT, агент из MCP или локальный человек, см. <see cref="ICurrentUser"/>).
     /// </summary>
     public async Task<User> GetCurrent(CancellationToken ct = default)
     {
