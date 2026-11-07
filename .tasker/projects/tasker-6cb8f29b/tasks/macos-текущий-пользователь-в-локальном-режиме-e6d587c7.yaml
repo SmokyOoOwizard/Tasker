@@ -2,9 +2,9 @@ formatVersion: 11
 id: e6d587c7-5c7d-4d55-9948-c4f11c2c0232
 title: 'macOS: текущий пользователь в локальном режиме'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-10-01T15:51:16.1559280+00:00
-updatedAt: 2026-11-06T18:23:20.2742510+00:00
+updatedAt: 2026-11-07T02:29:34.0113060+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 14
