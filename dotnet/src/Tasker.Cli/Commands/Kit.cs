@@ -62,6 +62,27 @@ internal static class Kit
     public static string WithDescription(string text, string description) =>
         description.Length == 0 ? text : text + "\n\n" + description;
 
+    public static Option<string?> Query() => new Option<string?>("--query")
+    {
+        Description = "Query line: conditions and an order, e.g. '.Status == [\"Todo\", \"Done\"] && .Field.Estimate > 3 | sort -.Updated' (see 'tasker manual query'). " +
+            "Holds together (AND) with --status, --type, --series and --field; a 'sort' in the query overrides --sort. A mistake is shown with its place in the query"
+    }.NoSuggestions();
+
+    public static async Task<string?> CheckedQuery(Context ctx, Guid projectId, string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return null;
+        var analysis = await ctx.Get<Tasker.Core.Tasks.TaskService>().AnalyzeQuery(projectId, query, null, ctx.Ct);
+        if (analysis.Valid || analysis.Errors.Length == 0)
+            return query;
+
+        var error = analysis.Errors[0];
+        var start = Math.Clamp(error.Start, 0, query.Length);
+        var end = Math.Clamp(Math.Max(error.End, start + 1), start + 1, Math.Max(query.Length, start + 1));
+        var marker = new string(' ', start) + new string('^', end - start);
+        throw new CliException($"Query error at {start + 1}-{end}: {error.Message}\n  {query}\n  {marker}");
+    }
+
     /// <summary><c>--sort</c> списков задач: ключи через запятую, <c>-</c> — по убыванию (разбирает ядро, <see cref="Tasker.Core.Tasks.TaskService.ParseSort"/>).</summary>
     public static Option<string?> Sort() => new("--sort")
     {
