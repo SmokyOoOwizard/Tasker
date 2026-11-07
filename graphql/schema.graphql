@@ -253,6 +253,13 @@ type Project {
     parentId: UUID
     levels: Int
   ): TaskTreeList!
+  taskSearch(
+    query: String!
+    limit: Int
+    statusIds: [UUID!]
+    typeIds: [UUID!]
+    seriesIds: [UUID!]
+  ): [TaskSearchHit!]!
   resolveTasks(ref: String!): [TaskItem!]!
   task(id: UUID!): TaskDetails
   taskLinks(id: UUID!): [TaskLinkView!]
@@ -456,6 +463,25 @@ type TaskListItemPage {
   data: [TaskListItem!]!
 }
 
+type TaskSearchHit {
+  task: TaskItem!
+  field: TaskSearchField!
+  match: TaskSearchMatch!
+  switchedLayout: Boolean!
+  score: Float!
+  snippet: TaskSearchSnippet
+}
+
+type TaskSearchRange {
+  start: Int!
+  length: Int!
+}
+
+type TaskSearchSnippet {
+  text: String!
+  ranges: [TaskSearchRange!]!
+}
+
 type TaskSeriesNumber {
   seriesId: UUID!
   number: Int!
@@ -626,6 +652,19 @@ enum TaskFieldSource {
   type
   extra
   own
+}
+
+enum TaskSearchField {
+  number
+  title
+  description
+}
+
+enum TaskSearchMatch {
+  exact
+  prefix
+  substring
+  typo
 }
 
 enum UserKind {

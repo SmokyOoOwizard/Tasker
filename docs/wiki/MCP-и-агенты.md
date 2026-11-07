@@ -54,6 +54,8 @@ claude mcp add --transport http tasker http://127.0.0.1:5719/mcp --header "X-Tas
 
 ### Краткие списки
 
+Поиск задач по номеру, заголовку и описанию: `search_tasks`. Лучшие совпадения идут первыми, опечатки и неверная раскладка допускаются.
+
 Инструменты со списками задач (`list_tasks`, `get_board`, `find_tasks_by_reference`) отдают превью описания: `descriptionLength` (по умолчанию 200) — сколько символов вернуть; `0` — без описания, `-1` — целиком. В записи также `descriptionTruncated`, длина полного описания, `linksCount`, `parentIds`, `childCount` (больше 0 — эпик). Список всегда плоский, иерархия в `parentIds` и `childCount`. Полное описание — `get_task`.
 
 ## Ошибки, версии, блокировки

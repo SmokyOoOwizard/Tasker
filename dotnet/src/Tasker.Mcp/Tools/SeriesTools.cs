@@ -132,6 +132,29 @@ public static class SeriesTools
             return McpCall.Found(await tasks.Renumber(projectId, await McpCall.TaskId(tasks, projectId, taskId, ct), found.Id, to, version, ct), $"Task {taskId} in series '{series}'");
         });
 
+    public record TaskSearchMatchView(
+        TaskListItem Task, Tasker.Core.Tasks.Search.TaskSearchField Field, Tasker.Core.Tasks.Search.TaskSearchMatch Match, bool SwitchedLayout, double Score,
+        Tasker.Core.Tasks.Search.TaskSearchSnippet? Snippet);
+
+    public record TaskSearchMatches(TaskSearchMatchView[] Hits);
+
+    [McpServerTool(Name = "search_tasks", ReadOnly = true)]
+    [Description(
+        "Finds tasks by free text, best matches first: first the number in a series (\"133\", \"TSK-133\", the start of a number), then the title, then the description. " +
+        "Ignores case and word order, finds parts of words, tolerates typos and a wrong keyboard layout (Russian/English). Several tasks with the same number are all returned. " +
+        "Every hit says where it matched (`field`), how (`match`), its `score` from 0 to 1 and, for a match in the description, a `snippet` of the text around it. `limit` is at most 200. " + TaskTools.DescriptionHint)]
+    public static Task<TaskSearchMatches> SearchTasks(
+        ProjectService projects, TaskService tasks, Tasker.Core.Tasks.Search.TaskSearchService search, Guid projectId, string query, int limit = Tasker.Core.Tasks.Search.TaskSearchService.DefaultLimit,
+        int descriptionLength = DescriptionPreview.McpDefault, CancellationToken ct = default) =>
+        McpCall.Run(async () =>
+        {
+            await McpCall.RequireProject(projects, projectId, ct);
+            var hits = await search.Search(projectId, query, limit, null, ct);
+            var previews = await tasks.Preview(projectId, hits.Select(x => x.Task).ToArray(), descriptionLength, ct);
+            var byId = previews.ToDictionary(x => x.Id);
+            return new TaskSearchMatches(hits.Select(x => new TaskSearchMatchView(byId[x.Task.Id], x.Field, x.Match, x.SwitchedLayout, x.Score, x.Snippet)).ToArray());
+        });
+
     [McpServerTool(Name = "find_tasks_by_reference", ReadOnly = true)]
     [Description(
         "Finds tasks by a reference: a task id (Guid, or its first 8 or more hex characters) or PREFIX-number such as TSK-5 (prefix is case-sensitive). " +

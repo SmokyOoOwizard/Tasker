@@ -8,5 +8,7 @@ namespace Tasker.Daemon;
 [JsonSerializable(typeof(DaemonStatus))]
 [JsonSerializable(typeof(SyncRequest))]
 [JsonSerializable(typeof(SyncResult))]
+[JsonSerializable(typeof(SearchRequest))]
+[JsonSerializable(typeof(SearchResult))]
 [JsonSerializable(typeof(DaemonBuildInfo))]
 public sealed partial class DaemonJsonContext : JsonSerializerContext;

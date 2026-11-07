@@ -32,6 +32,15 @@ enum PaletteMatcher {
         return 10
     }
 
+    private static let bestScore = 140.0
+
+    static func scored(_ entries: [PaletteEntry], query: String) -> [(entry: PaletteEntry, score: Double)] {
+        ranked(entries, query: query).map { entry in
+            let text = entry.title + " " + (entry.reference ?? "") + " " + entry.keywords
+            return (entry, Double(score(query, in: text)) / bestScore)
+        }
+    }
+
     static func ranked(_ entries: [PaletteEntry], query: String) -> [PaletteEntry] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return entries }
         var scored: [(index: Int, score: Int)] = []
@@ -42,13 +51,5 @@ enum PaletteMatcher {
         }
         scored.sort { $0.score == $1.score ? $0.index < $1.index : $0.score > $1.score }
         return scored.map { entries[$0.index] }
-    }
-
-    static func looksLikeReference(_ text: String) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard let dash = trimmed.firstIndex(of: "-") else { return false }
-        let prefix = trimmed[..<dash]
-        let number = trimmed[trimmed.index(after: dash)...]
-        return !prefix.isEmpty && prefix.allSatisfy { $0.isLetter || $0.isNumber } && !number.isEmpty && number.allSatisfy(\.isNumber)
     }
 }

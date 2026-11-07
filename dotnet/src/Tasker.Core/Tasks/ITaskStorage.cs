@@ -36,6 +36,8 @@ public interface ITaskStorage
     /// </summary>
     Task<Guid[]> GetIds(Guid projectId, TaskFilter? filter, CancellationToken ct = default);
 
+    Task<Search.TaskSearchStamp[]> GetSearchStamps(Guid projectId, CancellationToken ct = default);
+
     /// <summary>Сколько задач подходит под фильтр — для проверок «используется ли статус» и т.п.</summary>
     Task<int> Count(Guid projectId, TaskFilter filter, CancellationToken ct = default);
 

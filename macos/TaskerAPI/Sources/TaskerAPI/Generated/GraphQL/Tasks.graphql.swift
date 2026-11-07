@@ -1653,14 +1653,25 @@ public struct TaskSearchPageQuery: GraphQLQuery {
 public struct TaskPaletteSearchQuery: GraphQLQuery {
     public static let operationName = "TaskPaletteSearch"
     public static let document = """
-    query TaskPaletteSearch($projectId: UUID!, $search: String, $limit: Int) {
+    query TaskPaletteSearch($projectId: UUID!, $query: String!, $limit: Int) {
       project(id: $projectId) {
         __typename
         id
-        tasks(search: $search, limit: $limit, descriptionLength: 0) {
+        taskSearch(query: $query, limit: $limit) {
           __typename
-          totalCount
-          data {
+          score
+          field
+          match
+          snippet {
+            __typename
+            text
+            ranges {
+              __typename
+              start
+              length
+            }
+          }
+          task {
             __typename
             id
             title
@@ -1680,10 +1691,21 @@ public struct TaskPaletteSearchQuery: GraphQLQuery {
         GraphQLField("project", arguments: ["id": .variable("projectId")], selections: [
             GraphQLField("__typename"),
             GraphQLField("id"),
-            GraphQLField("tasks", arguments: ["search": .variable("search"), "limit": .variable("limit"), "descriptionLength": .value(.int(0))], selections: [
+            GraphQLField("taskSearch", arguments: ["query": .variable("query"), "limit": .variable("limit")], selections: [
                 GraphQLField("__typename"),
-                GraphQLField("totalCount"),
-                GraphQLField("data", selections: [
+                GraphQLField("score"),
+                GraphQLField("field"),
+                GraphQLField("match"),
+                GraphQLField("snippet", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("text"),
+                    GraphQLField("ranges", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("start"),
+                        GraphQLField("length")
+                    ])
+                ]),
+                GraphQLField("task", selections: [
                     GraphQLField("__typename"),
                     GraphQLField("id"),
                     GraphQLField("title"),
@@ -1700,19 +1722,19 @@ public struct TaskPaletteSearchQuery: GraphQLQuery {
     ]
 
     public var projectId: UUID
-    public var search: String?
+    public var query: String
     public var limit: Int?
 
-    public init(projectId: UUID, search: String? = nil, limit: Int? = nil) {
+    public init(projectId: UUID, query: String, limit: Int? = nil) {
         self.projectId = projectId
-        self.search = search
+        self.query = query
         self.limit = limit
     }
 
     public var variables: [String: JSONValue] {
         var result: [String: JSONValue] = [:]
         result["projectId"] = projectId.graphQLValue
-        if let search { result["search"] = search.graphQLValue }
+        result["query"] = query.graphQLValue
         if let limit { result["limit"] = limit.graphQLValue }
         return result
     }
@@ -1726,23 +1748,49 @@ public struct TaskPaletteSearchQuery: GraphQLQuery {
 
         public struct Project: Hashable, Sendable, Decodable {
             public var id: UUID
-            public var tasks: Tasks
+            public var taskSearch: [TaskSearch]
 
-            public init(id: UUID, tasks: Tasks) {
+            public init(id: UUID, taskSearch: [TaskSearch]) {
                 self.id = id
-                self.tasks = tasks
+                self.taskSearch = taskSearch
             }
 
-            public struct Tasks: Hashable, Sendable, Decodable {
-                public var totalCount: Int
-                public var data: [DataItem]
+            public struct TaskSearch: Hashable, Sendable, Decodable {
+                public var score: Double
+                public var field: TaskSearchField
+                public var match: TaskSearchMatch
+                public var snippet: Snippet?
+                public var task: Task
 
-                public init(totalCount: Int, data: [DataItem]) {
-                    self.totalCount = totalCount
-                    self.data = data
+                public init(score: Double, field: TaskSearchField, match: TaskSearchMatch, snippet: Snippet?, task: Task) {
+                    self.score = score
+                    self.field = field
+                    self.match = match
+                    self.snippet = snippet
+                    self.task = task
                 }
 
-                public struct DataItem: Hashable, Sendable, Decodable {
+                public struct Snippet: Hashable, Sendable, Decodable {
+                    public var text: String
+                    public var ranges: [Ranges]
+
+                    public init(text: String, ranges: [Ranges]) {
+                        self.text = text
+                        self.ranges = ranges
+                    }
+
+                    public struct Ranges: Hashable, Sendable, Decodable {
+                        public var start: Int
+                        public var length: Int
+
+                        public init(start: Int, length: Int) {
+                            self.start = start
+                            self.length = length
+                        }
+                    }
+                }
+
+                public struct Task: Hashable, Sendable, Decodable {
                     public var id: UUID
                     public var title: String
                     public var statusId: UUID

@@ -167,6 +167,12 @@ public sealed class InMemoryTaskStorage : ITaskStorage
                 .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Select(x => x.Id).ToArray());
     }
 
+    public Task<Tasker.Core.Tasks.Search.TaskSearchStamp[]> GetSearchStamps(Guid projectId, CancellationToken ct = default)
+    {
+        lock (_sync)
+            return Task.FromResult(_items.Values.Where(x => x.ProjectId == projectId).Select(x => new Tasker.Core.Tasks.Search.TaskSearchStamp(x.Id, x.Version)).ToArray());
+    }
+
     public Task<int> Count(Guid projectId, TaskFilter filter, CancellationToken ct = default)
     {
         lock (_sync)

@@ -4,6 +4,8 @@ using Autofac;
 using Serilog;
 using Tasker.Core;
 using Tasker.Core.Dto;
+using Tasker.Core.Tasks.Search;
+using Tasker.Search.Lucene;
 using Tasker.Core.Workspace;
 using Tasker.Mcp;
 using Tasker.Storage.Files;
@@ -208,6 +210,8 @@ public sealed class WorkspaceRegistry(ILifetimeScope root) : IAsyncDisposable
                 builder.RegisterType<WorkspaceLockNotifier>().As<Tasker.Core.Locks.ILockNotifier>().SingleInstance();
 
                 builder.RegisterModule(new FileStorageModule(location.Path));
+                builder.Register(_ => new LuceneTaskSearchIndex(Path.Combine(new TaskerDirectory(location.Path).Cache, "search-1")))
+                    .As<ITaskSearchIndex>().SingleInstance();
             });
 
             // События — до запуска хранилища: первая сверка индекса уже может что-то изменить.

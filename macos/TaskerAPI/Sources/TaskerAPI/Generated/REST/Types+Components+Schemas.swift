@@ -2306,6 +2306,56 @@ extension Components {
                 case token
             }
         }
+        /// - Remark: Generated from `#/components/schemas/SearchRequest`.
+        public struct SearchRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/SearchRequest/path`.
+            public var path: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SearchRequest/projectId`.
+            public var projectId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SearchRequest/text`.
+            public var text: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SearchRequest/limit`.
+            public var limit: Swift.Int32?
+            /// Creates a new `SearchRequest`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - projectId:
+            ///   - text:
+            ///   - limit:
+            public init(
+                path: Swift.String,
+                projectId: Swift.String,
+                text: Swift.String,
+                limit: Swift.Int32? = nil
+            ) {
+                self.path = path
+                self.projectId = projectId
+                self.text = text
+                self.limit = limit
+            }
+            public enum CodingKeys: String, CodingKey {
+                case path
+                case projectId
+                case text
+                case limit
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/SearchResult`.
+        public struct SearchResult: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/SearchResult/hits`.
+            public var hits: [Components.Schemas.TaskSearchHit]
+            /// Creates a new `SearchResult`.
+            ///
+            /// - Parameters:
+            ///   - hits:
+            public init(hits: [Components.Schemas.TaskSearchHit]) {
+                self.hits = hits
+            }
+            public enum CodingKeys: String, CodingKey {
+                case hits
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/Series`.
         public struct Series: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/Series/id`.
@@ -3014,6 +3064,130 @@ extension Components {
                 case direction
                 case name
                 case task
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/TaskSearchField`.
+        @frozen public enum TaskSearchField: String, Codable, Hashable, Sendable, CaseIterable {
+            case number = "number"
+            case title = "title"
+            case description = "description"
+        }
+        /// - Remark: Generated from `#/components/schemas/TaskSearchHit`.
+        public struct TaskSearchHit: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/TaskSearchHit/task`.
+            public var task: Components.Schemas.TaskItem
+            /// - Remark: Generated from `#/components/schemas/TaskSearchHit/field`.
+            public var field: Components.Schemas.TaskSearchField
+            /// - Remark: Generated from `#/components/schemas/TaskSearchHit/match`.
+            public var match: Components.Schemas.TaskSearchMatch
+            /// - Remark: Generated from `#/components/schemas/TaskSearchHit/switchedLayout`.
+            public var switchedLayout: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/TaskSearchHit/score`.
+            public var score: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/TaskSearchHit/snippet`.
+            public struct SnippetPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/TaskSearchHit/snippet/value1`.
+                public var value1: Components.Schemas.TaskSearchSnippet
+                /// Creates a new `SnippetPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.TaskSearchSnippet) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/TaskSearchHit/snippet`.
+            public var snippet: Components.Schemas.TaskSearchHit.SnippetPayload?
+            /// Creates a new `TaskSearchHit`.
+            ///
+            /// - Parameters:
+            ///   - task:
+            ///   - field:
+            ///   - match:
+            ///   - switchedLayout:
+            ///   - score:
+            ///   - snippet:
+            public init(
+                task: Components.Schemas.TaskItem,
+                field: Components.Schemas.TaskSearchField,
+                match: Components.Schemas.TaskSearchMatch,
+                switchedLayout: Swift.Bool,
+                score: Swift.Double,
+                snippet: Components.Schemas.TaskSearchHit.SnippetPayload? = nil
+            ) {
+                self.task = task
+                self.field = field
+                self.match = match
+                self.switchedLayout = switchedLayout
+                self.score = score
+                self.snippet = snippet
+            }
+            public enum CodingKeys: String, CodingKey {
+                case task
+                case field
+                case match
+                case switchedLayout
+                case score
+                case snippet
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/TaskSearchMatch`.
+        @frozen public enum TaskSearchMatch: String, Codable, Hashable, Sendable, CaseIterable {
+            case exact = "exact"
+            case prefix = "prefix"
+            case substring = "substring"
+            case typo = "typo"
+        }
+        /// - Remark: Generated from `#/components/schemas/TaskSearchRange`.
+        public struct TaskSearchRange: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/TaskSearchRange/start`.
+            public var start: Swift.Int32
+            /// - Remark: Generated from `#/components/schemas/TaskSearchRange/length`.
+            public var length: Swift.Int32
+            /// Creates a new `TaskSearchRange`.
+            ///
+            /// - Parameters:
+            ///   - start:
+            ///   - length:
+            public init(
+                start: Swift.Int32,
+                length: Swift.Int32
+            ) {
+                self.start = start
+                self.length = length
+            }
+            public enum CodingKeys: String, CodingKey {
+                case start
+                case length
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/TaskSearchSnippet`.
+        public struct TaskSearchSnippet: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/TaskSearchSnippet/text`.
+            public var text: Swift.String
+            /// - Remark: Generated from `#/components/schemas/TaskSearchSnippet/ranges`.
+            public var ranges: [Components.Schemas.TaskSearchRange]
+            /// Creates a new `TaskSearchSnippet`.
+            ///
+            /// - Parameters:
+            ///   - text:
+            ///   - ranges:
+            public init(
+                text: Swift.String,
+                ranges: [Components.Schemas.TaskSearchRange]
+            ) {
+                self.text = text
+                self.ranges = ranges
+            }
+            public enum CodingKeys: String, CodingKey {
+                case text
+                case ranges
             }
         }
         /// - Remark: Generated from `#/components/schemas/TaskSeriesNumber`.

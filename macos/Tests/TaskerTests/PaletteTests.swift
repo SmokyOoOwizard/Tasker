@@ -6,33 +6,29 @@ import TaskerAPI
 final class StubPaletteSource: PaletteSource, @unchecked Sendable {
     private let lock = NSLock()
     private var _searches: [String] = []
-    private var _resolves: [String] = []
     var tasks: [TaskLinkedBrief]
-    var byReference: [String: [TaskLinkedBrief]]
+    var hits: [String: [PaletteTaskHit]]
     let vocab: TaskListVocabulary
     var delay: Duration = .zero
 
-    init(vocabulary: TaskListVocabulary, tasks: [TaskLinkedBrief] = [], byReference: [String: [TaskLinkedBrief]] = [:]) {
+    init(vocabulary: TaskListVocabulary, tasks: [TaskLinkedBrief] = [], hits: [String: [PaletteTaskHit]] = [:]) {
         vocab = vocabulary
         self.tasks = tasks
-        self.byReference = byReference
+        self.hits = hits
     }
 
     var searches: [String] { lock.withLock { _searches } }
-    var resolves: [String] { lock.withLock { _resolves } }
 
     func vocabulary(project: UUID) async throws -> TaskListVocabulary { vocab }
 
-    func search(project: UUID, text: String, limit: Int) async throws -> [TaskLinkedBrief] {
+    func search(project: UUID, text: String, limit: Int) async throws -> [PaletteTaskHit] {
         lock.withLock { _searches.append(text) }
         if delay > .zero { try await Task.sleep(for: delay) }
+        if let exact = hits[text] { return exact }
         let folded = PaletteMatcher.normalize(text)
-        return tasks.filter { PaletteMatcher.normalize($0.title).contains(folded) }.prefix(limit).map { $0 }
-    }
-
-    func resolve(project: UUID, ref: String) async throws -> [TaskLinkedBrief] {
-        lock.withLock { _resolves.append(ref) }
-        return byReference[ref] ?? []
+        return tasks.filter { PaletteMatcher.normalize($0.title).contains(folded) }.prefix(limit).map {
+            PaletteTaskHit(brief: $0, score: 0.7, isExactNumber: false, snippet: nil)
+        }
     }
 }
 
@@ -116,14 +112,6 @@ struct PaletteTests {
         #expect(PaletteMatcher.score("созд зад", in: "Создать задачу") > 0)
         #expect(PaletteMatcher.score("ЯБЛОКО", in: "яблоко") > 0)
         #expect(PaletteMatcher.score("task create", in: "Create task") > 0)
-    }
-
-    @Test func detectsReferences() {
-        #expect(PaletteMatcher.looksLikeReference("TSK-133"))
-        #expect(PaletteMatcher.looksLikeReference("tsk-5"))
-        #expect(!PaletteMatcher.looksLikeReference("TSK-"))
-        #expect(!PaletteMatcher.looksLikeReference("fix-it now"))
-        #expect(!PaletteMatcher.looksLikeReference("133"))
     }
 
     @Test func commandsCoverScreensAndActions() {
@@ -234,43 +222,72 @@ struct PaletteTests {
         model.vocabularyLoaded(vocabulary)
         model.query = "login"
         await settle(model)
-        let tasks = model.sections.first { $0.id == "tasks" }
+        let tasks = model.sections.first { $0.id == "results" }
         #expect(tasks?.entries.count == 1)
         #expect(tasks?.entries.first?.title == "Fix login page")
         #expect(tasks?.entries.first?.reference == "TSK-7")
-        #expect(source.resolves.isEmpty)
         model.stop()
     }
 
-    @Test func referenceResolvesAndOpensTask() async {
-        let target = brief("Palette", number: 195)
-        let source = StubPaletteSource(vocabulary: vocabulary, byReference: ["TSK-195": [target]])
+    @Test func exactNumberOpensTaskFirst() async {
+        let target = brief("Palette", number: 133)
+        let hit = PaletteTaskHit(brief: target, score: 1, isExactNumber: true, snippet: nil)
+        let source = StubPaletteSource(vocabulary: vocabulary, hits: ["133": [hit]])
         let recorder = Recorder()
         let model = model(source, recorder: recorder)
         model.vocabularyLoaded(vocabulary)
-        model.query = "tsk-195"
+        model.query = "133"
         await settle(model)
-        #expect(source.resolves == ["TSK-195"])
-        #expect(model.sections.first?.id == "reference")
+        #expect(model.entries.first?.reference == "TSK-133")
         model.runSelected()
         #expect(recorder.opened == [target.id])
         #expect(recorder.closed == 1)
         model.stop()
     }
 
-    @Test func conflictingNumbersShowAllTasks() async {
-        let first = brief("First", number: 5)
-        let second = brief("Second", number: 5)
-        let source = StubPaletteSource(vocabulary: vocabulary, byReference: ["TSK-5": [first, second]])
+    @Test func commandsAndTasksMixByScore() async {
+        let strong = PaletteTaskHit(brief: brief("Theme of the title", number: 1), score: 0.8, isExactNumber: false, snippet: nil)
+        let weak = PaletteTaskHit(brief: brief("Mentioned in text", number: 2), score: 0.01, isExactNumber: false, snippet: nil)
+        let source = StubPaletteSource(vocabulary: vocabulary, hits: ["theme": [strong, weak]])
         let model = model(source, recorder: Recorder())
         model.vocabularyLoaded(vocabulary)
-        model.query = "TSK-5"
+        model.query = "theme"
         await settle(model)
-        let section = model.sections.first
-        #expect(section?.id == "reference")
-        #expect(section?.entries.map(\.title) == ["First", "Second"])
-        #expect(section?.title == "Number TSK-5 is taken by several tasks")
-        #expect(section?.entries.allSatisfy { $0.detail == "number conflict" } == true)
+        #expect(model.sections.count == 1)
+        let ids = model.entries.map(\.id)
+        let strongIndex = ids.firstIndex(of: "task:" + strong.brief.id.uuidString)
+        let weakIndex = ids.firstIndex(of: "task:" + weak.brief.id.uuidString)
+        let commandIndex = ids.firstIndex { $0.hasPrefix("theme") }
+        #expect(weakIndex == ids.count - 1)
+        #expect(strongIndex != nil && commandIndex != nil)
+        model.stop()
+    }
+
+    @Test func snippetReachesEntry() async {
+        let snippet = PaletteSnippet(text: "…редкое слово…", ranges: [1..<7])
+        let hit = PaletteTaskHit(brief: brief("Long", number: 3), score: 0.5, isExactNumber: false, snippet: snippet)
+        let source = StubPaletteSource(vocabulary: vocabulary, hits: ["редкое": [hit]])
+        let model = model(source, recorder: Recorder())
+        model.vocabularyLoaded(vocabulary)
+        model.query = "редкое"
+        await settle(model)
+        #expect(model.entries.first?.snippet == snippet)
+        #expect(PaletteMetrics.listHeight(model.sections) > PaletteMetrics.rowHeight + PaletteMetrics.sectionHeight)
+        model.stop()
+    }
+
+    @Test func conflictingNumbersShowAllTasks() async {
+        let first = PaletteTaskHit(brief: brief("First", number: 5), score: 1, isExactNumber: true, snippet: nil)
+        let second = PaletteTaskHit(brief: brief("Second", number: 5), score: 1, isExactNumber: true, snippet: nil)
+        let other = PaletteTaskHit(brief: brief("Other series", number: 5, in: otherSeries), score: 1, isExactNumber: true, snippet: nil)
+        let source = StubPaletteSource(vocabulary: vocabulary, hits: ["5": [first, second, other]])
+        let model = model(source, recorder: Recorder())
+        model.vocabularyLoaded(vocabulary)
+        model.query = "5"
+        await settle(model)
+        let entries = model.entries.filter { $0.id.hasPrefix("task:") }
+        #expect(entries.map(\.title) == ["First", "Second", "Other series"])
+        #expect(entries.map(\.detail) == ["number conflict", "number conflict", "Todo"])
         model.stop()
     }
 
@@ -282,7 +299,7 @@ struct PaletteTests {
         model.query = "alpha"
         model.query = "beta"
         await settle(model)
-        let titles = model.sections.first { $0.id == "tasks" }?.entries.map(\.title)
+        let titles = model.entries.filter { $0.id.hasPrefix("task:") }.map(\.title)
         #expect(titles == ["beta two"])
         model.stop()
     }

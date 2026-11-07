@@ -38,6 +38,7 @@ public class CoreModule(bool lazy) : Module
         Scoped<StatusSetService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<TaskTypeService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<TaskService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
+        Scoped<Tasks.Search.TaskSearchService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<BoardService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Links.LinkTypeService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Links.TaskLinkService>(builder, x => x.AsSelf().InstancePerLifetimeScope());

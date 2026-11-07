@@ -129,6 +129,38 @@ public class DaemonTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_works_through_the_daemon_for_the_console_and_mcp()
+    {
+        var folder = await _daemon.Workspace("a", "Alpha");
+
+        Assert.Equal(0, (await TaskerProcess.Run("status", "create", "Todo", "-w", folder)).Code);
+        Assert.Equal(0, (await TaskerProcess.Run("status-set", "create", "Set", "--status", "Todo", "-w", folder)).Code);
+        Assert.Equal(0, (await TaskerProcess.Run("task-type", "create", "Task", "--status-set", "Set", "-w", folder)).Code);
+        Assert.Equal(0, (await TaskerProcess.Run("series", "create", "Tasks", "--prefix", "TSK", "-w", folder)).Code);
+        Assert.Equal(0, (await TaskerProcess.Run("task", "create", "Палитра команд", "--type", "Task", "--series", "TSK", "-w", folder)).Code);
+
+        var offline = await TaskerProcess.Run("task", "search", "палитра", "-w", folder);
+        Assert.Equal(1, offline.Code);
+        Assert.Contains("tasker mcp start", offline.Err);
+
+        var status = await _daemon.Start();
+        var key = KeyOf(status.Workspaces[0]);
+
+        var byNumber = await TaskerProcess.Run("task", "search", "1", "-w", folder);
+        Assert.Equal(0, byNumber.Code);
+        Assert.Contains("TSK-1", byNumber.Out);
+        Assert.Contains("Палитра команд", byNumber.Out);
+
+        var json = await TaskerProcess.Run("task", "search", "gfkbnhf", "--json", "-w", folder);
+        Assert.Equal(0, json.Code);
+        Assert.Contains("Палитра команд", json.Out);
+
+        var fromAgent = await _daemon.CallTool(key, "search_tasks", new { query = "ПАЛИТРА" });
+        Assert.Contains("Палитра команд", fromAgent);
+        Assert.Contains("\"field\":\"title\"", fromAgent);
+    }
+
+    [Fact]
     public async Task Changes_made_by_the_cli_are_visible_through_mcp_right_away()
     {
         var folder = await _daemon.Workspace("a", "Alpha");

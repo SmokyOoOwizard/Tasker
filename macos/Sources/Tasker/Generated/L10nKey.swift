@@ -393,8 +393,6 @@ enum L10nKey: String, CaseIterable, Sendable {
     case paletteCommands = "palette.commands"
     case paletteCommandsAndTasks = "palette.commandsAndTasks"
     case paletteTasks = "palette.tasks"
-    case paletteByReference = "palette.byReference"
-    case paletteRefConflict = "palette.refConflict"
     case paletteConflictBadge = "palette.conflictBadge"
     case paletteMore = "palette.more"
     case paletteSearching = "palette.searching"

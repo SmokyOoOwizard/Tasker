@@ -56,6 +56,19 @@ public enum TaskFieldSource: String, GraphQLEnum, CaseIterable {
     case own
 }
 
+public enum TaskSearchField: String, GraphQLEnum, CaseIterable {
+    case number
+    case title
+    case description
+}
+
+public enum TaskSearchMatch: String, GraphQLEnum, CaseIterable {
+    case exact
+    case prefix
+    case substring
+    case typo
+}
+
 public enum UserKind: String, GraphQLEnum, CaseIterable {
     case human
     case agent

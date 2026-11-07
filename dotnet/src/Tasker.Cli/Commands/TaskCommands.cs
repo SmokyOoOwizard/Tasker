@@ -282,6 +282,22 @@ internal static class TaskCommands
             ctx.PrintTree(await paging.LoadTree(parse, page => ctx.Get<TaskService>().ListTree(projectId, filter, fieldFilters, page, parse.GetValue(descriptionLength), ctx.Ct, parse.GetValue(sort))), line);
         });
 
+        var searchText = new Argument<string>("query") { Description = "What to find: a task number (133, TSK-133), words of the title or the description" };
+        var searchLimit = new Option<int?>("--limit") { Description = $"How many tasks to show (default {Core.Tasks.Search.TaskSearchService.DefaultLimit}, at most {Core.Tasks.Search.TaskSearchService.MaxLimit})" };
+        var search = Kit.Leaf(g, "search", "Finds tasks by number, title and description, best matches first (needs the running daemon: 'tasker mcp start')", c =>
+        {
+            c.Arguments.Add(searchText);
+            c.Options.Add(searchLimit);
+        }, async (parse, ctx) =>
+        {
+            var projectId = await ctx.ProjectId();
+            var location = Session.Locate(new WorkspaceSettings(Tasker.Global.UserPath.Expand(parse.GetValue(g.Workspace))));
+            var found = await Tasker.Daemon.DaemonClient.Search(new Tasker.Daemon.SearchRequest(location.Path, projectId, parse.GetValue(searchText)!, parse.GetValue(searchLimit)), ctx.Ct)
+                ?? throw new CliException($"Search needs the daemon, and it is not running or does not serve {location.Path}: start it with 'tasker mcp start' and add the folder with 'tasker mcp add'");
+            var line = await LineFormat(ctx, projectId);
+            ctx.PrintAll(found, found.Hits, hit => [.. line(hit.Task), hit.Snippet?.Text ?? ""]);
+        });
+
         var reference = new Argument<string>("task") { Description = "Task: id or reference like TSK-5" };
         var newTitle = new Option<string?>("--title") { Description = "New title" };
         var newDescription = new Option<string?>("--description", "-d") { Description = "New description; an empty one clears it" };
@@ -344,6 +360,7 @@ internal static class TaskCommands
                 ctx.Print(task, $"Created task '{task.Title}' {task.Id}" + (references.Length > 0 ? $" ({string.Join(", ", references)})" : ""));
             }),
             list,
+            search,
             Kit.Leaf(g, "get", "Shows a task (a reference used by several tasks after a merge shows all of them)", c => c.Arguments.Add(reference), async (parse, ctx) =>
             {
                 var projectId = await ctx.ProjectId();
