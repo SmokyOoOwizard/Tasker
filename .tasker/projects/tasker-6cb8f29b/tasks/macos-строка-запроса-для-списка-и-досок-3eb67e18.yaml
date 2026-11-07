@@ -2,12 +2,19 @@ formatVersion: 12
 id: 3eb67e18-8e2e-42ea-a13a-ce37befe55b4
 title: 'macOS: строка запроса для списка и досок'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-03T21:32:48.6452360+00:00
-updatedAt: 2026-11-07T05:45:43.1870890+00:00
+updatedAt: 2026-11-07T07:39:36.6775550+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 190
+links:
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: a11267ff-f595-4a24-94df-c2232219eecf
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 4e7827fb-cb04-425c-9f9d-ce58bb35bb54
+- typeId: 54e2b640-5f78-d232-82ba-f0748b46d97c
+  taskId: 86dde9d7-4726-4d56-bd78-1cb2452b6f03
 description: |-
   Эпик TSK-178. Строка запроса: фильтр и сортировка одной строкой. Используется новый синтаксис, описанный ниже; синтаксис из макета 02 и main-design он заменяет.
 
