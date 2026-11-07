@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Tasker.Core.Boards;
+using Tasker.Core.Comments;
 using Tasker.Core.Dto;
 using Tasker.Core.Fields;
 using Tasker.Core.Links;
@@ -24,6 +25,8 @@ namespace Tasker.Cli;
 [JsonSerializable(typeof(LinkType))]
 [JsonSerializable(typeof(ListDto<LinkType>))]
 [JsonSerializable(typeof(TaskLinkView))]
+[JsonSerializable(typeof(TaskCommentView))]
+[JsonSerializable(typeof(TaskCommentView[]))]
 [JsonSerializable(typeof(LockInfo))]
 [JsonSerializable(typeof(Project))]
 [JsonSerializable(typeof(ListDto<Project>))]
