@@ -405,7 +405,7 @@ private struct BoardParentLine: View {
                         .foregroundStyle(DesignColor.dim.color)
                         .lineLimit(1)
                         .fixedSize()
-                    Text("›")
+                    Text(verbatim: "›")
                         .font(.design(DesignTypography.captionSize))
                         .foregroundStyle(DesignColor.dim.color)
                 }
@@ -424,7 +424,7 @@ private struct BoardParentLine: View {
                 .truncationMode(.tail)
             Spacer(minLength: 0)
             if more > 0 {
-                Text("+\(more)")
+                Text(verbatim: "+\(more)")
                     .font(.design(DesignTypography.captionSize))
                     .foregroundStyle(DesignColor.mut.color)
                     .padding(.horizontal, 5)
