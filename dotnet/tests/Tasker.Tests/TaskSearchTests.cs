@@ -105,7 +105,18 @@ public sealed class TaskSearchTests(ITestOutputHelper output)
             await _scope.DisposeAsync();
             await _container.DisposeAsync();
             SqliteConnection.ClearAllPools();
-            Directory.Delete(_root, recursive: true);
+            for (var attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    Directory.Delete(_root, recursive: true);
+                    return;
+                }
+                catch (IOException) when (attempt < 20)
+                {
+                    await Task.Delay(50);
+                }
+            }
         }
     }
 
