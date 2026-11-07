@@ -246,6 +246,39 @@ public sealed class TaskQueryApiTests : IAsyncLifetime
     }
 
     [Theory, MemberData(nameof(Modes))]
+    public async Task Own_fields_follow_their_own_multiple_flag(string mode)
+    {
+        var s = await Seed(mode);
+        var p = $"/projects/{s.Project}";
+        var (_, types) = await GraphReads.Query(_http, s.Base, "query($p: UUID!) { project(id: $p) { taskTypes { data { id name } } } }", new { p = s.Project }, s.Token);
+        var story = types!["data"]!["project"]!["taskTypes"]!["data"]!.AsArray().First(x => x!["name"]!.GetValue<string>() == "Story")!["id"]!.GetValue<string>();
+
+        async Task Own(string title, string name, bool multiple, params string[] values) =>
+            await Post(s.Base, p + "/tasks", s.Token, new
+            {
+                title, typeId = story,
+                fields = new { newOwnFields = new[] { new { name, type = "string", multiple, values } } }
+            });
+
+        await Own("Этап А", "Этап", false, "Дизайн");
+        await Own("Этап Б", "Этап", false, "Код");
+        await Own("Этап В", "Этап", false, "Тест");
+        await Own("Теги А", "Теги", true, "a");
+        await Own("Теги АБ", "Теги", true, "a", "b");
+
+        Assert.Equal(["Этап А", "Этап Б"], await Titles(s, ".Field.Этап == [\"Дизайн\", \"Код\"]"));
+        Assert.Equal(["Логин падает", "Кнопка", "Отчёт", "Экспорт логина", "Заметка", "Этап В", "Теги А", "Теги АБ"], await Titles(s, ".Field.Этап != [\"Дизайн\", \"Код\"]"));
+        Assert.Equal(["Теги АБ"], await Titles(s, ".Field.Теги == [\"b\", \"a\"]"));
+        Assert.Equal(["Теги А"], await Titles(s, ".Field.Теги == \"a\""));
+        Assert.Equal(["Теги А", "Теги АБ"], await Titles(s, ".Field.Теги.Contains(\"a\")"));
+
+        var single = await Analyze(s, ".Field.Этап.Contains(\"Код\")");
+        Assert.Equal("query.unknownFunction", single["errors"]![0]!["code"]!.GetValue<string>());
+        var functions = await Analyze(s, ".Field.Теги.");
+        Assert.Contains("ContainsAny(…)", functions["suggestions"]!.AsArray().Select(x => x!["label"]!.GetValue<string>()));
+    }
+
+    [Theory, MemberData(nameof(Modes))]
     public async Task An_invalid_query_is_refused_with_its_code(string mode)
     {
         var s = await Seed(mode);

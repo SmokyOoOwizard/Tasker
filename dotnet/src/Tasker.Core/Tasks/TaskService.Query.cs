@@ -68,11 +68,19 @@ public partial class TaskService
             var kinds = await tasks.GetOwnFieldKinds(projectId, FieldNames.Key(name), ct);
             if (kinds.Length == 1)
                 own[FieldNames.Key(name)] = new OwnFieldChoice(
-                    new QueryField(name, kinds[0].Type, true, null, kinds[0].EnumId is { } id ? enumerations.GetValueOrDefault(id) : null), false);
+                    new QueryField(name, kinds[0].Type, await OwnFieldIsMultiple(projectId, name, kinds[0], ct), null,
+                        kinds[0].EnumId is { } id ? enumerations.GetValueOrDefault(id) : null), false);
             else if (kinds.Length > 1)
                 own[FieldNames.Key(name)] = new OwnFieldChoice(null, true);
         }
         return vocabulary with { OwnFields = own };
+    }
+
+    private async Task<bool> OwnFieldIsMultiple(Guid projectId, string name, OwnFieldKind kind, CancellationToken ct)
+    {
+        var condition = new FieldCondition(name, kind.Type, FieldOperator.Attached);
+        var found = await tasks.GetAll(projectId, new TaskFilter { FieldValues = [condition] }, ct);
+        return found.Any(x => x.Fields.Any(f => f.Own is { Multiple: true } && condition.Covers(f)));
     }
 
     private async Task<TaskSortKey[]> QuerySortKeys(Guid projectId, (string? Builtin, QueryField? Field, bool Descending)[] items, CancellationToken ct)
