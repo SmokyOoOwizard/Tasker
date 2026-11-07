@@ -2,9 +2,9 @@ formatVersion: 11
 id: d1158c17-d1b4-4a78-8573-30c30ced6659
 title: 'Сервер и демон: универсальный нечёткий поиск задач (номер, заголовок, описание)'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-05T10:24:51.4460840+00:00
-updatedAt: 2026-11-07T02:44:30.1376160+00:00
+updatedAt: 2026-11-07T05:34:51.9769330+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 225
