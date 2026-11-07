@@ -2,9 +2,9 @@ formatVersion: 12
 id: 06aae69b-933a-483b-950b-6bc6a7286fe2
 title: 'Демон: второй экземпляр занимает уже занятый порт и перехватывает MCP'
 typeId: 97e160a1-7791-45ea-aa77-9e590c3536eb
-statusId: e419107c-3971-482e-b68f-46860d54f4d2
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-05T07:48:35.8541640+00:00
-updatedAt: 2026-11-07T08:02:37.5306580+00:00
+updatedAt: 2026-11-07T09:14:37.7690660+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 217
