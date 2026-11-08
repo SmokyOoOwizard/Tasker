@@ -306,7 +306,7 @@ struct BoardViewTests {
         let stub = source([first])
         stub.failure = .badRequest(Refusal(
             code: "board.taskNotMatchColumn", message: "raw",
-            params: ["task": .string("Задача 1"), "column": .string("В работе"), "conditions": .array([.string("Приоритет=Высокий")])]))
+            params: ["task": .string("Задача 1"), "column": .string("В работе"), "query": .string(".Field.Приоритет == \"Высокий\"")]))
         let model = model(stub)
         var failures: [String] = []
         model.onFailure = { failures.append($0) }
@@ -314,7 +314,7 @@ struct BoardViewTests {
         await until { model.phase == .ready }
         model.move(task: first.id, to: doingColumn)
         await until { !failures.isEmpty }
-        #expect(failures == [ru.string(.errorBoardTaskNotMatchColumn, "Задача 1", "В работе", "Приоритет=Высокий")])
+        #expect(failures == [ru.string(.errorBoardTaskNotMatchColumn, "Задача 1", "В работе", ".Field.Приоритет == \"Высокий\"")])
         #expect(model.moving.isEmpty)
         #expect(model.refusal == BoardRefusal(column: doingColumn, tick: 1))
         #expect(model.columns.map(\.rows.count) == [1, 0])
