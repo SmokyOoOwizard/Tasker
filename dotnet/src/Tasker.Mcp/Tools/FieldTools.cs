@@ -78,8 +78,7 @@ public static class FieldTools
         "repeat it with a choice: clearUnconvertible=true clears the values that do not parse / have no counterpart in the new enum (the others are converted); " +
         "mapping=[{from, to}] matches old values to values of the new enum explicitly (from: the old value or, for enum, its id or name; to: a value id or name); " +
         "several=keepFirst keeps the first value of tasks that have several, several=clear clears them. A required field left empty by a choice stays empty on " +
-        "the task until its next content edit. A field used in the conditions of board columns keeps its type, enum and `multiple` (fails with [in_use] naming the columns; " +
-        "remove the conditions first); renaming it is fine. " + VersionHint)]
+        "the task until its next content edit. Board column queries name fields by name: after a rename or a type change a column whose query no longer parses shows an error until its query is fixed. " + VersionHint)]
     public static Task<FieldDefinition> UpdateField(
         ProjectService projects, FieldService fields, Guid projectId, Guid fieldId, string version, string? name = null,
         FieldType? type = null, bool? multiple = null, Guid? enumId = null,
@@ -97,7 +96,7 @@ public static class FieldTools
     [McpServerTool(Name = "delete_field", Destructive = true)]
     [Description(
         "Deletes a field from the catalog. Fails with [in_use] naming the task types the field is connected to, the number of tasks that have values " +
-        "or the field added, and the board columns with a condition on it: disconnect/clear it or remove the condition first. " + VersionHint)]
+        "or the field added: disconnect/clear it first. A board column whose query names the field shows an error until its query is fixed. " + VersionHint)]
     public static Task<string> DeleteField(
         ProjectService projects, FieldService fields, Guid projectId, Guid fieldId, string version, CancellationToken ct) =>
         McpCall.Run(async () =>
@@ -147,10 +146,8 @@ public static class FieldTools
         "Removing a value that tasks have selected needs a choice, one for all removed values: removedValues=clear removes it from those tasks, " +
         "removedValues=reassign with reassignTo=<id of a remaining value> selects that value instead. Without a choice the call fails with [in_use] " +
         "giving the number of tasks. A required field left empty by `clear` stays empty on the task until its next content edit. " +
-        "A removed value that is used in the field conditions of board columns (see create_board fieldFilters) needs the same choice: clear drops the condition from the column, " +
-        "reassign replaces the value in it; if that would make columns sharing a status show the same tasks, the call fails with [in_use] and the board must be changed first. " +
-        "The result is the enum plus `affectedTasks`: how many tasks were rewritten by the choice (0 when no task used a removed value), and `affectedColumns` " +
-        "(only when not 0): how many board column conditions were dropped or replaced. " + VersionHint)]
+        "Board column queries are not rewritten: a column whose query names a removed value shows an error until its query is fixed. " +
+        "The result is the enum plus `affectedTasks`: how many tasks were rewritten by the choice (0 when no task used a removed value). " + VersionHint)]
     public static Task<CascadeResult<FieldEnum>> UpdateEnum(
         ProjectService projects, FieldEnumService enums, Guid projectId, Guid enumId, string version,
         string? name = null, FieldEnumValueInput[]? values = null,

@@ -34,6 +34,8 @@ final class BoardEditorModel {
     @ObservationIgnored var onNotice: ((String) -> Void)?
     @ObservationIgnored var onCreated: (() -> Void)?
     @ObservationIgnored private let source: any BoardEditorSource
+    @ObservationIgnored private let querySource: (any TaskQuerySource)?
+    @ObservationIgnored private var queryModels: [UUID: TaskQueryModel] = [:]
     @ObservationIgnored private let heartbeat: Duration
     @ObservationIgnored private var initial = BoardDraft()
     @ObservationIgnored private var loadTask: Task<Void, Never>?
@@ -41,9 +43,13 @@ final class BoardEditorModel {
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var released = false
 
-    init(target: BoardEditorTarget, source: any BoardEditorSource, heartbeat: Duration = BoardEditorModel.heartbeat) {
+    init(
+        target: BoardEditorTarget, source: any BoardEditorSource, querySource: (any TaskQuerySource)? = nil,
+        heartbeat: Duration = BoardEditorModel.heartbeat
+    ) {
         self.target = target
         self.source = source
+        self.querySource = querySource
         self.heartbeat = heartbeat
     }
 
@@ -84,6 +90,7 @@ final class BoardEditorModel {
             self.catalog = catalog
             if let loaded {
                 record = loaded
+                queryModels = [:]
                 draft = loaded.draft
                 staleVersion = false
                 issues = BoardIssues()
@@ -150,13 +157,39 @@ final class BoardEditorModel {
         issues = BoardIssues()
     }
 
+    func queryModel(for column: BoardColumnDraft) -> TaskQueryModel? {
+        if let found = queryModels[column.id] { return found }
+        guard let querySource else { return nil }
+        let model = TaskQueryModel(project: target.project, source: querySource, text: column.query)
+        let id = column.id
+        model.onTextChange = { [weak self, weak model] in
+            guard let self, let model else { return }
+            self.edit { draft, _ in
+                if let index = draft.columns.firstIndex(where: { $0.id == id }) { draft.columns[index].query = model.text }
+            }
+        }
+        queryModels[column.id] = model
+        model.start()
+        return model
+    }
+
+    func queryIssues() -> [UUID: [String]] {
+        var result: [UUID: [String]] = [:]
+        for column in draft.columns where !column.trimmedQuery.isEmpty {
+            guard let model = queryModels[column.id], model.text == column.query, let error = model.errors.first else { continue }
+            result[column.id] = [localizer.refusal(error.refusal)]
+        }
+        return result
+    }
+
     func clearIssues() {
         if !issues.isEmpty { issues = BoardIssues() }
     }
 
     func save() async -> Bool {
         guard canSave else { return false }
-        let found = BoardValidation.check(draft, catalog: catalog, l: localizer)
+        var found = BoardValidation.check(draft, catalog: catalog, l: localizer)
+        for (id, messages) in queryIssues() { found.columns[id, default: []] += messages }
         if !found.isEmpty {
             issues = found
             return false
@@ -186,6 +219,7 @@ final class BoardEditorModel {
         guard let id = target.board else { return }
         if let fresh = try? await source.board(project: target.project, id: id) {
             record = fresh
+            queryModels = [:]
             draft = fresh.draft
         }
     }

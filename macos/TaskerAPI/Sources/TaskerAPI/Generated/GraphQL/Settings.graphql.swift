@@ -117,11 +117,6 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                 statusSetId
                 statusId
               }
-              fieldConditions {
-                __typename
-                fieldId
-                value
-              }
             }
           }
         }
@@ -256,11 +251,6 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                             GraphQLField("__typename"),
                             GraphQLField("statusSetId"),
                             GraphQLField("statusId")
-                        ]),
-                        GraphQLField("fieldConditions", selections: [
-                            GraphQLField("__typename"),
-                            GraphQLField("fieldId"),
-                            GraphQLField("value")
                         ])
                     ])
                 ])
@@ -554,14 +544,12 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                         public var name: String
                         public var statusIds: [UUID]
                         public var dropStatuses: [DropStatuses]
-                        public var fieldConditions: [FieldConditions]
 
-                        public init(id: UUID, name: String, statusIds: [UUID], dropStatuses: [DropStatuses], fieldConditions: [FieldConditions]) {
+                        public init(id: UUID, name: String, statusIds: [UUID], dropStatuses: [DropStatuses]) {
                             self.id = id
                             self.name = name
                             self.statusIds = statusIds
                             self.dropStatuses = dropStatuses
-                            self.fieldConditions = fieldConditions
                         }
 
                         public struct DropStatuses: Hashable, Sendable, Decodable {
@@ -571,16 +559,6 @@ public struct SettingsCatalogQuery: GraphQLQuery {
                             public init(statusSetId: UUID, statusId: UUID) {
                                 self.statusSetId = statusSetId
                                 self.statusId = statusId
-                            }
-                        }
-
-                        public struct FieldConditions: Hashable, Sendable, Decodable {
-                            public var fieldId: UUID
-                            public var value: String?
-
-                            public init(fieldId: UUID, value: String?) {
-                                self.fieldId = fieldId
-                                self.value = value
                             }
                         }
                     }

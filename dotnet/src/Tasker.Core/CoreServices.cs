@@ -99,7 +99,7 @@ public sealed class CoreServices(
         storage.Writes, EditLocks, storage.Fields, storage.FieldEnums, TaskLinks, storage.Statuses, storage.Comments));
 
     public BoardService Boards => One(() => new BoardService(storage.Boards, storage.StatusSets, storage.Statuses, storage.TaskTypes, storage.Tasks, storage.Fields,
-        storage.FieldEnums, Tasks, storage.Writes, EditLocks));
+        Tasks, storage.Writes, EditLocks));
 
     public LinkTypeService LinkTypes => One(() => new LinkTypeService(storage.LinkTypes, storage.Tasks, EditLocks));
 
@@ -109,11 +109,11 @@ public sealed class CoreServices(
 
     public LinkHealthService LinkHealth => One(() => new LinkHealthService(storage.Tasks, storage.LinkTypes));
 
-    public FieldService Fields => One(() => new FieldService(storage.Fields, storage.FieldEnums, storage.TaskTypes, storage.Tasks, storage.Boards,
+    public FieldService Fields => One(() => new FieldService(storage.Fields, storage.FieldEnums, storage.TaskTypes, storage.Tasks,
         storage.Writes, Time, EditLocks, storage.Series));
 
     public FieldEnumService FieldEnums => One(() => new FieldEnumService(storage.FieldEnums, storage.Fields, storage.TaskTypes, storage.Tasks,
-        storage.Boards, storage.Writes, Time, EditLocks));
+        storage.Writes, Time, EditLocks));
 
     public SeriesService Series => One(() => new SeriesService(storage.Tasks, storage.Series, storage.Writes, Time, EditLocks));
     public SeriesHealthService SeriesHealth => One(() => new SeriesHealthService(storage.Tasks, storage.Series));

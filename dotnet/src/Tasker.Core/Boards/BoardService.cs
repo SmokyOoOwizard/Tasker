@@ -2,6 +2,7 @@ using Tasker.Core.Dto;
 using Tasker.Core.Fields;
 using Tasker.Core.Statuses;
 using Tasker.Core.Tasks;
+using Tasker.Core.Tasks.Query;
 
 namespace Tasker.Core.Boards;
 
@@ -17,13 +18,7 @@ public record UpdateBoard(string? Name, Guid[]? StatusSetIds, BoardColumnInput[]
 /// <param name="Id">Существующая колонка доски; null — новая колонка.</param>
 /// <param name="StatusIds">Статусы из наборов доски, задачи с которыми попадают в колонку.</param>
 /// <param name="DropStatuses">Набор статусов → статус, который получает перетянутая в колонку задача.</param>
-/// <param name="FieldFilters">
-/// Условия по полям каталога (И со статусами), текстом, как в <c>task list --field</c>: <c>Имя=значение</c>, <c>Имя!=значение</c>, <c>Имя&gt;=3</c>,
-/// <c>Имя:set</c> и так далее (см. <see cref="TaskService.ParseFieldFilters"/>; имя поля — без учёта регистра, значение enum — название или id).
-/// Хранятся по id поля и значения. null: у существующей колонки (с <paramref name="Id"/>) условия остаются прежними, у новой — их нет;
-/// пустой список — условий нет.
-/// </param>
-public record BoardColumnInput(Guid? Id, string Name, Guid[] StatusIds, Dictionary<Guid, Guid>? DropStatuses, string[]? FieldFilters = null);
+public record BoardColumnInput(Guid? Id, string Name, Guid[] StatusIds, Dictionary<Guid, Guid>? DropStatuses, string? Query = null);
 
 /// <param name="Version">Версия задачи, которую видел клиент: перенос меняет статус задачи.</param>
 public record MoveTask(Guid TaskId, string? Version);
@@ -35,7 +30,6 @@ public class BoardService(
     ITaskTypeStorage taskTypes,
     ITaskStorage tasks,
     IFieldStorage fields,
-    IFieldEnumStorage enums,
     TaskService taskService,
     TaskSeries.IWriteScope writes,
     Locks.EditLockService locks
@@ -60,8 +54,6 @@ public class BoardService(
         await locks.EnsureWritable(Locks.LockedEntity.Board, board.Id, Subject(board), ct);
         var expected = Versioning.Check(board.Version, command.Version, Subject(board));
 
-        // Колонки не переданы — оставляем текущие (условия по полям у них остаются: null у колонки с Id), но заново проверяем
-        // их против (возможно, новых) наборов.
         var columns = command.Columns ?? board.Columns
             .Select(c => new BoardColumnInput(c.Id, c.Name, c.StatusIds, c.DropStatuses.ToDictionary()))
             .ToArray();
@@ -99,14 +91,16 @@ public class BoardService(
         return true;
     }
 
+    public const string ColumnQueryInvalidCode = "board.columnQueryInvalid";
+
     private static ErrorSubject Subject(Board board) => ErrorSubject.Board(board.Name);
 
     /// <summary>
     /// Перенос задачи в колонку: задача получает статус из правила переноса колонки для набора её типа.
-    /// Задача, не подходящая под условия колонки по полям, не переносится: статус это не исправит (она сразу «пропала» бы с колонки),
-    /// а поля задачи перенос не меняет — сначала нужно поправить поля самой задачи. Отказ называет условия.
+    /// Задача, которая после переноса не подходила бы под запрос колонки, не переносится: перенос меняет только статус, остальное нужно поправить в самой задаче.
+    /// Отказ называет запрос.
     /// </summary>
-    /// <exception cref="TaskerValidationException">Нет правила переноса для типа задачи или задача не подходит под условия колонки.</exception>
+    /// <exception cref="TaskerValidationException">Нет правила переноса для типа задачи или задача не подходит под запрос колонки.</exception>
     /// <returns>null — нет доски, колонки или задачи.</returns>
     public async Task<TaskItem?> MoveTask(Guid projectId, Guid boardId, Guid columnId, MoveTask command, CancellationToken ct = default)
     {
@@ -125,22 +119,18 @@ public class BoardService(
         var statusId = column.GetDropStatus(type.StatusSetId)
             ?? throw TaskerErrors.BoardNoDropRule(column.Name, type.Name);
 
-        if (column.FieldConditions.Length > 0)
-        {
-            var conditions = ColumnFilters.ToConditions(
-                column.FieldConditions, await taskTypes.GetAll(projectId, ct), (await fields.GetAll(projectId, ct)).ToDictionary(x => x.Id));
-            if (!conditions.All(x => x.Matches(task)))
-                throw TaskerErrors.BoardTaskNotMatchColumn(task.Title, column.Name, await DescribeFilters(projectId, column, ct));
-        }
+        if (await ColumnQuery(projectId, column, ct) is { Predicate: { } predicate }
+            && (await tasks.GetAll(projectId, new TaskFilter { Ids = [task.Id], Predicate = AfterMove(predicate, task.StatusId, statusId) }, ct)).Length == 0)
+            throw TaskerErrors.BoardTaskNotMatchColumn(task.Title, column.Name, column.Query!);
 
         return await taskService.Update(projectId, task.Id, new UpdateTask(null, null, null, statusId, command.Version), ct);
     }
 
     /// <summary>
     /// Задачи колонки: тип задачи использует один из наборов статусов доски,
-    /// а статус — один из статусов колонки, и выполнены все условия колонки по полям (<see cref="BoardColumn.FieldConditions"/>). null — нет такой доски или колонки.
+    /// а статус — один из статусов колонки, и задача подходит под запрос колонки (<see cref="BoardColumn.Query"/>), а его сортировка задаёт порядок, если клиент не задал свою. null — нет такой доски или колонки.
     /// <paramref name="fieldFilters"/> — необязательный срез по значениям полей («Имя=значение», И; см. <see cref="TaskService.ParseFieldFilters"/>):
-    /// это условие просмотра, в колонке оно не хранится; оно добавляется к условиям колонки (И). <paramref name="descriptionLength"/> — усечение описаний, см. <see cref="DescriptionPreview"/>.
+    /// это условие просмотра, в колонке оно не хранится; оно добавляется к запросу колонки (И), как и <paramref name="query"/>. <paramref name="descriptionLength"/> — усечение описаний, см. <see cref="DescriptionPreview"/>.
     /// <paramref name="sort"/> — порядок задач внутри колонки (<see cref="TaskService.ParseSort"/>); по умолчанию — по времени создания.
     /// </summary>
     public async Task<ListDto<TaskListItem>?> GetColumnTasks(
@@ -166,31 +156,40 @@ public class BoardService(
             .Select(x => x.Id)
             .ToArray();
 
+        var parsed = await ColumnQuery(projectId, column, ct);
         var filter = new TaskFilter
         {
             TypeIds = typeIds,
             StatusIds = column.StatusIds,
-            FieldValues = column.FieldConditions.Length > 0
-                ? ColumnFilters.ToConditions(column.FieldConditions, allTypes, (await fields.GetAll(projectId, ct)).ToDictionary(x => x.Id))
-                : null
+            Predicate = parsed?.Predicate,
+            Sort = parsed?.Sort
         };
         return await taskService.List(projectId, filter, fieldFilters, page, descriptionLength, ct, sort, query);
     }
 
-    /// <summary>
-    /// Условия колонки текстом, как их пишут клиенты (<c>Имя=значение</c>, <c>Имя&gt;=3</c>, <c>Имя:set</c>): поле и значение enum — названиями из каталога.
-    /// </summary>
-    public async Task<string[]> DescribeFilters(Guid projectId, BoardColumn column, CancellationToken ct = default)
+    private static TaskPredicate AfterMove(TaskPredicate predicate, Guid current, Guid target) => predicate switch
     {
-        if (column.FieldConditions.Length == 0)
-            return [];
-        var catalog = (await fields.GetAll(projectId, ct)).ToDictionary(x => x.Id);
-        var enumerations = (await enums.GetAll(projectId, ct)).ToDictionary(x => x.Id);
-        return column.FieldConditions.Select(x => ColumnFilters.Text(x, catalog, enumerations)).ToArray();
+        TaskStatusIn x => new TaskStatusIn(x.Ids.Contains(target) ? [current] : []),
+        TaskAllOf x => new TaskAllOf([.. x.Parts.Select(p => AfterMove(p, current, target))]),
+        TaskAnyOf x => new TaskAnyOf([.. x.Parts.Select(p => AfterMove(p, current, target))]),
+        TaskNot x => new TaskNot(AfterMove(x.Inner, current, target)),
+        _ => predicate
+    };
+
+    private async Task<ParsedTaskQuery?> ColumnQuery(Guid projectId, BoardColumn column, CancellationToken ct)
+    {
+        try
+        {
+            return await taskService.ParseQuery(projectId, column.Query, ct);
+        }
+        catch (TaskerValidationException e)
+        {
+            throw TaskerErrors.BoardColumnQueryInvalid(column.Name, column.Query!, e.Message);
+        }
     }
 
     /// <summary>Общая проверка доски для создания и изменения.</summary>
-    /// <param name="existingColumns">Колонки, которые уже есть у доски: только их Id можно передавать; у них остаются условия по полям, если не переданы новые.</param>
+    /// <param name="existingColumns">Колонки, которые уже есть у доски: только их Id можно передавать; у них остаётся запрос, если не переданы новые.</param>
     private async Task<Board> Build(
         Guid projectId,
         Guid boardId,
@@ -216,37 +215,25 @@ public class BoardService(
         if (columns is not { Length: > 0 })
             throw TaskerErrors.BoardNoColumns();
 
-        // Условия колонок по полям: переданный текст разбирается по каталогу в id поля и значения; без текста у существующей колонки остаются
-        // её условия. Хранимые условия проверяются тем же правилом, что введённые.
         var catalog = (await fields.GetAll(projectId, ct)).ToDictionary(x => x.Id);
-        var enumerations = (await enums.GetAll(projectId, ct)).ToDictionary(x => x.Id);
-        var filters = new ColumnFieldFilter[columns.Length][];
+        var queries = new string?[columns.Length];
+        var predicates = new TaskPredicate?[columns.Length];
         for (var i = 0; i < columns.Length; i++)
         {
             var c = columns[i];
-            var where = $"Columns[{i}].FieldFilters";
-            if (c.FieldFilters == null)
-                filters[i] = c.Id is { } keptId && existingColumns.TryGetValue(keptId, out var kept) ? kept.FieldConditions : [];
-            else
+            var kept = c.Id is { } keptId && existingColumns.TryGetValue(keptId, out var existing) ? existing.Query : null;
+            var text = c.Query == null ? kept : string.IsNullOrWhiteSpace(c.Query) ? null : c.Query.Trim();
+            queries[i] = text;
+            try
             {
-                try
-                {
-                    filters[i] = (await taskService.ParseFieldFilters(projectId, c.FieldFilters, ct) ?? [])
-                        .Select(x => new ColumnFieldFilter(
-                            // Колонка хранит условия по id поля каталога: собственные поля задач (у каждой задачи свой id) в неё не входят.
-                            x.FieldId ?? throw TaskerErrors.Invalid($"'{x.Name}' is not a field of the catalog: a column condition needs one"),
-                            x.Operator, x.Value))
-                        .ToArray();
-                }
-                catch (TaskerValidationException e)
-                {
-                    throw e.Reworded($"{where}: {e.Message}", ("columnIndex", i));
-                }
+                predicates[i] = (await taskService.ParseQuery(projectId, text, ct))?.Predicate;
             }
-
-            filters[i] = filters[i].Distinct().ToArray();
-            foreach (var filter in filters[i])
-                ColumnFilters.Validate(filter, catalog, enumerations, i);
+            catch (TaskerValidationException e)
+            {
+                if (text != kept)
+                    throw e.Reworded($"Columns[{i}].Query: {e.Message}", ("columnIndex", i));
+                predicates[i] = null;
+            }
         }
 
         var usedColumnIds = new HashSet<Guid>();
@@ -287,17 +274,15 @@ public class BoardService(
                 Id = c.Id ?? Guid.NewGuid(),
                 Name = columnName,
                 StatusIds = statusIds,
-                FieldConditions = filters[i],
+                Query = queries[i],
                 DropStatuses = new Dictionary<Guid, Guid>(drop)
             };
         }).ToArray();
 
-        // Статус в двух колонках — задача показывалась бы на доске дважды, если только условия колонок по полям не исключают друг друга
-        // (например, «Компонент=API» и «Компонент!=API»).
-        if (ColumnFilters.FindOverlap(built, catalog) is var (first, _, shared, at))
+        if (ColumnQueries.FindOverlap(built, predicates, catalog) is var (first, _, shared, at))
             throw TaskerErrors.BoardColumnOverlap(at, StatusName(shared), first.Name,
-                $"Columns[{at}].StatusIds: status {shared} is already used by column '{first.Name}', and the columns' field conditions do not " +
-                "exclude each other (a status may be shared only by columns with conditions that cannot hold together, such as Field=a and Field!=a)");
+                $"Columns[{at}].StatusIds: status {shared} is already used by column '{first.Name}', and the columns' queries do not " +
+                "exclude each other (a status may be shared only by columns whose queries cannot hold together, such as .Field.Component == \"API\" and .Field.Component != \"API\")");
 
         return new Board
         {

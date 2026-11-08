@@ -114,6 +114,7 @@ struct BoardEditorPage: View {
                 field(.boardSets) { sets }
                 ForEach(Array(model.draft.columns.enumerated()), id: \.element.id) { index, column in
                     BoardColumnCard(model: model, index: index, column: column)
+                        .zIndex(model.queryModel(for: column)?.showsHints == true ? 1 : 0)
                 }
                 Button {
                     model.edit { draft, _ in draft.columns.append(BoardColumnDraft(name: l.string(.boardNewColumn))) }
@@ -215,7 +216,7 @@ private struct BoardColumnCard: View {
             }
             statuses
             drops
-            conditions
+            query
         }
         .padding(DesignSpacing.gap10 + 2)
         .background(DesignColor.panel.color, in: RoundedRectangle(cornerRadius: DesignRadius.card))
@@ -305,118 +306,18 @@ private struct BoardColumnCard: View {
         }
     }
 
-    private var conditions: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            label(.boardConditions)
-            ForEach(column.conditions) { condition in
-                BoardConditionRow(model: model, column: index, condition: condition)
-            }
-            if catalog.fields.isEmpty {
-                Text(l.string(.boardNoFields)).foregroundStyle(DesignColor.dim.color)
-            } else {
-                Button {
-                    model.edit { draft, catalog in
-                        if let value = catalog.newCondition(), draft.columns.indices.contains(index) { draft.columns[index].conditions.append(value) }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        MockupIconView(icon: .plus, size: 11)
-                        Text(l.string(.boardAddCondition))
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct BoardConditionRow: View {
-    @Bindable var model: BoardEditorModel
-    let column: Int
-    let condition: BoardCondition
-    @Environment(\.localizer) private var l
-
-    private var catalog: BoardCatalog { model.catalog }
-    private var field: BoardFieldInfo? { catalog.field(condition.fieldId) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: DesignSpacing.gap6) {
-                Picker(selection: Binding(
-                    get: { condition.fieldId },
-                    set: { id in
-                        guard let target = catalog.field(id) else { return }
-                        update { BoardEditing.changeField(&$0, to: target, catalog: catalog) }
-                    })) {
-                    ForEach(catalog.fields) { Text($0.name).tag($0.id) }
-                } label: { EmptyView() }
-                .labelsHidden()
-                .fixedSize()
-                Picker(selection: Binding(
-                    get: { condition.op },
-                    set: { op in update { BoardEditing.changeOperator(&$0, to: op, field: field, catalog: catalog) } })) {
-                    ForEach(field.map { catalog.operators(for: $0) } ?? [condition.op], id: \.self) { Text(operatorTitle($0)).tag($0) }
-                } label: { EmptyView() }
-                .labelsHidden()
-                .fixedSize()
-                if condition.takesValue { valueEditor }
-                Button {
-                    model.edit { draft, _ in draft.columns[column].conditions.removeAll { $0.id == condition.id } }
-                } label: {
-                    MockupIconView(icon: .x, size: 11)
-                        .foregroundStyle(DesignColor.mut.color)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(l.string(.boardConditionRemove))
-            }
-            if let message = model.issues.conditions[condition.id] {
-                Text(message).foregroundStyle(DesignColor.red.color)
-            }
-        }
-    }
-
     @ViewBuilder
-    private var valueEditor: some View {
-        if let field, field.type == .enum {
-            Picker(selection: Binding(
-                get: { condition.value.lowercased() },
-                set: { value in update { $0.value = value } })) {
-                ForEach(field.enumId.flatMap { catalog.enums[$0] } ?? []) { Text($0.name).tag($0.id.uuidString.lowercased()) }
-            } label: { EmptyView() }
-            .labelsHidden()
-            .fixedSize()
-        } else if let field, field.type == .bool {
-            Picker(selection: Binding(get: { condition.value }, set: { value in update { $0.value = value } })) {
-                Text(l.string(.taskDetailYes)).tag("true")
-                Text(l.string(.taskDetailNo)).tag("false")
-            } label: { EmptyView() }
-            .labelsHidden()
-            .fixedSize()
-        } else {
-            TextField(l.string(.boardValuePlaceholder), text: Binding(get: { condition.value }, set: { value in update { $0.value = value } }))
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 130)
-        }
-    }
-
-    private func update(_ change: @escaping (inout BoardCondition) -> Void) {
-        model.edit { draft, _ in
-            guard draft.columns.indices.contains(column), let index = draft.columns[column].conditions.firstIndex(where: { $0.id == condition.id }) else { return }
-            change(&draft.columns[column].conditions[index])
-        }
-    }
-
-    private func operatorTitle(_ op: FieldOperator) -> String {
-        switch op {
-        case .notEqual: "≠"
-        case .greaterOrEqual: "≥"
-        case .lessOrEqual: "≤"
-        case .set: l.string(.boardOpSet)
-        case .unset: l.string(.boardOpUnset)
-        case .attached: l.string(.boardOpAttached)
-        case .detached: l.string(.boardOpDetached)
-        default: BoardEditing.symbol(op)
+    private var query: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            label(.boardQuery)
+            if let query = model.queryModel(for: column) {
+                TaskQueryBarField(model: query)
+                    .zIndex(1)
+            }
+            Text(l.string(.boardQueryHint))
+                .font(.design(DesignTypography.captionSize))
+                .foregroundStyle(DesignColor.dim.color)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

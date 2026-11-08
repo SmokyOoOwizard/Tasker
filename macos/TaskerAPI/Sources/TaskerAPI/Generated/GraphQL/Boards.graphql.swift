@@ -27,30 +27,6 @@ public struct BoardEditorCatalogQuery: GraphQLQuery {
             statusIds
           }
         }
-        fields(limit: 200) {
-          __typename
-          data {
-            __typename
-            id
-            name
-            type
-            multiple
-            enumId
-          }
-        }
-        enums(limit: 200) {
-          __typename
-          data {
-            __typename
-            id
-            name
-            values {
-              __typename
-              id
-              name
-            }
-          }
-        }
       }
     }
     """
@@ -74,30 +50,6 @@ public struct BoardEditorCatalogQuery: GraphQLQuery {
                     GraphQLField("id"),
                     GraphQLField("name"),
                     GraphQLField("statusIds")
-                ])
-            ]),
-            GraphQLField("fields", arguments: ["limit": .value(.int(200))], selections: [
-                GraphQLField("__typename"),
-                GraphQLField("data", selections: [
-                    GraphQLField("__typename"),
-                    GraphQLField("id"),
-                    GraphQLField("name"),
-                    GraphQLField("type"),
-                    GraphQLField("multiple"),
-                    GraphQLField("enumId")
-                ])
-            ]),
-            GraphQLField("enums", arguments: ["limit": .value(.int(200))], selections: [
-                GraphQLField("__typename"),
-                GraphQLField("data", selections: [
-                    GraphQLField("__typename"),
-                    GraphQLField("id"),
-                    GraphQLField("name"),
-                    GraphQLField("values", selections: [
-                        GraphQLField("__typename"),
-                        GraphQLField("id"),
-                        GraphQLField("name")
-                    ])
                 ])
             ])
         ])
@@ -126,15 +78,11 @@ public struct BoardEditorCatalogQuery: GraphQLQuery {
             public var id: UUID
             public var statuses: Statuses
             public var statusSets: StatusSets
-            public var fields: Fields
-            public var enums: Enums
 
-            public init(id: UUID, statuses: Statuses, statusSets: StatusSets, fields: Fields, enums: Enums) {
+            public init(id: UUID, statuses: Statuses, statusSets: StatusSets) {
                 self.id = id
                 self.statuses = statuses
                 self.statusSets = statusSets
-                self.fields = fields
-                self.enums = enums
             }
 
             public struct Statuses: Hashable, Sendable, Decodable {
@@ -176,60 +124,6 @@ public struct BoardEditorCatalogQuery: GraphQLQuery {
                     }
                 }
             }
-
-            public struct Fields: Hashable, Sendable, Decodable {
-                public var data: [DataItem]
-
-                public init(data: [DataItem]) {
-                    self.data = data
-                }
-
-                public struct DataItem: Hashable, Sendable, Decodable {
-                    public var id: UUID
-                    public var name: String
-                    public var type: FieldType
-                    public var multiple: Bool
-                    public var enumId: UUID?
-
-                    public init(id: UUID, name: String, type: FieldType, multiple: Bool, enumId: UUID?) {
-                        self.id = id
-                        self.name = name
-                        self.type = type
-                        self.multiple = multiple
-                        self.enumId = enumId
-                    }
-                }
-            }
-
-            public struct Enums: Hashable, Sendable, Decodable {
-                public var data: [DataItem]
-
-                public init(data: [DataItem]) {
-                    self.data = data
-                }
-
-                public struct DataItem: Hashable, Sendable, Decodable {
-                    public var id: UUID
-                    public var name: String
-                    public var values: [Values]
-
-                    public init(id: UUID, name: String, values: [Values]) {
-                        self.id = id
-                        self.name = name
-                        self.values = values
-                    }
-
-                    public struct Values: Hashable, Sendable, Decodable {
-                        public var id: UUID
-                        public var name: String
-
-                        public init(id: UUID, name: String) {
-                            self.id = id
-                            self.name = name
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -252,12 +146,7 @@ public struct BoardEditorBoardQuery: GraphQLQuery {
             id
             name
             statusIds
-            fieldConditions {
-              __typename
-              fieldId
-              operator
-              value
-            }
+            query
             dropStatuses {
               __typename
               statusSetId
@@ -283,12 +172,7 @@ public struct BoardEditorBoardQuery: GraphQLQuery {
                     GraphQLField("id"),
                     GraphQLField("name"),
                     GraphQLField("statusIds"),
-                    GraphQLField("fieldConditions", selections: [
-                        GraphQLField("__typename"),
-                        GraphQLField("fieldId"),
-                        GraphQLField("operator"),
-                        GraphQLField("value")
-                    ]),
+                    GraphQLField("query"),
                     GraphQLField("dropStatuses", selections: [
                         GraphQLField("__typename"),
                         GraphQLField("statusSetId"),
@@ -349,27 +233,15 @@ public struct BoardEditorBoardQuery: GraphQLQuery {
                     public var id: UUID
                     public var name: String
                     public var statusIds: [UUID]
-                    public var fieldConditions: [FieldConditions]
+                    public var query: String?
                     public var dropStatuses: [DropStatuses]
 
-                    public init(id: UUID, name: String, statusIds: [UUID], fieldConditions: [FieldConditions], dropStatuses: [DropStatuses]) {
+                    public init(id: UUID, name: String, statusIds: [UUID], query: String?, dropStatuses: [DropStatuses]) {
                         self.id = id
                         self.name = name
                         self.statusIds = statusIds
-                        self.fieldConditions = fieldConditions
+                        self.query = query
                         self.dropStatuses = dropStatuses
-                    }
-
-                    public struct FieldConditions: Hashable, Sendable, Decodable {
-                        public var fieldId: UUID
-                        public var `operator`: FieldOperator
-                        public var value: String?
-
-                        public init(fieldId: UUID, `operator`: FieldOperator, value: String?) {
-                            self.fieldId = fieldId
-                            self.operator = `operator`
-                            self.value = value
-                        }
                     }
 
                     public struct DropStatuses: Hashable, Sendable, Decodable {

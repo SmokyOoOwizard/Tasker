@@ -5,7 +5,7 @@ struct BoardColumnInfo: Hashable, Sendable, Identifiable {
     var id: UUID
     var name: String
     var statusIds: [UUID]
-    var conditions: [BoardCondition]
+    var query: String?
 }
 
 struct BoardInfo: Hashable, Sendable {
@@ -55,7 +55,7 @@ struct GraphQLBoardViewSource: BoardViewSource {
     func board(project: UUID, id: UUID) async throws -> BoardInfo? {
         guard let record = try await GraphQLBoardEditorSource(client: client).board(project: project, id: id) else { return nil }
         let columns = record.draft.columns.compactMap { column in
-            column.serverId.map { BoardColumnInfo(id: $0, name: column.name, statusIds: column.statusIds, conditions: column.conditions) }
+            column.serverId.map { BoardColumnInfo(id: $0, name: column.name, statusIds: column.statusIds, query: column.trimmedQuery.isEmpty ? nil : column.trimmedQuery) }
         }
         return BoardInfo(id: record.id, name: record.draft.name, setIds: record.draft.setIds, columns: columns)
     }

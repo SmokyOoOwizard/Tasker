@@ -5,17 +5,15 @@ export const strings = {
     "error.auth.localOnly": "Only local requests are allowed.",
     "error.auth.required": "Sign in to continue.",
     "error.auth.sessionExpired": "The session has expired. Sign in again.",
-    "error.board.columnOverlap": "Status “{0}” is already in column “{1}”, and the field conditions of these columns do not exclude each other.",
-    "error.board.conditionNoValue": "Condition “{1}” on field “{0}” takes no value.",
-    "error.board.conditionNotApplicable": "Condition “{1}” does not apply to field “{0}” of type “{2}”.",
-    "error.board.conditionValueRequired": "Condition “{1}” on field “{0}” needs a value.",
+    "error.board.columnOverlap": "Status “{0}” is already in column “{1}”, and the queries of these columns do not exclude each other.",
+    "error.board.columnQueryInvalid": "The query of column “{0}” no longer parses. Fix it in the board settings.",
     "error.board.dropSetNotOnBoard": "Status set “{0}” is not on the board.",
     "error.board.dropStatusNotInColumn": "Status “{0}” does not belong to this column.",
     "error.board.dropStatusNotInSet": "Status “{0}” is not in set “{1}”.",
     "error.board.noColumns": "A board needs at least one column.",
     "error.board.noDropRule": "Column “{0}” has no rule for tasks of type “{1}”.",
     "error.board.noStatusSets": "A board needs at least one status set.",
-    "error.board.taskNotMatchColumn": "Task “{0}” does not match the conditions of column “{1}”: {2}. Change its fields first.",
+    "error.board.taskNotMatchColumn": "Task “{0}” does not match the query of column “{1}”: {2}. A move changes only the status, change the task first.",
     "error.board.taskTypeNotOnBoard": "Task type “{0}” is not on board “{1}”.",
     "error.comment.notAuthor": "You can change only your own comments.",
     "error.comment.parentDeleted": "The comment is deleted, it cannot be replied to.",
@@ -23,13 +21,11 @@ export const strings = {
     "error.entity.locked": "“{0}” is being edited by {1}.",
     "error.entity.modified": "Someone else already changed “{0}”. Reload and try again.",
     "error.entity.notFound": "Not found.",
-    "error.enum.columnsCollide": "On board “{0}”, columns “{1}” and “{2}” would show the same tasks after the change.",
     "error.enum.inUse": "Enum “{0}” is in use.",
     "error.enum.nameTaken": "Enum “{0}” already exists in the project.",
     "error.enum.noValues": "An enum needs at least one value.",
     "error.enum.valueRepeated": "Value “{0}” is repeated.",
     "error.enum.valuesInUse": "Values of enum “{0}” are in use and cannot be removed: {1}.",
-    "error.field.changeBlockedByColumns": "Field “{0}” is used in column conditions. Remove those conditions first.",
     "error.field.conversionBlocked": "Field values cannot be converted without instructions for the incompatible ones.",
     "error.field.enumNotAllowed": "Only a field of type enum can have an enum.",
     "error.field.enumRequired": "A field of type enum must refer to an enum of the project.",
@@ -316,17 +312,15 @@ export const strings = {
     "error.auth.localOnly": "Разрешены только локальные запросы.",
     "error.auth.required": "Войдите в учётную запись.",
     "error.auth.sessionExpired": "Сессия истекла. Войдите снова.",
-    "error.board.columnOverlap": "Статус «{0}» уже есть в колонке «{1}», а условия этих колонок по полям не исключают друг друга.",
-    "error.board.conditionNoValue": "Условию «{1}» по полю «{0}» значение не нужно.",
-    "error.board.conditionNotApplicable": "Условие «{1}» нельзя применить к полю «{0}» типа «{2}».",
-    "error.board.conditionValueRequired": "Условию «{1}» по полю «{0}» нужно значение.",
+    "error.board.columnOverlap": "Статус «{0}» уже есть в колонке «{1}», а запросы этих колонок не исключают друг друга.",
+    "error.board.columnQueryInvalid": "Запрос колонки «{0}» больше не разбирается. Исправьте его в настройках доски.",
     "error.board.dropSetNotOnBoard": "Набора статусов «{0}» нет на доске.",
     "error.board.dropStatusNotInColumn": "Статус «{0}» не относится к этой колонке.",
     "error.board.dropStatusNotInSet": "Статуса «{0}» нет в наборе «{1}».",
     "error.board.noColumns": "На доске должна быть хотя бы одна колонка.",
     "error.board.noDropRule": "В колонке «{0}» нет правила для задач типа «{1}».",
     "error.board.noStatusSets": "На доске должен быть хотя бы один набор статусов.",
-    "error.board.taskNotMatchColumn": "Задача «{0}» не подходит под условия колонки «{1}»: {2}. Сначала измените её поля.",
+    "error.board.taskNotMatchColumn": "Задача «{0}» не подходит под запрос колонки «{1}»: {2}. Перенос меняет только статус, сначала измените задачу.",
     "error.board.taskTypeNotOnBoard": "Типа задач «{0}» нет на доске «{1}».",
     "error.comment.notAuthor": "Менять и удалять можно только свои комментарии.",
     "error.comment.parentDeleted": "Комментарий удалён, на него нельзя ответить.",
@@ -334,13 +328,11 @@ export const strings = {
     "error.entity.locked": "«{0}» сейчас редактирует {1}.",
     "error.entity.modified": "«{0}» уже изменил кто-то другой. Обновите данные и повторите.",
     "error.entity.notFound": "Не найдено.",
-    "error.enum.columnsCollide": "На доске «{0}» колонки «{1}» и «{2}» после изменения показывали бы одни и те же задачи.",
     "error.enum.inUse": "Перечисление «{0}» используется.",
     "error.enum.nameTaken": "Перечисление «{0}» в проекте уже есть.",
     "error.enum.noValues": "В перечислении должно быть хотя бы одно значение.",
     "error.enum.valueRepeated": "Значение «{0}» повторяется.",
     "error.enum.valuesInUse": "Значения перечисления «{0}» используются и не могут быть удалены: {1}.",
-    "error.field.changeBlockedByColumns": "Поле «{0}» используется в условиях колонок. Сначала уберите эти условия.",
     "error.field.conversionBlocked": "Значения поля нельзя преобразовать без указаний, что делать с несовместимыми.",
     "error.field.enumNotAllowed": "Перечисление можно указать только у поля типа «перечисление».",
     "error.field.enumRequired": "У поля типа «перечисление» должно быть указано перечисление проекта.",
@@ -636,21 +628,9 @@ export const errorParams: Record<string, readonly string[]> = {
     "otherColumn",
     "columnIndex"
   ],
-  "board.conditionNoValue": [
-    "field",
-    "op",
-    "columnIndex"
-  ],
-  "board.conditionNotApplicable": [
-    "field",
-    "op",
-    "type",
-    "columnIndex"
-  ],
-  "board.conditionValueRequired": [
-    "field",
-    "op",
-    "columnIndex"
+  "board.columnQueryInvalid": [
+    "column",
+    "query"
   ],
   "board.dropSetNotOnBoard": [
     "statusSet",
@@ -674,7 +654,7 @@ export const errorParams: Record<string, readonly string[]> = {
   "board.taskNotMatchColumn": [
     "task",
     "column",
-    "conditions"
+    "query"
   ],
   "board.taskTypeNotOnBoard": [
     "taskType",
@@ -698,11 +678,6 @@ export const errorParams: Record<string, readonly string[]> = {
     "entity"
   ],
   "entity.notFound": [],
-  "enum.columnsCollide": [
-    "board",
-    "first",
-    "second"
-  ],
   "enum.inUse": [
     "name"
   ],
@@ -716,9 +691,6 @@ export const errorParams: Record<string, readonly string[]> = {
   "enum.valuesInUse": [
     "name",
     "values"
-  ],
-  "field.changeBlockedByColumns": [
-    "name"
   ],
   "field.conversionBlocked": [],
   "field.enumNotAllowed": [],

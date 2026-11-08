@@ -206,9 +206,7 @@ extension Components {
                 case auth_required = "auth.required"
                 case auth_sessionExpired = "auth.sessionExpired"
                 case board_columnOverlap = "board.columnOverlap"
-                case board_conditionNoValue = "board.conditionNoValue"
-                case board_conditionNotApplicable = "board.conditionNotApplicable"
-                case board_conditionValueRequired = "board.conditionValueRequired"
+                case board_columnQueryInvalid = "board.columnQueryInvalid"
                 case board_dropSetNotOnBoard = "board.dropSetNotOnBoard"
                 case board_dropStatusNotInColumn = "board.dropStatusNotInColumn"
                 case board_dropStatusNotInSet = "board.dropStatusNotInSet"
@@ -223,13 +221,11 @@ extension Components {
                 case entity_locked = "entity.locked"
                 case entity_modified = "entity.modified"
                 case entity_notFound = "entity.notFound"
-                case enum_columnsCollide = "enum.columnsCollide"
                 case enum_inUse = "enum.inUse"
                 case enum_nameTaken = "enum.nameTaken"
                 case enum_noValues = "enum.noValues"
                 case enum_valueRepeated = "enum.valueRepeated"
                 case enum_valuesInUse = "enum.valuesInUse"
-                case field_changeBlockedByColumns = "field.changeBlockedByColumns"
                 case field_conversionBlocked = "field.conversionBlocked"
                 case field_enumNotAllowed = "field.enumNotAllowed"
                 case field_enumRequired = "field.enumRequired"
@@ -450,8 +446,8 @@ extension Components {
             public var name: Swift.String
             /// - Remark: Generated from `#/components/schemas/BoardColumn/statusIds`.
             public var statusIds: [Swift.String]
-            /// - Remark: Generated from `#/components/schemas/BoardColumn/fieldConditions`.
-            public var fieldConditions: [Components.Schemas.ColumnFieldFilter]
+            /// - Remark: Generated from `#/components/schemas/BoardColumn/query`.
+            public var query: Swift.String?
             /// - Remark: Generated from `#/components/schemas/BoardColumn/dropStatuses`.
             public struct DropStatusesPayload: Codable, Hashable, Sendable {
                 /// A container of undocumented properties.
@@ -478,26 +474,26 @@ extension Components {
             ///   - id:
             ///   - name:
             ///   - statusIds:
-            ///   - fieldConditions:
+            ///   - query:
             ///   - dropStatuses:
             public init(
                 id: Swift.String,
                 name: Swift.String,
                 statusIds: [Swift.String],
-                fieldConditions: [Components.Schemas.ColumnFieldFilter],
+                query: Swift.String? = nil,
                 dropStatuses: Components.Schemas.BoardColumn.DropStatusesPayload
             ) {
                 self.id = id
                 self.name = name
                 self.statusIds = statusIds
-                self.fieldConditions = fieldConditions
+                self.query = query
                 self.dropStatuses = dropStatuses
             }
             public enum CodingKeys: String, CodingKey {
                 case id
                 case name
                 case statusIds
-                case fieldConditions
+                case query
                 case dropStatuses
             }
         }
@@ -529,8 +525,8 @@ extension Components {
             }
             /// - Remark: Generated from `#/components/schemas/BoardColumnInput/dropStatuses`.
             public var dropStatuses: Components.Schemas.BoardColumnInput.DropStatusesPayload?
-            /// - Remark: Generated from `#/components/schemas/BoardColumnInput/fieldFilters`.
-            public var fieldFilters: [Swift.String]?
+            /// - Remark: Generated from `#/components/schemas/BoardColumnInput/query`.
+            public var query: Swift.String?
             /// Creates a new `BoardColumnInput`.
             ///
             /// - Parameters:
@@ -538,26 +534,26 @@ extension Components {
             ///   - name:
             ///   - statusIds:
             ///   - dropStatuses:
-            ///   - fieldFilters:
+            ///   - query:
             public init(
                 id: Swift.String? = nil,
                 name: Swift.String,
                 statusIds: [Swift.String],
                 dropStatuses: Components.Schemas.BoardColumnInput.DropStatusesPayload? = nil,
-                fieldFilters: [Swift.String]? = nil
+                query: Swift.String? = nil
             ) {
                 self.id = id
                 self.name = name
                 self.statusIds = statusIds
                 self.dropStatuses = dropStatuses
-                self.fieldFilters = fieldFilters
+                self.query = query
             }
             public enum CodingKeys: String, CodingKey {
                 case id
                 case name
                 case statusIds
                 case dropStatuses
-                case fieldFilters
+                case query
             }
         }
         /// - Remark: Generated from `#/components/schemas/ChangePassword`.
@@ -706,35 +702,6 @@ extension Components {
                 case skipReason
                 case linksSkipReason
                 case linkCycles
-            }
-        }
-        /// - Remark: Generated from `#/components/schemas/ColumnFieldFilter`.
-        public struct ColumnFieldFilter: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/ColumnFieldFilter/fieldId`.
-            public var fieldId: Swift.String
-            /// - Remark: Generated from `#/components/schemas/ColumnFieldFilter/operator`.
-            public var _operator: Components.Schemas.FieldOperator
-            /// - Remark: Generated from `#/components/schemas/ColumnFieldFilter/value`.
-            public var value: Swift.String?
-            /// Creates a new `ColumnFieldFilter`.
-            ///
-            /// - Parameters:
-            ///   - fieldId:
-            ///   - _operator:
-            ///   - value:
-            public init(
-                fieldId: Swift.String,
-                _operator: Components.Schemas.FieldOperator,
-                value: Swift.String? = nil
-            ) {
-                self.fieldId = fieldId
-                self._operator = _operator
-                self.value = value
-            }
-            public enum CodingKeys: String, CodingKey {
-                case fieldId
-                case _operator = "operator"
-                case value
             }
         }
         /// - Remark: Generated from `#/components/schemas/CommentAuthor`.
@@ -1598,19 +1565,6 @@ extension Components {
                 case id
                 case name
             }
-        }
-        /// - Remark: Generated from `#/components/schemas/FieldOperator`.
-        @frozen public enum FieldOperator: String, Codable, Hashable, Sendable, CaseIterable {
-            case equal = "equal"
-            case notEqual = "notEqual"
-            case greater = "greater"
-            case greaterOrEqual = "greaterOrEqual"
-            case less = "less"
-            case lessOrEqual = "lessOrEqual"
-            case set = "set"
-            case unset = "unset"
-            case attached = "attached"
-            case detached = "detached"
         }
         /// - Remark: Generated from `#/components/schemas/FieldType`.
         @frozen public enum FieldType: String, Codable, Hashable, Sendable, CaseIterable {

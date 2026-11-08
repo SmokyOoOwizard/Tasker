@@ -9,19 +9,6 @@ public enum DaemonState: String, GraphQLEnum, CaseIterable {
     case failed
 }
 
-public enum FieldOperator: String, GraphQLEnum, CaseIterable {
-    case equal
-    case notEqual
-    case greater
-    case greaterOrEqual
-    case less
-    case lessOrEqual
-    case set
-    case unset
-    case attached
-    case detached
-}
-
 public enum FieldType: String, GraphQLEnum, CaseIterable {
     case string
     case int

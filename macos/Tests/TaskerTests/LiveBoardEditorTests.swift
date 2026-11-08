@@ -49,8 +49,8 @@ struct LiveBoardEditorTests {
         await settle { creator.phase == .ready }
         #expect(creator.draft.columns.count == 4)
         creator.draft.name = "Live " + UUID().uuidString.prefix(6)
-        creator.edit { draft, catalog in
-            draft.columns[1].conditions = [catalog.newCondition()!]
+        creator.edit { draft, _ in
+            draft.columns[1].query = ".Title.Contains(\"live\") | sort -.Updated"
         }
         var created = false
         creator.onCreated = { created = true }
@@ -67,7 +67,7 @@ struct LiveBoardEditorTests {
         editor.load()
         await settle { editor.lock == .mine }
         #expect(editor.lock == .mine)
-        #expect(editor.draft.columns[1].conditions.count == 1)
+        #expect(editor.draft.columns[1].query == ".Title.Contains(\"live\") | sort -.Updated")
         #expect(editor.draft.columns[0].statusIds.count == 1)
 
         editor.edit { draft, _ in
@@ -86,12 +86,9 @@ struct LiveBoardEditorTests {
         print("LIVE overlap message:", editor.issues.columns[rejected]?.first ?? "")
 
         editor.edit { draft, catalog in
-            var api = catalog.newCondition()!
-            api.op = .equal
-            var other = api
-            other.op = .notEqual
-            draft.columns[0].conditions = [api]
-            draft.columns[3].conditions = [other]
+            let name = catalog.status(shared)?.name ?? ""
+            draft.columns[0].query = ".Status == \"\(name)\""
+            draft.columns[3].query = ".Status != \"\(name)\""
         }
         #expect(await editor.save())
         #expect(editor.draft.columns[3].statusIds.contains(shared))

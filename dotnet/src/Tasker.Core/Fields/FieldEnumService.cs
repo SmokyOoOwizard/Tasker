@@ -1,4 +1,3 @@
-using Tasker.Core.Boards;
 using Tasker.Core.Dto;
 using Tasker.Core.Tasks;
 using Tasker.Core.TaskSeries;
@@ -14,17 +13,17 @@ public record FieldEnumValueInput(Guid? Id, string Name);
 /// <summary>
 /// Что сделать у задач со значением перечисления, которое удаляют, пока оно выбрано хотя бы у одной задачи. Задан ровно один вариант.
 /// </summary>
-/// <param name="Clear">Убрать значение у всех задач, которые его используют; условие колонки доски на это значение — убрать из колонки.</param>
+/// <param name="Clear">Убрать значение у всех задач, которые его используют.</param>
 /// <param name="ReassignTo">Подставить вместо него это значение (id оставшегося значения того же перечисления) у всех таких задач;
-/// у поля с несколькими значениями — без повторов. Условие колонки доски на это значение переключается на то же значение.</param>
+/// у поля с несколькими значениями — без повторов.</param>
 public record RemovedEnumValues(bool Clear = false, Guid? ReassignTo = null);
 
 /// <summary>
 /// Поля null — не меняются. Values заменяет список целиком (и порядок): значения с id остаются теми же значениями
 /// (переименование), без id — добавляются, пропавшие — удаляются. Version — версия, которую видел клиент (см. <see cref="Versioning"/>).
 /// <para>
-/// Удаляемое значение, выбранное у задач или входящее в условие колонки доски, — только с явным выбором <paramref name="Removed"/>
-/// (убрать или переназначить); без выбора — ошибка <c>In use</c> с числом задач и колонками. Выбор нужен только когда значение
+/// Удаляемое значение, выбранное у задач, — только с явным выбором <paramref name="Removed"/>
+/// (убрать или переназначить); без выбора — ошибка <c>In use</c> с числом задач. Выбор нужен только когда значение
 /// где-то используется и применяется ко всем удаляемым значениям сразу. Обязательное поле, оставшееся без значения после «убрать», у задачи остаётся пустым: это не правка
 /// пользователем, обязательность не блокирует.
 /// </para>
@@ -35,7 +34,7 @@ public record UpdateFieldEnum(string? Name, FieldEnumValueInput[]? Values, strin
 /// Перечисления проекта. Уникальность имён проверяется под <see cref="IWriteScope"/>, как у полей.
 /// </summary>
 public class FieldEnumService(
-    IFieldEnumStorage enums, IFieldStorage fields, ITaskTypeStorage types, ITaskStorage tasks, IBoardStorage boards, IWriteScope writes, TimeProvider time,
+    IFieldEnumStorage enums, IFieldStorage fields, ITaskTypeStorage types, ITaskStorage tasks, IWriteScope writes, TimeProvider time,
     Locks.EditLockService locks)
 {
     private const int CascadeAttempts = 3;
@@ -122,19 +121,17 @@ public class FieldEnumService(
             var removedKeys = removed.Select(x => x.ToString("D")).ToHashSet();
             var (holders, _) = await FindHolders(projectId, current, removedKeys, ct);
             await TaskRewrites.WaitForLocks(locks, holders.Values, ct);
-            await locks.WaitUntilWritable(
-                (await FindBoards(projectId, current, removedKeys, ct)).Select(x => (Locks.LockedEntity.Board, x.Id, BoardSubject(x))).ToArray(), null, ct);
         }
 
         return await writes.Exclusive<CascadeResult<FieldEnum>?>(projectId, async () =>
         {
             if (name != current.Name)
                 await EnsureNameFree(projectId, name, id, ct);
-            var (affected, columns) = removed.Length > 0 ? await ApplyRemoval(projectId, current, removed, command.Removed, ct) : (0, 0);
+            var affected = removed.Length > 0 ? await ApplyRemoval(projectId, current, removed, command.Removed, ct) : 0;
 
             var updated = current with { Name = name, Values = values };
             var version = await enums.Update(updated, expected, ct) ?? throw Versioning.Modified(Subject(current));
-            return new CascadeResult<FieldEnum>(updated with { Version = version }, affected, columns);
+            return new CascadeResult<FieldEnum>(updated with { Version = version }, affected);
         }, ct);
     }
 
@@ -201,111 +198,27 @@ public class FieldEnumService(
         return (holders, Uses);
     }
 
-    /// <summary>Поля каталога с этим перечислением: на их значения ссылаются условия колонок досок.</summary>
-    private async Task<HashSet<Guid>> EnumFieldIds(Guid projectId, FieldEnum current, CancellationToken ct) =>
-        (await fields.GetAll(projectId, ct)).Where(x => x.EnumId == current.Id).Select(x => x.Id).ToHashSet();
-
-    /// <summary>Доски, у колонок которых есть условие на убираемые значения.</summary>
-    private async Task<Board[]> FindBoards(Guid projectId, FieldEnum current, HashSet<string> removedKeys, CancellationToken ct)
-    {
-        var fieldIds = await EnumFieldIds(projectId, current, ct);
-        return (await boards.GetAll(projectId, ct))
-            .Where(b => b.Columns.Any(c => c.FieldConditions.Any(f => UsesValue(f, fieldIds, removedKeys))))
-            .ToArray();
-    }
-
-    private static bool UsesValue(ColumnFieldFilter filter, HashSet<Guid> fieldIds, HashSet<string> removedKeys) =>
-        fieldIds.Contains(filter.FieldId) && filter.Value != null && removedKeys.Contains(filter.Value);
-
-    private static ErrorSubject BoardSubject(Board board) => ErrorSubject.Board(board.Name);
-
     /// <summary>
     /// Значения, которые убирают из перечисления, и места, где они выбраны: задачи (у полей каталога с этим перечислением и у собственных
     /// полей) и условия колонок досок. Выбрано хотя бы где-то — нужен выбор; без него ошибка <c>In use</c>.
     /// </summary>
     /// <returns>Сколько задач и колонок досок переписано.</returns>
-    private async Task<(int Tasks, int Columns)> ApplyRemoval(Guid projectId, FieldEnum current, Guid[] removed, RemovedEnumValues? choice, CancellationToken ct)
+    private async Task<int> ApplyRemoval(Guid projectId, FieldEnum current, Guid[] removed, RemovedEnumValues? choice, CancellationToken ct)
     {
         var removedKeys = removed.Select(x => x.ToString("D")).ToHashSet();
         var (holders, Uses) = await FindHolders(projectId, current, removedKeys, ct);
-        var affectedBoards = await FindBoards(projectId, current, removedKeys, ct);
-        if (holders.Count == 0 && affectedBoards.Length == 0)
-            return (0, 0);
+        if (holders.Count == 0)
+            return 0;
 
         if (choice == null)
         {
-            var fieldIds = await EnumFieldIds(projectId, current, ct);
             var names = current.Values.Where(x => removed.Contains(x.Id)).Select(x => x.Name).ToArray();
-            var places = new List<string>();
-            if (holders.Count > 0)
-                places.Add($"selected in {holders.Count} task(s)");
-            if (affectedBoards.Length > 0)
-                places.Add("used in the field conditions of " + string.Join(", ", affectedBoards.SelectMany(b => b.Columns
-                    .Where(c => c.FieldConditions.Any(f => UsesValue(f, fieldIds, removedKeys))).Select(c => $"board '{b.Name}' (column '{c.Name}')"))));
             throw TaskerErrors.EnumValuesInUse(current.Name, names,
-                $"Value(s) {string.Join(", ", names.Select(x => $"'{x}'"))} of {Subject(current)} are {string.Join(" and ", places)} and cannot be removed: " +
-                "choose to clear them (from the tasks, and the conditions from the columns) or to reassign them to another value of the enum");
+                $"Value(s) {string.Join(", ", names.Select(x => $"'{x}'"))} of {Subject(current)} are selected in {holders.Count} task(s) and cannot be removed: " +
+                "choose to clear them from the tasks or to reassign them to another value of the enum");
         }
 
-        var tasksRewritten = holders.Count > 0 ? await RewriteTasks(projectId, current, removedKeys, choice, holders, Uses, ct) : 0;
-        var columnsRewritten = affectedBoards.Length > 0 ? await RewriteBoards(projectId, current, removedKeys, choice, affectedBoards, ct) : 0;
-        return (tasksRewritten, columnsRewritten);
-    }
-
-    /// <summary>
-    /// Колонки досок: условие на убираемое значение — убирается (выбор «убрать») или получает значение-замену (выбор «переназначить»).
-    /// Колонка остаётся колонкой. Доска после правки должна остаться корректной (колонки с общим статусом не пересекаются): если нет — отказ
-    /// без записи, условия нужно поправить на доске.
-    /// </summary>
-    /// <returns>Сколько колонок переписано.</returns>
-    private async Task<int> RewriteBoards(
-        Guid projectId, FieldEnum current, HashSet<string> removedKeys, RemovedEnumValues choice, Board[] affected, CancellationToken ct)
-    {
-        var fieldIds = await EnumFieldIds(projectId, current, ct);
-        var catalog = (await fields.GetAll(projectId, ct)).ToDictionary(x => x.Id);
-        var target = choice.ReassignTo?.ToString("D");
-
-        BoardColumn Rewrite(BoardColumn column) => column.FieldConditions.Any(f => UsesValue(f, fieldIds, removedKeys))
-            ? new BoardColumn
-            {
-                Id = column.Id, Name = column.Name, StatusIds = column.StatusIds, DropStatuses = column.DropStatuses,
-                FieldConditions = column.FieldConditions
-                    .Select(f => UsesValue(f, fieldIds, removedKeys) ? (target == null ? null : f with { Value = target }) : f)
-                    .OfType<ColumnFieldFilter>().Distinct().ToArray()
-            }
-            : column;
-
-        var rewrittenBoards = new List<Board>();
-        foreach (var board in affected)
-        {
-            var columns = board.Columns.Select(Rewrite).ToArray();
-            if (ColumnFilters.FindOverlap(columns, catalog) is var (first, second, _, _))
-                throw TaskerErrors.EnumColumnsCollide(board.Name, first.Name, second.Name,
-                    $"{BoardSubject(board)}: after the change columns '{first.Name}' and '{second.Name}' would show the same tasks (the same status and conditions that " +
-                    "no longer exclude each other): change their conditions on the board first");
-            rewrittenBoards.Add(board with { Columns = columns });
-        }
-
-        // Блокировки досок проверяются до первой записи (без ожидания: ожидание — снаружи секции записи, см. Update).
-        await locks.WaitUntilWritable(rewrittenBoards.Select(x => (Locks.LockedEntity.Board, x.Id, BoardSubject(x))).ToArray(), TimeSpan.Zero, ct);
-
-        foreach (var board in rewrittenBoards)
-        {
-            var next = board;
-            for (var attempt = 0; ; attempt++)
-            {
-                if (await boards.Update(next, next.Version, ct) != null)
-                    break;
-                // Доску тем временем изменили: колонки переписываются заново по свежей версии.
-                var fresh = await boards.GetById(projectId, board.Id, ct);
-                if (fresh == null)
-                    break;
-                if (attempt + 1 >= CascadeAttempts)
-                    throw Versioning.Modified(BoardSubject(board));
-                next = fresh with { Columns = fresh.Columns.Select(Rewrite).ToArray() };
-            }
-        }
-        return affected.Sum(b => b.Columns.Count(c => c.FieldConditions.Any(f => UsesValue(f, fieldIds, removedKeys))));
+        return await RewriteTasks(projectId, current, removedKeys, choice, holders, Uses, ct);
     }
 
     private async Task<int> RewriteTasks(

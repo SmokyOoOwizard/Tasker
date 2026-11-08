@@ -109,9 +109,9 @@ public class EntityFileNameTests : IDisposable
     [Fact]
     public void Format_version_4_files_are_read_as_version_10_and_a_newer_one_is_refused()
     {
-        Assert.Equal(12, FormatVersions.Current);
-        Assert.StartsWith("formatVersion: 12\n", FormatVersions.Upgrade("formatVersion: 4\nid: 1\n", "x.yaml"));
-        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 13\nid: 1\n", "x.yaml"));
+        Assert.Equal(13, FormatVersions.Current);
+        Assert.StartsWith("formatVersion: 13\n", FormatVersions.Upgrade("formatVersion: 4\nid: 1\n", "x.yaml"));
+        Assert.Throws<UnsupportedFormatException>(() => FormatVersions.Upgrade("formatVersion: 14\nid: 1\n", "x.yaml"));
     }
 
     // ---- хранилище: создание, переименование, старые файлы ----

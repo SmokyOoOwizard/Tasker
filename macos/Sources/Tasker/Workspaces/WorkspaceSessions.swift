@@ -241,7 +241,7 @@ final class WorkspaceTabSession: Identifiable {
         let target = BoardEditorTarget(project: project, board: board)
         if boardEditor?.target == target { return true }
         closeBoardEditor()
-        let model = BoardEditorModel(target: target, source: GraphQLBoardEditorSource(client: client))
+        let model = BoardEditorModel(target: target, source: GraphQLBoardEditorSource(client: client), querySource: GraphQLTaskQuerySource(client: client))
         model.localizer = localizer
         model.onNotice = { [weak self] text in self?.notice(text) }
         model.onCreated = { [weak self] in self?.closeBoardEditor() }

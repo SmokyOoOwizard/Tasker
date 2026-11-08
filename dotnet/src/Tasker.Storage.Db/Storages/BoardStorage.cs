@@ -98,12 +98,7 @@ internal class BoardStorage(AppDbContext context) : IBoardStorage
             DropStatuses = c.DropStatuses
                 .Select(d => new BoardColumnDropStatusDbModel { ColumnId = c.Id, StatusSetId = d.Key, StatusId = d.Value })
                 .ToList(),
-            FieldFilters = c.FieldConditions
-                .Select((f, j) => new BoardColumnFieldFilterDbModel
-                {
-                    ColumnId = c.Id, Position = j, FieldId = f.FieldId, Operator = f.Operator.ToString(), Value = f.Value
-                })
-                .ToList()
+            Query = c.Query
         })
         .ToList();
 
@@ -113,7 +108,6 @@ internal class BoardStorage(AppDbContext context) : IBoardStorage
         .Include(x => x.StatusSets)
         .Include(x => x.Columns).ThenInclude(x => x.Statuses)
         .Include(x => x.Columns).ThenInclude(x => x.DropStatuses)
-        .Include(x => x.Columns).ThenInclude(x => x.FieldFilters)
         .Where(x => x.ProjectId == projectId);
 
     private static Board Map(BoardDbModel model) => new()
@@ -133,10 +127,7 @@ internal class BoardStorage(AppDbContext context) : IBoardStorage
                 Name = c.Name,
                 StatusIds = c.Statuses.OrderBy(x => x.Position).Select(x => x.StatusId).ToArray(),
                 DropStatuses = c.DropStatuses.ToDictionary(x => x.StatusSetId, x => x.StatusId),
-                FieldConditions = c.FieldFilters
-                    .OrderBy(x => x.Position)
-                    .Select(x => new ColumnFieldFilter(x.FieldId, Enum.Parse<FieldOperator>(x.Operator), x.Value))
-                    .ToArray()
+                Query = c.Query
             })
             .ToArray(),
         Version = DbVersion.ToText(model.Version)

@@ -1,13 +1,12 @@
 {
-  "jsonrpc": "2.0",
-  "id": 1,
   "result": {
     "content": [
       {
         "type": "text",
         "text": "{\"numberConflicts\":[],\"prefixConflicts\":[],\"tasksWithInvalidSeries\":0,\"unreadableSeriesFiles\":0,\"needsAttention\":false}"
       }
-    ],
-    "isError": false
-  }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
 }

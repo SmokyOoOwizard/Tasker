@@ -89,18 +89,6 @@ public static class TaskerErrors
     public static TaskerValidationException BoardDropStatusNotInColumn(int columnIndex, string status, string message) =>
         Validation(message, [status, columnIndex]);
 
-    [ErrorCode("board.conditionValueRequired", "field", "op", "columnIndex")]
-    public static TaskerValidationException BoardConditionValueRequired(int columnIndex, string field, string op, string message) =>
-        Validation(message, [field, op, columnIndex]);
-
-    [ErrorCode("board.conditionNoValue", "field", "op", "columnIndex")]
-    public static TaskerValidationException BoardConditionNoValue(int columnIndex, string field, string op, string message) =>
-        Validation(message, [field, op, columnIndex]);
-
-    [ErrorCode("board.conditionNotApplicable", "field", "op", "type", "columnIndex")]
-    public static TaskerValidationException BoardConditionNotApplicable(int columnIndex, string field, string op, string type, string message) =>
-        Validation(message, [field, op, type, columnIndex]);
-
     [ErrorCode("board.taskTypeNotOnBoard")]
     public static TaskerValidationException BoardTaskTypeNotOnBoard(string taskType, string board) =>
         Validation($"Task type '{taskType}' is not on board '{board}'", [taskType, board]);
@@ -110,11 +98,14 @@ public static class TaskerErrors
         Validation($"Column '{column}' has no drop rule for tasks of type '{taskType}'", [column, taskType]);
 
     [ErrorCode("board.taskNotMatchColumn")]
-    public static TaskerValidationException BoardTaskNotMatchColumn(string task, string column, string[] conditions) =>
+    public static TaskerValidationException BoardTaskNotMatchColumn(string task, string column, string query) =>
         Validation(
-            $"Task '{task}' does not match the field conditions of column '{column}' ({string.Join(", ", conditions)}): " +
-            "change the task's fields first, a move does not change them",
-            [task, column, conditions]);
+            $"Task '{task}' does not match the query of column '{column}' ({query}): change the task first, a move changes only its status",
+            [task, column, query]);
+
+    [ErrorCode("board.columnQueryInvalid", "column", "query")]
+    public static TaskerValidationException BoardColumnQueryInvalid(string column, string query, string reason) =>
+        Validation($"The query of column '{column}' ({query}) is invalid: {reason}. Fix the column's query in the board settings", [column, query]);
 
     [ErrorCode("fieldValue.repeated")]
     public static TaskerValidationException FieldValueRepeated(string field, string value) =>
@@ -257,17 +248,9 @@ public static class TaskerErrors
     public static TaskerConflictException EnumValuesInUse(string name, string[] values, string message) =>
         Conflict(message, [name, values]);
 
-    [ErrorCode("enum.columnsCollide")]
-    public static TaskerConflictException EnumColumnsCollide(string board, string first, string second, string message) =>
-        Conflict(message, [board, first, second]);
-
     [ErrorCode("field.inUse")]
     public static TaskerConflictException FieldInUse(string name, Usages usages) =>
         Conflict(usages.Message("deleted"), [name], usages);
-
-    [ErrorCode("field.changeBlockedByColumns")]
-    public static TaskerConflictException FieldChangeBlockedByColumns(string name, Usages usages) =>
-        Conflict(usages.Message("changed to another type, enum or multiplicity (remove its conditions from the columns first)"), [name], usages);
 
     [ErrorCode("field.conversionBlocked")]
     public static TaskerConflictException FieldConversionBlocked(string message) => Conflict(message, []);

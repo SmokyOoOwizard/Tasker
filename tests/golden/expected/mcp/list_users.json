@@ -1,13 +1,12 @@
 {
-  "jsonrpc": "2.0",
-  "id": 1,
   "result": {
     "content": [
       {
         "type": "text",
-        "text": "{\"totalCount\":5,\"offset\":0,\"limit\":50,\"data\":[{\"id\":\"<LOCAL-AGENT-ID>\",\"username\":\"agent\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"<LOCAL-AGENT-CREATED>\",\"version\":\"<LOCAL-AGENT-VERSION>\",\"isAgent\":true},{\"id\":\"00000080-0000-4000-8000-000000000080\",\"username\":\"alice\",\"kind\":\"human\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:12:11.123521+00:00\",\"version\":\"a6d59d54f13845ca\",\"isAgent\":false},{\"id\":\"00000081-0000-4000-8000-000000000081\",\"username\":\"bob.the-2nd_user\",\"kind\":\"human\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:13:12.123522+00:00\",\"version\":\"883e65594c14b34d\",\"isAgent\":false},{\"id\":\"00000082-0000-4000-8000-000000000082\",\"username\":\"claude\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:14:13.123523+00:00\",\"version\":\"b572a7ef929b137e\",\"isAgent\":true},{\"id\":\"00000083-0000-4000-8000-000000000083\",\"username\":\"codex\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:15:14.123524+00:00\",\"version\":\"f073a3fb62632819\",\"isAgent\":true}]}"
+        "text": "{\"totalCount\":5,\"offset\":0,\"limit\":50,\"data\":[{\"id\":\"<LOCAL-AGENT-ID>\",\"username\":\"agent\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"<LOCAL-AGENT-CREATED>\",\"version\":\"<LOCAL-AGENT-VERSION>\",\"isAgent\":true},{\"id\":\"00000080-0000-4000-8000-000000000080\",\"username\":\"alice\",\"kind\":\"human\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:12:11.123521+00:00\",\"version\":\"b850e71227895108\",\"isAgent\":false},{\"id\":\"00000081-0000-4000-8000-000000000081\",\"username\":\"bob.the-2nd_user\",\"kind\":\"human\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:13:12.123522+00:00\",\"version\":\"7234ee97f91f70aa\",\"isAgent\":false},{\"id\":\"00000082-0000-4000-8000-000000000082\",\"username\":\"claude\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:14:13.123523+00:00\",\"version\":\"ae508878825f373d\",\"isAgent\":true},{\"id\":\"00000083-0000-4000-8000-000000000083\",\"username\":\"codex\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"2026-01-01T01:15:14.123524+00:00\",\"version\":\"e441c3d19944e3b8\",\"isAgent\":true}]}"
       }
-    ],
-    "isError": false
-  }
+    ]
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
 }

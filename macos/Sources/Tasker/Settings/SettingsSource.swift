@@ -99,11 +99,6 @@ struct GraphQLSettingsSource: SettingsSource {
                 name: board.name, statusSetIds: board.statusSetIds,
                 columns: board.columns.map { SettingsBoardColumnItem(name: $0.name, statusIds: $0.statusIds, dropStatusIds: $0.dropStatuses.map(\.statusId)) })
         }
-        catalog.conditions = data.boards.data.flatMap { board in
-            board.columns.flatMap { column in
-                column.fieldConditions.map { SettingsBoardCondition(board: board.name, column: column.name, fieldId: $0.fieldId, value: $0.value) }
-            }
-        }
         catalog.health = SettingsHealth(
             numberConflicts: data.seriesHealth.numberConflicts.map { SeriesNumberConflict(seriesId: $0.seriesId, number: $0.number, taskIds: $0.taskIds) },
             prefixConflicts: data.seriesHealth.prefixConflicts.map(\.prefix),

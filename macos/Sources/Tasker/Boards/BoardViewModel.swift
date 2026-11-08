@@ -13,6 +13,7 @@ struct BoardColumnState: Identifiable, Equatable {
     var rows: [TaskRow] = []
     var total = 0
     var expanded = false
+    var error: Refusal?
 
     var id: UUID { info.id }
 
@@ -28,6 +29,7 @@ struct BoardRefusal: Equatable {
 @Observable
 final class BoardViewModel {
     static let pageSize = 50
+    nonisolated static let columnQueryInvalid = "board.columnQueryInvalid"
     static let fetchSize = 200
     static let refreshDelay: Duration = .milliseconds(120)
 
@@ -219,7 +221,13 @@ final class BoardViewModel {
                 let old = previous[column.id]
                 group.addTask {
                     var state = BoardColumnState(info: column, expanded: old?.expanded ?? false)
-                    let first = try await source.columnPage(project: project, board: board, column: column.id, query: query, offset: 0, limit: Self.pageSize)
+                    let first: BoardRowPage
+                    do {
+                        first = try await source.columnPage(project: project, board: board, column: column.id, query: query, offset: 0, limit: Self.pageSize)
+                    } catch let error as TaskerAPIError where error.refusal?.code == Self.columnQueryInvalid {
+                        state.error = error.refusal
+                        return (index, state)
+                    }
                     state.rows = first.rows
                     state.total = first.total
                     if state.expanded {
@@ -364,38 +372,6 @@ final class BoardViewModel {
         } catch {
             onFailure?(localizer.message(for: error))
             return []
-        }
-    }
-}
-
-extension BoardViewModel {
-    func conditionText(_ condition: BoardCondition) -> String {
-        guard let field = vocabulary.fields.first(where: { $0.id == condition.fieldId }) else { return "" }
-        let symbol: String
-        switch condition.op {
-        case .equal: symbol = "="
-        case .notEqual: symbol = "≠"
-        case .greater: symbol = ">"
-        case .greaterOrEqual: symbol = "≥"
-        case .less: symbol = "<"
-        case .lessOrEqual: symbol = "≤"
-        case .set: return field.name + " " + localizer.string(.boardOpSet)
-        case .unset: return field.name + " " + localizer.string(.boardOpUnset)
-        case .attached: return field.name + " " + localizer.string(.boardOpAttached)
-        case .detached: return field.name + " " + localizer.string(.boardOpDetached)
-        }
-        return field.name + " " + symbol + " " + valueText(condition.value, field: field)
-    }
-
-    private func valueText(_ value: String, field: TaskListVocabulary.Field) -> String {
-        switch field.type {
-        case .enum:
-            let options = field.enumId.flatMap { vocabulary.enums[$0] } ?? []
-            return options.first { $0.id.caseInsensitiveCompare(value) == .orderedSame }?.name ?? value
-        case .bool:
-            return value.lowercased() == "true" ? localizer.string(.taskDetailYes) : localizer.string(.taskDetailNo)
-        default:
-            return value
         }
     }
 }

@@ -2014,10 +2014,6 @@
                         "affectedTasks": {
                           "type": "integer",
                           "format": "int32"
-                        },
-                        "affectedColumns": {
-                          "type": "integer",
-                          "format": "int32"
                         }
                       }
                     }
@@ -5507,10 +5503,6 @@
                         "affectedTasks": {
                           "type": "integer",
                           "format": "int32"
-                        },
-                        "affectedColumns": {
-                          "type": "integer",
-                          "format": "int32"
                         }
                       }
                     }
@@ -8113,9 +8105,7 @@
               "auth.required",
               "auth.sessionExpired",
               "board.columnOverlap",
-              "board.conditionNoValue",
-              "board.conditionNotApplicable",
-              "board.conditionValueRequired",
+              "board.columnQueryInvalid",
               "board.dropSetNotOnBoard",
               "board.dropStatusNotInColumn",
               "board.dropStatusNotInSet",
@@ -8130,13 +8120,11 @@
               "entity.locked",
               "entity.modified",
               "entity.notFound",
-              "enum.columnsCollide",
               "enum.inUse",
               "enum.nameTaken",
               "enum.noValues",
               "enum.valueRepeated",
               "enum.valuesInUse",
-              "field.changeBlockedByColumns",
               "field.conversionBlocked",
               "field.enumNotAllowed",
               "field.enumRequired",
@@ -8315,7 +8303,6 @@
           "id",
           "name",
           "statusIds",
-          "fieldConditions",
           "dropStatuses"
         ],
         "type": "object",
@@ -8334,11 +8321,9 @@
               "format": "uuid"
             }
           },
-          "fieldConditions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ColumnFieldFilter"
-            }
+          "query": {
+            "type": "string",
+            "nullable": true
           },
           "dropStatuses": {
             "type": "object",
@@ -8379,11 +8364,8 @@
             },
             "nullable": true
           },
-          "fieldFilters": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
+          "query": {
+            "type": "string",
             "nullable": true
           }
         }
@@ -8504,26 +8486,6 @@
             "items": {
               "$ref": "#/components/schemas/LinkCycle"
             },
-            "nullable": true
-          }
-        }
-      },
-      "ColumnFieldFilter": {
-        "required": [
-          "fieldId",
-          "operator"
-        ],
-        "type": "object",
-        "properties": {
-          "fieldId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "operator": {
-            "$ref": "#/components/schemas/FieldOperator"
-          },
-          "value": {
-            "type": "string",
             "nullable": true
           }
         }
@@ -9145,21 +9107,6 @@
             "type": "string"
           }
         }
-      },
-      "FieldOperator": {
-        "type": "string",
-        "enum": [
-          "equal",
-          "notEqual",
-          "greater",
-          "greaterOrEqual",
-          "less",
-          "lessOrEqual",
-          "set",
-          "unset",
-          "attached",
-          "detached"
-        ]
       },
       "FieldType": {
         "type": "string",

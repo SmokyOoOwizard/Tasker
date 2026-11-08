@@ -85,8 +85,6 @@ internal static class CliJson
         var result = ToNode(value.Value, value.ValueType) as JsonObject ?? new JsonObject();
         var naming = TaskerJson.Options.PropertyNamingPolicy;
         result[naming?.ConvertName("AffectedTasks") ?? "AffectedTasks"] = value.AffectedTasks;
-        if (value.AffectedColumns > 0)
-            result[naming?.ConvertName("AffectedColumns") ?? "AffectedColumns"] = value.AffectedColumns;
         return result;
     }
 

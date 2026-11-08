@@ -98,13 +98,6 @@ struct SettingsBoardItem: Hashable, Sendable {
     var columns: [SettingsBoardColumnItem]
 }
 
-struct SettingsBoardCondition: Hashable, Sendable {
-    var board: String
-    var column: String
-    var fieldId: UUID
-    var value: String?
-}
-
 struct SettingsHealth: Hashable, Sendable {
     var numberConflicts: [SeriesNumberConflict] = []
     var prefixConflicts: [String] = []
@@ -131,7 +124,6 @@ struct SettingsCatalog: Hashable, Sendable {
     var statuses: [SettingsStatusItem] = []
     var statusSets: [SettingsStatusSetItem] = []
     var boards: [SettingsBoardItem] = []
-    var conditions: [SettingsBoardCondition] = []
     var health = SettingsHealth()
 
     func field(_ id: UUID?) -> SettingsFieldItem? { fields.first { $0.id == id } }

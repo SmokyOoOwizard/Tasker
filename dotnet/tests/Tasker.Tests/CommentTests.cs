@@ -251,7 +251,7 @@ public sealed class FilesCommentTests : CommentContract
         Assert.Equal($"{s.Task.ToString("N")[..8]}-{first.Id.ToString("N")[..8]}.yaml", name);
 
         var text = await File.ReadAllTextAsync(files.Single(x => x.EndsWith(reply.Id.ToString("N")[..8] + ".yaml")));
-        Assert.StartsWith("formatVersion: 12\n", text.ReplaceLineEndings("\n"));
+        Assert.StartsWith("formatVersion: 13\n", text.ReplaceLineEndings("\n"));
         Assert.Contains($"parentId: {first.Id}", text);
         Assert.Contains("authorKind: agent", text);
         Assert.EndsWith("body: Reply\n", text.ReplaceLineEndings("\n"));

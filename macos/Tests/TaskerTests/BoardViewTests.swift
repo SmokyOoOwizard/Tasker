@@ -9,6 +9,7 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
     private var _holdPages = false
     private var _rows: [TaskRow]
     private var _failure: TaskerAPIError?
+    private var _brokenColumns: Set<UUID> = []
     private var _moves: [String] = []
     private var _fields: [[String]] = []
     private var _refs: [BoardParentRef] = []
@@ -27,6 +28,11 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
     var rows: [TaskRow] {
         get { lock.withLock { _rows } }
         set { lock.withLock { _rows = newValue } }
+    }
+
+    var brokenColumns: Set<UUID> {
+        get { lock.withLock { _brokenColumns } }
+        set { lock.withLock { _brokenColumns = newValue } }
     }
 
     var failure: TaskerAPIError? {
@@ -71,6 +77,9 @@ final class StubBoardViewSource: BoardViewSource, @unchecked Sendable {
 
     func columnPage(project: UUID, board: UUID, column: UUID, query: String?, offset: Int, limit: Int) async throws -> BoardRowPage {
         lock.withLock { _fields.append(query.map { [$0] } ?? []) }
+        if brokenColumns.contains(column) {
+            throw TaskerAPIError.badRequest(Refusal(code: "board.columnQueryInvalid", message: "broken", params: ["column": .string("В работе")]))
+        }
         let statuses = info.columns.first { $0.id == column }?.statusIds ?? []
         let all = rows.filter { statuses.contains($0.statusId) }
         if holdPages {
@@ -140,8 +149,8 @@ struct BoardViewTests {
 
     private var info: BoardInfo {
         BoardInfo(id: board, name: "Основная", setIds: [set], columns: [
-            BoardColumnInfo(id: todoColumn, name: "Туду", statusIds: [todo], conditions: []),
-            BoardColumnInfo(id: doingColumn, name: "В работе", statusIds: [doing], conditions: [BoardCondition(fieldId: priority, op: .equal, value: high.uuidString)])
+            BoardColumnInfo(id: todoColumn, name: "Туду", statusIds: [todo], query: nil),
+            BoardColumnInfo(id: doingColumn, name: "В работе", statusIds: [doing], query: ".Field.Приоритет == \"Высокий\"")
         ])
     }
 
@@ -297,7 +306,7 @@ struct BoardViewTests {
         let stub = source([first])
         stub.failure = .badRequest(Refusal(
             code: "board.taskNotMatchColumn", message: "raw",
-            params: ["task": .string("Задача 1"), "column": .string("В работе"), "conditions": .array([.string("Приоритет=Высокий")])]))
+            params: ["task": .string("Задача 1"), "column": .string("В работе"), "query": .string(".Field.Приоритет == \"Высокий\"")]))
         let model = model(stub)
         var failures: [String] = []
         model.onFailure = { failures.append($0) }
@@ -305,7 +314,7 @@ struct BoardViewTests {
         await until { model.phase == .ready }
         model.move(task: first.id, to: doingColumn)
         await until { !failures.isEmpty }
-        #expect(failures == [ru.string(.errorBoardTaskNotMatchColumn, "Задача 1", "В работе", "Приоритет=Высокий")])
+        #expect(failures == [ru.string(.errorBoardTaskNotMatchColumn, "Задача 1", "В работе", ".Field.Приоритет == \"Высокий\"")])
         #expect(model.moving.isEmpty)
         #expect(model.refusal == BoardRefusal(column: doingColumn, tick: 1))
         #expect(model.columns.map(\.rows.count) == [1, 0])
@@ -324,13 +333,21 @@ struct BoardViewTests {
         #expect(model.columns.map(\.rows.count) == [0, 1])
     }
 
-    @Test func conditionsReadLikeInTheMockup() async {
-        let model = model(source([]))
+    @Test func aColumnWithABrokenQueryShowsItsErrorAndTheOthersLoad() async {
+        let stub = source([row(1, status: todo), row(2, status: doing)])
+        stub.brokenColumns = [doingColumn]
+        let model = model(stub)
         model.start()
         await until { model.phase == .ready }
-        #expect(model.conditionText(BoardCondition(fieldId: priority, op: .equal, value: high.uuidString)) == "Приоритет = Высокий")
-        #expect(model.conditionText(BoardCondition(fieldId: priority, op: .notEqual, value: high.uuidString)) == "Приоритет ≠ Высокий")
-        #expect(model.conditionText(BoardCondition(fieldId: priority, op: .unset, value: "")) == "Приоритет не задано")
+        #expect(model.columns[0].rows.count == 1)
+        #expect(model.columns[0].error == nil)
+        #expect(model.columns[1].rows.isEmpty)
+        #expect(model.columns[1].error?.code == "board.columnQueryInvalid")
+        #expect(model.columns[1].info.query == ".Field.Приоритет == \"Высокий\"")
+        stub.brokenColumns = []
+        model.scheduleRefresh()
+        await until { model.columns[1].error == nil }
+        #expect(model.columns[1].rows.count == 1)
     }
 
     @Test func theQueryHookFiltersEveryColumn() async {

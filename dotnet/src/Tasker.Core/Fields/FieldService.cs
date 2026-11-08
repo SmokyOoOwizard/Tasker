@@ -1,4 +1,3 @@
-using Tasker.Core.Boards;
 using Tasker.Core.Dto;
 using Tasker.Core.Tasks;
 using Tasker.Core.TaskSeries;
@@ -25,12 +24,9 @@ public record UpdateField(
 /// Каталог полей проекта. Уникальность имени и существование перечисления проверяются под <see cref="IWriteScope"/>,
 /// чтобы два одновременных запроса не создали одноимённые поля, а перечисление не удалили между проверкой и записью.
 /// Задачи считаются «используют поле», если у них записано это поле: со значениями или добавленное (см. <see cref="TaskItem.Fields"/>).
-/// Поле используют и колонки досок, если у них есть условие по нему (<see cref="BoardColumn.FieldConditions"/>): такое поле не удаляется
-/// и не меняет тип, перечисление и множественность (условие хранит значение в виде этого типа, а от множественности зависит, исключают ли друг друга
-/// условия колонок с общим статусом); переименование колонку не затрагивает.
 /// </summary>
 public class FieldService(
-    IFieldStorage fields, IFieldEnumStorage enums, ITaskTypeStorage types, ITaskStorage tasks, IBoardStorage boards, IWriteScope writes, TimeProvider time,
+    IFieldStorage fields, IFieldEnumStorage enums, ITaskTypeStorage types, ITaskStorage tasks, IWriteScope writes, TimeProvider time,
     Locks.EditLockService locks, ISeriesStorage series)
 {
     private const int CascadeAttempts = 3;
@@ -149,15 +145,6 @@ public class FieldService(
             if (name != field.Name)
                 await EnsureNameFree(projectId, name, id, ct);
 
-            // Условие колонки хранит значение в виде прежнего типа и перечисления: с другим типом оно потеряло бы смысл. От «одного значения» или
-            // «нескольких» зависит, исключают ли друг друга условия колонок с общим статусом (Level=a и Level=b вместе возможны только у списка).
-            if (changed.Type != field.Type || changed.EnumId != field.EnumId || changed.Multiple != field.Multiple)
-            {
-                var usages = new Usages(Subject(field));
-                await AddBoardColumns(projectId, id, usages, ct);
-                usages.ThrowIfAny(u => TaskerErrors.FieldChangeBlockedByColumns(field.Name, u));
-            }
-
             await ApplyValues(projectId, field, changed, command.Choice, ct);
 
             var version = await fields.Update(changed, expected, ct) ?? throw Versioning.Modified(Subject(field));
@@ -261,7 +248,6 @@ public class FieldService(
                     usages.AddTaskType(type.Name);
             }
             await TaskUsageRefs.AddTo(usages, tasks, series, projectId, new TaskFilter { FieldIds = [id] }, ct);
-            await AddBoardColumns(projectId, id, usages, ct);
             usages.ThrowIfAny(u => TaskerErrors.FieldInUse(field.Name, u));
 
             if (!await fields.Delete(projectId, id, expected, ct))
@@ -269,17 +255,6 @@ public class FieldService(
             await locks.Forget(Locks.LockedEntity.Field, field.Id, ct);
             return true;
         }, ct);
-    }
-
-    /// <summary>Колонки досок, у которых есть условие по этому полю.</summary>
-    private async Task AddBoardColumns(Guid projectId, Guid fieldId, Usages usages, CancellationToken ct)
-    {
-        foreach (var board in await boards.GetAll(projectId, ct))
-        foreach (var column in board.Columns)
-        {
-            if (column.FieldConditions.Any(x => x.FieldId == fieldId))
-                usages.AddBoardColumn(board, column);
-        }
     }
 
     private async Task EnsureNameFree(Guid projectId, string name, Guid? exceptId, CancellationToken ct)

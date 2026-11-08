@@ -555,11 +555,11 @@ public class TaskHierarchyTests
         await Ok(ws.Run("link-type", "create", "Needs", "--outward", "needs", "--inward", "is needed by"));
         var file = Directory.GetFiles(ws.Root, "needs-*.yaml", SearchOption.AllDirectories).Single();
         var text = (await File.ReadAllTextAsync(file)).ReplaceLineEndings("\n");
-        Assert.StartsWith("formatVersion: 12\n", text);
+        Assert.StartsWith("formatVersion: 13\n", text);
         Assert.Contains("hierarchical: false", text);
 
         // Файл, записанный до признака: версия 8 и без ключа.
-        var old = string.Join("\n", text.Split('\n').Where(x => !x.StartsWith("hierarchical:"))).Replace("formatVersion: 12", "formatVersion: 8");
+        var old = string.Join("\n", text.Split('\n').Where(x => !x.StartsWith("hierarchical:"))).Replace("formatVersion: 13", "formatVersion: 8");
         await File.WriteAllTextAsync(file, old);
 
         var read = (await Ok(ws.Run("link-type", "get", "Needs", "--json"))).Json;
@@ -568,7 +568,7 @@ public class TaskHierarchyTests
 
         await Ok(ws.Run("link-type", "update", "Needs", "--hierarchical", "true"));
         var written = (await File.ReadAllTextAsync(Directory.GetFiles(ws.Root, "needs-*.yaml", SearchOption.AllDirectories).Single())).ReplaceLineEndings("\n");
-        Assert.StartsWith("formatVersion: 12\n", written);
+        Assert.StartsWith("formatVersion: 13\n", written);
         Assert.Contains("hierarchical: true", written);
         Assert.Contains("allowCycles: false", written);
     }

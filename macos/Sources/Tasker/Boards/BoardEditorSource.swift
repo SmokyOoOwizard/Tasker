@@ -31,9 +31,6 @@ struct GraphQLBoardEditorSource: BoardEditorSource {
         var catalog = BoardCatalog()
         catalog.statuses = data.statuses.data.map { BoardStatusInfo(id: $0.id, name: $0.name, color: $0.color) }
         catalog.sets = data.statusSets.data.map { BoardSetInfo(id: $0.id, name: $0.name, statusIds: $0.statusIds) }
-        catalog.fields = data.fields.data.map { BoardFieldInfo(id: $0.id, name: $0.name, type: $0.type, multiple: $0.multiple, enumId: $0.enumId) }
-        catalog.enums = Dictionary(
-            data.enums.data.map { ($0.id, $0.values.map { BoardEnumValue(id: $0.id, name: $0.name) }) }, uniquingKeysWith: { first, _ in first })
         return catalog
     }
 
@@ -46,7 +43,7 @@ struct GraphQLBoardEditorSource: BoardEditorSource {
             BoardColumnDraft(
                 serverId: column.id, name: column.name, statusIds: column.statusIds,
                 drop: Dictionary(column.dropStatuses.map { ($0.statusSetId, $0.statusId) }, uniquingKeysWith: { first, _ in first }),
-                conditions: column.fieldConditions.map { BoardCondition(fieldId: $0.fieldId, op: $0.operator, value: $0.value ?? "") })
+                query: column.query ?? "")
         }
         return BoardRecord(id: board.id, version: board.version, draft: BoardDraft(name: board.name, setIds: board.statusSetIds, columns: columns))
     }
@@ -95,11 +92,10 @@ struct GraphQLBoardEditorSource: BoardEditorSource {
 
     static func input(_ column: BoardColumnDraft, original: BoardColumnDraft?, catalog: BoardCatalog) -> Components.Schemas.BoardColumnInput {
         let drop = Dictionary(column.drop.map { ($0.key.wire, $0.value.wire) }, uniquingKeysWith: { first, _ in first })
-        let filters: [String]? = original.map { $0.conditions == column.conditions } == true
-            ? nil
-            : column.conditions.compactMap { BoardEditing.filterText($0, catalog: catalog) }
+        let text = column.trimmedQuery
+        let query: String? = original.map { $0.trimmedQuery == text } == true || (original == nil && text.isEmpty) ? nil : text
         return .init(
             id: column.serverId?.wire, name: column.name.trimmingCharacters(in: .whitespaces), statusIds: column.statusIds.map(\.wire),
-            dropStatuses: .init(additionalProperties: drop), fieldFilters: filters)
+            dropStatuses: .init(additionalProperties: drop), query: query)
     }
 }

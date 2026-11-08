@@ -89,10 +89,6 @@ query SettingsCatalog($projectId: UUID!) {
             statusSetId
             statusId
           }
-          fieldConditions {
-            fieldId
-            value
-          }
         }
       }
     }

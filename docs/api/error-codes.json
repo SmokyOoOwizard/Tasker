@@ -34,31 +34,11 @@
       ],
       "usages": false
     },
-    "board.conditionNoValue": {
+    "board.columnQueryInvalid": {
       "status": 400,
       "params": [
-        "field",
-        "op",
-        "columnIndex"
-      ],
-      "usages": false
-    },
-    "board.conditionNotApplicable": {
-      "status": 400,
-      "params": [
-        "field",
-        "op",
-        "type",
-        "columnIndex"
-      ],
-      "usages": false
-    },
-    "board.conditionValueRequired": {
-      "status": 400,
-      "params": [
-        "field",
-        "op",
-        "columnIndex"
+        "column",
+        "query"
       ],
       "usages": false
     },
@@ -110,7 +90,7 @@
       "params": [
         "task",
         "column",
-        "conditions"
+        "query"
       ],
       "usages": false
     },
@@ -164,15 +144,6 @@
       "params": [],
       "usages": false
     },
-    "enum.columnsCollide": {
-      "status": 409,
-      "params": [
-        "board",
-        "first",
-        "second"
-      ],
-      "usages": false
-    },
     "enum.inUse": {
       "status": 409,
       "params": [
@@ -206,13 +177,6 @@
         "values"
       ],
       "usages": false
-    },
-    "field.changeBlockedByColumns": {
-      "status": 409,
-      "params": [
-        "name"
-      ],
-      "usages": true
     },
     "field.conversionBlocked": {
       "status": 409,

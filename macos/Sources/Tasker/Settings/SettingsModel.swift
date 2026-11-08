@@ -11,7 +11,6 @@ enum SettingsPhase: Equatable {
 struct EnumUsage: Equatable, Sendable {
     var perValue: [UUID: Int] = [:]
     var complete = true
-    var columns: [UUID: Int] = [:]
 
     func count(_ id: UUID) -> Int { perValue[id] ?? 0 }
 }
@@ -219,11 +218,6 @@ final class SettingsModel {
                     usage.perValue[id, default: 0] += 1
                 }
             }
-        }
-        let fieldIds = Set(catalog.fields(of: item.id).map(\.id))
-        let valueIds = Dictionary(item.values.map { ($0.id.uuidString.lowercased(), $0.id) }, uniquingKeysWith: { first, _ in first })
-        for condition in catalog.conditions where fieldIds.contains(condition.fieldId) {
-            if let value = condition.value, let id = valueIds[value.lowercased()] { usage.columns[id, default: 0] += 1 }
         }
         return usage
     }

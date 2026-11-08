@@ -99,8 +99,7 @@ internal static class ApiSchemaGenerator
                     Required = new HashSet<string> { "affectedTasks" },
                     Properties = new Dictionary<string, IOpenApiSchema>
                     {
-                        ["affectedTasks"] = new OpenApiSchema { Type = JsonSchemaType.Integer, Format = "int32" },
-                        ["affectedColumns"] = new OpenApiSchema { Type = JsonSchemaType.Integer, Format = "int32" }
+                        ["affectedTasks"] = new OpenApiSchema { Type = JsonSchemaType.Integer, Format = "int32" }
                     }
                 }
             ]
