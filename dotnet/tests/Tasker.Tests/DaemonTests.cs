@@ -244,7 +244,7 @@ public class DaemonTests : IDisposable
         using var created = await http.PostAsJsonAsync($"{apiBase}/projects", new { name = "Beta" });
         var restBody = (await created.Content.ReadFromJsonAsync<JsonNode>())!;
         var restProject = restBody["id"]!.GetValue<string>();
-        var rest = await ProjectChange(restProject);
+        var rest = await ProjectChange(restProject, x => x["author"] != null);
         Assert.Equal("local", rest["author"]!["key"]!.GetValue<string>());
 
         await _daemon.CallTool(key, "update_project", new { projectId = restProject, name = "FromAgent", version = restBody["version"]!.GetValue<string>() });
