@@ -1,4 +1,4 @@
-formatVersion: 11
+formatVersion: 13
 id: 63f3a620-277c-45d3-9c3a-0c3ee2f181e4
 name: Основная
 statusSets:
@@ -29,3 +29,4 @@ columns:
   - 4d53dac5-0d44-44d0-adcc-135d1d5acb26
   onDrop:
     9bd67326-014e-43f2-9485-c2c85a221934: 30300951-beb2-495f-a290-2b36ae0f4920
+  query: .Updated > "today-7d"
