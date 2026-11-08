@@ -7,6 +7,13 @@ enum MarkdownBlock: Hashable, Sendable {
     case quote(String)
     case code(String)
     case rule
+    case table(header: [String], alignments: [MarkdownColumnAlignment], rows: [[String]])
+}
+
+enum MarkdownColumnAlignment: Hashable, Sendable {
+    case leading
+    case center
+    case trailing
 }
 
 enum MarkdownParser {
@@ -46,6 +53,12 @@ enum MarkdownParser {
             if trimmed.isEmpty {
                 flushParagraph()
                 flushQuote()
+            } else if index + 1 < lines.count, let table = table(header: trimmed, delimiter: lines[index + 1].trimmingCharacters(in: .whitespaces), lines: lines, from: index + 2) {
+                flushParagraph()
+                flushQuote()
+                blocks.append(table.block)
+                index = table.next
+                continue
             } else if let heading = heading(trimmed) {
                 flushParagraph()
                 flushQuote()
@@ -70,6 +83,58 @@ enum MarkdownParser {
         flushParagraph()
         flushQuote()
         return blocks
+    }
+
+    private static func splitRow(_ line: String) -> [String] {
+        var text = line.trimmingCharacters(in: .whitespaces)
+        if text.hasPrefix("|") { text.removeFirst() }
+        if text.hasSuffix("|"), !text.hasSuffix("\\|") { text.removeLast() }
+        var cells: [String] = []
+        var current = ""
+        var escaped = false
+        for character in text {
+            if escaped {
+                if character != "|" { current.append("\\") }
+                current.append(character)
+                escaped = false
+            } else if character == "\\" {
+                escaped = true
+            } else if character == "|" {
+                cells.append(current.trimmingCharacters(in: .whitespaces))
+                current = ""
+            } else {
+                current.append(character)
+            }
+        }
+        if escaped { current.append("\\") }
+        cells.append(current.trimmingCharacters(in: .whitespaces))
+        return cells
+    }
+
+    private static func table(header: String, delimiter: String, lines: [String], from start: Int) -> (block: MarkdownBlock, next: Int)? {
+        guard header.contains("|"), delimiter.contains("-") else { return nil }
+        let delimiterCells = splitRow(delimiter)
+        var alignments: [MarkdownColumnAlignment] = []
+        for cell in delimiterCells {
+            let core = cell.trimmingCharacters(in: CharacterSet(charactersIn: ":"))
+            guard !core.isEmpty, core.allSatisfy({ $0 == "-" }), cell.filter({ $0 == ":" }).count <= 2 else { return nil }
+            let left = cell.hasPrefix(":"), right = cell.hasSuffix(":")
+            alignments.append(left && right ? .center : (right ? .trailing : .leading))
+        }
+        let headerCells = splitRow(header)
+        guard headerCells.count == alignments.count else { return nil }
+        var rows: [[String]] = []
+        var index = start
+        while index < lines.count {
+            let row = lines[index].trimmingCharacters(in: .whitespaces)
+            if row.isEmpty || !row.contains("|") { break }
+            var cells = splitRow(row)
+            if cells.count > alignments.count { cells = Array(cells.prefix(alignments.count)) }
+            while cells.count < alignments.count { cells.append("") }
+            rows.append(cells)
+            index += 1
+        }
+        return (.table(header: headerCells, alignments: alignments, rows: rows), index)
     }
 
     private static func heading(_ line: String) -> MarkdownBlock? {
