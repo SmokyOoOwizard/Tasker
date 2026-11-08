@@ -2,9 +2,9 @@ formatVersion: 12
 id: 6a545f0b-39e0-4e6e-930e-5e8e2e597029
 title: 'Права агента: демон, сервер и приложение'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: e419107c-3971-482e-b68f-46860d54f4d2
+statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-07T09:23:05.8780110+00:00
-updatedAt: 2026-11-07T09:24:58.7577280+00:00
+updatedAt: 2026-11-08T00:44:34.9865400+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 246

@@ -4,7 +4,7 @@ title: 'Эпик: приложение Tasker для macOS (SwiftUI + AppKit)'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
 statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
 createdAt: 2026-11-03T21:31:22.8523980+00:00
-updatedAt: 2026-11-07T09:23:21.2702720+00:00
+updatedAt: 2026-11-08T00:13:12.2462470+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 178
@@ -105,6 +105,10 @@ links:
   taskId: 5499e7a0-109b-46eb-a1f3-4e899f234372
 - typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
   taskId: 6a545f0b-39e0-4e6e-930e-5e8e2e597029
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: 891d9c45-cd64-43a4-8fb4-8f30f3675dda
+- typeId: 9fdfc900-1e6f-8733-ac44-aad690f1a850
+  taskId: c2bf4435-6b08-4021-b28d-6e5f50e2bfd3
 description: |-
   Цель
   Нативное приложение Tasker для macOS на SwiftUI + AppKit: максимально быстрое и отзывчивое, по дизайну — docs/mockups/web/main-design.html. Решение и архитектура обсуждались в TSK-176; Windows (WinUI 3) — позже, отдельным эпиком.
