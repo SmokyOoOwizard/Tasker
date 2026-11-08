@@ -63,19 +63,21 @@ public record CleanupReport(
 #pragma warning disable CS9113
 public class CleanupService(
     ITaskStorage tasks, TaskService taskService, ISeriesStorage series, Links.LinkTypeService linkTypes, IWriteScope writes,
-    Locks.EditLockService locks, TimeProvider time, Comments.ITaskCommentStorage? comments = null)
+    Locks.EditLockService locks, TimeProvider time, Agents.AgentGuard guard, Comments.ITaskCommentStorage? comments = null)
 {
     private const int Attempts = 2;
 
     public CleanupService(
-        ITaskStorage tasks, TaskService taskService, ISeriesStorage series, Links.LinkTypeService linkTypes, IWriteScope writes, Locks.EditLockService locks)
-        : this(tasks, taskService, series, linkTypes, writes, locks, TimeProvider.System)
+        ITaskStorage tasks, TaskService taskService, ISeriesStorage series, Links.LinkTypeService linkTypes, IWriteScope writes, Locks.EditLockService locks,
+        Agents.AgentGuard guard)
+        : this(tasks, taskService, series, linkTypes, writes, locks, TimeProvider.System, guard)
     {
     }
 
     /// <exception cref="TaskerConflictException">Задачу постоянно меняет кто-то другой (после повтора).</exception>
     public async Task<CleanupReport> Run(Guid projectId, CleanupOptions options, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         // Общее правило массовых правок: задачи, которые чистка изменит, не должны быть заняты другим. Ждём (или отказываем) до секции
         // записи и до первой записи — внутри секции (в БД это транзакция) держатель не смог бы снять блокировку; там проверка без ожидания
         // перед каждой записью (TaskRewrites.ModifyAll).

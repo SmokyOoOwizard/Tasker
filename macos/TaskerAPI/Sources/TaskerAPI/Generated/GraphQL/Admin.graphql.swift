@@ -15,6 +15,13 @@ public struct AdminAgentsQuery: GraphQLQuery {
           username
           createdAt
           version
+          rights {
+            __typename
+            editTasks
+            deleteTasks
+            configureProject
+            manageSeries
+          }
         }
       }
     }
@@ -28,7 +35,14 @@ public struct AdminAgentsQuery: GraphQLQuery {
                 GraphQLField("id"),
                 GraphQLField("username"),
                 GraphQLField("createdAt"),
-                GraphQLField("version")
+                GraphQLField("version"),
+                GraphQLField("rights", selections: [
+                    GraphQLField("__typename"),
+                    GraphQLField("editTasks"),
+                    GraphQLField("deleteTasks"),
+                    GraphQLField("configureProject"),
+                    GraphQLField("manageSeries")
+                ])
             ])
         ])
     ]
@@ -58,12 +72,28 @@ public struct AdminAgentsQuery: GraphQLQuery {
                 public var username: String
                 public var createdAt: Date
                 public var version: String
+                public var rights: Rights?
 
-                public init(id: UUID, username: String, createdAt: Date, version: String) {
+                public init(id: UUID, username: String, createdAt: Date, version: String, rights: Rights?) {
                     self.id = id
                     self.username = username
                     self.createdAt = createdAt
                     self.version = version
+                    self.rights = rights
+                }
+
+                public struct Rights: Hashable, Sendable, Decodable {
+                    public var editTasks: Bool
+                    public var deleteTasks: Bool
+                    public var configureProject: Bool
+                    public var manageSeries: Bool
+
+                    public init(editTasks: Bool, deleteTasks: Bool, configureProject: Bool, manageSeries: Bool) {
+                        self.editTasks = editTasks
+                        self.deleteTasks = deleteTasks
+                        self.configureProject = configureProject
+                        self.manageSeries = manageSeries
+                    }
                 }
             }
         }

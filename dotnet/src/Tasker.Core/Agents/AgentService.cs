@@ -8,7 +8,7 @@ namespace Tasker.Core.Agents;
 public record CreateAgent(string Username);
 
 /// <summary>Поля null — не меняются. Version — версия агента-пользователя (см. <see cref="Versioning"/>).</summary>
-public record UpdateAgent(string? Username, string? Version);
+public record UpdateAgent(string? Username, string? Version, AgentRights? Rights = null);
 
 /// <param name="ExpiresAt">null — бессрочный (до отзыва).</param>
 public record CreateAgentToken(string Name, DateTimeOffset? ExpiresAt);
@@ -34,6 +34,7 @@ public class AgentService(
     UserOptions options,
     TimeProvider time,
     Locks.EditLockService locks,
+    AgentGuard guard,
     IAgentTokenStorage? tokens = null
 )
 {
@@ -72,6 +73,11 @@ public class AgentService(
     /// <returns>null — агента нет или он чужой.</returns>
     public async Task<User?> Update(Guid id, UpdateAgent command, CancellationToken ct = default)
     {
+        if (command.Rights != null && options.RequireCredentials)
+            throw TaskerErrors.AgentRightsOnMembership();
+        if (command.Rights != null)
+            await guard.RequireHuman(ct);
+
         var agent = await GetById(id, ct);
         if (agent == null)
             return null;
@@ -81,7 +87,7 @@ public class AgentService(
         var username = command.Username == null ? agent.Username : Validate.Username(command.Username);
         await users.EnsureUnique(username, null, except: agent.Id, ct);
 
-        var updated = agent with { Username = username };
+        var updated = agent with { Username = username, Rights = command.Rights ?? agent.Rights };
         var version = await userStorage.Update(updated, expected, ct) ?? throw Versioning.Modified(Subject(agent));
         return updated with { Version = version };
     }

@@ -9,6 +9,7 @@ public class TaskCommentService(
     IUserStorage users,
     ICurrentUser currentUser,
     TimeProvider time,
+    Agents.AgentGuard guard,
     LocalHuman? human = null)
 {
     public async Task<TaskCommentView[]?> List(Guid projectId, Guid taskId, CancellationToken ct = default)
@@ -21,6 +22,7 @@ public class TaskCommentService(
 
     public async Task<TaskCommentView?> Add(Guid projectId, Guid taskId, AddTaskComment command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
         if (await tasks.GetById(projectId, taskId, ct) == null)
             return null;
 
@@ -54,6 +56,7 @@ public class TaskCommentService(
 
     public async Task<TaskCommentView?> Update(Guid projectId, Guid taskId, Guid id, UpdateTaskComment command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
         var comment = await comments.GetById(projectId, id, ct);
         if (comment == null || comment.TaskId != taskId || comment.Deleted)
             return null;
@@ -72,6 +75,7 @@ public class TaskCommentService(
 
     public async Task<bool> Delete(Guid projectId, Guid taskId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.DeleteTasks, ct);
         var comment = await comments.GetById(projectId, id, ct);
         if (comment == null || comment.TaskId != taskId || comment.Deleted)
             return false;

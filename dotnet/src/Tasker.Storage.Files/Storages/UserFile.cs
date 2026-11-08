@@ -1,3 +1,4 @@
+using Tasker.Core.Agents;
 using Tasker.Core.Users;
 
 namespace Tasker.Storage.Files.Storages;
@@ -30,6 +31,7 @@ internal static class UserFile
         Id = user.Id,
         Username = user.Username,
         Kind = user.IsAgent ? AgentKind : null,
+        Rights = user.IsAgent ? user.Rights?.ToWire().ToList() : null,
         CreatedAt = user.CreatedAt
     };
 
@@ -37,11 +39,15 @@ internal static class UserFile
     {
         Id = file.Model.Id,
         Username = file.Model.Username ?? "",
-        Kind = string.Equals(file.Model.Kind, AgentKind, StringComparison.OrdinalIgnoreCase) ? UserKind.Agent : UserKind.Human,
+        Kind = IsAgent(file.Model) ? UserKind.Agent : UserKind.Human,
         IsAdmin = false,
+        Rights = file.Model.Rights is { } rights && IsAgent(file.Model) ? AgentRights.FromWire(rights) : null,
         CreatedAt = file.Model.CreatedAt,
         Version = file.Version
     };
+
+    private static bool IsAgent(UserFileModel model) =>
+        string.Equals(model.Kind, AgentKind, StringComparison.OrdinalIgnoreCase);
 
     private class UserFileModel : FileModel
     {
@@ -50,6 +56,8 @@ internal static class UserFile
 
         /// <summary>«agent» или нет поля (человек).</summary>
         public string? Kind { get; set; }
+
+        public List<string>? Rights { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }
     }

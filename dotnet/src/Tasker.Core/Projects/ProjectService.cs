@@ -21,7 +21,7 @@ public record ProjectStats(int Tasks, int Boards, int Statuses, int StatusSets, 
 public class ProjectService(
     IProjectStorage projects, IProjectAccess access, TimeProvider time, Locks.EditLockService locks,
     ITaskStorage tasks, IBoardStorage boards, IStatusStorage statuses, IStatusSetStorage statusSets,
-    ITaskTypeStorage taskTypes, ISeriesStorage series, ILinkTypeStorage linkTypes)
+    ITaskTypeStorage taskTypes, ISeriesStorage series, ILinkTypeStorage linkTypes, Agents.AgentGuard guard)
 {
     /// <summary>Страница проектов, видимых текущему пользователю, по имени.</summary>
     public async Task<ListDto<Project>> GetRange(Page page, CancellationToken ct = default) =>
@@ -54,6 +54,7 @@ public class ProjectService(
     /// <summary>На сервере создатель становится участником проекта.</summary>
     public async Task<Project> Create(CreateProject command, CancellationToken ct = default)
     {
+        await guard.RequireHuman(ct);
         var project = new Project
         {
             Id = Guid.NewGuid(),
@@ -73,6 +74,7 @@ public class ProjectService(
         var project = await GetById(id, ct);
         if (project == null)
             return null;
+        await guard.Require(project.Id, Agents.AgentRight.ConfigureProject, ct);
         await locks.EnsureWritable(Locks.LockedEntity.Project, project.Id, ErrorSubject.Project(project.Name), ct);
         var expected = Versioning.Check(project.Version, command.Version, ErrorSubject.Project(project.Name));
 
@@ -95,6 +97,8 @@ public class ProjectService(
         var project = await GetById(id, ct);
         if (project == null)
             return false;
+        await guard.Require(project.Id, Agents.AgentRight.ConfigureProject, ct);
+        await guard.Require(project.Id, Agents.AgentRight.DeleteTasks, ct);
         await locks.EnsureWritable(Locks.LockedEntity.Project, project.Id, ErrorSubject.Project(project.Name), ct);
         var expected = Versioning.Check(project.Version, version, ErrorSubject.Project(project.Name));
 

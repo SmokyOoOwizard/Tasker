@@ -426,8 +426,12 @@ final class SettingsModel {
         return all.filter { !present.contains($0.id) }
     }
 
-    func addMember(_ user: SettingsMember) async -> String? {
-        await run(.settingsMemberAdded) { try await source.addMember(project: project, user: user.id) }
+    func addMember(_ user: SettingsMember, rights: AgentRightsValue? = nil) async -> String? {
+        await run(.settingsMemberAdded) { try await source.addMember(project: project, user: user.id, rights: user.isAgent ? rights : nil) }
+    }
+
+    func setMemberRights(_ user: SettingsMember, _ rights: AgentRightsValue) async -> String? {
+        await run(.settingsMemberRightsSaved) { try await source.setMemberRights(project: project, user: user.id, rights: rights) }
     }
 
     func removeMember(_ user: SettingsMember) async -> String? {

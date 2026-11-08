@@ -161,6 +161,15 @@ final class BoardEditorModel {
         return result
     }
 
+    func blockingQueryIssues() -> [UUID: [String]] {
+        let originals = Dictionary((record?.draft.columns ?? []).compactMap { column in column.serverId.map { ($0, column.trimmedQuery) } }, uniquingKeysWith: { first, _ in first })
+        return queryIssues().filter { id, _ in
+            guard let column = draft.columns.first(where: { $0.id == id }) else { return true }
+            guard let serverId = column.serverId, let original = originals[serverId] else { return true }
+            return original != column.trimmedQuery
+        }
+    }
+
     func clearIssues() {
         if !issues.isEmpty { issues = BoardIssues() }
     }
@@ -168,7 +177,7 @@ final class BoardEditorModel {
     func save() async -> Bool {
         guard canSave else { return false }
         var found = BoardValidation.check(draft, catalog: catalog, l: localizer)
-        for (id, messages) in queryIssues() { found.columns[id, default: []] += messages }
+        for (id, messages) in blockingQueryIssues() { found.columns[id, default: []] += messages }
         if !found.isEmpty {
             issues = found
             return false

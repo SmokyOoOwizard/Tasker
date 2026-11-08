@@ -10,6 +10,9 @@ struct ErrorCatalogEntry: Sendable {
 enum ErrorCatalog {
     static let entries: [String: ErrorCatalogEntry] = [
         "agent.expiresAtPast": ErrorCatalogEntry(key: .errorAgentExpiresAtPast, params: [], shown: 0, plural: nil),
+        "agent.rightMissing": ErrorCatalogEntry(key: .errorAgentRightMissing, params: ["agent", "right"], shown: 1, plural: nil),
+        "agent.rightsAgentOnly": ErrorCatalogEntry(key: .errorAgentRightsAgentOnly, params: ["name"], shown: 1, plural: nil),
+        "agent.rightsOnMembership": ErrorCatalogEntry(key: .errorAgentRightsOnMembership, params: [], shown: 0, plural: nil),
         "auth.invalidCredentials": ErrorCatalogEntry(key: .errorAuthInvalidCredentials, params: [], shown: 0, plural: nil),
         "auth.localOnly": ErrorCatalogEntry(key: .errorAuthLocalOnly, params: [], shown: 0, plural: nil),
         "auth.required": ErrorCatalogEntry(key: .errorAuthRequired, params: [], shown: 0, plural: nil),

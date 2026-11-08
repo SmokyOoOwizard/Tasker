@@ -291,9 +291,7 @@ struct BoardEditorTests {
         let source = StubBoardSource()
         await source.setCatalog(catalog)
         let record = existing()
-        await source.setStored(BoardRecord(id: record.id, version: record.version, draft: BoardDraft(
-            name: "Main", setIds: [set],
-            columns: [BoardColumnDraft(serverId: record.draft.columns[0].serverId, name: "Open", statusIds: [todo, doing], drop: [set: todo], query: ".Field.Gone == 1")])))
+        await source.setStored(record)
         let queries = StubTaskQuerySource()
         let broken = TaskQueryIssue(code: "query.unknownField", message: "No field 'Gone'", params: ["name": "Gone"], start: 7, end: 11)
         queries.set(".Field.Gone == 1", TaskQueryReport(valid: false, hasSort: false, errors: [broken], hints: []))
@@ -302,7 +300,8 @@ struct BoardEditorTests {
         await settle(model) { model.phase == .ready }
         let column = model.draft.columns[0]
         let query = try! #require(model.queryModel(for: column))
-        #expect(query.text == ".Field.Gone == 1")
+        query.edited(".Field.Gone == 1", cursor: 5)
+        #expect(model.draft.columns[0].query == ".Field.Gone == 1")
         await settle(model) { !query.errors.isEmpty }
         #expect(query.error?.code == "query.unknownField")
 
@@ -349,5 +348,33 @@ struct BoardEditorTests {
         #expect(await model.rereadAndRetry() == false)
         #expect(await source.updated.isEmpty)
         model.release()
+    }
+
+    @Test func brokenUnchangedQueryDoesNotBlockSavingOtherChanges() async {
+        let source = StubBoardSource()
+        await source.setCatalog(catalog)
+        let record = existing()
+        var stored = record
+        stored.draft.columns.append(BoardColumnDraft(serverId: UUID(), name: "Broken", statusIds: [done], query: ".Field.Gone == 1"))
+        await source.setStored(stored)
+        let queries = StubTaskQuerySource()
+        let broken = TaskQueryIssue(code: "query.unknownField", message: "No field 'Gone'", params: ["name": "Gone"], start: 7, end: 11)
+        queries.set(".Field.Gone == 1", TaskQueryReport(valid: false, hasSort: false, errors: [broken], hints: []))
+        let model = editor(source, board: stored.id, queries: queries)
+        model.load()
+        await settle(model) { model.phase == .ready }
+        let column = model.draft.columns[1]
+        let query = try! #require(model.queryModel(for: column))
+        await settle(model) { !query.errors.isEmpty }
+
+        #expect(model.queryIssues()[column.id] == [l.refusal(broken.refusal)])
+        model.edit { draft, _ in draft.name = "Renamed" }
+        #expect(await model.save())
+        #expect(await source.updated.last?.name == "Renamed")
+        #expect(model.issues.isEmpty)
+        let reloaded = try! #require(model.draft.columns.last)
+        let again = try! #require(model.queryModel(for: reloaded))
+        await settle(model) { !again.errors.isEmpty }
+        #expect(model.queryIssues()[reloaded.id] == [l.refusal(broken.refusal)])
     }
 }

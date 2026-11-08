@@ -1,6 +1,9 @@
 export const strings = {
   "en": {
     "error.agent.expiresAtPast": "The expiry date must be in the future.",
+    "error.agent.rightMissing": "Agent “{0}” has no right to do this in the project.",
+    "error.agent.rightsAgentOnly": "“{0}” is a person: rights are set only for agents.",
+    "error.agent.rightsOnMembership": "On the server agent rights are set in the project members.",
     "error.auth.invalidCredentials": "Invalid username, email or password.",
     "error.auth.localOnly": "Only local requests are allowed.",
     "error.auth.required": "Sign in to continue.",
@@ -308,6 +311,9 @@ export const strings = {
   },
   "ru": {
     "error.agent.expiresAtPast": "Срок действия должен быть в будущем.",
+    "error.agent.rightMissing": "У агента «{0}» нет права на это действие в проекте.",
+    "error.agent.rightsAgentOnly": "«{0}» — человек: права задаются только агентам.",
+    "error.agent.rightsOnMembership": "На сервере права агента задаются в участниках проекта.",
     "error.auth.invalidCredentials": "Неверное имя для входа, адрес почты или пароль.",
     "error.auth.localOnly": "Разрешены только локальные запросы.",
     "error.auth.required": "Войдите в учётную запись.",
@@ -619,6 +625,14 @@ export type StringKey = keyof typeof strings.ru
 
 export const errorParams: Record<string, readonly string[]> = {
   "agent.expiresAtPast": [],
+  "agent.rightMissing": [
+    "agent",
+    "right"
+  ],
+  "agent.rightsAgentOnly": [
+    "name"
+  ],
+  "agent.rightsOnMembership": [],
   "auth.invalidCredentials": [],
   "auth.localOnly": [],
   "auth.required": [],

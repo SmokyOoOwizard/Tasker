@@ -2,9 +2,9 @@ formatVersion: 12
 id: 4e7827fb-cb04-425c-9f9d-ce58bb35bb54
 title: 'Консоль: строка запроса в task list и командах досок'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-07T06:42:51.6807550+00:00
-updatedAt: 2026-11-07T09:14:40.5316330+00:00
+updatedAt: 2026-11-08T00:43:11.3649660+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 243

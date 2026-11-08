@@ -20,6 +20,24 @@ internal sealed class UserType : ObjectType<User>
         descriptor.Field(x => x.CreatedAt);
         descriptor.Field(x => x.Version);
         descriptor.Field(x => x.IsAgent);
+        descriptor.Field(x => x.Rights)
+            .Type<AgentRightsType>()
+            .Resolve(x => x.Parent<User>() is { IsAgent: true } agent
+                ? agent.Rights ?? (x.Service<UserOptions>().RequireCredentials ? null : AgentRights.Full)
+                : null);
+    }
+}
+
+internal sealed class AgentRightsType : ObjectType<AgentRights>
+{
+    protected override void Configure(IObjectTypeDescriptor<AgentRights> descriptor)
+    {
+        descriptor.Name("AgentRights");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(x => x.EditTasks);
+        descriptor.Field(x => x.DeleteTasks);
+        descriptor.Field(x => x.ConfigureProject);
+        descriptor.Field(x => x.ManageSeries);
     }
 }
 

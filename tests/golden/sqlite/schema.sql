@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS "agent_tokens" (
 CREATE TABLE IF NOT EXISTS "project_members" (
     "ProjectId" TEXT NOT NULL,
     "UserId" TEXT NOT NULL,
+    "AgentRights" INTEGER NULL,
     CONSTRAINT "PK_project_members" PRIMARY KEY ("ProjectId", "UserId"),
     CONSTRAINT "FK_project_members_projects_ProjectId" FOREIGN KEY ("ProjectId") REFERENCES "projects" ("Id") ON DELETE CASCADE,
     CONSTRAINT "FK_project_members_users_UserId" FOREIGN KEY ("UserId") REFERENCES "users" ("Id") ON DELETE CASCADE

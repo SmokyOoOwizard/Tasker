@@ -27,7 +27,7 @@ public record UpdateField(
 /// </summary>
 public class FieldService(
     IFieldStorage fields, IFieldEnumStorage enums, ITaskTypeStorage types, ITaskStorage tasks, IWriteScope writes, TimeProvider time,
-    Locks.EditLockService locks, ISeriesStorage series)
+    Locks.EditLockService locks, ISeriesStorage series, Agents.AgentGuard guard)
 {
     private const int CascadeAttempts = 3;
 
@@ -73,6 +73,7 @@ public class FieldService(
     /// <exception cref="TaskerValidationException">Тип и перечисление не согласуются или перечисления нет.</exception>
     public async Task<FieldDefinition> Create(Guid projectId, CreateField command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var name = Validate.FieldName(command.Name);
         if (!Enum.IsDefined(command.Type))
             throw TaskerErrors.Invalid($"Field type: unknown '{command.Type}'");
@@ -111,6 +112,7 @@ public class FieldService(
     /// <exception cref="TaskerConflictException">Значения задач нельзя сохранить без выбора пользователя; в сообщении — число задач.</exception>
     public async Task<FieldDefinition?> Update(Guid projectId, Guid id, UpdateField command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var field = await fields.GetById(projectId, id, ct);
         if (field == null)
             return null;
@@ -233,6 +235,7 @@ public class FieldService(
     /// <returns>false — поля нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var field = await fields.GetById(projectId, id, ct);
         if (field == null)
             return false;

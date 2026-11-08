@@ -72,7 +72,7 @@ internal static class DefaultProject
                     return await next(context, ct);
 
                 case 0:
-                    return ErrorText.Error($"[invalid] projectId is required: this workspace has no projects (create one with create_project)");
+                    return ErrorText.Error($"[invalid] projectId is required: this workspace has no projects (only a person can create one: in the Tasker app or with `tasker project create`)");
 
                 default:
                     return ErrorText.Error($"[invalid] projectId is required: this workspace has {found.TotalCount} projects; list_projects shows them");

@@ -38,6 +38,49 @@ struct TaskQueryModelTests {
         TaskQueryModel(project: UUID(), source: source, text: text)
     }
 
+    @Test func aRecheckShowsTheErrorAndDropsTheAppliedQueryWhenTheCatalogChanged() async {
+        let source = StubTaskQuerySource()
+        let text = "| sort .Field.Estimate"
+        let model = model(source, text: text)
+        var applied: [String] = []
+        model.onApply = { value, _ in applied.append(value) }
+        #expect(model.applied == text)
+        source.set(text, TaskQueryReport(valid: false, hasSort: false, errors: [
+            TaskQueryIssue(code: "query.unknownField", message: "No field", params: ["name": "Estimate"], start: 8, end: 20)
+        ], hints: []))
+        model.recheck()
+        await until { model.error != nil }
+        #expect(model.error?.code == "query.unknownField")
+        #expect(applied.last == "")
+        #expect(model.applied == "")
+        #expect(model.text == text)
+    }
+
+    @Test func aRecheckOfAValidTextKeepsTheAppliedQuery() async {
+        let source = StubTaskQuerySource()
+        let text = ".Status == \"Todo\""
+        let model = model(source, text: text)
+        model.recheck()
+        await until { !source.calls.isEmpty }
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(model.error == nil)
+        #expect(model.applied == text)
+    }
+
+    @Test func aRecheckDoesNotTouchTheAppliedQueryWhileTheTextIsBeingEdited() async {
+        let source = StubTaskQuerySource()
+        let model = model(source, text: ".Type == \"Bug\"")
+        source.set(".Type == \"Nope\"", TaskQueryReport(valid: false, hasSort: false, errors: [
+            TaskQueryIssue(code: "query.unknownType", message: "No type", params: [:], start: 0, end: 3)
+        ], hints: []))
+        model.edited(".Type == \"Nope\"", cursor: 15)
+        await until { model.error != nil }
+        model.recheck()
+        await until { source.calls.count >= 2 }
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(model.applied == ".Type == \"Bug\"")
+    }
+
     @Test func aValidTextIsAppliedAfterTheAnalysis() async {
         let source = StubTaskQuerySource()
         source.set(".Status == \"Todo\" | sort .Title", TaskQueryReport(valid: true, hasSort: true, errors: [], hints: []))

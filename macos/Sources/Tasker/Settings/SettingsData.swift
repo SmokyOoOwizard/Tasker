@@ -169,6 +169,7 @@ struct SettingsMember: Hashable, Sendable, Identifiable {
     var isAgent: Bool
     var isAdmin: Bool
     var ownerId: UUID?
+    var rights: AgentRightsValue?
 }
 
 enum SettingsLockTarget: Hashable, Sendable {

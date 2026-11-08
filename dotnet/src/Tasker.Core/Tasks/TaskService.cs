@@ -42,6 +42,7 @@ public partial class TaskService(
     IFieldEnumStorage enums,
     Links.TaskLinkService links,
     IStatusStorage statuses,
+    Agents.AgentGuard guard,
     Comments.ITaskCommentStorage? comments = null)
 {
     public const int MaxTitleLength = 500;
@@ -50,6 +51,7 @@ public partial class TaskService(
 
     public async Task<TaskItem> Create(Guid projectId, CreateTask command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
         if (command.Links is not { Length: > 0 } newLinks)
             return await CreateCore(projectId, command, ct);
 
@@ -149,6 +151,7 @@ public partial class TaskService(
     /// <returns>null — задачи нет.</returns>
     public async Task<TaskItem?> Update(Guid projectId, Guid id, UpdateTask command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
         var task = await tasks.GetById(projectId, id, ct);
         if (task == null)
             return null;
@@ -523,6 +526,7 @@ public partial class TaskService(
     /// <returns>false — задачи нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.DeleteTasks, ct);
         var task = await tasks.GetById(projectId, id, ct);
         if (task == null)
             return false;
@@ -568,6 +572,7 @@ public partial class TaskService(
     public Task<TaskItem?> AddToSeries(Guid projectId, Guid taskId, Guid seriesId, string? version, CancellationToken ct = default) =>
         writes.Exclusive<TaskItem?>(projectId, async () =>
         {
+            await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
             var task = await tasks.GetById(projectId, taskId, ct);
             if (task == null || await seriesStorage.GetById(projectId, seriesId, ct) == null)
                 return null;
@@ -586,6 +591,7 @@ public partial class TaskService(
     public Task<TaskItem?> RemoveFromSeries(Guid projectId, Guid taskId, Guid seriesId, string? version, CancellationToken ct = default) =>
         writes.Exclusive<TaskItem?>(projectId, async () =>
         {
+            await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
             var task = await tasks.GetById(projectId, taskId, ct);
             if (task == null)
                 return null;
@@ -605,6 +611,7 @@ public partial class TaskService(
     public Task<TaskItem?> RemoveFromSeriesByNumber(Guid projectId, Guid seriesId, int number, CancellationToken ct = default) =>
         writes.Exclusive<TaskItem?>(projectId, async () =>
         {
+            await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
             var found = await tasks.FindByNumber(projectId, seriesId, number, ct);
             if (found.Length == 0)
                 return null;
@@ -625,6 +632,7 @@ public partial class TaskService(
     public Task<TaskItem?> Renumber(Guid projectId, Guid taskId, Guid seriesId, int? to, string? version, CancellationToken ct = default) =>
         writes.Exclusive<TaskItem?>(projectId, async () =>
         {
+            await guard.Require(projectId, Agents.AgentRight.ManageSeries, ct);
             var task = await tasks.GetById(projectId, taskId, ct);
             if (task == null || await seriesStorage.GetById(projectId, seriesId, ct) == null)
                 return null;

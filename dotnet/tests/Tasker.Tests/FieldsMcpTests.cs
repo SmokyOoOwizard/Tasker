@@ -374,7 +374,7 @@ public class FieldsMcpTests : IDisposable
         Assert.True(isError);
         Assert.StartsWith("[invalid] workspace is required", text);
 
-        await Call(a, "create_project", new { name = "Gamma" });
+        await _daemon.CreateProject(a, "Gamma");
         (isError, text) = await _daemon.CallToolResult(a, "list_fields", new { });
         Assert.True(isError);
         Assert.StartsWith("[invalid] projectId is required", text);

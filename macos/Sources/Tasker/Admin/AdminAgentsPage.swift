@@ -7,6 +7,7 @@ struct AdminAgentsPage: View {
     @Environment(\.localizer) private var l
     @State private var editing: AgentEditTarget?
     @State private var deleting: AdminAgent?
+    @State private var granting: AdminAgent?
     @State private var failure: String?
 
     var body: some View {
@@ -23,6 +24,7 @@ struct AdminAgentsPage: View {
                             HStack(spacing: 8) {
                                 Text(agent.name)
                                 if agent.isLocalDefault { SettingsChip(text: l.string(.adminAgentDefault)) }
+                                SettingsChip(text: agent.rights.summary(l), accent: agent.rights != .full)
                             }
                         } meta: {
                             Text(verbatim: agent.id.uuidString.lowercased()).font(.design(DesignTypography.smallSize, mono: true))
@@ -31,6 +33,7 @@ struct AdminAgentsPage: View {
                                 Button(l.string(.adminAgentCopy)) { copy(command) }
                                     .controlSize(.small)
                             }
+                            SettingsIconButton(icon: .shield, help: l.string(.adminRightsEdit)) { granting = agent }
                             SettingsIconButton(icon: .pen, help: l.string(.adminAgentRename)) { editing = .rename(agent) }
                             SettingsIconButton(icon: .trash, help: l.string(.adminAgentDelete), destructive: true) { deleting = agent }
                         }
@@ -43,6 +46,11 @@ struct AdminAgentsPage: View {
         }
         .sheet(item: $editing) { target in
             AgentEditSheet(model: model, target: target) { editing = nil }
+        }
+        .sheet(item: $granting) { agent in
+            AgentRightsSheet(
+                name: agent.name, initial: agent.rights, scope: l.string(.adminRightsScopeFolder),
+                save: { await model.setRights(agent, $0) }, close: { granting = nil })
         }
         .confirmationDialog(
             l.string(.adminAgentDeleteTitle), isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting

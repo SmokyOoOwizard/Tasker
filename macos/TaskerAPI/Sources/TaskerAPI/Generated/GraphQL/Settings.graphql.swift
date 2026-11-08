@@ -768,6 +768,13 @@ public struct SettingsMembersQuery: GraphQLQuery {
             email
             isAdmin
             ownerId
+            rights {
+              __typename
+              editTasks
+              deleteTasks
+              configureProject
+              manageSeries
+            }
           }
         }
       }
@@ -786,7 +793,14 @@ public struct SettingsMembersQuery: GraphQLQuery {
                     GraphQLField("kind"),
                     GraphQLField("email"),
                     GraphQLField("isAdmin"),
-                    GraphQLField("ownerId")
+                    GraphQLField("ownerId"),
+                    GraphQLField("rights", selections: [
+                        GraphQLField("__typename"),
+                        GraphQLField("editTasks"),
+                        GraphQLField("deleteTasks"),
+                        GraphQLField("configureProject"),
+                        GraphQLField("manageSeries")
+                    ])
                 ])
             ])
         ])
@@ -834,14 +848,30 @@ public struct SettingsMembersQuery: GraphQLQuery {
                     public var email: String?
                     public var isAdmin: Bool
                     public var ownerId: UUID?
+                    public var rights: Rights?
 
-                    public init(id: UUID, username: String, kind: UserKind, email: String?, isAdmin: Bool, ownerId: UUID?) {
+                    public init(id: UUID, username: String, kind: UserKind, email: String?, isAdmin: Bool, ownerId: UUID?, rights: Rights?) {
                         self.id = id
                         self.username = username
                         self.kind = kind
                         self.email = email
                         self.isAdmin = isAdmin
                         self.ownerId = ownerId
+                        self.rights = rights
+                    }
+
+                    public struct Rights: Hashable, Sendable, Decodable {
+                        public var editTasks: Bool
+                        public var deleteTasks: Bool
+                        public var configureProject: Bool
+                        public var manageSeries: Bool
+
+                        public init(editTasks: Bool, deleteTasks: Bool, configureProject: Bool, manageSeries: Bool) {
+                            self.editTasks = editTasks
+                            self.deleteTasks = deleteTasks
+                            self.configureProject = configureProject
+                            self.manageSeries = manageSeries
+                        }
                     }
                 }
             }

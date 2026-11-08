@@ -8,6 +8,7 @@ protocol AdminSource: Sendable {
     func createAgent(name: String) async throws
     func renameAgent(_ agent: AdminAgent, name: String) async throws
     func deleteAgent(_ agent: AdminAgent) async throws
+    func setRights(_ agent: AdminAgent, rights: AgentRightsValue) async throws
     func cleanup(project: UUID) async throws -> AdminCleanupResult
 }
 
@@ -27,7 +28,14 @@ struct GraphQLAdminSource: AdminSource {
 
     func agents() async throws -> [AdminAgent] {
         try await client.graphQL.fetch(AdminAgentsQuery()).agents.data
-            .map { AdminAgent(id: $0.id, name: $0.username, version: $0.version) }
+            .map { agent in
+                AdminAgent(
+                    id: agent.id, name: agent.username, version: agent.version,
+                    rights: agent.rights.map {
+                        AgentRightsValue(
+                            editTasks: $0.editTasks, deleteTasks: $0.deleteTasks, configureProject: $0.configureProject, manageSeries: $0.manageSeries)
+                    } ?? .full)
+            }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
@@ -96,6 +104,14 @@ struct GraphQLAdminSource: AdminSource {
     func deleteAgent(_ agent: AdminAgent) async throws {
         try await client.rest.perform {
             try await $0.deleteAgent(path: .init(id: agent.id.wire), query: .init(version: agent.version)).noContent
+        }
+    }
+
+    func setRights(_ agent: AdminAgent, rights: AgentRightsValue) async throws {
+        _ = try await client.rest.perform {
+            try await $0.updateAgent(
+                path: .init(id: agent.id.wire), body: .json(.init(version: agent.version, rights: .init(value1: rights.wire)))
+            ).ok.body.json
         }
     }
 

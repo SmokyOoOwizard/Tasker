@@ -88,6 +88,18 @@ public sealed class DaemonFixture : IDisposable
     /// <summary>Адрес MCP демона: один на все рабочие области.</summary>
     public string McpUrl => $"http://127.0.0.1:{Port}/mcp";
 
+    public async Task<string> CreateProject(string workspaceKey, string name)
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        using var response = await http.PostAsync(
+            $"http://127.0.0.1:{Port}/w/{workspaceKey}/api/projects",
+            new StringContent(new JsonObject { ["name"] = name }.ToJsonString(), Encoding.UTF8, new MediaTypeHeaderValue("application/json")));
+        var body = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"{(int)response.StatusCode}: {body}");
+        return JsonNode.Parse(body)!["id"]!.GetValue<string>();
+    }
+
     /// <summary>
     /// Вызывает инструмент MCP и возвращает текст результата (или HTTP-код, если ответ не 200).
     /// <paramref name="workspace"/> — имя области (аргумент <c>workspace</c>); null — аргумент не передаётся.
@@ -165,6 +177,9 @@ public sealed class DaemonFixture : IDisposable
         var result = await Rpc("tools/call", ToolCall(workspace, tool, arguments), headers);
         return (result["isError"]?.GetValue<bool>() ?? false, result["content"]![0]!["text"]!.GetValue<string>());
     }
+
+    public static string[] ProjectIds(string toolResult) =>
+        JsonNode.Parse(toolResult)!["data"]!.AsArray().Select(x => x!["id"]!.GetValue<string>()).ToArray();
 
     public static string[] ProjectNames(string toolResult) =>
         JsonNode.Parse(toolResult)!["data"]!.AsArray().Select(x => x!["name"]!.GetValue<string>()).Order().ToArray();

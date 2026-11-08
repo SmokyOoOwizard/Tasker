@@ -35,7 +35,7 @@ internal static class TaskLinks
 /// </para>
 /// </summary>
 public class TaskLinkService(
-    ITaskStorage tasks, LinkTypeService types, TimeProvider time, Locks.EditLockService locks, ISeriesStorage series, IWriteScope writes)
+    ITaskStorage tasks, LinkTypeService types, TimeProvider time, Locks.EditLockService locks, ISeriesStorage series, IWriteScope writes, Agents.AgentGuard guard)
 {
     // Связи коммутативны, и версию клиент не передаёт: гонку надо пережить, поэтому попыток много (с паузой между ними, см. TaskRewrites.Modify).
     private const int Attempts = 25;
@@ -58,6 +58,7 @@ public class TaskLinkService(
     /// </exception>
     public async Task<TaskItem?> Add(Guid projectId, Guid taskId, Guid typeId, Guid targetId, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
         var task = await tasks.GetById(projectId, taskId, ct);
         if (task == null)
             return null;
@@ -126,6 +127,7 @@ public class TaskLinkService(
     /// <returns>Задача-источник; null — её нет.</returns>
     public async Task<TaskItem?> Remove(Guid projectId, Guid taskId, Guid typeId, Guid targetId, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
         var task = await tasks.GetById(projectId, taskId, ct);
         if (task == null)
             return null;

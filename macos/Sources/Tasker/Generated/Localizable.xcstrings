@@ -979,6 +979,329 @@
         }
       }
     },
+    "admin.rights.allowAll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full access"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Полный доступ"
+          }
+        }
+      }
+    },
+    "admin.rights.configureProject" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure the project"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настраивать проект"
+          }
+        }
+      }
+    },
+    "admin.rights.configureProjectHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statuses, status sets, task types, fields, enums, link types, boards and the project itself"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статусы, наборы статусов, типы задач, поля, списки, типы связей, доски и сам проект"
+          }
+        }
+      }
+    },
+    "admin.rights.deleteTasks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete tasks and comments"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалять задачи и комментарии"
+          }
+        }
+      }
+    },
+    "admin.rights.deleteTasksHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without this right the agent does not delete tasks and comments"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Без этого права агент не удаляет задачи и комментарии"
+          }
+        }
+      }
+    },
+    "admin.rights.denyAll" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read only"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Только чтение"
+          }
+        }
+      }
+    },
+    "admin.rights.edit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rights"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Права"
+          }
+        }
+      }
+    },
+    "admin.rights.editTasks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit tasks"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Менять задачи"
+          }
+        }
+      }
+    },
+    "admin.rights.editTasksHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create and edit tasks, move them on boards, links, task series, comments, locks"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создание и правка задач, перенос на доске, связи, серии задачи, комментарии, блокировки"
+          }
+        }
+      }
+    },
+    "admin.rights.full" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "full access"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "полный доступ"
+          }
+        }
+      }
+    },
+    "admin.rights.lead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What the agent can do through MCP. Without rights the agent only reads. Rights do not restrict people."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Что агент может делать через MCP. Без прав агент только читает. Действия людей права не ограничивают."
+          }
+        }
+      }
+    },
+    "admin.rights.limited" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rights: %@ of 4"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "права: %@ из 4"
+          }
+        }
+      }
+    },
+    "admin.rights.manageSeries" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage series"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Управлять сериями"
+          }
+        }
+      }
+    },
+    "admin.rights.manageSeriesHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create, change and delete series, renumber tasks"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создавать, менять и удалять серии, перенумеровывать задачи"
+          }
+        }
+      }
+    },
+    "admin.rights.readOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "read only"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "только чтение"
+          }
+        }
+      }
+    },
+    "admin.rights.saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent rights changed: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Права агента изменены: %@"
+          }
+        }
+      }
+    },
+    "admin.rights.scopeFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The rights apply to all projects of the folder and are stored in the agent file in .tasker."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Права действуют во всех проектах папки и хранятся в файле агента в .tasker."
+          }
+        }
+      }
+    },
+    "admin.rights.scopeProject" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The rights apply only in this project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Права действуют только в этом проекте."
+          }
+        }
+      }
+    },
+    "admin.rights.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rights of the agent “%@”"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Права агента «%@»"
+          }
+        }
+      }
+    },
     "app.credits" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2344,6 +2667,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Срок действия должен быть в будущем."
+          }
+        }
+      }
+    },
+    "error.agent.rightMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent “%@” has no right to do this in the project."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У агента «%@» нет права на это действие в проекте."
+          }
+        }
+      }
+    },
+    "error.agent.rightsAgentOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” is a person: rights are set only for agents."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%@» — человек: права задаются только агентам."
+          }
+        }
+      }
+    },
+    "error.agent.rightsOnMembership" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the server agent rights are set in the project members."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На сервере права агента задаются в участниках проекта."
           }
         }
       }
@@ -9328,6 +9702,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Участник убран"
+          }
+        }
+      }
+    },
+    "settings.memberRightsSaved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent rights in the project changed"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Права агента в проекте изменены"
           }
         }
       }

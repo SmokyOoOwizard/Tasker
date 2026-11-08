@@ -38,7 +38,8 @@ public class TaskTypeService(
     IWriteScope writes,
     TimeProvider time,
     Locks.EditLockService locks,
-    ISeriesStorage series)
+    ISeriesStorage series,
+    Agents.AgentGuard guard)
 {
     private const int CascadeAttempts = 3;
 
@@ -58,6 +59,7 @@ public class TaskTypeService(
 
     public async Task<TaskType> Create(Guid projectId, CreateTaskType command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var name = Validate.Name(command.Name, ErrorField.TaskTypeName);
         await GetSet(projectId, command.StatusSetId, ct);
 
@@ -92,6 +94,7 @@ public class TaskTypeService(
     /// <exception cref="TaskerConflictException">Статусы задач не в новом наборе; у задач есть значения убираемого поля, а выбора нет.</exception>
     public async Task<CascadeResult<TaskType>?> Update(Guid projectId, Guid id, UpdateTaskType command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var type = await types.GetById(projectId, id, ct);
         if (type == null)
             return null;
@@ -146,6 +149,7 @@ public class TaskTypeService(
     /// <returns>false — типа нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var type = await types.GetById(projectId, id, ct);
         if (type == null)
             return false;

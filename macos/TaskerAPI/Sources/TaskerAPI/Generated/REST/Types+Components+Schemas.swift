@@ -22,15 +22,41 @@ extension Components {
         public struct AddProjectMember: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/AddProjectMember/userId`.
             public var userId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/AddProjectMember/rights`.
+            public struct RightsPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/AddProjectMember/rights/value1`.
+                public var value1: Components.Schemas.AgentRights
+                /// Creates a new `RightsPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.AgentRights) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/AddProjectMember/rights`.
+            public var rights: Components.Schemas.AddProjectMember.RightsPayload?
             /// Creates a new `AddProjectMember`.
             ///
             /// - Parameters:
             ///   - userId:
-            public init(userId: Swift.String) {
+            ///   - rights:
+            public init(
+                userId: Swift.String,
+                rights: Components.Schemas.AddProjectMember.RightsPayload? = nil
+            ) {
                 self.userId = userId
+                self.rights = rights
             }
             public enum CodingKeys: String, CodingKey {
                 case userId
+                case rights
             }
         }
         /// - Remark: Generated from `#/components/schemas/AddTaskComment`.
@@ -106,6 +132,41 @@ extension Components {
             public enum CodingKeys: String, CodingKey {
                 case seriesId
                 case version
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/AgentRights`.
+        public struct AgentRights: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AgentRights/editTasks`.
+            public var editTasks: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/AgentRights/deleteTasks`.
+            public var deleteTasks: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/AgentRights/configureProject`.
+            public var configureProject: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/AgentRights/manageSeries`.
+            public var manageSeries: Swift.Bool
+            /// Creates a new `AgentRights`.
+            ///
+            /// - Parameters:
+            ///   - editTasks:
+            ///   - deleteTasks:
+            ///   - configureProject:
+            ///   - manageSeries:
+            public init(
+                editTasks: Swift.Bool,
+                deleteTasks: Swift.Bool,
+                configureProject: Swift.Bool,
+                manageSeries: Swift.Bool
+            ) {
+                self.editTasks = editTasks
+                self.deleteTasks = deleteTasks
+                self.configureProject = configureProject
+                self.manageSeries = manageSeries
+            }
+            public enum CodingKeys: String, CodingKey {
+                case editTasks
+                case deleteTasks
+                case configureProject
+                case manageSeries
             }
         }
         /// - Remark: Generated from `#/components/schemas/AgentToken`.
@@ -201,6 +262,9 @@ extension Components {
             /// - Remark: Generated from `#/components/schemas/ApiError/code`.
             @frozen public enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case agent_expiresAtPast = "agent.expiresAtPast"
+                case agent_rightMissing = "agent.rightMissing"
+                case agent_rightsAgentOnly = "agent.rightsAgentOnly"
+                case agent_rightsOnMembership = "agent.rightsOnMembership"
                 case auth_invalidCredentials = "auth.invalidCredentials"
                 case auth_localOnly = "auth.localOnly"
                 case auth_required = "auth.required"
@@ -3430,21 +3494,45 @@ extension Components {
             public var username: Swift.String?
             /// - Remark: Generated from `#/components/schemas/UpdateAgent/version`.
             public var version: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/UpdateAgent/rights`.
+            public struct RightsPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/UpdateAgent/rights/value1`.
+                public var value1: Components.Schemas.AgentRights
+                /// Creates a new `RightsPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.AgentRights) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/UpdateAgent/rights`.
+            public var rights: Components.Schemas.UpdateAgent.RightsPayload?
             /// Creates a new `UpdateAgent`.
             ///
             /// - Parameters:
             ///   - username:
             ///   - version:
+            ///   - rights:
             public init(
                 username: Swift.String? = nil,
-                version: Swift.String? = nil
+                version: Swift.String? = nil,
+                rights: Components.Schemas.UpdateAgent.RightsPayload? = nil
             ) {
                 self.username = username
                 self.version = version
+                self.rights = rights
             }
             public enum CodingKeys: String, CodingKey {
                 case username
                 case version
+                case rights
             }
         }
         /// - Remark: Generated from `#/components/schemas/UpdateBoard`.
@@ -3686,6 +3774,39 @@ extension Components {
             public enum CodingKeys: String, CodingKey {
                 case name
                 case version
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/UpdateProjectMember`.
+        public struct UpdateProjectMember: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/UpdateProjectMember/rights`.
+            public struct RightsPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/UpdateProjectMember/rights/value1`.
+                public var value1: Components.Schemas.AgentRights
+                /// Creates a new `RightsPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.AgentRights) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/UpdateProjectMember/rights`.
+            public var rights: Components.Schemas.UpdateProjectMember.RightsPayload?
+            /// Creates a new `UpdateProjectMember`.
+            ///
+            /// - Parameters:
+            ///   - rights:
+            public init(rights: Components.Schemas.UpdateProjectMember.RightsPayload? = nil) {
+                self.rights = rights
+            }
+            public enum CodingKeys: String, CodingKey {
+                case rights
             }
         }
         /// - Remark: Generated from `#/components/schemas/UpdateSeries`.
@@ -3989,6 +4110,26 @@ extension Components {
             public var email: Swift.String?
             /// - Remark: Generated from `#/components/schemas/User/isAdmin`.
             public var isAdmin: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/User/rights`.
+            public struct RightsPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/User/rights/value1`.
+                public var value1: Components.Schemas.AgentRights
+                /// Creates a new `RightsPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.AgentRights) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/User/rights`.
+            public var rights: Components.Schemas.User.RightsPayload?
             /// - Remark: Generated from `#/components/schemas/User/createdAt`.
             public var createdAt: Foundation.Date
             /// - Remark: Generated from `#/components/schemas/User/version`.
@@ -4004,6 +4145,7 @@ extension Components {
             ///   - ownerId:
             ///   - email:
             ///   - isAdmin:
+            ///   - rights:
             ///   - createdAt:
             ///   - version:
             ///   - isAgent:
@@ -4014,6 +4156,7 @@ extension Components {
                 ownerId: Swift.String? = nil,
                 email: Swift.String? = nil,
                 isAdmin: Swift.Bool,
+                rights: Components.Schemas.User.RightsPayload? = nil,
                 createdAt: Foundation.Date,
                 version: Swift.String,
                 isAgent: Swift.Bool
@@ -4024,6 +4167,7 @@ extension Components {
                 self.ownerId = ownerId
                 self.email = email
                 self.isAdmin = isAdmin
+                self.rights = rights
                 self.createdAt = createdAt
                 self.version = version
                 self.isAgent = isAgent
@@ -4035,6 +4179,7 @@ extension Components {
                 case ownerId
                 case email
                 case isAdmin
+                case rights
                 case createdAt
                 case version
                 case isAgent

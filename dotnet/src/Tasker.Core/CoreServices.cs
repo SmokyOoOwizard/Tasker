@@ -20,7 +20,8 @@ public sealed class CoreServices(
     ILocalEditor? localEditor = null,
     ILockNotifier? notifier = null,
     TimeProvider? time = null,
-    LocalHuman? localHuman = null)
+    LocalHuman? localHuman = null,
+    IProjectMemberStorage? members = null)
 {
     private static readonly Dictionary<Type, Func<CoreServices, object?>> Services = new()
     {
@@ -47,6 +48,7 @@ public sealed class CoreServices(
         [typeof(EditLockService)] = x => x.EditLocks,
         [typeof(EntityLockService)] = x => x.EntityLocks,
         [typeof(UserService)] = x => x.Users,
+        [typeof(Agents.AgentGuard)] = x => x.Guard,
         [typeof(AgentService)] = x => x.Agents,
         [typeof(ProjectService)] = x => x.Projects,
         [typeof(StatusService)] = x => x.Statuses,
@@ -79,48 +81,50 @@ public sealed class CoreServices(
 
     public EntityLockService EntityLocks => One(() => new EntityLockService(EditLocks, EditorIdentity, storage.Projects, storage.Tasks,
         storage.TaskTypes, storage.Statuses, storage.StatusSets, storage.Boards, storage.Series, storage.Users, storage.LinkTypes,
-        storage.Fields, storage.FieldEnums));
+        storage.Fields, storage.FieldEnums, Guard));
+
+    public Agents.AgentGuard Guard => One(() => new Agents.AgentGuard(currentUser, storage.Users, options, members));
 
     public UserService Users => One(() => new UserService(storage.Users, currentUser, options, Time, EditLocks));
-    public AgentService Agents => One(() => new AgentService(Users, storage.Users, options, Time, EditLocks, storage.AgentTokens));
+    public AgentService Agents => One(() => new AgentService(Users, storage.Users, options, Time, EditLocks, Guard, storage.AgentTokens));
 
     public ProjectService Projects => One(() => new ProjectService(storage.Projects, access, Time, EditLocks, storage.Tasks, storage.Boards,
-        storage.Statuses, storage.StatusSets, storage.TaskTypes, storage.Series, storage.LinkTypes));
+        storage.Statuses, storage.StatusSets, storage.TaskTypes, storage.Series, storage.LinkTypes, Guard));
 
-    public StatusService Statuses => One(() => new StatusService(storage.Statuses, storage.StatusSets, storage.Boards, storage.Tasks, EditLocks, storage.Series));
+    public StatusService Statuses => One(() => new StatusService(storage.Statuses, storage.StatusSets, storage.Boards, storage.Tasks, EditLocks, storage.Series, Guard));
 
     public StatusSetService StatusSets => One(() => new StatusSetService(storage.StatusSets, storage.Statuses, storage.TaskTypes, storage.Boards,
-        storage.Tasks, EditLocks, storage.Series));
+        storage.Tasks, EditLocks, storage.Series, Guard));
 
     public TaskTypeService TaskTypes => One(() => new TaskTypeService(storage.TaskTypes, storage.StatusSets, storage.Tasks, storage.Fields,
-        storage.Writes, Time, EditLocks, storage.Series));
+        storage.Writes, Time, EditLocks, storage.Series, Guard));
 
     public TaskService Tasks => One(() => new TaskService(storage.Tasks, storage.TaskTypes, storage.StatusSets, Time, storage.Series,
-        storage.Writes, EditLocks, storage.Fields, storage.FieldEnums, TaskLinks, storage.Statuses, storage.Comments));
+        storage.Writes, EditLocks, storage.Fields, storage.FieldEnums, TaskLinks, storage.Statuses, Guard, storage.Comments));
 
     public BoardService Boards => One(() => new BoardService(storage.Boards, storage.StatusSets, storage.Statuses, storage.TaskTypes, storage.Tasks, storage.Fields,
-        Tasks, storage.Writes, EditLocks));
+        Tasks, storage.Writes, EditLocks, Guard));
 
-    public LinkTypeService LinkTypes => One(() => new LinkTypeService(storage.LinkTypes, storage.Tasks, EditLocks));
+    public LinkTypeService LinkTypes => One(() => new LinkTypeService(storage.LinkTypes, storage.Tasks, EditLocks, Guard));
 
-    public TaskLinkService TaskLinks => One(() => new TaskLinkService(storage.Tasks, LinkTypes, Time, EditLocks, storage.Series, storage.Writes));
+    public TaskLinkService TaskLinks => One(() => new TaskLinkService(storage.Tasks, LinkTypes, Time, EditLocks, storage.Series, storage.Writes, Guard));
 
-    public TaskCommentService TaskComments => One(() => new TaskCommentService(storage.Comments, storage.Tasks, storage.Users, currentUser, Time, localHuman));
+    public TaskCommentService TaskComments => One(() => new TaskCommentService(storage.Comments, storage.Tasks, storage.Users, currentUser, Time, Guard, localHuman));
 
     public LinkHealthService LinkHealth => One(() => new LinkHealthService(storage.Tasks, storage.LinkTypes));
 
     public FieldService Fields => One(() => new FieldService(storage.Fields, storage.FieldEnums, storage.TaskTypes, storage.Tasks,
-        storage.Writes, Time, EditLocks, storage.Series));
+        storage.Writes, Time, EditLocks, storage.Series, Guard));
 
     public FieldEnumService FieldEnums => One(() => new FieldEnumService(storage.FieldEnums, storage.Fields, storage.TaskTypes, storage.Tasks,
-        storage.Writes, Time, EditLocks));
+        storage.Writes, Time, EditLocks, Guard));
 
-    public SeriesService Series => One(() => new SeriesService(storage.Tasks, storage.Series, storage.Writes, Time, EditLocks));
+    public SeriesService Series => One(() => new SeriesService(storage.Tasks, storage.Series, storage.Writes, Time, EditLocks, Guard));
     public SeriesHealthService SeriesHealth => One(() => new SeriesHealthService(storage.Tasks, storage.Series));
 
-    public SeriesConflictService SeriesConflicts => One(() => new SeriesConflictService(storage.Tasks, storage.Series, storage.Writes, EditLocks, Time));
+    public SeriesConflictService SeriesConflicts => One(() => new SeriesConflictService(storage.Tasks, storage.Series, storage.Writes, EditLocks, Time, Guard));
 
-    public CleanupService Cleanup => One(() => new CleanupService(storage.Tasks, Tasks, storage.Series, LinkTypes, storage.Writes, EditLocks, Time, storage.Comments));
+    public CleanupService Cleanup => One(() => new CleanupService(storage.Tasks, Tasks, storage.Series, LinkTypes, storage.Writes, EditLocks, Time, Guard, storage.Comments));
 
     public T Get<T>() where T : class =>
         Find<T>() ?? throw new InvalidOperationException($"{typeof(T).Name} is not available in this workspace");
