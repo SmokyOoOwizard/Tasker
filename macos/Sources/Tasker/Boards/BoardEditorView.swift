@@ -78,23 +78,11 @@ struct BoardEditorPage: View {
         .padding(.vertical, 12)
     }
 
-    @ViewBuilder
     private var lockBadge: some View {
-        if let holder = model.holder {
-            HStack(spacing: 4) {
-                MockupIconView(icon: .lock, size: 11)
-                Text(l.string(.boardHolder, holder))
-            }
-            .font(.design(DesignTypography.smallSize))
-            .foregroundStyle(DesignColor.red.color)
-        } else if !model.isNew, model.lock == .mine {
-            HStack(spacing: 4) {
-                MockupIconView(icon: .pen, size: 11)
-                Text(l.string(.boardEditingMine))
-            }
-            .font(.design(DesignTypography.smallSize))
-            .foregroundStyle(DesignColor.green.color)
-        }
+        EditLockBadge(
+            state: model.isNew ? .none : model.lock,
+            holderText: { l.string(.boardHolder, $0) },
+            mineText: l.string(.boardEditingMine))
     }
 
     private var form: some View {
@@ -105,7 +93,10 @@ struct BoardEditorPage: View {
                 }
                 ForEach(model.issues.board, id: \.self) { BoardNotice(text: $0, icon: .warn) }
                 if model.staleVersion {
-                    Button(l.string(.boardReload)) { model.reloadFromServer() }
+                    HStack {
+                        Button(l.string(.boardRetry)) { Task { await model.rereadAndRetry() } }
+                        Button(l.string(.boardReload)) { model.reloadFromServer() }
+                    }
                 }
                 field(.boardName) {
                     TextField(l.string(.boardNamePlaceholder), text: $model.draft.name)

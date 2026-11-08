@@ -24,10 +24,10 @@ final class BoardEditorModel {
     private(set) var phase: BoardEditorPhase = .loading
     private(set) var catalog = BoardCatalog()
     private(set) var record: BoardRecord?
-    private(set) var lock: BoardLockState = .none
     private(set) var saving = false
     private(set) var issues = BoardIssues()
     private(set) var staleVersion = false
+    private(set) var editLock: EditLock?
     var draft = BoardDraft()
 
     @ObservationIgnored var localizer = Localizer(choice: .system)
@@ -39,7 +39,6 @@ final class BoardEditorModel {
     @ObservationIgnored private let heartbeat: Duration
     @ObservationIgnored private var initial = BoardDraft()
     @ObservationIgnored private var loadTask: Task<Void, Never>?
-    @ObservationIgnored private var beatTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var released = false
 
@@ -60,9 +59,12 @@ final class BoardEditorModel {
         return draft != (record?.draft ?? initial)
     }
 
+    var lock: EditLockState {
+        return editLock?.state ?? .none
+    }
+
     var holder: String? {
-        if case .other(let name) = lock { return name }
-        return nil
+        return editLock?.holder
     }
 
     var canSave: Bool { phase == .ready && !saving && holder == nil }
@@ -96,7 +98,6 @@ final class BoardEditorModel {
                 issues = BoardIssues()
                 phase = .ready
                 await takeLock(id: loaded.id)
-                startBeat()
             } else {
                 initial = BoardEditing.initial(catalog)
                 draft = initial
@@ -111,45 +112,23 @@ final class BoardEditorModel {
 
     private func takeLock(id: UUID) async {
         guard !released else { return }
-        do {
-            try await source.acquire(project: target.project, id: id)
-            if released {
-                try? await source.release(project: target.project, id: id)
-                return
-            }
-            lock = .mine
-        } catch {
-            if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .locked {
-                lock = .other(conflict.heldBy?.name ?? conflict.message)
-            }
+        if editLock == nil {
+            let source = source
+            let project = target.project
+            editLock = EditLock(
+                ops: EditLockOps(
+                    acquire: { try await source.acquire(project: project, id: id) },
+                    release: { try await source.release(project: project, id: id) },
+                    probe: { try await source.lock(project: project, id: id) }),
+                heartbeat: heartbeat)
         }
-    }
-
-    private func startBeat() {
-        beatTask?.cancel()
-        guard let id = target.board else { return }
-        let interval = heartbeat
-        beatTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
-                if Task.isCancelled { return }
-                await self?.takeLock(id: id)
-            }
-        }
+        await editLock?.acquire()
+        editLock?.start()
     }
 
     func refreshLock() {
-        guard let id = target.board, phase == .ready, !released else { return }
-        Task { [weak self, source, project = target.project] in
-            guard let state = try? await source.lock(project: project, id: id) else { return }
-            guard let self, !self.released else { return }
-            switch state {
-            case .other: self.lock = state
-            case .mine: self.lock = .mine
-            case .none:
-                if self.holder != nil { await self.takeLock(id: id) } else { self.lock = .none }
-            }
-        }
+        guard target.board != nil, phase == .ready, !released, let editLock else { return }
+        Task { await editLock.refresh() }
     }
 
     func edit(_ change: (inout BoardDraft, BoardCatalog) -> Void) {
@@ -241,7 +220,7 @@ final class BoardEditorModel {
         if case .conflict(let conflict) = error {
             switch conflict.kind {
             case .locked:
-                lock = .other(conflict.heldBy?.name ?? conflict.message)
+                editLock?.markLocked(by: conflict.heldBy?.name ?? conflict.message)
                 issues = BoardIssues(board: [localizer.refusal(refusal)])
                 return
             case .modified:
@@ -253,6 +232,15 @@ final class BoardEditorModel {
             }
         }
         issues = BoardServerIssue.map(refusal, draft: sent, l: localizer)
+    }
+
+    func rereadAndRetry() async -> Bool {
+        guard let id = target.board, staleVersion, phase == .ready, !saving else { return false }
+        guard let fresh = try? await source.board(project: target.project, id: id) else { return false }
+        record = fresh
+        staleVersion = false
+        issues = BoardIssues()
+        return await save()
     }
 
     func reloadFromServer() {
@@ -275,12 +263,7 @@ final class BoardEditorModel {
         released = true
         generation += 1
         loadTask?.cancel()
-        beatTask?.cancel()
         loadTask = nil
-        beatTask = nil
-        guard let id = target.board, lock == .mine else { return nil }
-        let source = source
-        let project = target.project
-        return { try? await source.release(project: project, id: id) }
+        return editLock?.stop()
     }
 }

@@ -1801,13 +1801,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The board was changed while you were editing it. Load the latest version — unsaved changes will be lost."
+            "value" : "The board was changed while you were editing it. You can re-read the latest version and save again — what you entered stays."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Доску изменили, пока вы её правили. Загрузите свежую версию — несохранённые правки пропадут."
+            "value" : "Доску изменили, пока вы её правили. Можно перечитать свежую версию и повторить сохранение — введённое останется."
           }
         }
       }
@@ -2144,6 +2144,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Загрузить заново"
+          }
+        }
+      }
+    },
+    "board.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reload and retry"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перечитать и повторить"
           }
         }
       }

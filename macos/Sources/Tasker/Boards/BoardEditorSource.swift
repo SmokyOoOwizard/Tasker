@@ -1,11 +1,7 @@
 import Foundation
 import TaskerAPI
 
-enum BoardLockState: Equatable, Sendable {
-    case none
-    case mine
-    case other(String)
-}
+typealias BoardLockState = EditLockState
 
 protocol BoardEditorSource: Sendable {
     func catalog(project: UUID) async throws -> BoardCatalog

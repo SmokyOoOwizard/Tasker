@@ -536,6 +536,7 @@ enum L10nKey: String, CaseIterable, Sendable {
     case boardCreated = "board.created"
     case boardSaveFailed = "board.saveFailed"
     case boardModified = "board.modified"
+    case boardRetry = "board.retry"
     case boardReload = "board.reload"
     case boardDiscardBody = "board.discardBody"
     case boardLoading = "board.loading"
