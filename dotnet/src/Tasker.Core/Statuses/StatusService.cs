@@ -9,10 +9,11 @@ public record CreateStatus(string Name, string Color, string? Description = null
 /// <summary>Поля null — не меняются; Description: пустая строка — очистить; Icon: пустая строка — значок по умолчанию. Version — версия, которую видел клиент (см. <see cref="Versioning"/>).</summary>
 public record UpdateStatus(string? Name, string? Color, string? Version, string? Description = null, string? Icon = null);
 
-public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoardStorage boards, ITaskStorage tasks, Locks.EditLockService locks, TaskSeries.ISeriesStorage series)
+public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoardStorage boards, ITaskStorage tasks, Locks.EditLockService locks, TaskSeries.ISeriesStorage series, Agents.AgentGuard guard)
 {
     public async Task<Status> Create(Guid projectId, CreateStatus command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var status = new Status
         {
             Id = Guid.NewGuid(),
@@ -44,6 +45,7 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
     /// <returns>null — статуса нет.</returns>
     public async Task<Status?> Update(Guid projectId, Guid id, UpdateStatus command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var status = await statuses.GetById(projectId, id, ct);
         if (status == null)
             return null;
@@ -66,6 +68,7 @@ public class StatusService(IStatusStorage statuses, IStatusSetStorage sets, IBoa
     /// <returns>false — статуса нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var status = await statuses.GetById(projectId, id, ct);
         if (status == null)
             return false;

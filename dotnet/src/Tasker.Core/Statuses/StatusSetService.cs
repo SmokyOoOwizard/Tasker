@@ -19,11 +19,13 @@ public class StatusSetService(
     IBoardStorage boards,
     ITaskStorage tasks,
     Locks.EditLockService locks,
-    TaskSeries.ISeriesStorage series
+    TaskSeries.ISeriesStorage series,
+    Agents.AgentGuard guard
 )
 {
     public async Task<StatusSet> Create(Guid projectId, CreateStatusSet command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var set = new StatusSet
         {
             Id = Guid.NewGuid(),
@@ -43,6 +45,7 @@ public class StatusSetService(
     /// <returns>null — набора нет.</returns>
     public async Task<StatusSet?> Update(Guid projectId, Guid id, UpdateStatusSet command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var set = await sets.GetById(projectId, id, ct);
         if (set == null)
             return null;
@@ -65,6 +68,7 @@ public class StatusSetService(
     /// <returns>false — набора нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var set = await sets.GetById(projectId, id, ct);
         if (set == null)
             return false;

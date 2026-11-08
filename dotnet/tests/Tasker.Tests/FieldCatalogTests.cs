@@ -51,12 +51,12 @@ public abstract class FieldCatalogContract : IAsyncLifetime
         var fields = scope.Resolve<IFieldStorage>();
         var enums = scope.Resolve<IFieldEnumStorage>();
         var writes = scope.Resolve<IWriteScope>();
-        var entityLocks = new EntityLockService(locks, _editor, scope.Resolve<IProjectStorage>(), null!, null!, null!, null!, null!, null!, null!, null!, fields, enums);
+        var entityLocks = new EntityLockService(locks, _editor, scope.Resolve<IProjectStorage>(), null!, null!, null!, null!, null!, null!, null!, null!, fields, enums, TestGuards.Open);
         var types = scope.Resolve<ITaskTypeStorage>();
         var tasks = scope.Resolve<ITaskStorage>();
         return action(new Services(
-            new FieldService(fields, enums, types, tasks, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
-            new FieldEnumService(enums, fields, types, tasks, writes, TimeProvider.System, locks), locks, entityLocks));
+            new FieldService(fields, enums, types, tasks, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>(), TestGuards.Open),
+            new FieldEnumService(enums, fields, types, tasks, writes, TimeProvider.System, locks, TestGuards.Open), locks, entityLocks));
     });
 
     private Task<FieldEnum> NewEnum(Guid project, string name = "Priority", params string[] values) =>

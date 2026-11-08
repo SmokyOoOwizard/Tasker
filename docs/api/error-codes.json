@@ -5,6 +5,26 @@
       "params": [],
       "usages": false
     },
+    "agent.rightMissing": {
+      "status": 403,
+      "params": [
+        "agent",
+        "right"
+      ],
+      "usages": false
+    },
+    "agent.rightsAgentOnly": {
+      "status": 400,
+      "params": [
+        "name"
+      ],
+      "usages": false
+    },
+    "agent.rightsOnMembership": {
+      "status": 400,
+      "params": [],
+      "usages": false
+    },
     "auth.invalidCredentials": {
       "status": 401,
       "params": [],

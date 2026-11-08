@@ -76,7 +76,8 @@ public abstract class CommentContract : IAsyncLifetime
     private readonly Clock _clock = new();
 
     protected TaskCommentService Service(ILifetimeScope scope, Guid user) => new(
-        scope.Resolve<ITaskCommentStorage>(), scope.Resolve<ITaskStorage>(), scope.Resolve<IUserStorage>(), new AsUser(user), _clock);
+        scope.Resolve<ITaskCommentStorage>(), scope.Resolve<ITaskStorage>(), scope.Resolve<IUserStorage>(), new AsUser(user), _clock,
+        new Tasker.Core.Agents.AgentGuard(new AsUser(user), scope.Resolve<IUserStorage>(), new UserOptions(false)));
 
     protected Task<TaskCommentView> Add(Setup s, Guid user, string body, Guid? parent = null) =>
         Run(async scope => (await Service(scope, user).Add(s.Project, s.Task, new AddTaskComment(body, parent)))!);

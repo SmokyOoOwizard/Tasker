@@ -41,6 +41,12 @@ final class StubAdminSource: AdminSource, @unchecked Sendable {
         agentsValue.removeAll { $0.id == agent.id }
     }
 
+    func setRights(_ agent: AdminAgent, rights: AgentRightsValue) async throws {
+        if let failure { throw failure }
+        record("rights \(agent.name) \(rights.count)")
+        agentsValue = agentsValue.map { $0.id == agent.id ? AdminAgent(id: $0.id, name: $0.name, version: "3", rights: rights) : $0 }
+    }
+
     func cleanup(project: UUID) async throws -> AdminCleanupResult {
         record("cleanup")
         return cleanupValue
@@ -135,6 +141,26 @@ private func loadedModel(_ source: StubAdminSource, directory: URL, system: Stri
         #expect(await model.deleteAgent(try #require(model.agents.first)) == nil)
         #expect(model.agents.isEmpty)
         #expect(source.calls == ["create reviewer", "rename reviewer->bot", "delete bot"])
+    }
+
+    @Test func agentRightsAreSavedAndShownAfterReload() async throws {
+        let directory = try scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = StubAdminSource()
+        source.agentsValue = [AdminAgent(id: UUID(), name: "bot", version: "1")]
+        let model = await loadedModel(source, directory: directory)
+        let ru = Localizer(choice: .ru)
+        let agent = try #require(model.agents.first)
+        #expect(agent.rights == .full)
+        #expect(agent.rights.summary(ru) == "полный доступ")
+
+        var tasksOnly = AgentRightsValue.readOnly
+        tasksOnly.editTasks = true
+        #expect(await model.setRights(agent, tasksOnly) == nil)
+        #expect(model.agents.first?.rights == tasksOnly)
+        #expect(model.agents.first?.rights.summary(ru) == "права: 1 из 4")
+        #expect(AgentRightsValue.readOnly.summary(ru) == "только чтение")
+        #expect(source.calls == ["rights bot 1"])
     }
 
     @Test func failureIsReturnedAndListKept() async throws {

@@ -43,7 +43,15 @@ final class StubSettingsSource: SettingsSource, @unchecked Sendable {
     func seriesStats(project: UUID, series: [UUID]) async throws -> [UUID: SettingsSeriesStat] { statsValue }
     func members(project: UUID) async throws -> [SettingsMember] { membersValue }
     func users() async throws -> [SettingsMember] { membersValue }
-    func addMember(project: UUID, user: UUID) async throws { record("addMember") }
+    func addMember(project: UUID, user: UUID, rights: AgentRightsValue?) async throws {
+        record("addMember" + (rights.map { ":\($0.count)" } ?? ""))
+    }
+
+    func setMemberRights(project: UUID, user: UUID, rights: AgentRightsValue) async throws {
+        record("setMemberRights:\(rights.count)")
+        membersValue = membersValue.map { $0.id == user ? SettingsMember(
+            id: $0.id, name: $0.name, email: $0.email, isAgent: $0.isAgent, isAdmin: $0.isAdmin, ownerId: $0.ownerId, rights: rights) : $0 }
+    }
     func removeMember(project: UUID, user: UUID) async throws { record("removeMember") }
 
     func createField(project: UUID, name: String, type: FieldType, multiple: Bool, enumId: UUID?) async throws { record("createField:\(name)") }
@@ -349,6 +357,26 @@ struct SettingsTests {
         await value.reload()
         #expect(await value.removeMember(human) == ru.string(.settingsMemberLast))
         #expect(!source.calls.contains("removeMember"))
+    }
+
+    @Test func memberRightsAreSentOnlyForAgentsAndChangedLater() async throws {
+        let source = StubSettingsSource(catalog: catalog())
+        let human = SettingsMember(id: UUID(), name: "a", email: nil, isAgent: false, isAdmin: false, ownerId: nil)
+        let agent = SettingsMember(id: UUID(), name: "bot", email: nil, isAgent: true, isAdmin: false, ownerId: human.id, rights: .full)
+        source.modeValue = .server
+        source.membersValue = [human]
+        let value = model(source)
+        await value.reload()
+
+        #expect(await value.addMember(agent, rights: .readOnly) == nil)
+        #expect(await value.addMember(human, rights: .readOnly) == nil)
+        source.membersValue = [human, agent]
+        await value.reload()
+        var series = AgentRightsValue.readOnly
+        series.manageSeries = true
+        #expect(await value.setMemberRights(agent, series) == nil)
+        #expect(value.members.first { $0.id == agent.id }?.rights == series)
+        #expect(source.calls.filter { $0.hasPrefix("addMember") || $0.hasPrefix("setMemberRights") } == ["addMember:0", "addMember", "setMemberRights:1"])
     }
 
     private func workflow() -> (status: SettingsStatusItem, other: SettingsStatusItem, set: SettingsStatusSetItem, type: SettingsTypeItem, data: SettingsCatalog) {

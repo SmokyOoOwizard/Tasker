@@ -19,12 +19,12 @@ public record ConflictPlan(Guid SeriesId, string Token, ConflictPlanStep[] Steps
 /// (токен включает версии всех затронутых задач). Два пользователя подтверждают один и тот же план — секции записи идут по очереди,
 /// первый применяет, у второго токен уже не совпадает (409 Modified), и повторно ничего не перенумеровывается.
 /// </summary>
-public class SeriesConflictService(ITaskStorage tasks, ISeriesStorage series, IWriteScope writes, Locks.EditLockService locks, TimeProvider time)
+public class SeriesConflictService(ITaskStorage tasks, ISeriesStorage series, IWriteScope writes, Locks.EditLockService locks, TimeProvider time, Agents.AgentGuard guard)
 {
     private const int Attempts = 2;
 
-    public SeriesConflictService(ITaskStorage tasks, ISeriesStorage series, IWriteScope writes, Locks.EditLockService locks)
-        : this(tasks, series, writes, locks, TimeProvider.System)
+    public SeriesConflictService(ITaskStorage tasks, ISeriesStorage series, IWriteScope writes, Locks.EditLockService locks, Agents.AgentGuard guard)
+        : this(tasks, series, writes, locks, TimeProvider.System, guard)
     {
     }
 
@@ -37,6 +37,7 @@ public class SeriesConflictService(ITaskStorage tasks, ISeriesStorage series, IW
     /// <returns>Применённый план.</returns>
     public async Task<ConflictPlan> Apply(Guid projectId, Guid seriesId, string? token, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ManageSeries, ct);
         if (string.IsNullOrWhiteSpace(token))
             throw TaskerErrors.Invalid("Token is required: pass the token of the plan you are confirming");
 

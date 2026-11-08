@@ -174,9 +174,9 @@ public class DaemonTests : IDisposable
         await Eventually(async () => (await _daemon.CallTool(key, "list_projects")).Contains("Gamma"));
         Assert.Equal(["Alpha", "Gamma"], DaemonFixture.ProjectNames(await _daemon.CallTool(key, "list_projects")));
 
-        // И наоборот: то, что создал агент через MCP, видит CLI.
-        await _daemon.CallTool(key, "create_project", new { name = "FromAgent" });
-        Assert.Contains("FromAgent", (await TaskerProcess.Run("project", "list", "-w", folder)).Out);
+        var alpha = DaemonFixture.ProjectIds(await _daemon.CallTool(key, "list_projects"))[0];
+        await _daemon.CallTool(key, "create_status", new { projectId = alpha, name = "FromAgent", color = "#112233" });
+        Assert.Contains("FromAgent", (await TaskerProcess.Run("status", "list", "-w", folder, "-p", alpha)).Out);
     }
 
     [Fact]
@@ -241,12 +241,13 @@ public class DaemonTests : IDisposable
         }
 
         using var created = await http.PostAsJsonAsync($"{apiBase}/projects", new { name = "Beta" });
-        var restProject = (await created.Content.ReadFromJsonAsync<JsonNode>())!["id"]!.GetValue<string>();
+        var restBody = (await created.Content.ReadFromJsonAsync<JsonNode>())!;
+        var restProject = restBody["id"]!.GetValue<string>();
         var rest = await ProjectChange(restProject);
         Assert.Equal("local", rest["author"]!["key"]!.GetValue<string>());
 
-        var agentProject = JsonNode.Parse(await _daemon.CallTool(key, "create_project", new { name = "FromAgent" }))!["id"]!.GetValue<string>();
-        var agent = await ProjectChange(agentProject);
+        await _daemon.CallTool(key, "update_project", new { projectId = restProject, name = "FromAgent", version = restBody["version"]!.GetValue<string>() });
+        var agent = await ProjectChange(restProject);
         Assert.StartsWith("user:", agent["author"]!["key"]!.GetValue<string>());
         Assert.Equal("agent", agent["author"]!["name"]!.GetValue<string>());
 

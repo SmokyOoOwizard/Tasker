@@ -32,6 +32,7 @@ public class CoreModule(bool lazy) : Module
         Scoped<Locks.EntityLockService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Locks.CurrentUserEditor>(builder, x => x.As<Locks.IEditorIdentity>().InstancePerLifetimeScope());
         Scoped<UserService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
+        Scoped<Agents.AgentGuard>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<Agents.AgentService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<ProjectService>(builder, x => x.AsSelf().InstancePerLifetimeScope());
         Scoped<StatusService>(builder, x => x.AsSelf().InstancePerLifetimeScope());

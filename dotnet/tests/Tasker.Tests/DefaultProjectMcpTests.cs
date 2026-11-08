@@ -145,7 +145,7 @@ public class DefaultProjectMcpTests : IDisposable
     {
         var key = await StartWithOneProject();
         var alpha = await ProjectId(key);
-        var beta = (await Call(key, "create_project", new { name = "Beta" }))["id"]!.GetValue<string>();
+        var beta = await _daemon.CreateProject(key, "Beta");
 
         var error = await Fail(key, "list_statuses");
         Assert.StartsWith("[invalid] projectId is required", error);
@@ -171,9 +171,10 @@ public class DefaultProjectMcpTests : IDisposable
         var error = await Fail(key, "list_statuses");
         Assert.StartsWith("[invalid] projectId is required", error);
         Assert.Contains("no projects", error);
-        Assert.Contains("create_project", error);
+        Assert.Contains("only a person can create one", error);
+        Assert.StartsWith("[forbidden]", await Fail(key, "create_project", new { name = "First" }));
 
-        await Call(key, "create_project", new { name = "First" });
+        await _daemon.CreateProject(key, "First");
 
         Assert.Equal(0, (await Call(key, "list_statuses"))["totalCount"]!.GetValue<int>());
     }

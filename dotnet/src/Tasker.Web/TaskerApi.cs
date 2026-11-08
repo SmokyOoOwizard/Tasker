@@ -400,6 +400,10 @@ internal static class TaskerApi
             Created(await service.Add(projectId, command, ct)))
             .RespondsCreated<User>("addProjectMember");
 
+        project.MapPatch("/members/{userId:guid}", async (ProjectMemberService service, Guid projectId, Guid userId, UpdateProjectMember command, CancellationToken ct) =>
+            OkOrNotFound(await service.Update(projectId, userId, command, ct)))
+            .RespondsOk<User>("updateProjectMember");
+
         project.MapDelete("/members/{userId:guid}", async (ProjectMemberService service, Guid projectId, Guid userId, CancellationToken ct) =>
             NoContentOrNotFound(await service.Remove(projectId, userId, ct)))
             .RespondsNoContent("removeProjectMember");

@@ -985,7 +985,7 @@
       },
       {
         "name": "whoami",
-        "description": "Returns the user this agent acts as. Agents are regular users: they see only projects they are members of.",
+        "description": "Returns the user this agent acts as. Agents are regular users: they see only projects they are members of. `rights` are the agent's rights: editTasks (create and edit tasks, links, series membership, comments, locks), deleteTasks (delete tasks and comments), configureProject (statuses, status sets, task types, fields, enums, link types, boards, the project), manageSeries (create, change and delete series, renumber tasks). Without a right the call fails with [forbidden]. Locally the rights apply to all projects; on the server they are set per project and listed in `projects`.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1001,7 +1001,7 @@
       },
       {
         "name": "create_project",
-        "description": "Creates a project. On the server the agent becomes its member.",
+        "description": "Creates a project. Only a person can create projects: for an agent the call fails with [forbidden].",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -2907,7 +2907,7 @@
       },
       {
         "name": "get_project",
-        "description": "Gets a project by id.",
+        "description": "Gets a project by id. For an agent `rights` are its rights in this project (see whoami).",
         "inputSchema": {
           "type": "object",
           "properties": {

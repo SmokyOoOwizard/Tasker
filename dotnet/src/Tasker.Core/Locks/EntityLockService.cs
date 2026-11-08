@@ -30,7 +30,8 @@ public class EntityLockService(
     IUserStorage users,
     Links.ILinkTypeStorage linkTypes,
     Fields.IFieldStorage fields,
-    Fields.IFieldEnumStorage fieldEnums)
+    Fields.IFieldEnumStorage fieldEnums,
+    Agents.AgentGuard guard)
 {
     /// <summary>Сущности внутри проекта — для них при блокировке нужен <c>projectId</c>.</summary>
     public static bool IsProjectScoped(LockedEntity entity) => entity is not (LockedEntity.Project or LockedEntity.User);
@@ -57,6 +58,8 @@ public class EntityLockService(
     {
         if (await Subject(projectId, entity, id, ct) is not { } subject)
             return null;
+        if ((entity == LockedEntity.Project ? id : projectId) is { } lockProject)
+            await guard.Require(lockProject, Agents.AgentRight.EditTasks, ct);
         // У самого проекта «проект сущности» — он сам.
         return await ToInfo(await locks.Acquire(entity, id, subject, entity == LockedEntity.Project ? id : projectId, ct), ct);
     }

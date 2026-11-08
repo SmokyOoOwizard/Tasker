@@ -639,12 +639,12 @@ public sealed class SeriesEnv
 
         // Ожидание массовых правок — ноль: заблокированная задача сразу даёт отказ, тесты не спят.
         Locks = new EditLockService(new InMemoryEditLockStorage(), Editor, Clock) { CascadeTimeout = TimeSpan.Zero };
-        LinkTypeSvc = new LinkTypeService(LinkTypes, Tasks, Locks);
-        LinkSvc = new TaskLinkService(Tasks, LinkTypeSvc, Clock, Locks, Series, Scope);
-        TaskSvc = new TaskService(Tasks, types, sets, Clock, Series, Scope, Locks, new InMemoryFieldStorage(), new InMemoryFieldEnumStorage(), LinkSvc, new InMemoryStatusStorage());
-        SeriesSvc = new SeriesService(Tasks, Series, Scope, Clock, Locks);
+        LinkTypeSvc = new LinkTypeService(LinkTypes, Tasks, Locks, TestGuards.Open);
+        LinkSvc = new TaskLinkService(Tasks, LinkTypeSvc, Clock, Locks, Series, Scope, TestGuards.Open);
+        TaskSvc = new TaskService(Tasks, types, sets, Clock, Series, Scope, Locks, new InMemoryFieldStorage(), new InMemoryFieldEnumStorage(), LinkSvc, new InMemoryStatusStorage(), TestGuards.Open);
+        SeriesSvc = new SeriesService(Tasks, Series, Scope, Clock, Locks, TestGuards.Open);
         Health = new SeriesHealthService(Tasks, Series);
-        Cleanup = new CleanupService(Tasks, TaskSvc, Series, LinkTypeSvc, Scope, Locks, Clock);
+        Cleanup = new CleanupService(Tasks, TaskSvc, Series, LinkTypeSvc, Scope, Locks, Clock, TestGuards.Open);
         LinkHealthSvc = new LinkHealthService(Tasks, LinkTypes);
     }
 

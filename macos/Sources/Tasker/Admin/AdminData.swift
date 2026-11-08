@@ -5,6 +5,7 @@ struct AdminAgent: Identifiable, Hashable, Sendable {
     var id: UUID
     var name: String
     var version: String
+    var rights: AgentRightsValue = .full
 
     static let localName = "agent"
 

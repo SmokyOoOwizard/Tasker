@@ -35,7 +35,7 @@ public record UpdateFieldEnum(string? Name, FieldEnumValueInput[]? Values, strin
 /// </summary>
 public class FieldEnumService(
     IFieldEnumStorage enums, IFieldStorage fields, ITaskTypeStorage types, ITaskStorage tasks, IWriteScope writes, TimeProvider time,
-    Locks.EditLockService locks)
+    Locks.EditLockService locks, Agents.AgentGuard guard)
 {
     private const int CascadeAttempts = 3;
 
@@ -79,6 +79,7 @@ public class FieldEnumService(
     /// <exception cref="TaskerConflictException">Перечисление с таким именем уже есть.</exception>
     public async Task<FieldEnum> Create(Guid projectId, CreateFieldEnum command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var name = Validate.Name(command.Name, ErrorField.EnumName);
         var values = ValidateValues((command.Values ?? []).Select(x => new FieldEnumValueInput(null, x)).ToArray(), []);
 
@@ -103,6 +104,7 @@ public class FieldEnumService(
     /// </returns>
     public async Task<CascadeResult<FieldEnum>?> Update(Guid projectId, Guid id, UpdateFieldEnum command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var current = await enums.GetById(projectId, id, ct);
         if (current == null)
             return null;
@@ -139,6 +141,7 @@ public class FieldEnumService(
     /// <returns>false — перечисления нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var current = await enums.GetById(projectId, id, ct);
         if (current == null)
             return false;

@@ -60,13 +60,13 @@ public abstract class TaskFieldsContract : IAsyncLifetime
         var tasks = scope.Resolve<ITaskStorage>();
         var types = scope.Resolve<ITaskTypeStorage>();
         var sets = scope.Resolve<IStatusSetStorage>();
-        var linkTypes = new LinkTypeService(scope.Resolve<ILinkTypeStorage>(), tasks, locks);
-        var links = new TaskLinkService(tasks, linkTypes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>(), writes);
+        var linkTypes = new LinkTypeService(scope.Resolve<ILinkTypeStorage>(), tasks, locks, TestGuards.Open);
+        var links = new TaskLinkService(tasks, linkTypes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>(), writes, TestGuards.Open);
         return action(new Svc(
-            new TaskService(tasks, types, sets, TimeProvider.System, scope.Resolve<ISeriesStorage>(), writes, locks, fields, enums, links, scope.Resolve<IStatusStorage>()),
-            new TaskTypeService(types, sets, tasks, fields, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
-            new FieldService(fields, enums, types, tasks, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>()),
-            new FieldEnumService(enums, fields, types, tasks, writes, TimeProvider.System, locks),
+            new TaskService(tasks, types, sets, TimeProvider.System, scope.Resolve<ISeriesStorage>(), writes, locks, fields, enums, links, scope.Resolve<IStatusStorage>(), TestGuards.Open),
+            new TaskTypeService(types, sets, tasks, fields, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>(), TestGuards.Open),
+            new FieldService(fields, enums, types, tasks, writes, TimeProvider.System, locks, scope.Resolve<ISeriesStorage>(), TestGuards.Open),
+            new FieldEnumService(enums, fields, types, tasks, writes, TimeProvider.System, locks, TestGuards.Open),
             tasks, types));
     });
 
