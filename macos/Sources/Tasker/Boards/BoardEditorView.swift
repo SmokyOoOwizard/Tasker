@@ -312,6 +312,7 @@ private struct BoardColumnCard: View {
             label(.boardQuery)
             if let query = model.queryModel(for: column) {
                 TaskQueryBarField(model: query)
+                    .zIndex(1)
             }
             Text(l.string(.boardQueryHint))
                 .font(.design(DesignTypography.captionSize))

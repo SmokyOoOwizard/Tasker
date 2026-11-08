@@ -1359,13 +1359,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Columns, conditions and drop rules of the board"
+            "value" : "Columns, their queries and drop rules of the board"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Колонки, условия и правила переноса доски"
+            "value" : "Колонки, их запросы и правила переноса доски"
           }
         }
       }
@@ -1746,13 +1746,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Board rejected: status “%1$@” is in columns %2$@ and %3$@ without mutually exclusive conditions"
+            "value" : "Board rejected: status “%1$@” is in columns %2$@ and %3$@ without mutually exclusive queries"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Доска не принимается: статус «%1$@» в колонках %2$@ и %3$@ без взаимоисключающих условий"
+            "value" : "Доска не принимается: статус «%1$@» в колонках %2$@ и %3$@ без взаимоисключающих запросов"
           }
         }
       }
@@ -9725,13 +9725,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove the value from tasks and conditions"
+            "value" : "Remove the value from tasks"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Убрать значение у задач и из условий"
+            "value" : "Убрать значение у задач"
           }
         }
       }
