@@ -24,7 +24,7 @@ public record UpdateLinkType(string? Name, string? OutwardName, string? InwardNa
 /// или переименованный «Parent/Child» его заменяют; удалить «Parent/Child» насовсем можно, только оставив другой иерархический тип.
 /// </para>
 /// </summary>
-public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.EditLockService locks)
+public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.EditLockService locks, Agents.AgentGuard guard)
 {
     /// <summary>Сколько файлов типов связей проекта не удалось прочитать (см. <see cref="ILinkTypeStorage.CountUnreadable"/>).</summary>
     public Task<int> CountUnreadable(Guid projectId, CancellationToken ct = default) => types.CountUnreadable(projectId, ct);
@@ -178,6 +178,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
     /// <exception cref="TaskerConflictException">Тип с таким названием уже есть.</exception>
     public async Task<LinkType> Create(Guid projectId, CreateLinkType command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         await EnsureDefaults(projectId, ct);
 
         var name = Validate.Name(command.Name, ErrorField.LinkTypeName);
@@ -205,6 +206,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
     /// <returns>null — типа нет.</returns>
     public async Task<LinkType?> Update(Guid projectId, Guid id, UpdateLinkType command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         await EnsureDefaults(projectId, ct);
         var type = await GetById(projectId, id, ct);
         if (type == null)
@@ -235,6 +237,7 @@ public class LinkTypeService(ILinkTypeStorage types, ITaskStorage tasks, Locks.E
     /// <returns>false — типа нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         await EnsureDefaults(projectId, ct);
         var type = await GetById(projectId, id, ct);
         if (type == null)

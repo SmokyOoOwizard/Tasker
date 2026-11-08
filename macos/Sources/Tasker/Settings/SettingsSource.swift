@@ -8,7 +8,8 @@ protocol SettingsSource: Sendable {
     func seriesStats(project: UUID, series: [UUID]) async throws -> [UUID: SettingsSeriesStat]
     func members(project: UUID) async throws -> [SettingsMember]
     func users() async throws -> [SettingsMember]
-    func addMember(project: UUID, user: UUID) async throws
+    func addMember(project: UUID, user: UUID, rights: AgentRightsValue?) async throws
+    func setMemberRights(project: UUID, user: UUID, rights: AgentRightsValue) async throws
     func removeMember(project: UUID, user: UUID) async throws
 
     func createField(project: UUID, name: String, type: FieldType, multiple: Bool, enumId: UUID?) async throws
@@ -153,8 +154,13 @@ struct GraphQLSettingsSource: SettingsSource {
         guard let data = try await client.graphQL.fetch(SettingsMembersQuery(projectId: project)).project else {
             throw TaskerAPIError.notFound(Refusal(code: "entity.notFound", message: project.uuidString))
         }
-        return data.members.data.map {
-            SettingsMember(id: $0.id, name: $0.username, email: $0.email, isAgent: $0.kind == .agent, isAdmin: $0.isAdmin, ownerId: $0.ownerId)
+        return data.members.data.map { user in
+            SettingsMember(
+                id: user.id, name: user.username, email: user.email, isAgent: user.kind == .agent, isAdmin: user.isAdmin, ownerId: user.ownerId,
+                rights: user.rights.map {
+                    AgentRightsValue(
+                        editTasks: $0.editTasks, deleteTasks: $0.deleteTasks, configureProject: $0.configureProject, manageSeries: $0.manageSeries)
+                })
         }
     }
 
@@ -164,9 +170,15 @@ struct GraphQLSettingsSource: SettingsSource {
         }
     }
 
-    func addMember(project: UUID, user: UUID) async throws {
+    func addMember(project: UUID, user: UUID, rights: AgentRightsValue?) async throws {
         try await client.rest.perform {
-            try await $0.addProjectMember(path: .init(projectId: project.wire), body: .json(.init(userId: user.wire))).created
+            try await $0.addProjectMember(path: .init(projectId: project.wire), body: .json(.init(userId: user.wire, rights: rights.map { .init(value1: $0.wire) }))).created
+        }
+    }
+
+    func setMemberRights(project: UUID, user: UUID, rights: AgentRightsValue) async throws {
+        try await client.rest.perform {
+            try await $0.updateProjectMember(path: .init(projectId: project.wire, userId: user.wire), body: .json(.init(rights: .init(value1: rights.wire)))).ok
         }
     }
 

@@ -8,7 +8,7 @@ public record CreateSeries(string Name, string Prefix);
 public record UpdateSeries(string? Name, string? Prefix, string? Version);
 
 /// <summary>Серии проекта. Реализация — по образцу <see cref="Statuses.StatusService"/>.</summary>
-public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScope writes, TimeProvider time, Locks.EditLockService locks)
+public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScope writes, TimeProvider time, Locks.EditLockService locks, Agents.AgentGuard guard)
 {
     private const int CascadeAttempts = 4;
 
@@ -16,6 +16,7 @@ public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScop
     /// <exception cref="TaskerConflictException">Префикс уже занят в проекте (точное совпадение, регистр важен).</exception>
     public async Task<Series> Create(Guid projectId, CreateSeries command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ManageSeries, ct);
         var name = Validate.Name(command.Name, ErrorField.SeriesName);
         var prefix = SeriesPrefix.Validate(command.Prefix);
 
@@ -39,6 +40,7 @@ public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScop
     public Task<Series?> Update(Guid projectId, Guid id, UpdateSeries command, CancellationToken ct = default) =>
         writes.Exclusive<Series?>(projectId, async () =>
         {
+            await guard.Require(projectId, Agents.AgentRight.ManageSeries, ct);
             var current = await series.GetById(projectId, id, ct);
             if (current == null)
                 return null;
@@ -63,6 +65,7 @@ public class SeriesService(ITaskStorage tasks, ISeriesStorage series, IWriteScop
     /// <returns>false — серии нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ManageSeries, ct);
         // Задачи серии не должны быть заняты другим: ждём (или отказываем) до секции записи и до первой записи.
         // Внутри секции (в БД это транзакция) ожидание не годится — держатель не смог бы снять блокировку; там проверка без ожидания.
         if (await series.GetById(projectId, id, ct) != null)

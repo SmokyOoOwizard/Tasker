@@ -6,6 +6,7 @@ struct MembersSettingsPage: View {
     @Environment(\.localizer) private var l
     @State private var adding = false
     @State private var removing: SettingsMember?
+    @State private var granting: SettingsMember?
     @State private var failure: String?
 
     var body: some View {
@@ -25,10 +26,16 @@ struct MembersSettingsPage: View {
                                     .frame(width: 20, height: 20)
                                     .background(member.isAgent ? DesignColor.amber.color : DesignColor.acc.color, in: Circle())
                                 Text(member.name)
+                                if let rights = member.rights {
+                                    SettingsChip(text: rights.summary(l), accent: rights != .full)
+                                }
                             }
                         } meta: {
                             Text(detail(member))
                         } actions: {
+                            if member.isAgent {
+                                SettingsIconButton(icon: .shield, help: l.string(.adminRightsEdit)) { granting = member }
+                            }
                             SettingsIconButton(icon: .trash, help: l.string(.settingsMemberRemove), destructive: true) { removing = member }
                         }
                     }
@@ -37,6 +44,11 @@ struct MembersSettingsPage: View {
         }
         .sheet(isPresented: $adding) {
             MemberAddSheet(model: model) { adding = false }
+        }
+        .sheet(item: $granting) { member in
+            AgentRightsSheet(
+                name: member.name, initial: member.rights ?? .full, scope: l.string(.adminRightsScopeProject),
+                save: { await model.setMemberRights(member, $0) }, close: { granting = nil })
         }
         .confirmationDialog(
             l.string(.settingsMemberRemoveTitle), isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }), presenting: removing
@@ -66,8 +78,23 @@ private struct MemberAddSheet: View {
     @State private var candidates: [SettingsMember]?
     @State private var error: String?
     @State private var busy = false
+    @State private var agent: SettingsMember?
+    @State private var rights = AgentRightsValue.full
 
     var body: some View {
+        if let agent {
+            SettingsSheet(
+                title: l.string(.adminRightsTitle, agent.name), error: error, saveTitle: l.string(.settingsMemberAdd), busy: busy,
+                cancel: { self.agent = nil; error = nil }, save: { add(agent) }
+            ) {
+                AgentRightsEditor(rights: $rights, scope: l.string(.adminRightsScopeProject))
+            }
+        } else {
+            list
+        }
+    }
+
+    private var list: some View {
         SettingsSheet(title: l.string(.settingsMemberAddTitle), error: error, busy: busy, cancelTitle: l.string(.settingsUsedOk), cancel: close) {
             if let candidates {
                 if candidates.isEmpty {
@@ -77,7 +104,12 @@ private struct MemberAddSheet: View {
                     VStack(spacing: 0) {
                         ForEach(candidates) { user in
                             Button {
-                                add(user)
+                                if user.isAgent {
+                                    rights = .full
+                                    agent = user
+                                } else {
+                                    add(user)
+                                }
                             } label: {
                                 HStack {
                                     Text(user.name)
@@ -104,7 +136,7 @@ private struct MemberAddSheet: View {
     private func add(_ user: SettingsMember) {
         busy = true
         Task {
-            if let failure = await model.addMember(user) {
+            if let failure = await model.addMember(user, rights: user.isAgent ? rights : nil) {
                 error = failure
                 busy = false
             } else {

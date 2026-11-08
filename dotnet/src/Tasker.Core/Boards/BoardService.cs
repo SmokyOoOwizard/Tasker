@@ -32,11 +32,13 @@ public class BoardService(
     IFieldStorage fields,
     TaskService taskService,
     TaskSeries.IWriteScope writes,
-    Locks.EditLockService locks
+    Locks.EditLockService locks,
+    Agents.AgentGuard guard
 )
 {
     public async Task<Board> Create(Guid projectId, CreateBoard command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         // Проверка по каталогу и запись — в одной секции записи: поле, которое использует колонка, не удалят между ними (см. FieldService.Delete).
         return await writes.Exclusive(projectId, async () =>
         {
@@ -48,6 +50,7 @@ public class BoardService(
     /// <returns>null — доски нет.</returns>
     public async Task<Board?> Update(Guid projectId, Guid id, UpdateBoard command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var board = await boards.GetById(projectId, id, ct);
         if (board == null)
             return null;
@@ -79,6 +82,7 @@ public class BoardService(
     /// <returns>false — доски нет.</returns>
     public async Task<bool> Delete(Guid projectId, Guid id, string? version, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.ConfigureProject, ct);
         var board = await boards.GetById(projectId, id, ct);
         if (board == null)
             return false;
@@ -104,6 +108,7 @@ public class BoardService(
     /// <returns>null — нет доски, колонки или задачи.</returns>
     public async Task<TaskItem?> MoveTask(Guid projectId, Guid boardId, Guid columnId, MoveTask command, CancellationToken ct = default)
     {
+        await guard.Require(projectId, Agents.AgentRight.EditTasks, ct);
         var board = await boards.GetById(projectId, boardId, ct);
         var column = board?.Columns.FirstOrDefault(x => x.Id == columnId);
         var task = await tasks.GetById(projectId, command.TaskId, ct);

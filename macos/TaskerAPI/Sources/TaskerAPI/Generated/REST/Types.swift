@@ -131,6 +131,9 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /api/projects/{projectId}/members`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/members/post(addProjectMember)`.
     func addProjectMember(_ input: Operations.AddProjectMember.Input) async throws -> Operations.AddProjectMember.Output
+    /// - Remark: HTTP `PATCH /api/projects/{projectId}/members/{userId}`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/members/{userId}/patch(updateProjectMember)`.
+    func updateProjectMember(_ input: Operations.UpdateProjectMember.Input) async throws -> Operations.UpdateProjectMember.Output
     /// - Remark: HTTP `DELETE /api/projects/{projectId}/members/{userId}`.
     /// - Remark: Generated from `#/paths//api/projects/{projectId}/members/{userId}/delete(removeProjectMember)`.
     func removeProjectMember(_ input: Operations.RemoveProjectMember.Input) async throws -> Operations.RemoveProjectMember.Output
@@ -715,6 +718,19 @@ extension APIProtocol {
         body: Operations.AddProjectMember.Input.Body
     ) async throws -> Operations.AddProjectMember.Output {
         try await addProjectMember(Operations.AddProjectMember.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `PATCH /api/projects/{projectId}/members/{userId}`.
+    /// - Remark: Generated from `#/paths//api/projects/{projectId}/members/{userId}/patch(updateProjectMember)`.
+    public func updateProjectMember(
+        path: Operations.UpdateProjectMember.Input.Path,
+        headers: Operations.UpdateProjectMember.Input.Headers = .init(),
+        body: Operations.UpdateProjectMember.Input.Body
+    ) async throws -> Operations.UpdateProjectMember.Output {
+        try await updateProjectMember(Operations.UpdateProjectMember.Input(
             path: path,
             headers: headers,
             body: body

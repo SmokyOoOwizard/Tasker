@@ -3647,6 +3647,112 @@
       }
     },
     "/api/projects/{projectId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "members"
+        ],
+        "operationId": "updateProjectMember",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectMember"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tasker-modes": [
+          "server"
+        ]
+      },
       "delete": {
         "tags": [
           "members"
@@ -7967,6 +8073,14 @@
           "userId": {
             "type": "string",
             "format": "uuid"
+          },
+          "rights": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentRights"
+              }
+            ],
+            "nullable": true
           }
         }
       },
@@ -8020,6 +8134,29 @@
           "version": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "AgentRights": {
+        "required": [
+          "editTasks",
+          "deleteTasks",
+          "configureProject",
+          "manageSeries"
+        ],
+        "type": "object",
+        "properties": {
+          "editTasks": {
+            "type": "boolean"
+          },
+          "deleteTasks": {
+            "type": "boolean"
+          },
+          "configureProject": {
+            "type": "boolean"
+          },
+          "manageSeries": {
+            "type": "boolean"
           }
         }
       },
@@ -8100,6 +8237,9 @@
             "type": "string",
             "enum": [
               "agent.expiresAtPast",
+              "agent.rightMissing",
+              "agent.rightsAgentOnly",
+              "agent.rightsOnMembership",
               "auth.invalidCredentials",
               "auth.localOnly",
               "auth.required",
@@ -10589,6 +10729,14 @@
           "version": {
             "type": "string",
             "nullable": true
+          },
+          "rights": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentRights"
+              }
+            ],
+            "nullable": true
           }
         }
       },
@@ -10724,6 +10872,19 @@
           },
           "version": {
             "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateProjectMember": {
+        "type": "object",
+        "properties": {
+          "rights": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentRights"
+              }
+            ],
             "nullable": true
           }
         }
@@ -10932,6 +11093,14 @@
           },
           "isAdmin": {
             "type": "boolean"
+          },
+          "rights": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentRights"
+              }
+            ],
+            "nullable": true
           },
           "createdAt": {
             "type": "string",

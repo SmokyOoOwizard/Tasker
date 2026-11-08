@@ -142,6 +142,10 @@ final class AdminModel {
         await run(.adminAgentDeleted, agent.name) { try await source.deleteAgent(agent) }
     }
 
+    func setRights(_ agent: AdminAgent, _ rights: AgentRightsValue) async -> String? {
+        await run(.adminRightsSaved, agent.name) { try await source.setRights(agent, rights: rights) }
+    }
+
     func cleanInvalidLinks(project: UUID) async -> String? {
         guard !busy else { return nil }
         busy = true

@@ -55,7 +55,7 @@ public class WorkspaceArgumentMcpTests : IDisposable
         await Call(b, "create_status", new { name = "Todo", color = "#112233" });
         Assert.Equal(1, (await Call(b, "list_statuses"))["totalCount"]!.GetValue<int>());
         Assert.Equal(0, (await Call(a, "list_statuses"))["totalCount"]!.GetValue<int>());
-        await Call(a, "create_project", new { name = "Gamma" });
+        await _daemon.CreateProject(a, "Gamma");
         Assert.Equal(["Alpha", "Gamma"], DaemonFixture.ProjectNames((await Call(a, "list_projects")).ToJsonString()));
         Assert.Equal(["Beta"], DaemonFixture.ProjectNames((await Call(b, "list_projects")).ToJsonString()));
 
@@ -188,7 +188,7 @@ public class WorkspaceArgumentMcpTests : IDisposable
     {
         await _daemon.Workspace("c", "Gamma");
         var status = await StartWithTwo();
-        await Call(KeyOf(status, "a"), "create_project", new { name = "Alpha2" });
+        await _daemon.CreateProject(KeyOf(status, "a"), "Alpha2");
 
         var listed = (await Call(null, "list_workspaces"))["workspaces"]!.AsArray().Select(x => x!).ToArray();
 

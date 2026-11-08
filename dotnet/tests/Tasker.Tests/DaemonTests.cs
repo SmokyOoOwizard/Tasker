@@ -174,9 +174,9 @@ public class DaemonTests : IDisposable
         await Eventually(async () => (await _daemon.CallTool(key, "list_projects")).Contains("Gamma"));
         Assert.Equal(["Alpha", "Gamma"], DaemonFixture.ProjectNames(await _daemon.CallTool(key, "list_projects")));
 
-        // И наоборот: то, что создал агент через MCP, видит CLI.
-        await _daemon.CallTool(key, "create_project", new { name = "FromAgent" });
-        Assert.Contains("FromAgent", (await TaskerProcess.Run("project", "list", "-w", folder)).Out);
+        var alpha = DaemonFixture.ProjectIds(await _daemon.CallTool(key, "list_projects"))[0];
+        await _daemon.CallTool(key, "create_status", new { projectId = alpha, name = "FromAgent", color = "#112233" });
+        Assert.Contains("FromAgent", (await TaskerProcess.Run("status", "list", "-w", folder, "-p", alpha)).Out);
     }
 
     [Fact]
@@ -229,24 +229,26 @@ public class DaemonTests : IDisposable
         using var reader = new StreamReader(await subscription.Content.ReadAsStreamAsync());
         Assert.Equal(": connected", await reader.ReadLineAsync());
 
-        async Task<JsonNode> ProjectChange(string projectId)
+        async Task<JsonNode> ProjectChange(string projectId, Func<JsonNode, bool>? accept = null)
         {
             using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             while (await reader.ReadLineAsync(wait.Token) is { } line)
             {
-                if (GraphReads.Change(line) is { } change && change["entity"]!.GetValue<string>() == "project" && change["id"]?.GetValue<string>() == projectId)
+                if (GraphReads.Change(line) is { } change && change["entity"]!.GetValue<string>() == "project" && change["id"]?.GetValue<string>() == projectId
+                    && (accept == null || accept(change)))
                     return change;
             }
             throw new InvalidOperationException("the stream ended");
         }
 
         using var created = await http.PostAsJsonAsync($"{apiBase}/projects", new { name = "Beta" });
-        var restProject = (await created.Content.ReadFromJsonAsync<JsonNode>())!["id"]!.GetValue<string>();
-        var rest = await ProjectChange(restProject);
+        var restBody = (await created.Content.ReadFromJsonAsync<JsonNode>())!;
+        var restProject = restBody["id"]!.GetValue<string>();
+        var rest = await ProjectChange(restProject, x => x["author"] != null);
         Assert.Equal("local", rest["author"]!["key"]!.GetValue<string>());
 
-        var agentProject = JsonNode.Parse(await _daemon.CallTool(key, "create_project", new { name = "FromAgent" }))!["id"]!.GetValue<string>();
-        var agent = await ProjectChange(agentProject);
+        await _daemon.CallTool(key, "update_project", new { projectId = restProject, name = "FromAgent", version = restBody["version"]!.GetValue<string>() });
+        var agent = await ProjectChange(restProject, x => x["author"]?["key"]?.GetValue<string>() is { } author && author != "local");
         Assert.StartsWith("user:", agent["author"]!["key"]!.GetValue<string>());
         Assert.Equal("agent", agent["author"]!["name"]!.GetValue<string>());
 

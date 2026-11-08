@@ -50,4 +50,5 @@ internal class ProjectMemberDbModel
 {
     public Guid ProjectId { get; set; }
     public Guid UserId { get; set; }
+    public int? AgentRights { get; set; }
 }

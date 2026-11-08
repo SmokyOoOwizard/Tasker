@@ -155,9 +155,9 @@ public abstract class LinkStorageContract : IAsyncLifetime
     {
         var tasks = scope.Resolve<ITaskStorage>();
         var locks = new Tasker.Core.Locks.EditLockService(scope.Resolve<Tasker.Core.Locks.IEditLockStorage>(), new FakeEditor(), TimeProvider.System);
-        var types = new LinkTypeService(scope.Resolve<ILinkTypeStorage>(), tasks, locks);
+        var types = new LinkTypeService(scope.Resolve<ILinkTypeStorage>(), tasks, locks, TestGuards.Open);
         var links = new TaskLinkService(tasks, types, TimeProvider.System, locks, scope.Resolve<Tasker.Core.TaskSeries.ISeriesStorage>(),
-            scope.Resolve<Tasker.Core.TaskSeries.IWriteScope>());
+            scope.Resolve<Tasker.Core.TaskSeries.IWriteScope>(), TestGuards.Open);
         return await action(links, types);
     });
 

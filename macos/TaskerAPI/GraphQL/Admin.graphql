@@ -6,6 +6,12 @@ query AdminAgents {
       username
       createdAt
       version
+      rights {
+        editTasks
+        deleteTasks
+        configureProject
+        manageSeries
+      }
     }
   }
 }

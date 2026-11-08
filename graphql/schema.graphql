@@ -21,6 +21,13 @@ type Subscription {
   workspaceChanges: WorkspaceChange!
 }
 
+type AgentRights {
+  editTasks: Boolean!
+  deleteTasks: Boolean!
+  configureProject: Boolean!
+  manageSeries: Boolean!
+}
+
 type AgentToken {
   id: UUID!
   agentId: UUID!
@@ -619,6 +626,7 @@ type User {
   createdAt: DateTime!
   version: String!
   isAgent: Boolean!
+  rights: AgentRights
 }
 
 type UserPage {

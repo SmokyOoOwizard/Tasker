@@ -3,7 +3,7 @@
     "content": [
       {
         "type": "text",
-        "text": "{\"id\":\"<LOCAL-AGENT-ID>\",\"username\":\"agent\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"createdAt\":\"<LOCAL-AGENT-CREATED>\",\"version\":\"<LOCAL-AGENT-VERSION>\",\"isAgent\":true}"
+        "text": "{\"projects\":null,\"id\":\"<LOCAL-AGENT-ID>\",\"username\":\"agent\",\"kind\":\"agent\",\"ownerId\":null,\"email\":null,\"isAdmin\":false,\"rights\":{\"editTasks\":true,\"deleteTasks\":true,\"configureProject\":true,\"manageSeries\":true},\"createdAt\":\"<LOCAL-AGENT-CREATED>\",\"version\":\"<LOCAL-AGENT-VERSION>\",\"isAgent\":true}"
       }
     ]
   },

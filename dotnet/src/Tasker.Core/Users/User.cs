@@ -35,6 +35,8 @@ public record User
     /// <summary>Администратор сервера: управляет пользователями и видит все проекты. У агентов и на десктопе всегда false.</summary>
     public required bool IsAdmin { get; init; }
 
+    public Agents.AgentRights? Rights { get; init; }
+
     public required DateTimeOffset CreatedAt { get; init; }
 
     /// <summary>См. <see cref="Versioning"/>.</summary>

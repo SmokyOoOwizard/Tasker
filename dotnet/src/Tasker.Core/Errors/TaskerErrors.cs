@@ -326,6 +326,18 @@ public static class TaskerErrors
     [ErrorCode("user.personOnly")]
     public static TaskerForbiddenException PersonOnly() => Forbidden("Agents cannot do this: only a person can", []);
 
+    [ErrorCode("agent.rightMissing")]
+    public static TaskerForbiddenException AgentRightMissing(string agent, string right) =>
+        Forbidden($"Agent '{agent}' has no right '{right}' in this project: ask a person to change the agent's rights", [agent, right]);
+
+    [ErrorCode("agent.rightsOnMembership")]
+    public static TaskerValidationException AgentRightsOnMembership() =>
+        Validation("On the server agent rights are set per project: change them in the project members", []);
+
+    [ErrorCode("agent.rightsAgentOnly")]
+    public static TaskerValidationException AgentRightsAgentOnly(string name) =>
+        Validation($"'{name}' is a person: rights are set only for agents", [name]);
+
     [ErrorCode("auth.localOnly")]
     public static TaskerForbiddenException LocalOnly() => Forbidden("Only local requests are allowed", []);
 
