@@ -2,9 +2,9 @@ formatVersion: 12
 id: c2bf4435-6b08-4021-b28d-6e5f50e2bfd3
 title: 'Редактор доски: сломанный, но не изменённый запрос колонки не мешает сохранить доску'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-08T00:13:06.8795000+00:00
-updatedAt: 2026-11-08T00:44:36.6235380+00:00
+updatedAt: 2026-11-08T04:59:08.3691210+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 248

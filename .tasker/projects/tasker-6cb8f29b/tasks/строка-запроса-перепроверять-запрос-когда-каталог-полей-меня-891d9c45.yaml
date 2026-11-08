@@ -2,9 +2,9 @@ formatVersion: 12
 id: 891d9c45-cd64-43a4-8fb4-8f30f3675dda
 title: 'Строка запроса: перепроверять запрос, когда каталог полей меняется'
 typeId: 52c69d59-658f-467b-8e64-0eb42c3dd961
-statusId: 19d3f76d-e068-4e23-83c9-cebd1c982ca3
+statusId: 30300951-beb2-495f-a290-2b36ae0f4920
 createdAt: 2026-11-08T00:12:59.7183400+00:00
-updatedAt: 2026-11-08T00:44:35.3435360+00:00
+updatedAt: 2026-11-08T04:59:06.7042170+00:00
 series:
 - seriesId: d7ef1523-7d8d-46f8-b3c1-996e24fbd2c1
   number: 247
