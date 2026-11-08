@@ -229,12 +229,13 @@ public class DaemonTests : IDisposable
         using var reader = new StreamReader(await subscription.Content.ReadAsStreamAsync());
         Assert.Equal(": connected", await reader.ReadLineAsync());
 
-        async Task<JsonNode> ProjectChange(string projectId)
+        async Task<JsonNode> ProjectChange(string projectId, Func<JsonNode, bool>? accept = null)
         {
             using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             while (await reader.ReadLineAsync(wait.Token) is { } line)
             {
-                if (GraphReads.Change(line) is { } change && change["entity"]!.GetValue<string>() == "project" && change["id"]?.GetValue<string>() == projectId)
+                if (GraphReads.Change(line) is { } change && change["entity"]!.GetValue<string>() == "project" && change["id"]?.GetValue<string>() == projectId
+                    && (accept == null || accept(change)))
                     return change;
             }
             throw new InvalidOperationException("the stream ended");
@@ -247,7 +248,7 @@ public class DaemonTests : IDisposable
         Assert.Equal("local", rest["author"]!["key"]!.GetValue<string>());
 
         await _daemon.CallTool(key, "update_project", new { projectId = restProject, name = "FromAgent", version = restBody["version"]!.GetValue<string>() });
-        var agent = await ProjectChange(restProject);
+        var agent = await ProjectChange(restProject, x => x["author"]?["key"]?.GetValue<string>() is { } author && author != "local");
         Assert.StartsWith("user:", agent["author"]!["key"]!.GetValue<string>());
         Assert.Equal("agent", agent["author"]!["name"]!.GetValue<string>());
 
