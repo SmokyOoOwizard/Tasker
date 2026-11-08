@@ -134,6 +134,37 @@ final class TaskQueryModel {
         schedule(apply: false)
     }
 
+    func recheck() {
+        guard !text.isEmpty else { return }
+        generation += 1
+        let current = generation
+        let text = text
+        let cursor = cursor
+        let source = source
+        let project = project
+        task?.cancel()
+        task = Task { [weak self] in
+            do {
+                let report = try await source.analyze(project: project, text: text, cursor: cursor)
+                self?.rechecked(report, generation: current, text: text)
+            } catch {
+            }
+        }
+    }
+
+    private func rechecked(_ report: TaskQueryReport, generation: Int, text: String) {
+        guard generation == self.generation else { return }
+        errors = report.errors
+        guard !hintsStale else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if report.valid {
+            hasSort = report.hasSort
+            if trimmed == applied { onApply?(applied, report.hasSort) }
+        } else if !applied.isEmpty, trimmed == applied {
+            apply("", hasSort: false)
+        }
+    }
+
     func showHints() {
         open = true
         selected = nil

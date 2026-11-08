@@ -92,7 +92,10 @@ struct TaskListScreen: View {
         .task {
             model = session.attachList(owner: owner, project: project.id, client: client, localizer: l)
         }
-        .onChange(of: live.revision) { model?.scheduleRefresh() }
+        .onChange(of: live.revision) {
+            session.listQuery?.recheck()
+            model?.scheduleRefresh()
+        }
         .onChange(of: settings.revision) { model?.apply(settings.preferences(for: project.id)) }
         .onChange(of: l.language) {
             model?.localizer = l

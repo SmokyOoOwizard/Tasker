@@ -65,7 +65,10 @@ struct BoardScreen: View {
         .task(id: session.boardId) {
             model = session.attachBoard(owner: owner, project: project.id, client: client, localizer: l)
         }
-        .onChange(of: live.revision) { model?.scheduleRefresh() }
+        .onChange(of: live.revision) {
+            session.boardQuery?.recheck()
+            model?.scheduleRefresh()
+        }
         .onChange(of: l.language) { model?.localizer = l }
         .onChange(of: navigator.card) { _, card in
             if card == nil { Task { @MainActor in focused = true } }
