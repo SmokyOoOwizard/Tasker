@@ -34,6 +34,7 @@ final class SettingsModel {
     private(set) var stats: [UUID: SettingsSeriesStat] = [:]
     private(set) var members: [SettingsMember] = []
     private(set) var held: SettingsLockTarget?
+    private(set) var editLock: EditLock?
     private(set) var busy = false
 
     @ObservationIgnored var localizer = Localizer(choice: .system)
@@ -43,7 +44,6 @@ final class SettingsModel {
     @ObservationIgnored private let source: any SettingsSource
     @ObservationIgnored private let heartbeat: Duration
     @ObservationIgnored private var loadTask: Task<Void, Never>?
-    @ObservationIgnored private var beatTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var released = false
 
@@ -118,42 +118,33 @@ final class SettingsModel {
     func hold(_ target: SettingsLockTarget) async -> String? {
         guard !released else { return nil }
         if held != nil { await drop() }
-        do {
-            try await source.lock(project: project, target: target)
-        } catch {
-            if case TaskerAPIError.conflict(let conflict) = error, conflict.kind == .locked {
-                return localizer.refusal(conflict.refusal)
-            }
-            return nil
+        let source = source
+        let project = project
+        let lock = EditLock(
+            ops: EditLockOps(
+                acquire: { try await source.lock(project: project, target: target) },
+                release: { try await source.unlock(project: project, target: target) }),
+            heartbeat: heartbeat)
+        await lock.acquire()
+        if let holder = lock.holder {
+            return lock.refusal.map { localizer.refusal($0) } ?? holder
         }
+        guard lock.isMine else { return nil }
         if released {
-            try? await source.unlock(project: project, target: target)
+            await lock.relinquish()
             return nil
         }
+        editLock = lock
         held = target
-        startBeat(target)
+        lock.start()
         return nil
     }
 
-    private func startBeat(_ target: SettingsLockTarget) {
-        beatTask?.cancel()
-        let interval = heartbeat
-        beatTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
-                if Task.isCancelled { return }
-                guard let self, self.held == target else { return }
-                try? await self.source.lock(project: self.project, target: target)
-            }
-        }
-    }
-
     func drop() async {
-        beatTask?.cancel()
-        beatTask = nil
-        guard let target = held else { return }
+        let lock = editLock
+        editLock = nil
         held = nil
-        try? await source.unlock(project: project, target: target)
+        await lock?.relinquish()
     }
 
     func dropSoon() {

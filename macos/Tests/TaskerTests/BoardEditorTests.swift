@@ -317,4 +317,37 @@ struct BoardEditorTests {
         #expect(await model.save())
         #expect(await source.updated.last?.columns[0].query == ".Status == \"Todo\" | sort .Title")
     }
+
+    @Test func rereadAndRetryKeepsTypedChangesAndSavesOnFreshVersion() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.lock == .mine }
+        await source.setSaveFailure(TaskerAPIError.modified())
+        model.draft.name = "Renamed"
+        #expect(await model.save() == false)
+        #expect(model.staleVersion)
+        await source.setSaveFailure(nil)
+        await source.setStored(BoardRecord(id: record.id, version: "fresh", draft: record.draft))
+        #expect(await model.rereadAndRetry())
+        #expect(!model.staleVersion)
+        #expect(await source.updated.last?.name == "Renamed")
+        model.release()
+    }
+
+    @Test func rereadAndRetryDoesNothingWithoutConflict() async {
+        let source = StubBoardSource()
+        let record = existing()
+        await source.setCatalog(catalog)
+        await source.setStored(record)
+        let model = editor(source, board: record.id)
+        model.load()
+        await settle(model) { model.lock == .mine }
+        #expect(await model.rereadAndRetry() == false)
+        #expect(await source.updated.isEmpty)
+        model.release()
+    }
 }

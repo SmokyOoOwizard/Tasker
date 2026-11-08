@@ -242,13 +242,13 @@ final class TaskDetailModel {
     private func fail(_ error: TaskerAPIError, edit: TaskEdit) async {
         switch error {
         case .conflict(let conflict):
-            switch conflict.kind {
-            case .modified:
+            switch EditFailure(error) {
+            case .modified(let refusal):
                 await fetch(initial: false)
-                self.conflict = TaskEditConflict(edit: edit, message: localizer.refusal(conflict.refusal))
-            case .locked:
-                onFailure?(localizer.refusal(conflict.refusal))
-            default:
+                self.conflict = TaskEditConflict(edit: edit, message: localizer.refusal(refusal))
+            case .locked(_, let refusal):
+                onFailure?(localizer.refusal(refusal))
+            case .other:
                 onFailure?(localizer.string(.taskDetailFailed, localizer.refusal(conflict.refusal)))
             }
         case .notFound:
