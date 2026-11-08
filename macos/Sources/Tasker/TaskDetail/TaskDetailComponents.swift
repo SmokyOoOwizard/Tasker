@@ -185,6 +185,7 @@ struct MarkdownView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
         .environment(\.openURL, OpenURLAction { url in
             if let ref = TaskReference.ref(from: url) {
                 open(ref)
