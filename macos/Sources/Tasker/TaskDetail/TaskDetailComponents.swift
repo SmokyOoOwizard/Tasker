@@ -185,6 +185,7 @@ struct MarkdownView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
         .environment(\.openURL, OpenURLAction { url in
             if let ref = TaskReference.ref(from: url) {
                 open(ref)
@@ -226,6 +227,43 @@ struct MarkdownView: View {
                 .background(DesignColor.hov.color, in: RoundedRectangle(cornerRadius: DesignRadius.control))
         case .rule:
             DesignDivider().padding(.vertical, DesignSpacing.gap6)
+        case .table(let header, let alignments, let rows):
+            tableView(header: header, alignments: alignments, rows: rows)
         }
+    }
+
+    private func tableView(header: [String], alignments: [MarkdownColumnAlignment], rows: [[String]]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            Grid(alignment: .topLeading, horizontalSpacing: 0, verticalSpacing: 0) {
+                GridRow {
+                    ForEach(Array(header.enumerated()), id: \.offset) { column, cell in
+                        tableCell(cell, alignment: alignments[column], bold: true)
+                    }
+                }
+                .background(DesignColor.hov.color)
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    DesignDivider()
+                    GridRow {
+                        ForEach(Array(row.enumerated()), id: \.offset) { column, cell in
+                            tableCell(cell, alignment: alignments[column], bold: false)
+                        }
+                    }
+                }
+            }
+            .overlay(RoundedRectangle(cornerRadius: DesignRadius.control).stroke(DesignColor.line2.color, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: DesignRadius.control))
+        }
+    }
+
+    private func tableCell(_ text: String, alignment: MarkdownColumnAlignment, bold: Bool) -> some View {
+        let horizontal: Alignment = alignment == .center ? .center : (alignment == .trailing ? .trailing : .leading)
+        let multiline: TextAlignment = alignment == .center ? .center : (alignment == .trailing ? .trailing : .leading)
+        return Text(MarkdownParser.inline(text, prefixes: prefixes))
+            .fontWeight(bold ? .semibold : .regular)
+            .multilineTextAlignment(multiline)
+            .padding(.horizontal, DesignSpacing.gap10)
+            .padding(.vertical, DesignSpacing.gap6)
+            .frame(maxWidth: 260, alignment: horizontal)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

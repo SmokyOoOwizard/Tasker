@@ -228,6 +228,28 @@ struct TaskDetailTests {
         ])
     }
 
+    @Test func markdownTable() {
+        let blocks = MarkdownParser.parse("before\n| A | B | C |\n|:--|:-:|--:|\n| 1 | x \\| y | 3 |\n| 4 |\n\nafter")
+        #expect(blocks == [
+            .paragraph("before"),
+            .table(header: ["A", "B", "C"], alignments: [.leading, .center, .trailing], rows: [["1", "x | y", "3"], ["4", "", ""]]),
+            .paragraph("after")
+        ])
+        #expect(MarkdownParser.parse("a | b\nc | d") == [.paragraph("a | b\nc | d")])
+        #expect(MarkdownParser.parse("A|B\n-|-\n1|2") == [.table(header: ["A", "B"], alignments: [.leading, .leading], rows: [["1", "2"]])])
+    }
+
+    @Test func markdownTableAmongBlocks() {
+        let blocks = MarkdownParser.parse("# T\n| Вариант | В месяц |\n|---|---|\n| Одна ВМ | 4 605 |\n- item\n\n| только | строка |\n\n> q")
+        #expect(blocks == [
+            .heading(level: 1, text: "T"),
+            .table(header: ["Вариант", "В месяц"], alignments: [.leading, .leading], rows: [["Одна ВМ", "4 605"]]),
+            .listItem(marker: "•", level: 0, text: "item"),
+            .paragraph("| только | строка |"),
+            .quote("q")
+        ])
+    }
+
     @Test func referencesBecomeLinks() {
         let text = MarkdownParser.inline("See DMO-12, UTF-8 and `DMO-3` **DMO-4**", prefixes: ["DMO"])
         let links = text.runs.compactMap { run in run.link.flatMap(TaskReference.ref) }
