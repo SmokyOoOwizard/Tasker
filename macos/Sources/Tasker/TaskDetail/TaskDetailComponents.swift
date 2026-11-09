@@ -263,6 +263,7 @@ struct MarkdownView: View {
             .multilineTextAlignment(multiline)
             .padding(.horizontal, DesignSpacing.gap10)
             .padding(.vertical, DesignSpacing.gap6)
-            .frame(maxWidth: .infinity, alignment: horizontal)
+            .frame(maxWidth: 260, alignment: horizontal)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
