@@ -210,10 +210,12 @@ private struct BoardColumnCard: View {
             query
         }
         .padding(DesignSpacing.gap10 + 2)
-        .background(DesignColor.panel.color, in: RoundedRectangle(cornerRadius: DesignRadius.card))
-        .overlay(
+        .background(
             RoundedRectangle(cornerRadius: DesignRadius.card)
-                .strokeBorder(model.issues.columns[column.id] == nil ? DesignColor.line.color : DesignColor.red.color, lineWidth: DesignLayout.borderWidth))
+                .fill(DesignColor.panel.color)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignRadius.card)
+                        .strokeBorder(model.issues.columns[column.id] == nil ? DesignColor.line.color : DesignColor.red.color, lineWidth: DesignLayout.borderWidth)))
     }
 
     private func iconButton(_ icon: MockupIcon, help: L10nKey, enabled: Bool, destructive: Bool = false, action: @escaping () -> Void) -> some View {
