@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import SwiftUI
 import Testing
 import TaskerAPI
 @testable import Tasker
@@ -248,6 +250,20 @@ struct TaskQueryModelTests {
         #expect(saved == 1)
     }
 
+    @Test func clearingDropsTheAnalysisThatIsStillOnItsWay() async {
+        let source = StubTaskQuerySource()
+        let model = model(source)
+        var applied: [String] = []
+        model.onApply = { text, _ in applied.append(text) }
+        model.edited(".Type == \"Bug\"", cursor: 14)
+        model.clear()
+        try? await Task.sleep(for: TaskQueryModel.analyzeDelay * 3)
+        #expect(applied == [""])
+        #expect(model.applied == "")
+        #expect(model.text.isEmpty)
+        #expect(!model.showsHints)
+    }
+
     @Test func aRestoredQueryKnowsItsSortWithoutOpeningHints() async {
         let source = StubTaskQuerySource()
         source.set("| sort .Title", TaskQueryReport(valid: true, hasSort: true, errors: [], hints: [hint("x", insert: "x", start: 0, end: 0)]))
@@ -293,5 +309,51 @@ struct TaskQueryModelTests {
         #expect(list.request.query == ".Type == \"Bug\"")
         list.query = ""
         #expect(list.request.query == nil)
+    }
+}
+
+@MainActor
+struct TaskQueryBarTests {
+    private func until(_ condition: @MainActor () -> Bool) async {
+        for _ in 0..<200 where !condition() {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    private func click(_ window: NSWindow, at point: NSPoint) throws {
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            let event = try #require(NSEvent.mouseEvent(
+                with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0))
+            window.sendEvent(event)
+        }
+    }
+
+    private func textView(in view: NSView?) -> NSTextView? {
+        guard let view else { return nil }
+        if let found = view as? NSTextView { return found }
+        for child in view.subviews {
+            if let found = textView(in: child) { return found }
+        }
+        return nil
+    }
+
+    @Test func aClickBesideTheStrokesOfTheCrossClearsTheQuery() async throws {
+        let model = TaskQueryModel(project: UUID(), source: StubTaskQuerySource(), text: ".Status == \"Todo\"")
+        var applied: [String] = []
+        model.onApply = { value, _ in applied.append(value) }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 26), styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = NSHostingView(rootView: TaskQueryBarField(model: model).frame(width: 400, height: 26))
+        window.setFrameOrigin(NSPoint(x: -20000, y: -20000))
+        window.orderFrontRegardless()
+        defer { window.orderOut(nil) }
+        try await Task.sleep(for: .milliseconds(300))
+        try click(window, at: NSPoint(x: 400 - DesignSpacing.gap8 - 5.5, y: 13 + 4))
+        await until { model.text.isEmpty }
+        #expect(model.text == "")
+        #expect(applied.last == "")
+        let field = try #require(textView(in: window.contentView))
+        await until { field.string.isEmpty }
+        #expect(field.string == "")
     }
 }

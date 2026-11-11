@@ -199,6 +199,8 @@ private struct TaskSortPills: View {
                     } label: {
                         MockupIconView(icon: .x, size: 10)
                             .foregroundStyle(DesignColor.dim.color)
+                            .frame(width: 16, height: 16)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .help(l.string(.taskListSortRemove))

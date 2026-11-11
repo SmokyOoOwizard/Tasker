@@ -222,6 +222,11 @@ final class TaskQueryModel {
     }
 
     func clear() {
+        generation += 1
+        task?.cancel()
+        task = nil
+        hintsStale = false
+        pendingAccept = false
         text = ""
         cursor = 0
         errors = []
