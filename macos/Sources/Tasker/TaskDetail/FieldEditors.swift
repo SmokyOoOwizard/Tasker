@@ -183,6 +183,8 @@ struct FieldRowView: View {
                 if !field.required {
                     Button { set([]) } label: {
                         MockupIconView(icon: .x, size: 10).foregroundStyle(DesignColor.dim.color)
+                            .frame(width: 18, height: 18)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .help(l.string(.taskDetailClear))
@@ -239,6 +241,8 @@ struct FieldRowView: View {
                             .textFieldStyle(.roundedBorder)
                         Button { drafts.remove(at: index) } label: {
                             MockupIconView(icon: .x, size: 11).foregroundStyle(DesignColor.dim.color)
+                                .frame(width: 18, height: 18)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
